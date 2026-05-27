@@ -118,6 +118,7 @@ App.TaskListView = class TaskListView {
   renderRow(t) {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
+    const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const urgency = App.URGENCIES[t.urgency] || App.URGENCIES.medium;
     const due = App.utils.formatDue(t.due);
@@ -132,6 +133,10 @@ App.TaskListView = class TaskListView {
     row.innerHTML = `
       <input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${App.can('tasks.write') ? '' : 'disabled'} />
       <div class="task-title-cell ${isDone ? 'done' : ''}">${App.utils.escapeHtml(t.title)}</div>
+      <div class="type-cell">
+        <span class="pill-type ${type.cls}">${type.label}</span>
+        ${t.type === 'bid' && App.BID_STATUSES[t.bidStatus] ? `<span class="pill-bid-status ${App.BID_STATUSES[t.bidStatus].cls}">${App.BID_STATUSES[t.bidStatus].label}</span>` : ''}
+      </div>
       <div><span class="pill ${company.pill}">${company.label}</span></div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
         <span class="avatar-xs" style="background:${person.color};">${App.utils.initials(person.full)}</span>${person.name}
