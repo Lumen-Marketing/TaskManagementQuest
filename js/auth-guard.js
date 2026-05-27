@@ -1,11 +1,13 @@
-/* Guards index.html — three states:
-   - No session       -> bounce to login.html
-   - Not approved     -> bounce to login.html (which renders pending card)
-   - Approved         -> let the app load, wire sign-out, paint avatar */
+/* Guards app.html:
+   - No session   -> return to login
+   - Not approved -> return to login so pending state can render
+   - Approved     -> allow app bootstrap and wire sign-out */
 (async function () {
+  const loginUrl = window.location.origin + '/';
+
   const { data: sessionData } = await App.supabase.auth.getSession();
   if (!sessionData.session) {
-    window.location.replace('/');
+    window.location.replace(loginUrl);
     return;
   }
 
@@ -17,7 +19,7 @@
     .single();
 
   if (error || !profile || !profile.approved) {
-    window.location.replace('/');
+    window.location.replace(loginUrl);
     return;
   }
 
@@ -27,11 +29,11 @@
 
   App.signOut = async function () {
     await App.supabase.auth.signOut();
-    window.location.replace('/');
+    window.location.replace(loginUrl);
   };
 
   App.supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session) window.location.replace('/');
+    if (!session) window.location.replace(loginUrl);
   });
 
   const wire = () => {
@@ -53,6 +55,7 @@
       }
     }
   };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wire);
   } else {

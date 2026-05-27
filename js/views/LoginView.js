@@ -8,7 +8,6 @@ App.LoginView = class LoginView {
     this.pendingCard = document.getElementById('pendingCard');
 
     this.tabs = document.querySelectorAll('.auth-tab');
-    this.googleBtn = document.getElementById('googleSignInBtn');
     this.pwForm = document.getElementById('pwForm');
     this.magicForm = document.getElementById('magicForm');
     this.panelPassword = this.pwForm;
@@ -42,13 +41,6 @@ App.LoginView = class LoginView {
   }
 
   _bind() {
-    if (this.googleBtn) {
-      this.googleBtn.addEventListener('click', () => {
-        this._clearMessages();
-        this.controller.signInWithGoogle();
-      });
-    }
-
     this.tabs.forEach(tab => {
       tab.addEventListener('click', () => this._switchTab(tab.dataset.tab));
     });

@@ -46,14 +46,6 @@ App.AuthModel = class AuthModel {
     });
   }
 
-  async signInWithGoogle(redirectTo) {
-    const { error } = await this._sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo },
-    });
-    if (error) throw error;
-  }
-
   async signInWithPassword(email, password) {
     const { error } = await this._sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
