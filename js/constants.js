@@ -32,5 +32,5 @@ App.URGENCIES = {
   chill:    { label: 'Whenever', cls: 'urgency-chill',    order: 5 },
 };
 
-App.STORAGE_KEY = 'quest-hq-state-v3';
+App.STORAGE_KEY = 'quest-hq-state-v4';
 App.CURRENT_USER = 'abraham';
