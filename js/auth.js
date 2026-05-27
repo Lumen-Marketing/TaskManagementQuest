@@ -16,4 +16,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.LoginView({ controller });
 
   await authModel.init();
+
+  // If the user is already signed in AND approved, send them straight to the app.
+  // (The signed-in card is only useful as a brief landing — no need to gate behind a click.)
+  if (authModel.isAuthenticated() && authModel.isApproved()) {
+    window.location.replace(appUrl);
+  }
 });
