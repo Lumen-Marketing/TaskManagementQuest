@@ -13,14 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const saved = store.load();
   if (saved) {
-    taskModel.hydrate(saved.tasks && saved.tasks.length ? saved.tasks : null);
-    if (!saved.tasks || !saved.tasks.length) taskModel.seedDefaults();
+    taskModel.hydrate(saved.tasks || []);
     timeModel.hydrate(saved.timeEntries, saved.activeTimers);
-    if (!saved.timeEntries || !saved.timeEntries.length) timeModel.seedDefaults();
     notifModel.hydrate(saved.notifications);
-  } else {
-    taskModel.seedDefaults();
-    timeModel.seedDefaults();
   }
 
   const controller = new App.AppController({
