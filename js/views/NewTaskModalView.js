@@ -76,6 +76,12 @@ App.NewTaskModalView = class NewTaskModalView {
 
           <div class="field-row-3">
             <div>
+              <div class="field-label">Type</div>
+              <select id="nt-type" style="width:100%; padding: 6px 10px; font-size: 12px;">
+                ${Object.entries(App.TASK_TYPES).map(([k, v]) => `<option value="${k}" ${k === 'admin' ? 'selected' : ''}>${v.label}</option>`).join('')}
+              </select>
+            </div>
+            <div>
               <div class="field-label">Company</div>
               <select id="nt-company" style="width:100%; padding: 6px 10px; font-size: 12px;">
                 <option value="roofing">Roofing</option>
@@ -87,15 +93,22 @@ App.NewTaskModalView = class NewTaskModalView {
               <div class="field-label">Due</div>
               <input type="date" id="nt-due" value="${App.utils.todayISO(1)}" style="width:100%; padding: 6px 10px; font-size: 12px;" />
             </div>
+          </div>
+
+          <div id="nt-bid-status-row" class="field hidden" style="margin-top:14px;">
+            <div class="field-label">Bid status</div>
+            <select id="nt-bid-status" style="width:100%; padding: 6px 10px; font-size: 12px;">
+              ${Object.entries(App.BID_STATUSES).map(([k, v]) => `<option value="${k}" ${k === 'queue' ? 'selected' : ''}>${v.label}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="field-row-3" style="margin-top:14px;">
             <div>
               <div class="field-label">Urgency</div>
               <select id="nt-urgency" style="width:100%; padding: 6px 10px; font-size: 12px;">
                 ${Object.entries(App.URGENCIES).map(([k, v]) => `<option value="${k}" ${k === 'medium' ? 'selected' : ''}>${v.label}</option>`).join('')}
               </select>
             </div>
-          </div>
-
-          <div class="field-row" style="margin-top:14px;">
             <div>
               <div class="field-label">Priority</div>
               <select id="nt-priority" style="width:100%; padding: 6px 10px; font-size: 12px;">
@@ -169,6 +182,15 @@ App.NewTaskModalView = class NewTaskModalView {
     });
 
     document.getElementById('nt-assignee').addEventListener('change', () => this.updateDelegationBanner());
+    document.getElementById('nt-type').addEventListener('change', () => this.updateBidStatusRow());
+    this.updateBidStatusRow();
+  }
+
+  updateBidStatusRow() {
+    const row = document.getElementById('nt-bid-status-row');
+    if (!row) return;
+    const type = document.getElementById('nt-type').value;
+    row.classList.toggle('hidden', type !== 'bid');
   }
 
   renderWatcherChips() {
@@ -245,6 +267,8 @@ App.NewTaskModalView = class NewTaskModalView {
       title,
       description: document.getElementById('nt-desc').value.trim(),
       assignee: document.getElementById('nt-assignee').value,
+      type: document.getElementById('nt-type').value,
+      bidStatus: document.getElementById('nt-bid-status').value,
       company: document.getElementById('nt-company').value,
       due: document.getElementById('nt-due').value,
       urgency: document.getElementById('nt-urgency').value,
