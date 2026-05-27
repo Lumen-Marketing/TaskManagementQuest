@@ -5,6 +5,7 @@
    4. Persist to Supabase on any model change
    5. Start the 1-second clock tick */
 document.addEventListener('DOMContentLoaded', async () => {
+  if (App.authReady) await App.authReady;
   App.currentProfile = App.currentProfile || {};
   App.CURRENT_USER = App.currentProfile.member_id || App.CURRENT_USER;
 

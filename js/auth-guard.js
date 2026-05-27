@@ -2,7 +2,9 @@
    - No session   -> return to login
    - Not approved -> return to login so pending state can render
    - Approved     -> allow app bootstrap and wire sign-out */
-(async function () {
+window.App = window.App || {};
+
+App.authReady = (async function () {
   const loginUrl = App.routes ? App.routes.login : window.location.origin + '/';
 
   if (!App.supabase || !App.supabase.auth) {
@@ -24,6 +26,11 @@
     .single();
 
   if (error || !profile) {
+    window.location.replace(loginUrl);
+    return;
+  }
+
+  if (!profile.approved) {
     window.location.replace(loginUrl);
     return;
   }
