@@ -5,7 +5,7 @@
 (async function () {
   const { data: sessionData } = await App.supabase.auth.getSession();
   if (!sessionData.session) {
-    window.location.replace('login.html');
+    window.location.replace('/');
     return;
   }
 
@@ -17,7 +17,7 @@
     .single();
 
   if (error || !profile || !profile.approved) {
-    window.location.replace('login.html');
+    window.location.replace('/');
     return;
   }
 
@@ -27,11 +27,11 @@
 
   App.signOut = async function () {
     await App.supabase.auth.signOut();
-    window.location.replace('login.html');
+    window.location.replace('/');
   };
 
   App.supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session) window.location.replace('login.html');
+    if (!session) window.location.replace('/');
   });
 
   const wire = () => {
