@@ -19,11 +19,11 @@
   const user = sessionData.session.user;
   const { data: profile, error } = await App.supabase
     .from('profiles')
-    .select('id, email, full_name, approved, role, email_verified')
+    .select('id, email, full_name, approved, role, email_verified, member_id')
     .eq('id', user.id)
     .single();
 
-  if (error || !profile || !profile.approved) {
+  if (error || !profile) {
     window.location.replace(loginUrl);
     return;
   }

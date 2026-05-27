@@ -32,4 +32,28 @@ App.URGENCIES = {
   chill:    { label: 'Whenever', cls: 'urgency-chill',    order: 5 },
 };
 
+App.ROLES = {
+  member: { label: 'Member' },
+  worker: { label: 'Worker' },
+  sales: { label: 'Sales' },
+  supervisor: { label: 'Supervisor' },
+  construction_supervisor: { label: 'Construction supervisor' },
+  admin: { label: 'Admin' },
+};
+
+App.ROLE_PERMISSIONS = {
+  member: [],
+  worker: ['clock.use', 'time.own'],
+  sales: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own'],
+  supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team'],
+  construction_supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage'],
+  admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage'],
+};
+
+App.DEFAULT_CLOCK_TASK_ID = 'general-shift';
 App.CURRENT_USER = 'abraham';
+
+App.can = function can(permission) {
+  const role = (App.currentProfile && App.currentProfile.role) || 'member';
+  return (App.ROLE_PERMISSIONS[role] || []).includes(permission);
+};

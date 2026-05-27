@@ -48,6 +48,7 @@ App.TaskListView = class TaskListView {
       'time:mine':      { eyebrow: 'Time tracking', title: 'My time' },
       'time:resource':  { eyebrow: 'Time tracking', title: 'Resource allocation' },
       'time:analytics': { eyebrow: 'Time tracking', title: 'Project analytics' },
+      'approvals':      { eyebrow: 'Admin', title: 'Approvals' },
     };
     let t = titles[view];
     if (!t && view.startsWith('company:')) {
@@ -65,6 +66,7 @@ App.TaskListView = class TaskListView {
   }
 
   render() {
+    if (!App.can('tasks.view')) return;
     this.renderStats();
     this.renderList();
   }
@@ -114,8 +116,8 @@ App.TaskListView = class TaskListView {
   }
 
   renderRow(t) {
-    const person = App.PEOPLE[t.assignee];
-    const company = App.COMPANIES[t.company];
+    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
+    const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const urgency = App.URGENCIES[t.urgency] || App.URGENCIES.medium;
     const due = App.utils.formatDue(t.due);
@@ -128,16 +130,16 @@ App.TaskListView = class TaskListView {
     row.className = 'list-row' + (selected ? ' selected' : '');
     row.dataset.id = t.id;
     row.innerHTML = `
-      <input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" />
+      <input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${App.can('tasks.write') ? '' : 'disabled'} />
       <div class="task-title-cell ${isDone ? 'done' : ''}">${App.utils.escapeHtml(t.title)}</div>
       <div><span class="pill ${company.pill}">${company.label}</span></div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
         <span class="avatar-xs" style="background:${person.color};">${App.utils.initials(person.full)}</span>${person.name}
       </div>
-      <div><span class="urgency-block ${urgency.cls}" data-action="cycle-urgency" title="Click to change urgency">${urgency.label}</span></div>
+      <div><span class="urgency-block ${urgency.cls}" ${App.can('tasks.write') ? 'data-action="cycle-urgency" title="Click to change urgency"' : ''}>${urgency.label}</span></div>
       <div class="due-cell ${due.cls}">${due.text}</div>
       <div><span class="pill-status ${status.cls}">${status.label}</span></div>
-      <button class="timer-btn ${myTimerOnThis ? 'active' : ''}" data-action="toggle-timer" title="${myTimerOnThis ? 'Stop timer' : 'Start timer'}">
+      <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Stop timer' : 'Start timer'}">
         <i class="ti ${myTimerOnThis ? 'ti-player-stop-filled' : 'ti-player-play'}"></i>
       </button>
       <button class="more-btn" data-action="more" aria-label="More"><i class="ti ti-dots"></i></button>

@@ -5,14 +5,15 @@ window.App = window.App || {};
    - Receives commands from views, calls model methods.
    - Cross-model coordination (e.g. stopping a timer adds task activity) lives here. */
 App.AppController = class AppController {
-  constructor({ taskModel, timeModel, notifModel, currentUser }) {
+  constructor({ taskModel, timeModel, notifModel, currentUser, dataStore }) {
     this.taskModel = taskModel;
     this.timeModel = timeModel;
     this.notifModel = notifModel;
     this.currentUser = currentUser;
+    this.dataStore = dataStore;
 
     this.uiState = {
-      view: 'all',
+      view: App.can('tasks.view') ? 'all' : 'time:mine',
       searchQuery: '',
       selectedTaskId: null,
     };
@@ -30,9 +31,20 @@ App.AppController = class AppController {
   /* ---------- helpers ---------- */
   getTask(id) { return this.taskModel.find(id); }
   getUserName(userId) { return App.PEOPLE[userId] ? App.PEOPLE[userId].name : userId; }
+  can(permission) { return App.can(permission); }
+  canView(view) {
+    if (view === 'approvals') return App.can('roles.manage');
+    if (view === 'time:mine') return App.can('time.own') || App.can('clock.use');
+    if (view === 'time:resource' || view === 'time:analytics') return App.can('time.team');
+    return App.can('tasks.view');
+  }
 
   /* ---------- UI state ---------- */
   setView(view) {
+    if (!this.canView(view)) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot open that view.' });
+      return;
+    }
     if (this.uiState.view === view) return;
     this.uiState.view = view;
     this.uiState.selectedTaskId = null;
@@ -57,29 +69,34 @@ App.AppController = class AppController {
   }
 
   _togglePanes() {
-    const isTimeView = this.uiState.view.startsWith('time:');
+    const isTimeView = this.uiState.view.startsWith('time:') || this.uiState.view === 'approvals';
     document.getElementById('taskViewWrap').classList.toggle('hidden', isTimeView);
     document.getElementById('timeViewWrap').classList.toggle('hidden', !isTimeView);
   }
 
   /* ---------- task actions ---------- */
   toggleTaskDone(id) {
+    if (!App.can('tasks.write')) return;
     this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
   }
 
   cycleTaskUrgency(id) {
+    if (!App.can('tasks.write')) return;
     this.taskModel.cycleUrgency(id, this.getUserName(this.currentUser));
   }
 
   updateTaskField(id, field, value) {
+    if (!App.can('tasks.write')) return;
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser));
   }
 
   toggleSubtask(taskId, idx) {
+    if (!App.can('tasks.write')) return;
     this.taskModel.toggleSubtask(taskId, idx);
   }
 
   reassignTask(id, newAssignee) {
+    if (!App.can('tasks.write')) return;
     const result = this.taskModel.reassign(id, newAssignee, this.getUserName(this.currentUser));
     if (!result) return;
     if (newAssignee !== this.currentUser) {
@@ -97,10 +114,15 @@ App.AppController = class AppController {
   }
 
   openNewTaskModal() {
+    if (!App.can('tasks.write')) {
+      this.toastView.show({ title: 'No access', sub: 'Your role cannot create tasks.' });
+      return;
+    }
     this.newTaskModal.open();
   }
 
   createTask(payload) {
+    if (!App.can('tasks.write')) return;
     const task = {
       id: App.utils.uid('t'),
       title: payload.title,
@@ -167,6 +189,7 @@ App.AppController = class AppController {
 
   /* ---------- timer actions ---------- */
   startTimer(userId, taskId) {
+    if (!App.can('clock.use')) return;
     const { priorEntry } = this.timeModel.startTimer(userId, taskId);
     if (priorEntry) {
       this.taskModel.addActivity(priorEntry.taskId, {
@@ -190,6 +213,7 @@ App.AppController = class AppController {
   }
 
   stopTimer(userId) {
+    if (!App.can('clock.use')) return;
     const entry = this.timeModel.stopTimer(userId);
     if (!entry) return;
     this.taskModel.addActivity(entry.taskId, {
@@ -204,6 +228,7 @@ App.AppController = class AppController {
   }
 
   toggleTimerForTask(taskId) {
+    if (!App.can('clock.use')) return;
     const active = this.timeModel.activeFor(this.currentUser);
     if (active && active.taskId === taskId) {
       this.stopTimer(this.currentUser);
@@ -213,16 +238,18 @@ App.AppController = class AppController {
   }
 
   toggleGlobalClock() {
+    if (!App.can('clock.use')) return;
     const active = this.timeModel.activeFor(this.currentUser);
     if (active) {
       this.stopTimer(this.currentUser);
       return;
     }
-    let target = this.uiState.selectedTaskId
+    let target = App.can('tasks.view') && this.uiState.selectedTaskId
       ? this.taskModel.find(this.uiState.selectedTaskId)
       : this.taskModel.all().find(t => t.assignee === this.currentUser && t.status !== 'done');
+    if (!target) target = this.taskModel.find(App.DEFAULT_CLOCK_TASK_ID);
     if (!target) {
-      this.toastView.show({ title: 'No task selected', sub: 'Open a task or assign yourself one to clock in.' });
+      this.toastView.show({ title: 'Clock task missing', sub: 'Ask an admin to restore the General shift task.' });
       return;
     }
     this.startTimer(this.currentUser, target.id);

@@ -1,14 +1,16 @@
 window.App = window.App || {};
 
 App.SupabaseDataStore = class SupabaseDataStore {
-  constructor({ supabase, currentUser }) {
+  constructor({ supabase, currentUser, role }) {
     if (!supabase) throw new Error('Supabase client is required.');
     this.supabase = supabase;
     this.currentUser = currentUser;
+    this.role = role || 'member';
   }
 
   async load() {
     const [
+      peopleRes,
       tasksRes,
       watchersRes,
       subtasksRes,
@@ -16,7 +18,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
       entriesRes,
       timersRes,
       notificationsRes,
+      profilesRes,
     ] = await Promise.all([
+      this.supabase.from('team_members').select('*').order('name', { ascending: true }),
       this.supabase.from('tasks').select('*').order('created_at', { ascending: true }),
       this.supabase.from('task_watchers').select('*'),
       this.supabase.from('task_subtasks').select('*').order('sort_order', { ascending: true }),
@@ -24,8 +28,12 @@ App.SupabaseDataStore = class SupabaseDataStore {
       this.supabase.from('time_entries').select('*').order('start_at', { ascending: false }),
       this.supabase.from('active_timers').select('*'),
       this.supabase.from('notifications').select('*').eq('member_id', this.currentUser).order('created_at', { ascending: false }),
+      App.can('roles.manage')
+        ? this.supabase.from('profiles').select('id, email, full_name, approved, role, email_verified, member_id, created_at').order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
+    this._throwIfError(peopleRes, 'people');
     this._throwIfError(tasksRes, 'tasks');
     this._throwIfError(watchersRes, 'task watchers');
     this._throwIfError(subtasksRes, 'subtasks');
@@ -33,12 +41,15 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwIfError(entriesRes, 'time entries');
     this._throwIfError(timersRes, 'active timers');
     this._throwIfError(notificationsRes, 'notifications');
+    this._throwIfError(profilesRes, 'profiles');
 
     const watchersByTask = this._group(watchersRes.data || [], 'task_id');
     const subtasksByTask = this._group(subtasksRes.data || [], 'task_id');
     const activityByTask = this._group(activityRes.data || [], 'task_id');
 
     return {
+      people: this._mapPeople(peopleRes.data || []),
+      profiles: profilesRes.data || [],
       tasks: (tasksRes.data || []).map(row => ({
         id: row.id,
         title: row.title,
@@ -79,8 +90,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
   }
 
   async save({ tasks, timeEntries, activeTimers, notifications }) {
-    await this._upsertTasks(tasks || []);
-    await this._replaceTaskChildren(tasks || []);
+    if (App.can('tasks.write')) {
+      await this._upsertTasks(tasks || []);
+      await this._replaceTaskChildren(tasks || []);
+    }
     await this._replaceTimeEntries(timeEntries || []);
     await this._replaceActiveTimers(activeTimers || {});
     await this._replaceNotifications(notifications || []);
@@ -140,9 +153,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
   }
 
   async _replaceTimeEntries(entries) {
-    const teamIds = Object.keys(App.PEOPLE || {});
-    if (teamIds.length) await this._deleteIn('time_entries', 'user_id', teamIds, 'clearing time entries');
-    const rows = entries.map(entry => ({
+    const clearRes = await this.supabase.from('time_entries').delete().eq('user_id', this.currentUser);
+    this._throwIfError(clearRes, 'clearing your time entries');
+    const rows = entries.filter(entry => entry.userId === this.currentUser).map(entry => ({
       id: entry.id,
       user_id: entry.userId,
       task_id: entry.taskId,
@@ -155,9 +168,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
   }
 
   async _replaceActiveTimers(activeTimers) {
-    const teamIds = Object.keys(App.PEOPLE || {});
-    if (teamIds.length) await this._deleteIn('active_timers', 'user_id', teamIds, 'clearing active timers');
-    const rows = Object.entries(activeTimers).map(([userId, timer]) => ({
+    const clearRes = await this.supabase.from('active_timers').delete().eq('user_id', this.currentUser);
+    this._throwIfError(clearRes, 'clearing your active timer');
+    const rows = Object.entries(activeTimers).filter(([userId]) => userId === this.currentUser).map(([userId, timer]) => ({
       user_id: userId,
       task_id: timer.taskId,
       started_at: new Date(timer.startedAt).toISOString(),
@@ -191,11 +204,38 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwIfError(res, label);
   }
 
+  async updateProfileAccess(profileId, updates) {
+    const res = await this.supabase
+      .from('profiles')
+      .update({
+        role: updates.role,
+        approved: !!updates.approved,
+      })
+      .eq('id', profileId)
+      .select('id, email, full_name, approved, role, email_verified, member_id, created_at')
+      .single();
+    this._throwIfError(res, 'updating profile access');
+    return res.data;
+  }
+
   _group(rows, key) {
     return rows.reduce((acc, row) => {
       const value = row[key];
       acc[value] = acc[value] || [];
       acc[value].push(row);
+      return acc;
+    }, {});
+  }
+
+  _mapPeople(rows) {
+    return rows.reduce((acc, row) => {
+      acc[row.id] = {
+        id: row.id,
+        name: row.name || row.full_name || row.email || row.id,
+        full: row.full_name || row.name || row.email || row.id,
+        email: row.email || '',
+        color: row.color || '#E8A03A',
+      };
       return acc;
     }, {});
   }

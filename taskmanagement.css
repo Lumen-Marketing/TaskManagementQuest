@@ -361,6 +361,8 @@ kbd { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px
 .time-table tr:last-child td { border-bottom: none; }
 .time-table tr.live td { background: rgba(111, 169, 56, 0.06); }
 .time-table .mono { font-family: 'SFMono-Regular', monospace; font-size: 11.5px; }
+.approval-table select { min-width: 170px; }
+.approval-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); }
 
 .bar-row { display: grid; grid-template-columns: 110px 1fr 80px; gap: 12px; align-items: center; padding: 8px 0; font-size: 12px; }
 .bar-track { background: var(--bg-2); border-radius: 4px; height: 10px; overflow: hidden; }

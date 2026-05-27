@@ -44,7 +44,7 @@ App.AuthModel = class AuthModel {
   async _loadProfile() {
     const { data, error } = await this._sb
       .from('profiles')
-      .select('id, email, full_name, approved, role, email_verified')
+      .select('id, email, full_name, approved, role, email_verified, member_id')
       .eq('id', this.user.id)
       .single();
     if (error) {

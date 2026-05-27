@@ -8,6 +8,7 @@ App.SidebarView = class SidebarView {
     this.currentUser = currentUser;
 
     this.peopleList = document.getElementById('peopleList');
+    this.applyRoleVisibility();
     this.renderPeopleList();
     this.bindStaticItems();
     this.subscribe();
@@ -17,8 +18,25 @@ App.SidebarView = class SidebarView {
   bindStaticItems() {
     document.querySelectorAll('.side-item[data-view]').forEach(el => {
       if (el.dataset.view.startsWith('person:')) return;
+      if (!this.controller.canView(el.dataset.view)) {
+        el.classList.add('hidden');
+        return;
+      }
       el.addEventListener('click', () => this.controller.setView(el.dataset.view));
     });
+  }
+
+  applyRoleVisibility() {
+    const adminGroup = document.getElementById('adminSideGroup');
+    if (adminGroup) adminGroup.classList.toggle('hidden', !App.can('roles.manage'));
+
+    const groups = Array.from(document.querySelectorAll('.sidebar .side-group'));
+    const viewsGroup = groups[0];
+    const companiesGroup = groups[1];
+    const peopleGroup = groups.find(group => group.querySelector('#peopleList'));
+    if (viewsGroup) viewsGroup.classList.toggle('hidden', !App.can('tasks.view'));
+    if (companiesGroup) companiesGroup.classList.toggle('hidden', !App.can('tasks.view'));
+    if (peopleGroup) peopleGroup.classList.toggle('hidden', !App.can('tasks.view'));
   }
 
   renderPeopleList() {
@@ -54,7 +72,7 @@ App.SidebarView = class SidebarView {
       if (el) el.textContent = value;
     };
 
-    set('cnt-all', all.length);
+    set('cnt-all', App.can('tasks.view') ? all.length : 0);
     set('cnt-mine', all.filter(t => t.assignee === this.currentUser).length);
     set('cnt-hot', all.filter(t => t.urgency === 'critical' || t.urgency === 'urgent').length);
     set('cnt-today', all.filter(t => t.due === today).length);
