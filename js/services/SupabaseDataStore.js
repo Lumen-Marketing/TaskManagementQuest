@@ -50,9 +50,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
         priority: row.priority,
         urgency: row.urgency,
         status: row.status,
+        project: row.project_id || null,
         watchers: (watchersByTask[row.id] || []).map(w => w.member_id),
-        subtasks: (subtasksByTask[row.id] || []).map(s => ({ t: s.body, d: !!s.done })),
-        activity: (activityByTask[row.id] || []).map(a => ({ who: a.who, what: a.what, when: a.when_label })),
+        subtasks: this._jsonArray(row.subtasks, (subtasksByTask[row.id] || []).map(s => ({ t: s.body, d: !!s.done }))),
+        activity: this._jsonArray(row.activity, (activityByTask[row.id] || []).map(a => ({ who: a.who, what: a.what, when: a.when_label }))),
       })),
       timeEntries: (entriesRes.data || []).map(row => ({
         id: row.id,
@@ -94,10 +95,13 @@ App.SupabaseDataStore = class SupabaseDataStore {
       company_id: task.company,
       creator_id: task.creator,
       assignee_id: task.assignee,
+      project_id: task.project || null,
       due: task.due,
       priority: task.priority || 'medium',
       urgency: task.urgency || 'medium',
       status: task.status || 'todo',
+      subtasks: task.subtasks || [],
+      activity: task.activity || [],
     }));
     const res = await this.supabase.from('tasks').upsert(rows, { onConflict: 'id' });
     this._throwIfError(res, 'saving tasks');
@@ -194,6 +198,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
       acc[value].push(row);
       return acc;
     }, {});
+  }
+
+  _jsonArray(value, fallback) {
+    return Array.isArray(value) ? value : fallback;
   }
 
   _throwIfError(result, label) {

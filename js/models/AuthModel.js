@@ -44,7 +44,7 @@ App.AuthModel = class AuthModel {
   async _loadProfile() {
     const { data, error } = await this._sb
       .from('profiles')
-      .select('id, email, full_name, approved, role')
+      .select('id, email, full_name, approved, role, email_verified')
       .eq('id', this.user.id)
       .single();
     if (error) {
@@ -65,8 +65,14 @@ App.AuthModel = class AuthModel {
 
   async signInWithPassword(email, password) {
     this._requireClient();
-    const { error } = await this._sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await this._sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    if (data && data.session) {
+      this.session = data.session;
+      this.user = data.user;
+      await this._loadProfile();
+      this._emit();
+    }
   }
 
   async signUpWithPassword(email, password, redirectTo) {
@@ -77,6 +83,12 @@ App.AuthModel = class AuthModel {
       options: { emailRedirectTo: redirectTo },
     });
     if (error) throw error;
+    if (data && data.session) {
+      this.session = data.session;
+      this.user = data.user;
+      await this._loadProfile();
+      this._emit();
+    }
     return data;
   }
 

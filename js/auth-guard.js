@@ -19,7 +19,7 @@
   const user = sessionData.session.user;
   const { data: profile, error } = await App.supabase
     .from('profiles')
-    .select('id, email, full_name, approved, role')
+    .select('id, email, full_name, approved, role, email_verified')
     .eq('id', user.id)
     .single();
 
