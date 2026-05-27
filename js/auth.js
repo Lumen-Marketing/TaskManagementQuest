@@ -1,8 +1,8 @@
 /* Bootstrap for the login page.
    Wires the AuthModel, LoginView, and AuthController together. */
 document.addEventListener('DOMContentLoaded', async () => {
-  const loginUrl = window.location.origin + '/';
-  const appUrl = window.location.origin + '/app.html';
+  const loginUrl = App.routes ? App.routes.login : window.location.origin + '/';
+  const appUrl = App.routes ? App.routes.app : window.location.origin + '/app.html';
 
   const authModel = new App.AuthModel();
   const controller = new App.AuthController({

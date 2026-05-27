@@ -3,7 +3,12 @@
    - Not approved -> return to login so pending state can render
    - Approved     -> allow app bootstrap and wire sign-out */
 (async function () {
-  const loginUrl = window.location.origin + '/';
+  const loginUrl = App.routes ? App.routes.login : window.location.origin + '/';
+
+  if (!App.supabase || !App.supabase.auth) {
+    document.body.innerHTML = '<div style="padding:24px;font-family:Inter,system-ui,sans-serif;">Auth service is unavailable. Check Supabase configuration.</div>';
+    throw new Error('Supabase auth is unavailable');
+  }
 
   const { data: sessionData } = await App.supabase.auth.getSession();
   if (!sessionData.session) {
