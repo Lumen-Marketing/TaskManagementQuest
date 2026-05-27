@@ -117,6 +117,19 @@ App.TaskDetailView = class TaskDetailView {
         </div>
 
         <div class="detail-row">
+          <span class="label">Type</span>
+          <select data-field="type" style="font-size:12px; padding:4px 8px;">
+            ${Object.entries(App.TASK_TYPES).map(([k, v]) => `<option value="${k}" ${(t.type || 'admin') === k ? 'selected' : ''}>${v.label}</option>`).join('')}
+          </select>
+        </div>
+        ${t.type === 'bid' ? `
+        <div class="detail-row">
+          <span class="label">Bid status</span>
+          <select data-field="bidStatus" style="font-size:12px; padding:4px 8px;">
+            ${Object.entries(App.BID_STATUSES).map(([k, v]) => `<option value="${k}" ${(t.bidStatus || 'queue') === k ? 'selected' : ''}>${v.label}</option>`).join('')}
+          </select>
+        </div>` : ''}
+        <div class="detail-row">
           <span class="label">Status</span>
           <select data-field="status" style="font-size:12px; padding:4px 8px;">
             ${Object.entries(App.STATUSES).map(([k, v]) => `<option value="${k}" ${t.status === k ? 'selected' : ''}>${v.label}</option>`).join('')}
