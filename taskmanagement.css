@@ -191,7 +191,7 @@ kbd { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px
 /* List */
 .list-row {
   display: grid;
-  grid-template-columns: 28px 1fr 100px 110px 100px 80px 88px 28px 36px;
+  grid-template-columns: 28px 1fr 170px 100px 110px 100px 80px 88px 28px 36px;
   gap: 12px;
   align-items: center;
   padding: 11px 24px;
@@ -205,7 +205,7 @@ kbd { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px
 .list-row.selected { background: var(--amber-bg); border-left: 3px solid var(--amber); padding-left: 21px; }
 .list-header {
   display: grid;
-  grid-template-columns: 28px 1fr 100px 110px 100px 80px 88px 28px 36px;
+  grid-template-columns: 28px 1fr 170px 100px 110px 100px 80px 88px 28px 36px;
   gap: 12px;
   padding: 8px 24px;
   font-size: 10px;
@@ -245,6 +245,36 @@ kbd { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px
 .pill-roof { background: var(--rust-bg); color: var(--rust-ink); }
 .pill-draft { background: var(--blue-bg); color: var(--blue-ink); }
 .pill-lumen { background: var(--amber-bg); color: var(--amber-ink); }
+
+/* Task type pills */
+.type-cell { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pill-type {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 4px;
+  font-size: 10.5px; font-weight: 500;
+}
+.type-lead      { background: #185FA5; color: #FFFFFF; }
+.type-bid       { background: #3A2D14; color: #D9B779; }
+.type-admin     { background: #2A2A2F; color: #C9C9CF; }
+.type-invoicing { background: #1E4A3D; color: #8FD9C0; }
+.type-ar        { background: #4A2118; color: #E8B5A3; }
+.type-meeting   { background: #3D2A55; color: #C7A8E8; }
+
+/* Bid status sub-pill (only shown when type=bid) */
+.pill-bid-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px; border-radius: 4px;
+  font-size: 10px; font-weight: 500;
+  background: var(--bg-3); color: var(--ink-2);
+}
+.pill-bid-status::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+.bid-queue    { color: #8A8A92; }
+.bid-started  { color: #4A9EE0; }
+.bid-supplier { color: #E8A03A; }
+.bid-ready    { color: #5BB87A; }
 .pill-status { padding: 2px 7px; border-radius: 4px; font-size: 10.5px; font-weight: 500; }
 .status-todo { background: var(--bg-3); color: var(--ink-2); }
 .status-doing { background: var(--blue-bg); color: var(--blue-ink); }
