@@ -7,6 +7,14 @@ App.AuthController = class AuthController {
     this.emailRedirect = emailRedirect || appUrl;
   }
 
+  async signInWithGoogle() {
+    try {
+      await this.authModel.signInWithGoogle(this.emailRedirect);
+    } catch (err) {
+      App.EventBus.emit('auth:error', this._friendly(err));
+    }
+  }
+
   async signIn(email, password) {
     try {
       await this.authModel.signInWithPassword(email, password);
