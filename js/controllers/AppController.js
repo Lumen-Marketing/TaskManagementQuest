@@ -127,6 +127,8 @@ App.AppController = class AppController {
       id: App.utils.uid('t'),
       title: payload.title,
       description: payload.description,
+      type: payload.type || 'admin',
+      bidStatus: payload.type === 'bid' ? (payload.bidStatus || 'queue') : null,
       company: payload.company,
       due: payload.due,
       urgency: payload.urgency,
