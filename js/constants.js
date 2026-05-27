@@ -15,6 +15,22 @@ App.COMPANIES = {
   lumen:    { id: 'lumen',    label: 'Lumen',    pill: 'pill-lumen' },
 };
 
+App.TASK_TYPES = {
+  lead:      { id: 'lead',      label: 'Lead',           cls: 'type-lead'      },
+  bid:       { id: 'bid',       label: 'Bid / Estimate', cls: 'type-bid'       },
+  admin:     { id: 'admin',     label: 'Admin',          cls: 'type-admin'     },
+  invoicing: { id: 'invoicing', label: 'Invoicing',      cls: 'type-invoicing' },
+  ar:        { id: 'ar',        label: 'AR',             cls: 'type-ar'        },
+  meeting:   { id: 'meeting',   label: 'Meeting',        cls: 'type-meeting'   },
+};
+
+App.BID_STATUSES = {
+  queue:    { id: 'queue',    label: 'In queue',          cls: 'bid-queue'    },
+  started:  { id: 'started',  label: 'Started',           cls: 'bid-started'  },
+  supplier: { id: 'supplier', label: 'Waiting supplier',  cls: 'bid-supplier' },
+  ready:    { id: 'ready',    label: 'Ready to submit',   cls: 'bid-ready'    },
+};
+
 App.STATUSES = {
   todo:    { label: 'Active',  cls: 'status-doing' },
   pending: { label: 'Pending', cls: 'status-pending' },
