@@ -1,0 +1,166 @@
+/* Hallmark · tokens.css · genre: editorial-utilitarian · design-system: design.md · designed-as-app
+ * Locked design system for Quest HQ. Both surfaces (index.html, app.html) read these tokens.
+ * Colours are OKLCH; spacing is a 4-pt scale; every face/easing/radius is a named token.
+ * Legacy semantic names (--bg, --ink, --amber...) are the source of truth so existing
+ * component CSS keeps working; --color-* / --font-* aliases below make the system portable.
+ */
+
+:root, [data-theme="dark"] {
+  /* paper + ink — warm charcoal under cream */
+  --bg:            oklch(16% 0.006 70);
+  --bg-2:          oklch(20% 0.006 70);
+  --bg-3:          oklch(25% 0.006 70);
+  --surface:       oklch(18% 0.006 70);
+  --ink:           oklch(94% 0.013 85);
+  --ink-2:         oklch(76% 0.012 85);
+  --ink-3:         oklch(55% 0.012 82);
+  --border:        oklch(28% 0.006 72);
+  --border-strong: oklch(35% 0.007 72);
+
+  /* accent — amber */
+  --amber:     oklch(76% 0.13 75);
+  --amber-bg:  oklch(30% 0.06 68);
+  --amber-ink: oklch(83% 0.10 80);
+
+  /* rust */
+  --rust:     oklch(62% 0.15 40);
+  --rust-bg:  oklch(28% 0.075 36);
+  --rust-ink: oklch(74% 0.11 42);
+
+  /* blue */
+  --blue:     oklch(66% 0.12 250);
+  --blue-bg:  oklch(31% 0.07 252);
+  --blue-ink: oklch(79% 0.09 250);
+
+  /* green */
+  --green:     oklch(66% 0.14 132);
+  --green-bg:  oklch(29% 0.07 132);
+  --green-ink: oklch(81% 0.12 130);
+
+  /* task-type swatches (lifted from inline hex into named tokens) */
+  --type-lead:        oklch(50% 0.12 250);   --type-lead-ink:      oklch(98% 0 0);
+  --type-bid:         oklch(28% 0.04 72);    --type-bid-ink:       oklch(80% 0.08 80);
+  --type-admin:       oklch(28% 0.004 280);  --type-admin-ink:     oklch(82% 0.004 280);
+  --type-invoicing:   oklch(34% 0.07 168);   --type-invoicing-ink: oklch(84% 0.10 168);
+  --type-ar:          oklch(33% 0.08 40);    --type-ar-ink:        oklch(82% 0.08 42);
+  --type-meeting:     oklch(34% 0.09 305);   --type-meeting-ink:   oklch(82% 0.10 305);
+
+  /* urgency ladder — bold, full-colour */
+  --u-critical: oklch(50% 0.19 5);
+  --u-urgent:   oklch(58% 0.21 25);
+  --u-high:     oklch(68% 0.18 55);
+  --u-medium:   oklch(76% 0.13 75);
+  --u-low:      oklch(58% 0.12 130);
+  --u-chill:    oklch(45% 0.006 280);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] {
+  --bg:            oklch(95% 0.02 88);
+  --bg-2:          oklch(92% 0.03 88);
+  --bg-3:          oklch(86% 0.04 88);
+  --surface:       oklch(99% 0.008 90);
+  --ink:           oklch(25% 0.022 72);
+  --ink-2:         oklch(45% 0.022 76);
+  --ink-3:         oklch(62% 0.022 80);
+  --border:        oklch(85% 0.03 86);
+  --border-strong: oklch(75% 0.04 86);
+
+  --amber:     oklch(62% 0.13 65);
+  --amber-bg:  oklch(92% 0.05 85);
+  --amber-ink: oklch(43% 0.09 62);
+
+  --rust:     oklch(52% 0.15 38);
+  --rust-bg:  oklch(89% 0.05 35);
+  --rust-ink: oklch(38% 0.12 35);
+
+  --blue:     oklch(52% 0.13 250);
+  --blue-bg:  oklch(90% 0.04 250);
+  --blue-ink: oklch(36% 0.10 254);
+
+  --green:     oklch(54% 0.14 132);
+  --green-bg:  oklch(91% 0.05 126);
+  --green-ink: oklch(39% 0.11 130);
+
+  --type-lead:        oklch(48% 0.13 252);   --type-lead-ink:      oklch(99% 0 0);
+  --type-bid:         oklch(90% 0.05 85);    --type-bid-ink:       oklch(42% 0.09 65);
+  --type-admin:       oklch(90% 0.004 280);  --type-admin-ink:     oklch(40% 0.006 280);
+  --type-invoicing:   oklch(90% 0.06 168);   --type-invoicing-ink: oklch(38% 0.10 168);
+  --type-ar:          oklch(90% 0.05 40);    --type-ar-ink:        oklch(40% 0.11 38);
+  --type-meeting:     oklch(91% 0.06 305);   --type-meeting-ink:   oklch(42% 0.11 305);
+
+  --u-critical: oklch(50% 0.19 5);
+  --u-urgent:   oklch(56% 0.21 25);
+  --u-high:     oklch(66% 0.18 55);
+  --u-medium:   oklch(72% 0.14 75);
+  --u-low:      oklch(52% 0.13 130);
+  --u-chill:    oklch(70% 0.01 280);
+
+  --shadow-sm: 0 1px 2px rgba(45, 31, 14, 0.10), 0 1px 1px rgba(45, 31, 14, 0.06);
+  --shadow-md: 0 4px 12px rgba(45, 31, 14, 0.14), 0 1px 3px rgba(45, 31, 14, 0.08);
+  --shadow-lg: 0 24px 48px rgba(45, 31, 14, 0.18), 0 8px 16px rgba(45, 31, 14, 0.12);
+}
+
+/* ----- type, space, motion, radius : theme-independent ----- */
+:root {
+  --font-display:  'IBM Plex Sans Condensed', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-body:     'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:     'IBM Plex Mono', 'SFMono-Regular', 'Consolas', ui-monospace, monospace;
+
+  /* portable Hallmark aliases → map to the live theme tokens */
+  --color-paper:      var(--bg);
+  --color-paper-2:    var(--bg-2);
+  --color-surface:    var(--surface);
+  --color-ink:        var(--ink);
+  --color-ink-2:      var(--ink-2);
+  --color-rule:       var(--border);
+  --color-accent:     var(--amber);
+  --color-accent-ink: oklch(22% 0.04 70);
+  --color-focus:      var(--amber);
+
+  /* 4-pt spacing scale */
+  --space-3xs: 2px;  --space-2xs: 4px;  --space-xs: 8px;
+  --space-sm:  12px; --space-md:  16px; --space-lg: 24px;
+  --space-xl:  32px; --space-2xl: 48px; --space-3xl: 72px;
+
+  /* type scale */
+  --text-2xs: 10px;  --text-xs: 11px;  --text-sm: 12px;
+  --text-base: 13px; --text-md: 15px;  --text-lg: 18px;
+  --text-xl:  22px;  --text-2xl: 28px; --text-3xl: 34px;
+  --text-display-s: clamp(2rem, 4vw, 2.75rem);
+  --text-display:   clamp(2.75rem, 6vw, 4.5rem);
+
+  /* motion */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast:  120ms;
+  --dur-short: 180ms;
+  --dur-mid:   260ms;
+
+  /* radius — squared for an industrial, instrument-panel feel */
+  --radius-xs: 0px; --radius-sm: 2px; --radius-md: 2px;
+  --radius-lg: 2px; --radius-xl: 2px; --radius-pill: 2px;
+}
+
+html, body { overflow-x: clip; }
+
+/* Universal focus ring — instant, never animated, ≥3:1 contrast */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+:focus:not(:focus-visible) { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
