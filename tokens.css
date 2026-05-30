@@ -1,0 +1,185 @@
+/* Hallmark · tokens.css · genre: editorial-utilitarian · design-system: design.md · designed-as-app
+ * Locked design system for Quest HQ. Both surfaces (index.html, app.html) read these tokens.
+ * Colours are OKLCH; spacing is a 4-pt scale; every face/easing/radius is a named token.
+ * Legacy semantic names (--bg, --ink, --amber...) are the source of truth so existing
+ * component CSS keeps working; --color-* / --font-* aliases below make the system portable.
+ */
+
+:root, [data-theme="dark"] {
+  /* paper + ink — warm charcoal under cream */
+  --bg:            oklch(16% 0.006 70);
+  --bg-2:          oklch(20% 0.006 70);
+  --bg-3:          oklch(25% 0.006 70);
+  --surface:       oklch(18% 0.006 70);
+  --ink:           oklch(94% 0.013 85);
+  --ink-2:         oklch(76% 0.012 85);
+  --ink-3:         oklch(55% 0.012 82);
+  --border:        oklch(28% 0.006 72);
+  --border-strong: oklch(35% 0.007 72);
+
+  /* accent — amber */
+  --amber:     oklch(76% 0.13 75);
+  --amber-bg:  oklch(30% 0.06 68);
+  --amber-ink: oklch(83% 0.10 80);
+
+  /* rust */
+  --rust:     oklch(62% 0.15 40);
+  --rust-bg:  oklch(28% 0.075 36);
+  --rust-ink: oklch(74% 0.11 42);
+
+  /* blue */
+  --blue:     oklch(66% 0.12 250);
+  --blue-bg:  oklch(31% 0.07 252);
+  --blue-ink: oklch(79% 0.09 250);
+
+  /* green */
+  --green:     oklch(66% 0.14 132);
+  --green-bg:  oklch(29% 0.07 132);
+  --green-ink: oklch(81% 0.12 130);
+
+  /* task-type swatches (lifted from inline hex into named tokens) */
+  --type-lead:        oklch(50% 0.12 250);   --type-lead-ink:      oklch(98% 0 0);
+  --type-bid:         oklch(28% 0.04 72);    --type-bid-ink:       oklch(80% 0.08 80);
+  --type-admin:       oklch(28% 0.004 280);  --type-admin-ink:     oklch(82% 0.004 280);
+  --type-invoicing:   oklch(34% 0.07 168);   --type-invoicing-ink: oklch(84% 0.10 168);
+  --type-ar:          oklch(33% 0.08 40);    --type-ar-ink:        oklch(82% 0.08 42);
+  --type-meeting:     oklch(34% 0.09 305);   --type-meeting-ink:   oklch(82% 0.10 305);
+
+  /* urgency ladder — bold, full-colour */
+  --u-critical: oklch(50% 0.19 5);
+  --u-urgent:   oklch(58% 0.21 25);
+  --u-high:     oklch(68% 0.18 55);
+  --u-medium:   oklch(76% 0.13 75);
+  --u-low:      oklch(58% 0.12 130);
+  --u-chill:    oklch(45% 0.006 280);
+
+  /* Pastel chip palette — kept dimmer for dark mode */
+  --pastel-pink:    oklch(32% 0.07 5);    --pastel-pink-ink:   oklch(85% 0.10 5);
+  --pastel-yellow:  oklch(32% 0.08 80);   --pastel-yellow-ink: oklch(86% 0.12 85);
+  --pastel-blue:    oklch(32% 0.07 245);  --pastel-blue-ink:   oklch(85% 0.09 245);
+  --pastel-green:   oklch(32% 0.07 140);  --pastel-green-ink:  oklch(85% 0.10 140);
+  --pastel-lilac:   oklch(32% 0.07 300);  --pastel-lilac-ink:  oklch(85% 0.10 300);
+  --pastel-peach:   oklch(32% 0.07 45);   --pastel-peach-ink:  oklch(85% 0.11 45);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] {
+  /* Cream paper — intelly-inspired soft, warm, low-saturation backdrop */
+  --bg:            oklch(96% 0.018 88);
+  --bg-2:          oklch(98% 0.012 90);
+  --bg-3:          oklch(92% 0.025 86);
+  --surface:       oklch(99.5% 0.005 90);
+  --ink:           oklch(20% 0.012 70);
+  --ink-2:         oklch(42% 0.018 78);
+  --ink-3:         oklch(62% 0.018 80);
+  --border:        oklch(91% 0.012 86);
+  --border-strong: oklch(82% 0.018 86);
+
+  /* Accents — gentler, more pastel feel */
+  --amber:     oklch(78% 0.14 78);
+  --amber-bg:  oklch(94% 0.07 85);
+  --amber-ink: oklch(38% 0.10 65);
+
+  --rust:     oklch(64% 0.16 38);
+  --rust-bg:  oklch(93% 0.05 30);
+  --rust-ink: oklch(40% 0.13 38);
+
+  --blue:     oklch(70% 0.13 250);
+  --blue-bg:  oklch(94% 0.045 245);
+  --blue-ink: oklch(38% 0.11 254);
+
+  --green:     oklch(68% 0.14 138);
+  --green-bg:  oklch(93% 0.06 132);
+  --green-ink: oklch(40% 0.11 132);
+
+  /* Pastel chip palette — for stat cards + priorities (intelly tiles) */
+  --pastel-pink:    oklch(91% 0.06 5);    --pastel-pink-ink:   oklch(38% 0.13 5);
+  --pastel-yellow:  oklch(94% 0.10 95);   --pastel-yellow-ink: oklch(40% 0.10 75);
+  --pastel-blue:    oklch(91% 0.06 240);  --pastel-blue-ink:   oklch(38% 0.12 250);
+  --pastel-green:   oklch(91% 0.07 145);  --pastel-green-ink:  oklch(38% 0.11 138);
+  --pastel-lilac:   oklch(91% 0.06 300);  --pastel-lilac-ink:  oklch(40% 0.12 300);
+  --pastel-peach:   oklch(92% 0.07 50);   --pastel-peach-ink:  oklch(40% 0.13 45);
+
+  --type-lead:        oklch(91% 0.05 250);  --type-lead-ink:      oklch(38% 0.13 252);
+  --type-bid:         oklch(94% 0.06 85);   --type-bid-ink:       oklch(40% 0.10 65);
+  --type-admin:       oklch(94% 0.005 280); --type-admin-ink:     oklch(38% 0.008 280);
+  --type-invoicing:   oklch(91% 0.06 168);  --type-invoicing-ink: oklch(38% 0.11 168);
+  --type-ar:          oklch(92% 0.06 40);   --type-ar-ink:        oklch(40% 0.13 38);
+  --type-meeting:     oklch(92% 0.06 305);  --type-meeting-ink:   oklch(42% 0.12 305);
+
+  /* Priority hues — soft full-color (used as the ring/dot/bar pivot) */
+  --u-critical: oklch(72% 0.16 5);
+  --u-urgent:   oklch(74% 0.16 28);
+  --u-high:     oklch(80% 0.14 55);
+  --u-medium:   oklch(84% 0.13 78);
+  --u-low:      oklch(76% 0.13 140);
+  --u-chill:    oklch(82% 0.01 280);
+
+  --shadow-sm: 0 1px 2px rgba(45, 31, 14, 0.06), 0 1px 1px rgba(45, 31, 14, 0.04);
+  --shadow-md: 0 6px 16px rgba(45, 31, 14, 0.08), 0 2px 4px rgba(45, 31, 14, 0.05);
+  --shadow-lg: 0 24px 48px rgba(45, 31, 14, 0.10), 0 8px 16px rgba(45, 31, 14, 0.06);
+}
+
+/* ----- type, space, motion, radius : theme-independent ----- */
+:root {
+  --font-display:  'IBM Plex Sans Condensed', 'IBM Plex Sans', system-ui, sans-serif;
+  --font-body:     'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:     'IBM Plex Mono', 'SFMono-Regular', 'Consolas', ui-monospace, monospace;
+
+  /* portable Hallmark aliases → map to the live theme tokens */
+  --color-paper:      var(--bg);
+  --color-paper-2:    var(--bg-2);
+  --color-surface:    var(--surface);
+  --color-ink:        var(--ink);
+  --color-ink-2:      var(--ink-2);
+  --color-rule:       var(--border);
+  --color-accent:     var(--amber);
+  --color-accent-ink: oklch(22% 0.04 70);
+  --color-focus:      var(--amber);
+
+  /* 4-pt spacing scale */
+  --space-3xs: 2px;  --space-2xs: 4px;  --space-xs: 8px;
+  --space-sm:  12px; --space-md:  16px; --space-lg: 24px;
+  --space-xl:  32px; --space-2xl: 48px; --space-3xl: 72px;
+
+  /* type scale */
+  --text-2xs: 10px;  --text-xs: 11px;  --text-sm: 12px;
+  --text-base: 13px; --text-md: 15px;  --text-lg: 18px;
+  --text-xl:  22px;  --text-2xl: 28px; --text-3xl: 34px;
+  --text-display-s: clamp(2rem, 4vw, 2.75rem);
+  --text-display:   clamp(2.75rem, 6vw, 4.5rem);
+
+  /* motion */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:     cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast:  120ms;
+  --dur-short: 180ms;
+  --dur-mid:   260ms;
+
+  /* radius — soft, rounded, intelly-leaning */
+  --radius-xs: 4px;  --radius-sm: 10px; --radius-md: 14px;
+  --radius-lg: 20px; --radius-xl: 28px; --radius-pill: 999px;
+}
+
+html, body { overflow-x: clip; }
+
+/* Universal focus ring — instant, never animated, ≥3:1 contrast */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+:focus:not(:focus-visible) { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
