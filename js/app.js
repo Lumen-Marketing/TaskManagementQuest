@@ -195,14 +195,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
     } catch (err) {
-      console.error('[app] Supabase save failed', err);
+      console.error('[app] Supabase save failed', err, 'cause:', err && err.cause);
       // Re-flag the changes so the next save retries them instead of losing them.
       taskModel.markDirty(dirtyTasks.map(t => t.id));
       timeModel.markUnsavedEntries(unsavedEntries.map(e => e.id));
       if (controller.toastView) {
+        // Include the underlying Supabase message in the toast — the wrapper's
+        // friendly text alone hides the diagnosis (RLS, constraint, network).
+        const friendly = (err && err.message) || 'Save failed';
+        const cause = err && err.cause && err.cause.message;
         controller.toastView.show({
           title: 'Supabase save failed',
-          sub: (err && err.message) || 'Will retry on the next change.',
+          sub: cause ? `${friendly} — ${cause}` : friendly,
         });
       }
     }
