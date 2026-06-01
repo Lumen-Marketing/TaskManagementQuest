@@ -102,6 +102,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     dataStore,
   });
 
+  // Expose models on App for console debugging (read-only contract — don't
+  // mutate from console in production, but inspect freely).
+  App.taskModel = taskModel;
+  App.timeModel = timeModel;
+  App.notifModel = notifModel;
+  App.controller = controller;
+  App.dataStore = dataStore;
+
   const toastView = new App.ToastView('toastContainer');
   const newTaskModal = new App.NewTaskModalView({ controller, currentUser: App.CURRENT_USER });
   controller.attachViews({ toastView, newTaskModal });
