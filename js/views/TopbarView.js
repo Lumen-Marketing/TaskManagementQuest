@@ -101,6 +101,9 @@ App.TopbarView = class TopbarView {
   renderNotifs() {
     const unread = this.notifModel.unreadCount();
     this.notifDot.classList.toggle('hidden', unread === 0);
+    // Show the unread count inside the badge so it's actually noticeable.
+    // Cap at 99+ to keep the pill from blowing out the bell icon.
+    this.notifDot.textContent = unread === 0 ? '' : (unread > 99 ? '99+' : String(unread));
 
     const all = this.notifModel.all();
     if (all.length === 0) {
