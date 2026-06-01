@@ -229,15 +229,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Existing users skip it (migration 014 backfills them as onboarded), and
   // anyone can replay it via the avatar menu (see TopbarView).
   App.tour = new App.TourView();
+  // Per-user localStorage key — fallback for when migration 015 hasn't been
+  // run yet so the DB column doesn't exist. Survives reloads on this device
+  // even if the Supabase write fails.
+  const tourLocalKey = () => `qhq.onboarded.${App.currentAuthUser && App.currentAuthUser.id || 'anon'}`;
   const markOnboarded = async () => {
     if (App.previewMode) return;
+    try { window.localStorage.setItem(tourLocalKey(), '1'); } catch (e) {}
     try {
       await App.supabase.from('profiles').update({ onboarded: true }).eq('id', App.currentAuthUser.id);
-      App.currentProfile.onboarded = true;
-    } catch (e) { /* column may not exist until migration 014 runs — ignore */ }
+      if (App.currentProfile) App.currentProfile.onboarded = true;
+    } catch (e) { /* column may not exist until migration 015 runs — local flag still set */ }
   };
   const shouldAutoStartTour = async () => {
     if (App.previewMode) return true; // always available while previewing
+    try { if (window.localStorage.getItem(tourLocalKey()) === '1') return false; } catch (e) {}
     try {
       const { data } = await App.supabase.from('profiles').select('onboarded').eq('id', App.currentAuthUser.id).maybeSingle();
       return !(data && data.onboarded);
