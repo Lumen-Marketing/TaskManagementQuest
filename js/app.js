@@ -84,6 +84,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderFatalDataError(err);
       return;
     }
+    // Best-effort: hard-delete cleared tasks past their 30-day grace.
+    // Fire-and-forget so a slow delete doesn't block first paint; RLS
+    // gates this to roles allowed by migration 017.
+    if (dataStore.purgeExpiredClearedTasks) {
+      dataStore.purgeExpiredClearedTasks().then(n => {
+        if (n) console.info(`[app] purged ${n} expired cleared task(s)`);
+      });
+    }
   }
 
   const controller = new App.AppController({
