@@ -244,6 +244,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const shouldAutoStartTour = async () => {
     if (App.previewMode) return true; // always available while previewing
     try { if (window.localStorage.getItem(tourLocalKey()) === '1') return false; } catch (e) {}
+    // Treat anyone whose profile was created more than 10 minutes ago as
+    // already-onboarded — they're a returning user, not a fresh signup. Auto-
+    // persist the flag so this check doesn't have to run again next reload.
+    const createdAt = App.currentProfile && App.currentProfile.created_at;
+    if (createdAt) {
+      const ageMs = Date.now() - new Date(createdAt).getTime();
+      if (ageMs > 10 * 60 * 1000) { markOnboarded(); return false; }
+    }
     try {
       const { data } = await App.supabase.from('profiles').select('onboarded').eq('id', App.currentAuthUser.id).maybeSingle();
       return !(data && data.onboarded);
