@@ -2242,8 +2242,12 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* Layout: stack — sidebar collapses to icon strip via existing
      .deck.minimized mechanism, but here we hide it by default and
      surface it via a bottom dock-style bar. Simpler: drop sidebar
-     entirely; the topbar logo can act as the menu affordance. */
-  .app {
+     entirely; the topbar logo can act as the menu affordance.
+     `body.x .app` selector covers both the unminimized and minimized
+     state so the `body.sidebar-minimized .app { grid-template-columns: 68px 1fr }`
+     at line 1026 — which has higher specificity than a bare `.app` —
+     can't keep a phantom sidebar column on phones. */
+  body .app {
     grid-template-columns: 1fr;
     grid-template-rows: 56px 1fr;
     height: 100vh;
@@ -2314,20 +2318,16 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     flex-wrap: wrap;
     align-items: center;
     gap: 6px 8px;
-    padding: 12px 56px 12px 14px; /* right pad reserves room for absolute finish-btn */
+    padding: 12px 52px 12px 14px; /* right pad reserves room for absolute finish-btn */
     position: relative;
     border-bottom: 1px solid var(--bg-3);
   }
-  .list-row > input[type="checkbox"] {
-    display: inline-block !important; /* re-enable from earlier rule */
-    width: 22px; height: 22px;
-    margin: 0;
-    flex: 0 0 auto;
-    order: 1;
-  }
+  /* Mobile cards don't need the checkbox — the finish-btn (top-right)
+     is the touch-friendly equivalent and the row itself opens detail. */
+  .list-row > input[type="checkbox"] { display: none !important; }
   .list-row .task-title-cell {
-    flex: 1 1 0;
-    min-width: 100px;
+    flex: 1 1 100%;
+    min-width: 0;
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
@@ -2495,6 +2495,99 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
+}
+
+/* ============================================================
+   RESPONSIVE POLISH PASS — targeted fixes layered on top of the
+   existing breakpoint tiers (1200/900/720/460 + coarse-pointer).
+   Each block names the gap it closes so future edits can grep by
+   symptom.
+   ============================================================ */
+
+/* (1) Kanban / wide tables horizontal overflow.
+   The Kanban board is `repeat(5, minmax(220px, 1fr))` = 1100px+ minimum,
+   and the desktop list-row's 9-column grid sits around 940px minimum.
+   Without overflow-x on the pane, narrow viewports push the whole page
+   sideways. Allowing scroll inside the pane means content that fits
+   shows no scrollbar; only the wide views opt-in. */
+.list-pane { overflow-x: auto; }
+
+/* (2) Stats grid: 4 columns squashes to ~80px each on tablet widths.
+   2×2 below 1100px, single column on the smallest phones. */
+@media (max-width: 1100px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 460px) {
+  .stats { grid-template-columns: 1fr; }
+}
+
+/* (3) Form field-rows: two columns is fine on desktop modals but
+   collides on portrait-tablet modals. Collapse at 900px. */
+@media (max-width: 900px) {
+  .field-row,
+  .field-row-3 { grid-template-columns: 1fr; }
+}
+
+/* (4) Notification panel — was only `position: fixed` on phones.
+   At 721-900 the absolute panel can clip when the topbar shrinks. */
+@media (max-width: 900px) and (min-width: 721px) {
+  .notif-panel {
+    position: fixed;
+    top: 64px;
+    right: 12px;
+    left: auto;
+    width: min(360px, calc(100vw - 24px));
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+}
+
+/* (5) Touch targets — when the primary pointer is coarse, enforce
+   WCAG 2.5.5 minimums on the main button shapes regardless of
+   viewport width. Phones already get 44px in the ≤720 block; this
+   catches tablets in the 721-1200 range that were stuck at ~30px. */
+@media (hover: none) and (pointer: coarse) {
+  .btn { min-height: 40px; padding: 10px 14px; }
+  .icon-btn { width: 40px; height: 40px; }
+  .icon-btn i { font-size: 17px; }
+  .filter-chip { min-height: 36px; padding: 7px 12px; }
+  .toolbar-menu-item { min-height: 40px; }
+  .timer-btn,
+  .finish-btn { min-width: 36px; min-height: 36px; }
+  /* The detail-close & similar small icon-only buttons share .icon-btn
+     so they pick up the 40×40 above. */
+}
+
+/* (6) Detail panel on tablets (721-900) — side-by-side at this
+   width leaves the list squashed to ~250px once you account for
+   sidebar (200) + detail (340). Float the detail as a fixed
+   overlay instead, matching the ≤720 pattern. */
+@media (max-width: 900px) and (min-width: 721px) {
+  .main.with-detail { grid-template-columns: 1fr; }
+  .detail:not(.hidden) {
+    position: fixed;
+    top: 64px;
+    right: 0;
+    bottom: 0;
+    width: min(460px, 100%);
+    z-index: 60;
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+  .resize-handle { display: none; }
+}
+
+/* (7) Topbar right cluster at narrow widths — let it shrink
+   cleanly instead of wrapping or pushing icons off-screen.
+   Search input gets a final clamp between 460-600px so it
+   doesn't dominate the 36px icon buttons. */
+@media (max-width: 720px) {
+  .topbar-right { flex-shrink: 1; min-width: 0; flex-wrap: nowrap; }
+  .search { flex-shrink: 1; min-width: 0; }
+  .search input { min-width: 0; }
+}
+@media (max-width: 600px) and (min-width: 461px) {
+  .search input { width: 120px; }
 }
 
 /* ---- Resize handle: hide on coarse pointers regardless of width
