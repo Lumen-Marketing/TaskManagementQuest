@@ -2504,6 +2504,24 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
    symptom.
    ============================================================ */
 
+/* (0) "Clear done" button on the Done group header — sits right of the
+   count chip; subtle until hovered so it doesn't compete with the
+   group title. */
+.group-clear-btn {
+  margin-left: 8px;
+  font-size: 11.5px;
+  padding: 5px 10px;
+  color: var(--ink-3);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+.group-clear-btn:hover {
+  color: var(--rust-ink);
+  background: var(--rust-bg);
+  border-color: var(--rust);
+}
+.group-clear-btn i { font-size: 13px; }
+
 /* (1) Kanban / wide tables horizontal overflow.
    The Kanban board is `repeat(5, minmax(220px, 1fr))` = 1100px+ minimum,
    and the desktop list-row's 9-column grid sits around 940px minimum.
