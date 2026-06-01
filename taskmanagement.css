@@ -2299,50 +2299,56 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .task-group { margin: 0 10px; border-radius: var(--radius-md); }
   .task-group + .task-group { margin-top: 8px; }
   .task-group > .group-head { padding: 10px 12px; font-size: 13px; }
+  /* Card layout: row 1 holds the checkbox + title (with the finish
+     button pinned to the right via absolute positioning); row 2 holds
+     pills/chips that wrap as needed. A 100%-width pseudo-element
+     between the two zones forces the line break.
+
+     The previous version used `grid-template-areas` with every pill
+     assigned to a single `meta` area, which stacked Type / Priority /
+     Status / Due on top of each other (the "Admin" + "May 28"
+     overlap bug). Flex with an explicit break flows them properly. */
   .task-group .list-row,
   .list-row {
-    /* Re-establish a clean two-row grid: title spans full width on
-       row 1; metadata chips wrap on row 2. */
-    display: grid !important;
-    grid-template-columns: auto 1fr auto !important;
-    grid-template-areas:
-      "check title finish"
-      "meta meta meta";
-    gap: 6px 10px;
+    display: flex !important;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 12px 14px;
+    gap: 6px 8px;
+    padding: 12px 56px 12px 14px; /* right pad reserves room for absolute finish-btn */
+    position: relative;
     border-bottom: 1px solid var(--bg-3);
   }
-  /* Position children by source order — checkboxes, then title, then
-     a wrapping metadata zone, then the finish button at the end. */
   .list-row > input[type="checkbox"] {
     display: inline-block !important; /* re-enable from earlier rule */
-    grid-area: check;
     width: 22px; height: 22px;
     margin: 0;
+    flex: 0 0 auto;
+    order: 1;
   }
   .list-row .task-title-cell {
-    grid-area: title;
-    min-width: 0;
+    flex: 1 1 0;
+    min-width: 100px;
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
     font-size: 15px;
     font-weight: 500;
     line-height: 1.3;
+    order: 2;
   }
-  .list-row .finish-btn {
-    grid-area: finish;
-    width: 40px; height: 40px;
-    flex-shrink: 0;
+  /* Force pills to wrap onto a fresh visual row below the title. */
+  .list-row::after {
+    content: '';
+    flex-basis: 100%;
+    height: 0;
+    order: 3;
   }
-  .list-row .finish-btn i { font-size: 18px; }
-  /* Everything else flows into the metadata row, wrapping naturally */
   .list-row > :not(input):not(.task-title-cell):not(.finish-btn) {
-    grid-area: meta;
-    justify-self: start !important;
-    text-align: left !important;
+    flex: 0 0 auto;
     font-size: 12px;
+    order: 4;
+    justify-self: start;
+    text-align: left;
   }
   /* The .meta-cell wrapper itself becomes a flex container of chips */
   .list-row .meta-cell {
@@ -2351,6 +2357,14 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     align-items: center;
     gap: 6px;
   }
+  .list-row .finish-btn {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 40px; height: 40px;
+    flex: 0 0 auto;
+  }
+  .list-row .finish-btn i { font-size: 18px; }
   /* Hide noisy/duplicated columns on phones */
   .list-row > div:nth-child(4),   /* assignee (often = current user) */
   .list-row .desc-cell,
