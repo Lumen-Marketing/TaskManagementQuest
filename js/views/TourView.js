@@ -79,7 +79,10 @@ App.TourView = class TourView {
 
   end(completed) {
     this._teardown();
-    if (completed && typeof this.onFinish === 'function') this.onFinish();
+    // Dismiss (Skip/Esc) counts the same as finishing — the user has seen it
+    // and doesn't want it again. The `completed` flag is kept on the callback
+    // in case a caller wants to distinguish, but it no longer gates the call.
+    if (typeof this.onFinish === 'function') this.onFinish(completed);
   }
 
   _teardown() {
