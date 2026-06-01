@@ -79,7 +79,20 @@ App.TaskModel = class TaskModel {
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      tasks = tasks.filter(t => t.title.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q));
+      tasks = tasks.filter(t => {
+        if (t.title.toLowerCase().includes(q)) return true;
+        if ((t.description || '').toLowerCase().includes(q)) return true;
+        const person = App.PEOPLE[t.assignee];
+        if (person && (
+          (person.name || '').toLowerCase().includes(q) ||
+          (person.full || '').toLowerCase().includes(q) ||
+          (person.email || '').toLowerCase().includes(q)
+        )) return true;
+        if ((t.project || '').toLowerCase().includes(q)) return true;
+        const company = App.COMPANIES[t.company];
+        if (company && (company.label || '').toLowerCase().includes(q)) return true;
+        return false;
+      });
     }
 
     if (activeFilters) {
