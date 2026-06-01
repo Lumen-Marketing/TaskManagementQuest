@@ -222,13 +222,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Poll for notifications addressed to this user by other people (assignments,
-  // watcher pings) since there's no realtime subscription.
+  // watcher pings) since there's no realtime subscription. Newly arrived
+  // notifications also pop a toast so the user sees them without having to
+  // open the bell — IDs seen on boot are excluded so the first poll after
+  // page load doesn't dump a wall of toasts for older unread items.
   if (!App.previewMode && App.can('tasks.view')) {
+    const seenNotifIds = new Set(notifModel.all().map(n => n.id));
     setInterval(async () => {
       try {
         const fresh = await dataStore.loadNotifications();
+        const arrivals = fresh.filter(n => !seenNotifIds.has(n.id) && !n.read);
         notifModel.hydrate(fresh);
+        fresh.forEach(n => seenNotifIds.add(n.id));
         App.EventBus.emit('notifs:refreshed');
+        arrivals.slice(0, 3).forEach(n => {
+          toastView.show({
+            title: n.meta || 'New notification',
+            sub: App.utils.stripHtml ? App.utils.stripHtml(n.html) : (n.html || '').replace(/<[^>]+>/g, ''),
+          });
+        });
+        if (arrivals.length > 3) {
+          toastView.show({
+            title: `+${arrivals.length - 3} more notifications`,
+            sub: 'Open the bell icon to see them all.',
+          });
+        }
       } catch (e) { /* transient poll error — ignore */ }
     }, 30000);
   }
