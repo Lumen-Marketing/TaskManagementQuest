@@ -61,7 +61,10 @@ App.TaskModel = class TaskModel {
   byAssignee(userId) { return this.tasks.filter(t => t.assignee === userId); }
 
   getFiltered({ view, searchQuery, currentUser, activeFilters }) {
-    let tasks = this.tasks;
+    // Soft-cleared rows (Clear-done-group action) stay in memory so the
+    // optimistic-lock save still works, but they never appear in any
+    // view — boot-time purge hard-deletes them after the 30-day grace.
+    let tasks = this.tasks.filter(t => !t.clearedAt);
     const t0 = App.utils.todayISO(0);
 
     if (view === 'mine') tasks = tasks.filter(t => t.assignee === currentUser);
@@ -257,6 +260,23 @@ App.TaskModel = class TaskModel {
     this._markDirty(id);
     App.EventBus.emit('tasks:changed');
     return { becomingDone };
+  }
+
+  /* Soft-clear every currently-done task. The rows stay in Supabase for the
+     30-day grace window so a misclick is recoverable via a SQL update —
+     after that, boot-time `purgeExpiredClearedTasks` deletes them for good.
+     Returns the count of tasks cleared (0 if there were none).  */
+  clearDoneTasks(userName) {
+    const now = new Date().toISOString();
+    const done = this.tasks.filter(t => t.status === 'done' && !t.clearedAt);
+    if (!done.length) return 0;
+    done.forEach(t => {
+      t.clearedAt = now;
+      this.pushActivity(t, userName, 'cleared from the Done list');
+      this._markDirty(t.id);
+    });
+    App.EventBus.emit('tasks:changed');
+    return done.length;
   }
 
   cyclePriority(id, userName) {
