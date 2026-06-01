@@ -163,7 +163,32 @@ App.SupabaseDataStore = class SupabaseDataStore {
       watchers: task.watchers || [],
       subtasks: task.subtasks || [],
       activity: task.activity || [],
+      cleared_at: task.clearedAt || null,
     };
+  }
+
+  /* Hard-delete tasks whose cleared_at is older than the grace window.
+     Runs on app boot (best-effort); RLS gates this to the same roles
+     allowed by migration 017's "role users can delete tasks" policy.
+     Returns the number of rows removed, or 0 if RLS blocked or nothing
+     was due. Never throws — a network blip on boot shouldn't break login. */
+  async purgeExpiredClearedTasks({ graceDays = 30 } = {}) {
+    try {
+      const cutoff = new Date(Date.now() - graceDays * 24 * 60 * 60 * 1000).toISOString();
+      const res = await this.supabase
+        .from('tasks')
+        .delete()
+        .lt('cleared_at', cutoff)
+        .select('id');
+      if (res.error) {
+        console.warn('[datastore] purge cleared tasks failed', res.error);
+        return 0;
+      }
+      return (res.data || []).length;
+    } catch (err) {
+      console.warn('[datastore] purge cleared tasks threw', err);
+      return 0;
+    }
   }
 
   async _upsertTimeEntries(entries) {
@@ -284,6 +309,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       watchers: Array.isArray(row.watchers) ? row.watchers : [],
       subtasks: Array.isArray(row.subtasks) ? row.subtasks : [],
       activity: Array.isArray(row.activity) ? row.activity : [],
+      clearedAt: row.cleared_at || null,
     };
   }
 
