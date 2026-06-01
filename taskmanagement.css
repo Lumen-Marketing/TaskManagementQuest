@@ -64,7 +64,17 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
 .icon-btn { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; color: var(--ink); background: var(--surface); border: 1px solid var(--border); transition: background 0.15s, border-color 0.15s; }
 .icon-btn:hover { background: var(--bg-2); border-color: var(--border-strong); }
 .icon-btn i { font-size: 16px; }
-.icon-btn .dot { position: absolute; top: 8px; right: 9px; width: 7px; height: 7px; background: var(--rust); border-radius: 50%; border: 1.5px solid var(--surface); }
+.icon-btn .dot {
+  position: absolute; top: 1px; right: 1px;
+  min-width: 16px; height: 16px; padding: 0 5px;
+  background: var(--rust); color: oklch(99% 0 0);
+  border-radius: 999px;
+  border: 2px solid var(--surface);
+  font-family: var(--font-body); font-size: 10px; font-weight: 700;
+  line-height: 12px; text-align: center;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-sizing: border-box;
+}
 .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
 /* Clock widget */
@@ -2267,7 +2277,6 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* Touch-target minimums (WCAG 2.5.5 AAA = 44×44) */
   .icon-btn { width: 44px; height: 44px; }
   .icon-btn i { font-size: 18px; }
-  .icon-btn .dot { top: 11px; right: 12px; }
   .avatar { width: 40px; height: 40px; font-size: 12px; }
   .clock-widget { padding: 10px 14px; min-height: 40px; font-size: 13px; }
   .clock-widget i { font-size: 15px; }
