@@ -322,6 +322,10 @@ App.TaskListView = class TaskListView {
       const head = document.createElement('div');
       head.className = 'group-head';
       head.dataset.groupKey = g.key;
+      // Show a "Clear" button only on the Done bucket and only for users
+      // with task-write permission. Clicking it soft-clears every done task
+      // (30-day grace before hard delete) — see AppController.clearDoneTasks.
+      const showClearBtn = g.key === 'done' && App.can('tasks.write') && g.items.length > 0;
       head.innerHTML = `
         <button class="group-chevron" aria-label="Toggle group" data-action="toggle-group">
           <i class="ti ti-chevron-down"></i>
@@ -329,11 +333,24 @@ App.TaskListView = class TaskListView {
         <span class="group-pill" style="background:${g.color};">${App.utils.escapeHtml(String(g.label || '?').trim().charAt(0).toUpperCase())}</span>
         <span class="group-title">${App.utils.escapeHtml(g.label)}</span>
         <span class="group-count">${g.items.length}</span>
+        ${showClearBtn ? `
+          <button class="btn btn-sm group-clear-btn" data-action="clear-done" title="Clear done tasks (deleted in 30 days)">
+            <i class="ti ti-eraser"></i>
+            <span>Clear</span>
+          </button>
+        ` : ''}
       `;
       head.querySelector('[data-action="toggle-group"]').addEventListener('click', (e) => {
         e.stopPropagation();
         this.controller.toggleGroupCollapsed(g.key);
       });
+      const clearBtn = head.querySelector('[data-action="clear-done"]');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.controller.clearDoneTasks();
+        });
+      }
       section.appendChild(head);
 
       if (!collapsed) {
