@@ -101,8 +101,15 @@ App.AppController = class AppController {
   /* ---------- task actions ---------- */
   toggleTaskDone(id) {
     if (!App.can('tasks.write')) return;
+    const task = this.taskModel.find(id);
     const result = this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
-    if (result && result.becomingDone) this._stopTimerIfOnTask(id);
+    if (!result || !task) return;
+    if (result.becomingDone) {
+      this._stopTimerIfOnTask(id);
+      this._notifyTaskChange(task, 'marked this complete');
+    } else {
+      this._notifyTaskChange(task, 'reopened this task');
+    }
   }
 
   /* Same as toggleTaskDone but fires a celebratory toast when the task moves
@@ -115,7 +122,10 @@ App.AppController = class AppController {
     const result = this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
     if (result && result.becomingDone) {
       this._stopTimerIfOnTask(id);
+      this._notifyTaskChange(task, 'marked this complete');
       this._celebrateCompletion(task);
+    } else if (result) {
+      this._notifyTaskChange(task, 'reopened this task');
     }
   }
 
@@ -129,6 +139,31 @@ App.AppController = class AppController {
     if (this.toastView) {
       this.toastView.show({ title: 'Timer stopped', sub: 'Task is done — clock back in if you’re still working.' });
     }
+  }
+
+  // Broadcast a status/priority/completion change to everyone connected to
+  // the task (creator, assignee, watchers) except the user who made the
+  // change. Covers both directions naturally: supervisor edits → worker
+  // pinged; worker edits → supervisor/creator pinged. In-app only — these
+  // happen often enough that email would be noise.
+  _notifyTaskChange(task, summary) {
+    if (!task) return;
+    const me = this.currentUser;
+    const ids = new Set();
+    if (task.creator && task.creator !== me) ids.add(task.creator);
+    if (task.assignee && task.assignee !== me) ids.add(task.assignee);
+    (task.watchers || []).forEach(w => { if (w && w !== me) ids.add(w); });
+    if (!ids.size) return;
+    const whoEsc = App.utils.escapeHtml(this.getUserName(me));
+    const titleEsc = App.utils.escapeHtml(task.title);
+    const summaryEsc = App.utils.escapeHtml(summary);
+    const inapp = Array.from(ids).map(memberId => ({
+      memberId,
+      taskId: task.id,
+      meta: 'Task update · just now',
+      html: `<strong>${whoEsc}</strong> ${summaryEsc} on <em>${titleEsc}</em>`,
+    }));
+    this._deliver(inapp, [], null);
   }
 
   _celebrateCompletion(task) {
@@ -153,7 +188,14 @@ App.AppController = class AppController {
 
   cycleTaskPriority(id) {
     if (!App.can('tasks.write')) return;
+    const task = this.taskModel.find(id);
+    if (!task) return;
+    const prev = task.priority;
     this.taskModel.cyclePriority(id, this.getUserName(this.currentUser));
+    if (task.priority !== prev) {
+      const label = (App.PRIORITIES[task.priority] && App.PRIORITIES[task.priority].label) || task.priority;
+      this._notifyTaskChange(task, `set priority to ${label}`);
+    }
   }
 
   /* Soft-clear every done task, after a confirm prompt. Rows stay in
@@ -176,10 +218,17 @@ App.AppController = class AppController {
 
   updateTaskField(id, field, value) {
     if (!App.can('tasks.write')) return;
-    const prev = field === 'status' ? (this.taskModel.find(id) || {}).status : null;
+    const task = this.taskModel.find(id);
+    if (!task) return;
+    const prev = task[field];
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser));
     if (field === 'status' && value === 'done' && prev !== 'done') {
       this._stopTimerIfOnTask(id);
+    }
+    if ((field === 'status' || field === 'priority') && prev !== value) {
+      const dict = field === 'status' ? App.STATUSES : App.PRIORITIES;
+      const label = (dict && dict[value] && dict[value].label) || value;
+      this._notifyTaskChange(task, `changed ${field} to ${label}`);
     }
   }
 
