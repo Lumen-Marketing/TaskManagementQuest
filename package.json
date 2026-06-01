@@ -1,0 +1,18 @@
+{
+  "name": "task-management-quest",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Quest HQ — static SPA (Supabase backend). package.json exists only for Playwright dev tooling; runtime is a zero-build static site.",
+  "scripts": {
+    "dev": "node tools/dev-server.mjs",
+    "test": "playwright test",
+    "test:local": "playwright test --project=local",
+    "test:smoke": "playwright test --project=preview-smoke"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

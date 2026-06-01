@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quest HQ — Task Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/tabler-icons/tabler-icons.min.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="taskmanagement.css">
+<script>
+  // Apply persisted theme before first paint to avoid flash.
+  (function () {
+    try {
+      var t = localStorage.getItem('questhq:theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      else document.documentElement.setAttribute('data-theme', 'light');
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo"><i class="ti ti-bolt"></i></div>
+      <div>
+        <div class="brand-name">Quest HQ</div>
+        <div class="brand-sub">Roofing · Drafting · Lumen</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="search">
+        <i class="ti ti-search"></i>
+        <input type="text" id="searchInput" placeholder="Search tasks, people, projects" />
+      </div>
+
+      <!-- Clock-in / Clock-out widget -->
+      <div id="clockWidget" class="clock-widget" title="Clock in / out">
+        <i class="ti ti-player-play-filled"></i>
+        <span id="clockLabel">Clock in</span>
+        <span id="clockTimer" class="clock-timer hidden">00:00:00</span>
+      </div>
+
+      <button class="icon-btn" id="scaleBtn" aria-label="Display size" title="Display size">
+        <i class="ti ti-zoom-scan"></i>
+      </button>
+
+      <div style="position: relative;">
+        <button class="icon-btn" id="notifBtn" aria-label="Notifications">
+          <i class="ti ti-bell"></i>
+          <span class="dot hidden" id="notifDot"></span>
+        </button>
+        <div id="notifPanel" class="notif-panel hidden">
+          <div class="notif-head">
+            <div class="notif-head-title">Inbox</div>
+            <button class="btn-sm" id="markAllRead" style="font-size: 11px; color: var(--ink-3);">Mark all read</button>
+          </div>
+          <div class="notif-list" id="notifList"></div>
+        </div>
+      </div>
+      <div class="avatar" id="userAvatar" title="Account" style="background: var(--amber); color: var(--color-accent-ink);">AM</div>
+    </div>
+  </div>
+
+  <!-- LEFT SIDEBAR -->
+  <nav class="deck">
+    <div class="sidebar">
+      <button class="side-minimize-btn" id="sideMinimizeBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
+        <i class="ti ti-layout-sidebar-left-collapse"></i>
+      </button>
+
+      <div class="side-group grp-views">
+        <div class="side-label">Workspace</div>
+        <div class="side-item active" data-view="all" title="All"><i class="ti ti-list-check"></i><span class="side-item-label">All</span><span class="side-count" id="cnt-all">0</span></div>
+        <div class="side-item" data-view="mine" title="Mine"><i class="ti ti-user"></i><span class="side-item-label">Mine</span><span class="side-count" id="cnt-mine">0</span></div>
+        <div class="side-item" data-view="hot" title="Urgent"><i class="ti ti-bolt" style="color: var(--u-urgent);"></i><span class="side-item-label">Urgent</span><span class="side-count" id="cnt-hot" style="color: var(--u-urgent);">0</span></div>
+        <div class="side-item" data-view="today" title="Today"><i class="ti ti-flame" style="color: var(--rust);"></i><span class="side-item-label">Today</span><span class="side-count danger-text" id="cnt-today">0</span></div>
+        <div class="side-item" data-view="overdue" title="Overdue"><i class="ti ti-alert-triangle"></i><span class="side-item-label">Overdue</span><span class="side-count" id="cnt-overdue">0</span></div>
+        <div class="side-item" data-view="watching" title="Watching"><i class="ti ti-eye"></i><span class="side-item-label">Watching</span><span class="side-count" id="cnt-watching">0</span></div>
+      </div>
+
+      <div id="sideExtraGroups"></div>
+    </div>
+  </nav>
+
+  <!-- WORK SURFACE -->
+  <main class="main" id="mainPane">
+    <div class="list-pane" id="listPane">
+
+      <div class="work-toolbar">
+        <div class="work-toolbar-spacer"></div>
+        <button class="btn" id="viewBtn"><i class="ti ti-table"></i>View: Table</button>
+        <button class="btn" id="filterBtn"><i class="ti ti-filter"></i>Filter</button>
+        <button class="btn" id="sortBtn"><i class="ti ti-arrows-sort"></i>Sort</button>
+        <button class="btn" id="groupBtn"><i class="ti ti-layout-rows"></i>Group by</button>
+        <button class="btn btn-primary" id="newTaskBtn"><i class="ti ti-plus"></i>New task</button>
+      </div>
+
+      <div class="page-head">
+        <div class="page-title-block">
+          <div class="page-eyebrow" id="pageEyebrow">This week</div>
+          <h1 class="page-title" id="pageTitle">All tasks</h1>
+        </div>
+        <div class="page-head-widgets">
+          <div class="up-next-mount" id="upNextWidget"></div>
+          <div class="progress-widget-mount" id="progressWidget"></div>
+        </div>
+      </div>
+
+      <div id="filterBar" class="filter-bar hidden"></div>
+
+      <div id="taskViewWrap">
+        <div class="list-header">
+          <span></span>
+          <span>Task</span>
+          <span>Type</span>
+          <span>Assignee</span>
+          <span>Priority</span>
+          <span>Status</span>
+          <span>Due</span>
+          <span>Description</span>
+          <span></span>
+        </div>
+
+        <div id="listBody"></div>
+      </div>
+
+      <!-- Time-tracking views render into this container -->
+      <div id="timeViewWrap" class="hidden"></div>
+    </div>
+
+    <!-- Drag-resize handle (only visible when the detail pane is open) -->
+    <div class="resize-handle hidden" id="resizeHandle" aria-hidden="true"></div>
+
+    <!-- Detail panel (toggled) -->
+    <aside class="detail hidden" id="detailPane"></aside>
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ============ MVC SCRIPT LOAD ORDER ============
+     Foundation → Models → Views → Controllers → Bootstrap.
+     Each file attaches to the global `App` namespace. -->
+
+<!-- Supabase SDK + auth guard (must run before app bootstrap) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/EventBus.js"></script>
+<script src="js/config.js"></script>
+<script src="js/errors.js"></script>
+<script src="js/auth-guard.js"></script>
+
+<!-- Foundation -->
+<script src="js/constants.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/validate.js"></script>
+<script src="js/observability.js"></script>
+
+<!-- Models -->
+<script src="js/models/TaskModel.js"></script>
+<script src="js/models/TimeModel.js"></script>
+<script src="js/models/NotificationModel.js"></script>
+<script src="js/services/SupabaseDataStore.js"></script>
+<script src="js/services/ReminderEngine.js"></script>
+
+<!-- Views -->
+<script src="js/views/ToastView.js"></script>
+<script src="js/views/TopbarView.js"></script>
+<script src="js/views/SidebarView.js"></script>
+<script src="js/views/TaskListView.js"></script>
+<script src="js/views/TaskDetailView.js"></script>
+<script src="js/views/TimeView.js"></script>
+<script src="js/views/ApprovalView.js"></script>
+<script src="js/views/ClockDashboardView.js"></script>
+<script src="js/views/HierarchyView.js"></script>
+<script src="js/views/TourView.js"></script>
+<script src="js/views/NewTaskModalView.js"></script>
+<script src="js/views/FilterBarView.js"></script>
+<script src="js/views/ResizeHandleView.js"></script>
+<script src="js/views/ToolbarMenuView.js"></script>
+<script src="js/views/UiScaleView.js"></script>
+<script src="js/views/ProgressWidgetView.js"></script>
+<script src="js/views/UpNextWidgetView.js"></script>
+
+<!-- Controllers -->
+<script src="js/controllers/AppController.js"></script>
+
+<!-- Bootstrap -->
+<script src="js/app.js"></script>
+</body>
+</html>

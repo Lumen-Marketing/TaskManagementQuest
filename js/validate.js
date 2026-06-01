@@ -1,0 +1,120 @@
+/* Input validation. Each validator returns a cleaned/coerced value, or throws
+   App.errors.ValidationError with a user-safe message and the offending field.
+   Validators here are defense-in-depth: SQL CHECK constraints + RLS are the
+   final wall, this layer just stops obvious junk from reaching the network. */
+window.App = window.App || {};
+
+App.validate = (function () {
+  const { ValidationError } = App.errors;
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const ISO_TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
+
+  const LIMITS = {
+    email: 254,        // RFC 5321
+    name: 80,
+    title: 200,
+    description: 5000,
+    watchers: 25,
+    passwordMin: 6,
+    passwordMax: 128,
+  };
+
+  function email(value, { field = 'email' } = {}) {
+    const v = String(value == null ? '' : value).trim().toLowerCase();
+    if (!v) throw new ValidationError('Email is required.', { field });
+    if (v.length > LIMITS.email) throw new ValidationError('Email is too long.', { field });
+    if (!EMAIL_RE.test(v)) throw new ValidationError('Enter a valid email address.', { field });
+    return v;
+  }
+
+  function password(value, { field = 'password', min = LIMITS.passwordMin, max = LIMITS.passwordMax } = {}) {
+    const v = String(value == null ? '' : value);
+    if (!v) throw new ValidationError('Password is required.', { field });
+    if (v.length < min) throw new ValidationError(`Password must be at least ${min} characters.`, { field });
+    if (v.length > max) throw new ValidationError(`Password is too long (max ${max}).`, { field });
+    return v;
+  }
+
+  function displayName(value, { field = 'name' } = {}) {
+    const v = String(value == null ? '' : value).trim();
+    if (!v) throw new ValidationError('Enter a display name.', { field });
+    if (v.length > LIMITS.name) throw new ValidationError(`Name is too long (max ${LIMITS.name}).`, { field });
+    return v;
+  }
+
+  function nonEmpty(value, label, { field, max } = {}) {
+    const v = String(value == null ? '' : value).trim();
+    if (!v) throw new ValidationError(`${label} is required.`, { field });
+    if (max && v.length > max) throw new ValidationError(`${label} is too long (max ${max}).`, { field });
+    return v;
+  }
+
+  function oneOf(value, allowed, { field, label } = {}) {
+    if (!allowed.includes(value)) {
+      const name = label || field || 'Value';
+      throw new ValidationError(`${name} is not one of the allowed values.`, { field });
+    }
+    return value;
+  }
+
+  function isoDate(value, { field = 'due', required = false } = {}) {
+    const v = String(value == null ? '' : value).trim();
+    if (!v) {
+      if (required) throw new ValidationError('Date is required.', { field });
+      return null;
+    }
+    if (!ISO_DATE_RE.test(v)) throw new ValidationError('Date must be in YYYY-MM-DD format.', { field });
+    const ts = Date.parse(v + 'T00:00:00Z');
+    if (Number.isNaN(ts)) throw new ValidationError('Invalid date.', { field });
+    return v;
+  }
+
+  function isoTime(value, { field = 'dueTime' } = {}) {
+    const v = String(value == null ? '' : value).trim();
+    if (!v) return null;
+    if (!ISO_TIME_RE.test(v)) throw new ValidationError('Time must be in HH:MM format.', { field });
+    return v;
+  }
+
+  /* Validate the payload coming out of NewTaskModalView. Returns a frozen,
+     cleaned object — callers should use the return value, not the input. */
+  function newTask(payload) {
+    if (!payload || typeof payload !== 'object') {
+      throw new ValidationError('Task data is missing.');
+    }
+    const title = nonEmpty(payload.title, 'Title', { field: 'title', max: LIMITS.title });
+    const description = String(payload.description || '').slice(0, LIMITS.description);
+    const type = oneOf(payload.type || 'admin', Object.keys(App.TASK_TYPES || {}), { field: 'type', label: 'Type' });
+    const company = oneOf(payload.company, Object.keys(App.COMPANIES || {}), { field: 'company', label: 'Company' });
+    const priority = oneOf(payload.priority || 'medium', Object.keys(App.PRIORITIES || {}), { field: 'priority', label: 'Priority' });
+    const status = oneOf(payload.status || 'todo', Object.keys(App.STATUSES || {}), { field: 'status', label: 'Status' });
+    const assignee = nonEmpty(payload.assignee, 'Assignee', { field: 'assignee' });
+    if (!(App.PEOPLE || {})[assignee]) throw new ValidationError('Unknown assignee.', { field: 'assignee' });
+
+    const watchers = Array.isArray(payload.watchers) ? payload.watchers : [];
+    if (watchers.length > LIMITS.watchers) {
+      throw new ValidationError(`Too many watchers (max ${LIMITS.watchers}).`, { field: 'watchers' });
+    }
+    for (const w of watchers) {
+      if (!(App.PEOPLE || {})[w]) throw new ValidationError(`Unknown watcher: ${w}`, { field: 'watchers' });
+    }
+
+    const due = isoDate(payload.due, { field: 'due' });
+    const dueTime = isoTime(payload.dueTime, { field: 'dueTime' });
+    const bidStatus = type === 'bid'
+      ? oneOf(payload.bidStatus || 'queue', Object.keys(App.BID_STATUSES || {}), { field: 'bidStatus', label: 'Bid status' })
+      : null;
+
+    return Object.freeze({
+      title, description, type, company, priority, status,
+      assignee, watchers: watchers.slice(), due, dueTime, bidStatus,
+    });
+  }
+
+  return {
+    email, password, displayName, nonEmpty, oneOf, isoDate, isoTime, newTask,
+    EMAIL_RE, LIMITS,
+  };
+})();
