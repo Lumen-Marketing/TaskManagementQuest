@@ -391,7 +391,7 @@ App.AppController = class AppController {
   }
 
   /* ---------- team-watching: ping a direct report ---------- */
-  pingTeamMember(memberId, info = {}) {
+  async pingTeamMember(memberId, info = {}) {
     if (!memberId || memberId === this.currentUser) return;
     const person = App.PEOPLE[memberId] || { full: memberId, name: memberId };
     const fromName = (App.PEOPLE[this.currentUser] && App.PEOPLE[this.currentUser].full) || 'Your supervisor';
@@ -404,19 +404,43 @@ App.AppController = class AppController {
     const meta = `From ${fromName}`;
     const html = `<strong>Status check requested.</strong><br>${fromName} is asking about ${reason}.`;
 
-    // Deliver to the report (Supabase row when wired, no-op in preview mode).
-    if (this.dataStore && typeof this.dataStore.sendNotifications === 'function') {
-      this.dataStore.sendNotifications([{ memberId, meta, html }]).catch(err => {
-        console.warn('[ping] sendNotifications failed', err);
-      });
+    if (!this.dataStore || typeof this.dataStore.sendNotifications !== 'function') {
+      if (this.toastView) this.toastView.show({ title: 'Ping unavailable', sub: 'No data store wired up.' });
+      return;
     }
 
-    // Confirmation toast for me.
-    if (this.toastView) {
-      this.toastView.show({
-        title: 'Pinged ' + (person.name || person.full),
-        sub: 'They\'ll see the request next time they open the app.',
-      });
+    // Verify the recipient has a profile row whose member_id matches — the
+    // notifications table FKs to team_members(id), and the worker's poll
+    // queries by their profile.member_id. If the profile is missing or the
+    // slug doesn't line up, the insert will succeed but the worker will
+    // never see it.
+    const recipientProfile = (App.PROFILES || []).find(p => p.member_id === memberId);
+    if (!recipientProfile) {
+      if (this.toastView) {
+        this.toastView.show({
+          title: `Can't ping ${person.name || person.full}`,
+          sub: 'They haven’t signed up yet, or their account isn’t linked to this team slot.',
+        });
+      }
+      return;
+    }
+
+    try {
+      await this.dataStore.sendNotifications([{ memberId, meta, html }]);
+      if (this.toastView) {
+        this.toastView.show({
+          title: 'Pinged ' + (person.name || person.full),
+          sub: 'They’ll see it within 30s of opening the app.',
+        });
+      }
+    } catch (err) {
+      console.error('[ping] sendNotifications failed', err);
+      if (this.toastView) {
+        this.toastView.show({
+          title: 'Ping failed',
+          sub: (err && err.message) || 'The notification could not be saved.',
+        });
+      }
     }
   }
 
