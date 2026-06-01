@@ -140,6 +140,24 @@ App.AppController = class AppController {
     this.taskModel.cyclePriority(id, this.getUserName(this.currentUser));
   }
 
+  /* Soft-clear every done task, after a confirm prompt. Rows stay in
+     Supabase for a 30-day grace window (boot-time purge does the real
+     delete), so a fat-finger is recoverable by SQL update. */
+  clearDoneTasks() {
+    if (!App.can('tasks.write')) return;
+    const doneCount = this.taskModel.all().filter(t => t.status === 'done' && !t.clearedAt).length;
+    if (!doneCount) return;
+    const msg = `Clear ${doneCount} done task${doneCount > 1 ? 's' : ''}? They'll be hidden everywhere and permanently deleted in 30 days.`;
+    if (!window.confirm(msg)) return;
+    const cleared = this.taskModel.clearDoneTasks(this.getUserName(this.currentUser));
+    if (cleared && this.toastView) {
+      this.toastView.show({
+        title: `Cleared ${cleared} task${cleared > 1 ? 's' : ''}`,
+        sub: 'They’ll be permanently deleted in 30 days.',
+      });
+    }
+  }
+
   updateTaskField(id, field, value) {
     if (!App.can('tasks.write')) return;
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser));
