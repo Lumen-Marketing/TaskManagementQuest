@@ -101,7 +101,8 @@ App.AppController = class AppController {
   /* ---------- task actions ---------- */
   toggleTaskDone(id) {
     if (!App.can('tasks.write')) return;
-    this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
+    const result = this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
+    if (result && result.becomingDone) this._stopTimerIfOnTask(id);
   }
 
   /* Same as toggleTaskDone but fires a celebratory toast when the task moves
@@ -112,7 +113,22 @@ App.AppController = class AppController {
     const task = this.taskModel.find(id);
     if (!task) return;
     const result = this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
-    if (result && result.becomingDone) this._celebrateCompletion(task);
+    if (result && result.becomingDone) {
+      this._stopTimerIfOnTask(id);
+      this._celebrateCompletion(task);
+    }
+  }
+
+  // When a task transitions to Done, stop the current user's timer if it's
+  // pointed at that task — otherwise it keeps logging time to a completed
+  // task. The user can hit Clock In again to resume general-shift tracking.
+  _stopTimerIfOnTask(taskId) {
+    const active = this.timeModel.activeFor(this.currentUser);
+    if (!active || active.taskId !== taskId) return;
+    this.stopTimer(this.currentUser);
+    if (this.toastView) {
+      this.toastView.show({ title: 'Timer stopped', sub: 'Task is done — clock back in if you’re still working.' });
+    }
   }
 
   _celebrateCompletion(task) {
@@ -160,7 +176,11 @@ App.AppController = class AppController {
 
   updateTaskField(id, field, value) {
     if (!App.can('tasks.write')) return;
+    const prev = field === 'status' ? (this.taskModel.find(id) || {}).status : null;
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser));
+    if (field === 'status' && value === 'done' && prev !== 'done') {
+      this._stopTimerIfOnTask(id);
+    }
   }
 
   toggleSubtask(taskId, idx) {
