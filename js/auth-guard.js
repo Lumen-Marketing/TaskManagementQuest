@@ -58,7 +58,7 @@ App.authReady = (async function () {
   const user = sessionData.session.user;
   const { data: profile, error } = await App.supabase
     .from('profiles')
-    .select('id, email, full_name, approved, role, email_verified, member_id')
+    .select('id, email, full_name, approved, role, email_verified, member_id, created_at')
     .eq('id', user.id)
     .single();
 
