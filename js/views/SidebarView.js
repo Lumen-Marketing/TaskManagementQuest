@@ -58,13 +58,71 @@ App.SidebarView = class SidebarView {
     if (topLeft) {
       topLeft.style.cursor = 'pointer';
       topLeft.setAttribute('title', 'Toggle sidebar');
-      topLeft.addEventListener('click', () => this.toggleMinimize());
+      topLeft.addEventListener('click', () => {
+        if (this._isMobile()) this._toggleMobileDrawer();
+        else this.toggleMinimize();
+      });
+      this._injectMobileMenuHint(topLeft);
     }
+    this._setupMobileDrawer();
   }
 
   applyStoredMinimize() {
+    // On phones the sidebar renders as a slide-in drawer (open or closed);
+    // the desktop "icon-strip" minimize state has no meaning there.
+    if (this._isMobile()) { this._setMinimized(false); return; }
     const stored = localStorage.getItem(this.MINIMIZE_KEY) === '1';
     this._setMinimized(stored);
+  }
+
+  _isMobile() {
+    return window.matchMedia('(max-width: 720px)').matches;
+  }
+
+  _setupMobileDrawer() {
+    if (!document.querySelector('.sidebar-backdrop')) {
+      const bd = document.createElement('div');
+      bd.className = 'sidebar-backdrop';
+      bd.addEventListener('click', () => this._closeMobileDrawer());
+      document.body.appendChild(bd);
+    }
+    // Tapping any nav item should dismiss the drawer on mobile.
+    document.addEventListener('click', (e) => {
+      if (!this._isMobile()) return;
+      if (!document.body.classList.contains('sidebar-open')) return;
+      if (e.target.closest('.side-item')) this._closeMobileDrawer();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('sidebar-open')) {
+        this._closeMobileDrawer();
+      }
+    });
+    // Crossing the mobile breakpoint: reset minimize state and close drawer.
+    const mq = window.matchMedia('(max-width: 720px)');
+    mq.addEventListener('change', (e) => {
+      this._closeMobileDrawer();
+      if (e.matches) {
+        this._setMinimized(false);
+      } else {
+        this._setMinimized(localStorage.getItem(this.MINIMIZE_KEY) === '1');
+      }
+    });
+  }
+
+  _toggleMobileDrawer() {
+    if (document.body.classList.contains('sidebar-open')) this._closeMobileDrawer();
+    else this._openMobileDrawer();
+  }
+
+  _openMobileDrawer()  { document.body.classList.add('sidebar-open'); }
+  _closeMobileDrawer() { document.body.classList.remove('sidebar-open'); }
+
+  _injectMobileMenuHint(topLeft) {
+    if (topLeft.querySelector('.mobile-menu-hint')) return;
+    const hint = document.createElement('i');
+    hint.className = 'ti ti-menu-2 mobile-menu-hint';
+    hint.setAttribute('aria-hidden', 'true');
+    topLeft.appendChild(hint);
   }
 
   toggleMinimize() {

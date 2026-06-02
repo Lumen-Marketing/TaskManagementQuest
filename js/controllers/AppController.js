@@ -271,7 +271,15 @@ App.AppController = class AppController {
         await this.dataStore.sendNotifications(inappRecipients);
       }
     } catch (err) {
-      if (this.toastView) this.toastView.show({ title: 'Notification delivery failed', sub: (err && err.message) || 'Recipients may not see this until reload.' });
+      console.error('[notify] in-app delivery failed', err, 'cause:', err && err.cause);
+      if (this.toastView) {
+        const friendly = (err && err.message) || 'Recipients may not see this until reload.';
+        const cause = err && err.cause && err.cause.message;
+        this.toastView.show({
+          title: 'Notification delivery failed',
+          sub: cause ? `${friendly} — ${cause}` : friendly,
+        });
+      }
     }
     const unique = Array.from(new Set((emails || []).filter(Boolean)));
     if (unique.length && emailContent) {

@@ -2622,3 +2622,88 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 @media (pointer: coarse) {
   .resize-handle { display: none !important; }
 }
+
+/* ============================================================
+   MOBILE SIDEBAR DRAWER (≤720px)
+   Replaces the earlier `.app > .deck { display: none }` rule —
+   the sidebar slides in from the left as a drawer triggered by
+   tapping the topbar-left logo area (body.sidebar-open).
+   Backdrop, Esc, and item-tap all dismiss it (wired in JS).
+   ============================================================ */
+.mobile-menu-hint   { display: none; }
+.sidebar-backdrop   { display: none; }
+
+@media (max-width: 720px) {
+  .app > .deck {
+    display: flex !important;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 84vw;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.22s var(--ease-out);
+    box-shadow: 4px 0 18px rgba(0, 0, 0, 0.35);
+    padding: 14px 10px 18px;
+    overflow-y: auto;
+  }
+  body.sidebar-open .app > .deck { transform: translateX(0); }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 56px 0 0 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s var(--ease-out);
+  }
+  body.sidebar-open .sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Tap-target hint in the topbar */
+  .mobile-menu-hint {
+    display: inline-flex;
+    align-items: center;
+    font-size: 20px;
+    margin-left: 6px;
+    color: oklch(75% 0.012 80);
+  }
+
+  /* The desktop icon-strip "minimized" mode doesn't apply inside the
+     drawer — force full pill items even if body.sidebar-minimized
+     happens to be set from a prior desktop session. */
+  body.sidebar-minimized .app > .deck,
+  .app > .deck.minimized {
+    padding: 14px 10px 18px;
+    align-items: stretch;
+  }
+  body.sidebar-minimized .deck .sidebar,
+  .deck.minimized .sidebar { align-items: stretch; gap: 14px; }
+  body.sidebar-minimized .deck .side-label,
+  body.sidebar-minimized .deck .side-item-label,
+  body.sidebar-minimized .deck .side-count,
+  body.sidebar-minimized .deck .side-group-chevron,
+  body.sidebar-minimized .deck .side-group-head,
+  .deck.minimized .side-label,
+  .deck.minimized .side-item-label,
+  .deck.minimized .side-count,
+  .deck.minimized .side-group-chevron,
+  .deck.minimized .side-group-head { display: revert; }
+  body.sidebar-minimized .deck .side-item,
+  .deck.minimized .side-item {
+    width: auto;
+    height: auto;
+    padding: 10px 14px;
+    justify-content: flex-start;
+    gap: 11px;
+    border-radius: var(--radius-md);
+  }
+  /* The collapse-to-icons button has no role inside a drawer */
+  .side-minimize-btn { display: none !important; }
+}
