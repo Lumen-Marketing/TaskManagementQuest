@@ -2680,7 +2680,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
      happens to be set from a prior desktop session. */
   body.sidebar-minimized .app > .deck,
   .app > .deck.minimized {
-    padding: 14px 10px 18px;
+    padding: 8px 10px 18px;
     align-items: stretch;
   }
   body.sidebar-minimized .deck .sidebar,
@@ -2699,7 +2699,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .deck.minimized .side-item {
     width: auto;
     height: auto;
-    padding: 10px 14px;
+    padding: 10px 12px;
     justify-content: flex-start;
     gap: 11px;
     border-radius: var(--radius-md);

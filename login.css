@@ -366,6 +366,29 @@
     min-height: 100dvh;
   }
   .login-split { min-height: 100dvh; }
+
+  /* Hide the editorial brand panel on phones — the "Operations board"
+     headline + lede push the actual sign-in form below the fold, and
+     sign-in is the only thing a user comes here to do. The compact
+     .login-brand (already in the form column, just `display: none` by
+     default) takes over as the identity. */
+  .login-aside { display: none; }
+  .login-brand {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+
+  /* Center the auth column with phone-appropriate breathing room and
+     let the card span the column instead of capping at 380px. */
+  .login-main { padding: 32px 16px; }
+  .login-shell { gap: 12px; max-width: 100%; }
+  .login-card {
+    padding: 20px 16px;
+    border-radius: var(--radius-lg);
+  }
+  .login-title { font-size: var(--text-xl); }
+  .login-sub   { margin-bottom: var(--space-md); }
 }
 
 @media (hover: none) and (pointer: coarse) {
