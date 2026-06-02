@@ -2707,3 +2707,34 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* The collapse-to-icons button has no role inside a drawer */
   .side-minimize-btn { display: none !important; }
 }
+
+/* ============================================================
+   MOBILE TOPBAR — single dark band, hamburger on the left.
+   Desktop splits the topbar into a dark left brand column and a
+   light right action area; on phones we unify both into one dark
+   bar and put the menu affordance on the far left.
+   ============================================================ */
+@media (max-width: 720px) {
+  .topbar { background: oklch(17% 0.012 70); }
+  .topbar-left { background: transparent; }
+
+  /* Right-side icon buttons: transparent glyphs on the dark bar
+     instead of light pills that would clash with the new bg. */
+  .topbar-right .icon-btn {
+    background: transparent;
+    border-color: transparent;
+    color: oklch(92% 0.012 80);
+  }
+  .topbar-right .icon-btn:hover {
+    background: oklch(24% 0.014 70);
+    border-color: transparent;
+  }
+
+  /* Swap visual order to: ☰  Quest HQ  ⚡
+     DOM stays the same — flex `order` does the reshuffle so the
+     existing click handler on .topbar-left still fires correctly. */
+  .topbar-left { display: flex; align-items: center; }
+  .topbar-left .mobile-menu-hint { order: 1; margin-left: 0; margin-right: 4px; }
+  .topbar-left > div:not(.logo)   { order: 2; }
+  .topbar-left .logo              { order: 3; }
+}
