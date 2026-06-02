@@ -2737,4 +2737,26 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .topbar-left .mobile-menu-hint { order: 1; margin-left: 0; margin-right: 4px; }
   .topbar-left > div:not(.logo)   { order: 2; }
   .topbar-left .logo              { order: 3; }
+
+  /* Drop the drawer's box-shadow — its vertical blur was bleeding
+     up into the topbar's bottom edge and creating a visible "seam"
+     even though both surfaces share the same background color. The
+     backdrop (rgba over the page) already provides enough visual
+     separation when the drawer is open. */
+  .app > .deck { box-shadow: none; }
+
+  /* Tighter drawer padding so the WORKSPACE label sits closer to
+     the topbar without a big empty band. */
+  .app > .deck { padding: 8px 10px 18px; }
+
+  /* Align nav items with section labels. Both now sit at 22px from
+     the drawer's outer edge (10px drawer padding + 12px element
+     padding), matching the WORKSPACE / COMPANY / TIME headers. */
+  .app > .deck .side-item { padding: 10px 12px; }
+
+  /* Tighter vertical rhythm between sections on a phone-sized
+     drawer — the desktop 18px gap leaves the bottom items
+     (Admin / Clock dashboard) below the fold on common viewports. */
+  .app > .deck .side-group { margin-bottom: 10px; }
+  .app > .deck .side-group-collapsible { margin-top: 4px; }
 }
