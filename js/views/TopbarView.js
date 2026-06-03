@@ -150,6 +150,7 @@ App.TopbarView = class TopbarView {
           <button class="theme-opt ${currentTheme === 'light' ? 'active' : ''}" data-theme-set="light"><i class="ti ti-sun"></i>Light</button>
         </div>
       </div>
+      <div class="user-menu-item" data-action="edit-profile"><i class="ti ti-user-edit"></i>Edit profile</div>
       <div class="user-menu-item" data-action="show-tour"><i class="ti ti-help"></i>Show tour again</div>
       <div class="user-menu-item" data-action="sign-out"><i class="ti ti-logout"></i>Sign out</div>
     `;
@@ -162,6 +163,10 @@ App.TopbarView = class TopbarView {
 
     this.userMenu = menu;
 
+    menu.querySelector('[data-action="edit-profile"]').addEventListener('click', () => {
+      this.closeUserMenu();
+      if (this.controller && this.controller.openProfile) this.controller.openProfile();
+    });
     menu.querySelector('[data-action="show-tour"]').addEventListener('click', () => {
       this.closeUserMenu();
       if (App.startTour) App.startTour();

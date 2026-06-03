@@ -58,7 +58,7 @@ App.authReady = (async function () {
   const user = sessionData.session.user;
   const { data: profile, error } = await App.supabase
     .from('profiles')
-    .select('id, email, full_name, approved, role, email_verified, member_id, created_at')
+    .select('id, email, full_name, approved, role, email_verified, member_id, created_at, avatar_url')
     .eq('id', user.id)
     .single();
 
@@ -96,9 +96,10 @@ App.authReady = (async function () {
     if (avatar) {
       avatar.title = user.email || name || 'Account';
       const meta = user.user_metadata || {};
-      if (meta.avatar_url) {
+      const avatarSrc = profile.avatar_url || meta.avatar_url || '';
+      if (avatarSrc) {
         avatar.style.background = 'transparent';
-        avatar.innerHTML = `<img src="${meta.avatar_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+        avatar.innerHTML = `<img src="${avatarSrc}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
       } else {
         const initials = name.trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
         if (initials) avatar.textContent = initials;

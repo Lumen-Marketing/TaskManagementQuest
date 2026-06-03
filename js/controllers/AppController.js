@@ -30,9 +30,14 @@ App.AppController = class AppController {
     this.newTaskModal = null;
   }
 
-  attachViews({ toastView, newTaskModal }) {
+  attachViews({ toastView, newTaskModal, profileView }) {
     this.toastView = toastView;
     this.newTaskModal = newTaskModal;
+    this.profileView = profileView;
+  }
+
+  openProfile() {
+    if (this.profileView) this.profileView.open();
   }
 
   /* ---------- helpers ---------- */

@@ -1,0 +1,303 @@
+window.App = window.App || {};
+
+App.ProfileView = class ProfileView {
+  constructor({ controller }) {
+    this.controller = controller;
+    this.modal = null;
+    this.pendingFile = null;
+    this.removePending = false;
+  }
+
+  open() {
+    if (this.modal) return;
+    this.pendingFile = null;
+    this.removePending = false;
+
+    this.modal = document.createElement('div');
+    this.modal.className = 'modal-backdrop';
+    this.modal.id = 'profileModal';
+    this.modal.innerHTML = this.template();
+    document.body.appendChild(this.modal);
+
+    this.bindEvents();
+    setTimeout(() => {
+      const input = document.getElementById('pf-name');
+      if (input) { input.focus(); input.select(); }
+    }, 50);
+  }
+
+  close() {
+    if (!this.modal) return;
+    this.modal.remove();
+    this.modal = null;
+  }
+
+  template() {
+    const profile = App.currentProfile || {};
+    const currentName = profile.full_name || '';
+    const currentAvatar = this._currentAvatarUrl();
+    const initials = this._initialsOf(currentName);
+
+    return `
+      <div class="modal" data-stop>
+        <div class="modal-head">
+          <div class="modal-title">Edit profile</div>
+          <button class="icon-btn" data-action="close" aria-label="Close"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="profile-avatar-row">
+            <div class="profile-avatar-preview" id="pf-preview">
+              ${currentAvatar
+                ? `<img src="${App.utils.escapeHtml(currentAvatar)}" alt="Current avatar" />`
+                : `<span class="profile-avatar-initials">${App.utils.escapeHtml(initials)}</span>`}
+            </div>
+            <div class="profile-avatar-actions">
+              <label class="btn">
+                <i class="ti ti-upload"></i> Upload photo
+                <input type="file" id="pf-file" accept="image/*" style="display:none;" />
+              </label>
+              <button type="button" class="btn-link ${currentAvatar ? '' : 'hidden'}" id="pf-remove">Remove photo</button>
+              <div class="profile-hint">JPG or PNG, up to 2 MB. Auto-resized to 512×512.</div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:18px;">
+            <label class="field-label" for="pf-name">Display name</label>
+            <input type="text" id="pf-name" value="${App.utils.escapeHtml(currentName)}" placeholder="Your name" maxlength="80" />
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn" data-action="close">Cancel</button>
+            <button class="btn btn-primary" data-action="submit">Save changes</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  bindEvents() {
+    this.modal.addEventListener('click', (e) => {
+      if (e.target === this.modal) this.close();
+    });
+    this.modal.querySelectorAll('[data-action="close"]').forEach(el => {
+      el.addEventListener('click', () => this.close());
+    });
+    this.modal.querySelector('[data-action="submit"]').addEventListener('click', () => this.submit());
+
+    const removeBtn = document.getElementById('pf-remove');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        this.removePending = true;
+        this.pendingFile = null;
+        document.getElementById('pf-file').value = '';
+        const initials = this._initialsOf(document.getElementById('pf-name').value);
+        document.getElementById('pf-preview').innerHTML =
+          `<span class="profile-avatar-initials">${App.utils.escapeHtml(initials)}</span>`;
+        removeBtn.classList.add('hidden');
+      });
+    }
+
+    document.getElementById('pf-file').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        this._inlineError('Please choose an image file.');
+        e.target.value = '';
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        this._inlineError('Image must be 2 MB or smaller.');
+        e.target.value = '';
+        return;
+      }
+      this.pendingFile = file;
+      this.removePending = false;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        document.getElementById('pf-preview').innerHTML =
+          `<img src="${ev.target.result}" alt="New avatar preview" />`;
+        if (removeBtn) removeBtn.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    this.modal.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.close();
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        this.submit();
+      }
+    });
+
+    // Name change updates the initials preview when no photo is showing.
+    document.getElementById('pf-name').addEventListener('input', () => {
+      if (!this.pendingFile && (this.removePending || !this._currentAvatarUrl())) {
+        const initials = this._initialsOf(document.getElementById('pf-name').value);
+        document.getElementById('pf-preview').innerHTML =
+          `<span class="profile-avatar-initials">${App.utils.escapeHtml(initials)}</span>`;
+      }
+    });
+  }
+
+  async submit() {
+    const nameRaw = (document.getElementById('pf-name').value || '').trim();
+    if (!nameRaw) {
+      this._inlineError('Display name is required.');
+      return;
+    }
+
+    const submitBtn = this.modal.querySelector('[data-action="submit"]');
+    const originalLabel = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving…';
+
+    try {
+      let avatarUrl = this._currentAvatarUrl();
+      let avatarChanged = false;
+
+      if (this.pendingFile) {
+        avatarUrl = await this._uploadAvatar(this.pendingFile);
+        avatarChanged = true;
+      } else if (this.removePending) {
+        avatarUrl = null;
+        avatarChanged = true;
+      }
+
+      await this._saveProfile(nameRaw, avatarUrl, avatarChanged);
+
+      if (this.controller && this.controller.toastView) {
+        this.controller.toastView.show({ title: 'Profile updated', sub: '' });
+      }
+      this.close();
+    } catch (err) {
+      console.error('[profile] save failed', err);
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalLabel;
+      this._inlineError((err && err.message) || 'Could not save profile.');
+    }
+  }
+
+  async _uploadAvatar(file) {
+    const resized = await this._resizeImage(file, 512);
+    const uid = App.currentAuthUser && App.currentAuthUser.id;
+    if (!uid) throw new Error('Not signed in.');
+
+    const path = `${uid}/avatar.jpg`;
+    const { error } = await App.supabase.storage
+      .from('avatars')
+      .upload(path, resized, {
+        contentType: 'image/jpeg',
+        upsert: true,
+        cacheControl: '0',
+      });
+    if (error) throw error;
+
+    const { data } = App.supabase.storage.from('avatars').getPublicUrl(path);
+    return `${data.publicUrl}?v=${Date.now()}`;
+  }
+
+  _resizeImage(file, maxDim) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(
+            blob => blob ? resolve(blob) : reject(new Error('Image encode failed.')),
+            'image/jpeg',
+            0.85
+          );
+        };
+        img.onerror = () => reject(new Error('Could not load image.'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('Could not read file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async _saveProfile(fullName, avatarUrl, avatarChanged) {
+    const profile = App.currentProfile;
+    const memberId = profile && profile.member_id;
+    const firstName = fullName.split(/\s+/)[0] || fullName;
+
+    const profileUpdate = { full_name: fullName };
+    if (avatarChanged) profileUpdate.avatar_url = avatarUrl;
+
+    const profileRes = await App.supabase
+      .from('profiles')
+      .update(profileUpdate)
+      .eq('id', profile.id);
+    if (profileRes.error) throw profileRes.error;
+
+    if (memberId) {
+      const memberUpdate = { name: firstName, full_name: fullName };
+      if (avatarChanged) memberUpdate.avatar_url = avatarUrl;
+
+      const memberRes = await App.supabase
+        .from('team_members')
+        .update(memberUpdate)
+        .eq('id', memberId);
+      if (memberRes.error) throw memberRes.error;
+    }
+
+    if (avatarChanged) {
+      try {
+        await App.supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
+      } catch (e) { /* metadata mirror is best-effort */ }
+    }
+
+    App.currentProfile = Object.assign({}, profile, profileUpdate);
+    if (memberId && App.PEOPLE && App.PEOPLE[memberId]) {
+      App.PEOPLE[memberId].name = firstName;
+      App.PEOPLE[memberId].full = fullName;
+      if (avatarChanged) App.PEOPLE[memberId].avatar_url = avatarUrl;
+    }
+
+    this._repaintTopbarAvatar(fullName, avatarChanged ? avatarUrl : (App.currentProfile.avatar_url || null));
+    App.EventBus.emit('profile:changed');
+    App.EventBus.emit('tasks:changed');
+  }
+
+  _repaintTopbarAvatar(name, avatarUrl) {
+    const avatar = document.getElementById('userAvatar');
+    if (!avatar) return;
+    if (avatarUrl) {
+      avatar.style.background = 'transparent';
+      avatar.innerHTML = `<img src="${App.utils.escapeHtml(avatarUrl)}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+    } else {
+      avatar.style.background = 'var(--amber)';
+      avatar.style.color = 'var(--color-accent-ink)';
+      avatar.innerHTML = '';
+      avatar.textContent = this._initialsOf(name);
+    }
+  }
+
+  _currentAvatarUrl() {
+    const p = App.currentProfile || {};
+    const meta = (App.currentAuthUser && App.currentAuthUser.user_metadata) || {};
+    return p.avatar_url || meta.avatar_url || '';
+  }
+
+  _initialsOf(name) {
+    return (name || '').trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() || '?';
+  }
+
+  _inlineError(msg) {
+    const existing = this.modal.querySelector('.profile-inline-error');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.className = 'profile-inline-error';
+    div.textContent = msg;
+    const actions = this.modal.querySelector('.modal-actions');
+    actions.parentNode.insertBefore(div, actions);
+    setTimeout(() => { if (div.parentNode) div.remove(); }, 4000);
+  }
+};
