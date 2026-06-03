@@ -146,6 +146,12 @@ App.TaskDetailView = class TaskDetailView {
         </div>
 
         <div class="detail-row">
+          <span class="label">Company</span>
+          <select data-field="company" style="font-size:12px; padding:4px 8px;">
+            ${Object.values(App.COMPANIES).map(c => `<option value="${App.utils.escapeHtml(c.id)}" ${t.company === c.id ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="detail-row">
           <span class="label">Type</span>
           <select data-field="type" style="font-size:12px; padding:4px 8px;">
             ${Object.entries(App.TASK_TYPES).map(([k, v]) => `<option value="${k}" ${(t.type || 'admin') === k ? 'selected' : ''}>${v.label}</option>`).join('')}
