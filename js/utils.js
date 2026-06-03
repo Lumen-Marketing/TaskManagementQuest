@@ -5,6 +5,26 @@ App.utils = {
     return String(name || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   },
 
+  /* Returns a self-contained <span class="avatar-xs ..."> element for
+     the given person. Prefers the uploaded avatar_url over the colored
+     initials fallback. Pass `extraClass` to merge additional classes
+     onto the span (defaults to none). All callers should use this in
+     place of hand-rolled `<span class="avatar-xs" style="background:
+     ${color}">${initials}</span>` so uploaded photos appear everywhere
+     the same way. */
+  avatarHtml(person, extraClass = '') {
+    const cls = `avatar-xs${extraClass ? ' ' + extraClass : ''}`;
+    if (!person) {
+      return `<span class="${cls}" style="background:var(--ink-3);">?</span>`;
+    }
+    if (person.avatar_url) {
+      // avatar_url is escaped to be safe inside an attribute even if
+      // the migration-022 CHECK constraint were ever bypassed.
+      return `<span class="${cls}" style="background:transparent; padding:0;"><img src="${App.utils.escapeHtml(person.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" /></span>`;
+    }
+    return `<span class="${cls}" style="background:${person.color || 'var(--ink-3)'};">${App.utils.initials(person.full || person.name || '')}</span>`;
+  },
+
   todayISO(offset = 0) {
     const d = new Date();
     d.setDate(d.getDate() + offset);

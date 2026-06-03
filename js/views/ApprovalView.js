@@ -59,6 +59,7 @@ App.ApprovalView = class ApprovalView {
       full: profile.full_name || profile.email || 'Member',
       email: profile.email || '',
       color: '#E8A03A',
+      avatar_url: profile.avatar_url || null,
     };
     const roles = Object.entries(App.ROLES).map(([id, role]) =>
       `<option value="${id}" ${profile.role === id ? 'selected' : ''}>${role.label}</option>`
@@ -78,7 +79,7 @@ App.ApprovalView = class ApprovalView {
       <tr data-profile-id="${profile.id}" data-member-id="${profile.member_id || ''}">
         <td>
           <span style="display:inline-flex;align-items:center;gap:8px;">
-            <span class="avatar-xs" style="background:${person.color};">${App.utils.initials(person.full)}</span>
+            ${App.utils.avatarHtml(person)}
             <span style="font-size:12px;">${App.utils.escapeHtml(person.full)}</span>
           </span>
         </td>

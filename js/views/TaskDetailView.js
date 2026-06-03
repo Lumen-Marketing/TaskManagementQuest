@@ -64,7 +64,7 @@ App.TaskDetailView = class TaskDetailView {
       const p = App.PEOPLE[w];
       if (!p) return '';
       return `<span class="watcher-chip-detail" data-watcher-id="${App.utils.escapeHtml(w)}">
-        <span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>
+        ${App.utils.avatarHtml(p)}
         ${App.utils.escapeHtml(p.name)}
         <button class="watcher-remove" data-action="remove-watcher" data-member-id="${App.utils.escapeHtml(w)}" aria-label="Remove ${App.utils.escapeHtml(p.name)}" type="button">×</button>
       </span>`;
@@ -179,7 +179,7 @@ App.TaskDetailView = class TaskDetailView {
         <div class="detail-row">
           <span class="label">Created by</span>
           <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
-            <span class="avatar-xs" style="background:${creator.color};">${App.utils.initials(creator.full)}</span>${creator.name}
+            ${App.utils.avatarHtml(creator)}${creator.name}
           </span>
         </div>
         <div class="detail-row">

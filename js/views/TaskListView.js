@@ -422,7 +422,7 @@ App.TaskListView = class TaskListView {
         <span class="due-cell ${due.cls}">${due.text}${t.dueTime ? ` · ${App.utils.formatClock(t.dueTime)}` : ''}</span>
       </div>
       <div class="kanban-card-foot">
-        <span class="avatar-xs" style="background:${person.color};">${App.utils.initials(person.full)}</span>
+        ${App.utils.avatarHtml(person)}
         <span class="kanban-card-assignee">${App.utils.escapeHtml(person.name)}</span>
       </div>
     `;
@@ -499,7 +499,7 @@ App.TaskListView = class TaskListView {
         ${t.type === 'bid' && App.BID_STATUSES[t.bidStatus] ? `<span class="pill-bid-status ${App.BID_STATUSES[t.bidStatus].cls}">${App.BID_STATUSES[t.bidStatus].label}</span>` : ''}
       </div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
-        <span class="avatar-xs" style="background:${person.color};">${App.utils.initials(person.full)}</span>${person.name}
+        ${App.utils.avatarHtml(person)}${person.name}
       </div>
       <div><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
       <div><span class="pill-status ${status.cls}">${status.label}</span></div>

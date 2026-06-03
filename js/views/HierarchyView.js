@@ -68,6 +68,7 @@ App.HierarchyView = class HierarchyView {
         .forEach(s => sections.push({
           name: this.person(s.member_id).full,
           color: this.person(s.member_id).color,
+          avatar_url: this.person(s.member_id).avatar_url,
           role: this.roleLabel(s.role),
           companyIds: Array.isArray(s.company_ids) ? s.company_ids : [],
           reports: directReports(s.member_id),
@@ -76,6 +77,7 @@ App.HierarchyView = class HierarchyView {
       sections.push({
         name: `${this.person(me.member_id).full} (You)`,
         color: this.person(me.member_id).color,
+        avatar_url: this.person(me.member_id).avatar_url,
         role: this.roleLabel(me.role),
         companyIds: Array.isArray(me.company_ids) ? me.company_ids : [],
         reports: directReports(me.member_id),
@@ -109,7 +111,7 @@ App.HierarchyView = class HierarchyView {
       : `<div class="org-empty">No direct reports</div>`;
     const avatar = section.pool
       ? `<span class="avatar-xs org-pool-icon"><i class="ti ti-users"></i></span>`
-      : `<span class="avatar-xs" style="background:${section.color};">${App.utils.initials(section.name)}</span>`;
+      : App.utils.avatarHtml({ avatar_url: section.avatar_url, color: section.color, full: section.name });
     const co = section.pool ? '' : this.companyChips(section.companyIds);
     return `
       <div class="org-node ${section.pool ? 'org-node-pool' : ''}">
@@ -134,7 +136,7 @@ App.HierarchyView = class HierarchyView {
     const co = this.companyChips(profile.company_ids);
     return `
       <div class="org-report">
-        <span class="avatar-xs" style="background:${person.color};">${App.utils.initials(person.full)}</span>
+        ${App.utils.avatarHtml(person)}
         <span class="org-report-name">${App.utils.escapeHtml(person.full)}</span>
         <span class="org-report-meta">
           <span class="org-report-role">${App.utils.escapeHtml(this.roleLabel(profile.role))}</span>

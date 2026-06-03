@@ -50,7 +50,7 @@ App.NewTaskModalView = class NewTaskModalView {
             <div>
               <div class="field-label">Created by <i class="ti ti-lock"></i></div>
               <div class="locked-field">
-                <span class="avatar-xs" style="background:${me.color};">${App.utils.initials(me.full)}</span>You (${me.name})
+                ${App.utils.avatarHtml(me)}You (${me.name})
               </div>
             </div>
             <div>
@@ -206,7 +206,7 @@ App.NewTaskModalView = class NewTaskModalView {
       const p = App.PEOPLE[id];
       const chip = document.createElement('span');
       chip.className = 'watcher-tag';
-      chip.innerHTML = `<span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>${p.name} <i class="ti ti-x remove"></i>`;
+      chip.innerHTML = `${App.utils.avatarHtml(p)}${p.name} <i class="ti ti-x remove"></i>`;
       chip.querySelector('.remove').addEventListener('click', (e) => {
         e.stopPropagation();
         this.watchers.delete(id);
@@ -225,7 +225,7 @@ App.NewTaskModalView = class NewTaskModalView {
       Object.values(App.PEOPLE).filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
         const item = document.createElement('div');
         item.className = 'watcher-dropdown-item';
-        item.innerHTML = `<span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>${p.full}`;
+        item.innerHTML = `${App.utils.avatarHtml(p)}${p.full}`;
         item.addEventListener('click', () => {
           this.watchers.add(p.id);
           dropdown.classList.add('hidden');

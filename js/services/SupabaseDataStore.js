@@ -343,6 +343,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
         full: row.full_name || row.name || row.email || row.id,
         email: row.email || '',
         color: App.utils.safeColor(row.color),
+        avatar_url: row.avatar_url || null,
       };
       return acc;
     }, {});

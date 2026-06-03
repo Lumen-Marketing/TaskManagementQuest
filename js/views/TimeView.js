@@ -131,7 +131,7 @@ App.TimeView = class TimeView {
         <tr class="live">
           <td>
             <span style="display:inline-flex; align-items:center; gap:6px;">
-              <span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>${p.name}
+              ${App.utils.avatarHtml(p)}${p.name}
             </span>
           </td>
           <td>${t ? App.utils.escapeHtml(t.title) : '—'}</td>
@@ -150,7 +150,7 @@ App.TimeView = class TimeView {
         <tr>
           <td>
             <span style="display:inline-flex; align-items:center; gap:6px;">
-              <span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>${p.name}
+              ${App.utils.avatarHtml(p)}${p.name}
             </span>
           </td>
           <td class="mono">${App.utils.formatHours(todayMs)}</td>
@@ -222,7 +222,7 @@ App.TimeView = class TimeView {
           <td><span class="pill ${company.pill}">${company.label}</span></td>
           <td>
             <span style="display:inline-flex; align-items:center; gap:6px;">
-              <span class="avatar-xs" style="background:${person.color};">${App.utils.initials(person.full)}</span>${person.name}
+              ${App.utils.avatarHtml(person)}${person.name}
             </span>
           </td>
           <td class="mono">${App.utils.formatHours(x.ms)}</td>

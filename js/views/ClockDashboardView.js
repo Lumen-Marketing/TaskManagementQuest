@@ -47,7 +47,7 @@ App.ClockDashboardView = class ClockDashboardView {
         <tr class="live">
           <td>
             <span style="display:inline-flex; align-items:center; gap:6px;">
-              <span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>${App.utils.escapeHtml(p.full)}
+              ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.full)}
             </span>
           </td>
           <td>${t ? App.utils.escapeHtml(t.title) : '<em>unknown task</em>'}</td>
@@ -69,7 +69,7 @@ App.ClockDashboardView = class ClockDashboardView {
       <tr>
         <td>
           <span style="display:inline-flex; align-items:center; gap:6px;">
-            <span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>${App.utils.escapeHtml(p.full)}
+            ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.full)}
           </span>
         </td>
         <td>${isLive
