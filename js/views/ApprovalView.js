@@ -146,6 +146,7 @@ App.ApprovalView = class ApprovalView {
       button.addEventListener('click', async () => {
         const row = button.closest('[data-profile-id]');
         const profileId = row.dataset.profileId;
+        const memberId = row.dataset.memberId || null;
         const name = row.dataset.personName || 'this user';
         const ok = window.confirm(
           `Remove access for ${name}?\n\nThey'll be signed out of the app and disappear from this list. Their login email stays reserved and their past tasks are kept.`
@@ -153,7 +154,7 @@ App.ApprovalView = class ApprovalView {
         if (!ok) return;
         button.disabled = true;
         try {
-          await this.dataStore.deleteProfile(profileId);
+          await this.dataStore.deleteProfile(profileId, memberId);
           this.controller.toastView.show({ title: 'User removed', sub: 'Their access has been revoked.' });
           await this.reloadAndRender();
         } catch (err) {

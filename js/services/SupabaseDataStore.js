@@ -303,17 +303,31 @@ App.SupabaseDataStore = class SupabaseDataStore {
     return res.data;
   }
 
-  /* Remove a user's access by hard-deleting their profile row. RLS gates
-     this to managers (migration 024's "managers can delete profiles"
-     policy) and forbids deleting your own profile. We leave the matching
-     team_members row in place on purpose — it's referenced by NOT NULL FKs
-     on tasks, and dropping it would orphan their historical tasks. With no
-     profile the account is treated as unapproved and is gated out of the
-     app (AuthModel.isApproved). */
-  async deleteProfile(profileId) {
+  /* Remove a user's access by hard-deleting their profile row, then prune
+     their team_members row so they also drop out of the assignee picker
+     (App.PEOPLE). RLS gates the profile delete to managers (migration 024's
+     "managers can delete profiles" policy) and forbids deleting your own.
+
+     The team_members delete is best-effort: the member-side FKs on tasks /
+     time_entries are ON DELETE RESTRICT, so if the person is still load-
+     bearing for real data the delete fails — we swallow that and keep the
+     row so their name still renders on historical tasks. Only truly
+     orphaned members (no remaining references) actually get removed, which
+     mirrors the prune in migration 025. With no profile the account is
+     treated as unapproved and gated out of the app (AuthModel.isApproved). */
+  async deleteProfile(profileId, memberId) {
     if (!profileId) return;
     const res = await this.supabase.from('profiles').delete().eq('id', profileId);
     this._throwIfError(res, 'deleting profile');
+    if (memberId) {
+      const memberRes = await this.supabase.from('team_members').delete().eq('id', memberId);
+      // FK RESTRICT (still referenced by a task) is expected and fine — keep
+      // the member for history. Other errors are surfaced to the console but
+      // don't fail the delete: the profile is already gone, access is revoked.
+      if (memberRes && memberRes.error) {
+        console.warn('[datastore] team_member kept (still referenced or blocked):', memberRes.error.message);
+      }
+    }
   }
 
   _mapTaskRow(row) {
