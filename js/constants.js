@@ -10,9 +10,10 @@ App.PEOPLE = {
 };
 
 App.COMPANIES = {
-  roofing:  { id: 'roofing',  label: 'Roofing',  pill: 'pill-roof'  },
-  drafting: { id: 'drafting', label: 'Drafting', pill: 'pill-draft' },
-  lumen:    { id: 'lumen',    label: 'Lumen',    pill: 'pill-lumen' },
+  roofing:  { id: 'roofing',  label: 'Roofing',  pill: 'pill-roof'    },
+  drafting: { id: 'drafting', label: 'Drafting', pill: 'pill-draft'   },
+  lumen:    { id: 'lumen',    label: 'Lumen',    pill: 'pill-lumen'   },
+  website:  { id: 'website',  label: 'Website',  pill: 'pill-website' },
 };
 
 App.TASK_TYPES = {
