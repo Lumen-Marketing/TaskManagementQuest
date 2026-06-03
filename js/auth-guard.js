@@ -99,7 +99,16 @@ App.authReady = (async function () {
       const avatarSrc = profile.avatar_url || meta.avatar_url || '';
       if (avatarSrc) {
         avatar.style.background = 'transparent';
-        avatar.innerHTML = `<img src="${avatarSrc}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+        // Build the <img> via DOM API rather than string interpolation —
+        // avatarSrc is user-controlled (profiles.avatar_url is editable
+        // by the row owner), so building HTML with `<img src="${url}">`
+        // would let a malicious value like `"><script>...` break out of
+        // the attribute. Setting img.src as a DOM attribute is XSS-safe.
+        const img = document.createElement('img');
+        img.src = avatarSrc;
+        img.alt = '';
+        img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+        avatar.replaceChildren(img);
       } else {
         const initials = name.trim().split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
         if (initials) avatar.textContent = initials;
