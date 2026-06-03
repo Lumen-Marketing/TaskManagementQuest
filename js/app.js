@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             p.role = updates.role;
             p.approved = !!updates.approved;
             if ('supervisorId' in updates) p.supervisor_id = updates.supervisorId || null;
-            if ('companyId' in updates) p.company_id = updates.companyId || null;
+            if ('companyIds' in updates) p.company_ids = Array.isArray(updates.companyIds) ? updates.companyIds : [];
           }
           return p || {};
         },
@@ -49,12 +49,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Demo roles + reporting lines so role-gated views (worker, supervisor, hierarchy)
     // can be exercised in preview via ?preview=1&role=...&member=...
     const previewRoles = {
-      abraham:  { role: 'admin',                   company_id: 'roofing' },
-      alkeith:  { role: 'construction_supervisor', company_id: 'roofing' },
-      jesus:    { role: 'supervisor',              company_id: 'roofing' },
-      kristine: { role: 'worker', supervisor_id: 'jesus',   company_id: 'roofing' },
-      andres:   { role: 'worker', supervisor_id: 'alkeith', company_id: 'drafting' },
-      adrian:   { role: 'member', approved: false,          company_id: 'lumen' },
+      abraham:  { role: 'admin',                   company_ids: ['roofing', 'drafting', 'lumen'] },
+      alkeith:  { role: 'construction_supervisor', company_ids: ['roofing'] },
+      jesus:    { role: 'supervisor',              company_ids: ['roofing'] },
+      kristine: { role: 'worker', supervisor_id: 'jesus',   company_ids: ['roofing'] },
+      andres:   { role: 'worker', supervisor_id: 'alkeith', company_ids: ['drafting'] },
+      adrian:   { role: 'member', approved: false,          company_ids: ['lumen'] },
     };
     App.PROFILES = Object.values(App.PEOPLE).map(p => {
       const cfg = previewRoles[p.id] || { role: 'sales' };
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         email_verified: true,
         member_id: p.id,
         supervisor_id: cfg.supervisor_id || null,
-        company_id: cfg.company_id || null,
+        company_ids: Array.isArray(cfg.company_ids) ? cfg.company_ids : (cfg.company_id ? [cfg.company_id] : []),
         created_at: new Date().toISOString(),
       };
     });

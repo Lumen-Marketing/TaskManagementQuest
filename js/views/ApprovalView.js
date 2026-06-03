@@ -67,10 +67,13 @@ App.ApprovalView = class ApprovalView {
       .concat(this.supervisorOptions(profile.member_id).map(s =>
         `<option value="${s.id}" ${profile.supervisor_id === s.id ? 'selected' : ''}>${App.utils.escapeHtml(s.name)}</option>`
       )).join('');
-    const companyOpts = ['<option value="">— None —</option>']
-      .concat(Object.values(App.COMPANIES).map(c =>
-        `<option value="${c.id}" ${profile.company_id === c.id ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`
-      )).join('');
+    const companyIds = Array.isArray(profile.company_ids) ? profile.company_ids : [];
+    const companyChecks = Object.values(App.COMPANIES).map(c => `
+      <label class="company-chk">
+        <input type="checkbox" value="${App.utils.escapeHtml(c.id)}" ${companyIds.includes(c.id) ? 'checked' : ''} />
+        <span>${App.utils.escapeHtml(c.label)}</span>
+      </label>
+    `).join('');
     return `
       <tr data-profile-id="${profile.id}" data-member-id="${profile.member_id || ''}">
         <td>
@@ -80,7 +83,7 @@ App.ApprovalView = class ApprovalView {
           </span>
         </td>
         <td><select data-field="role">${roles}</select></td>
-        <td><select data-field="company">${companyOpts}</select></td>
+        <td><div class="company-multi" data-field="companies">${companyChecks}</div></td>
         <td><select data-field="supervisor">${supervisorOpts}</select></td>
         <td>
           <label class="approval-toggle">
@@ -113,11 +116,13 @@ App.ApprovalView = class ApprovalView {
         const role = row.querySelector('[data-field="role"]').value;
         const approved = row.querySelector('[data-field="approved"]').checked;
         const supervisorId = row.querySelector('[data-field="supervisor"]').value || null;
-        const companyId = row.querySelector('[data-field="company"]').value || null;
+        const companyIds = Array.from(
+          row.querySelectorAll('[data-field="companies"] input[type="checkbox"]:checked')
+        ).map(el => el.value);
         button.disabled = true;
         button.textContent = 'Saving';
         try {
-          await this.dataStore.updateProfileAccess(profileId, { role, approved, supervisorId, companyId });
+          await this.dataStore.updateProfileAccess(profileId, { role, approved, supervisorId, companyIds });
           this.controller.toastView.show({ title: 'Access updated', sub: approved ? 'Account approved' : 'Account set to pending' });
           // Reload from the server so the table reflects the saved state without a manual refresh.
           await this.reloadAndRender();

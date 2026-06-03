@@ -32,9 +32,13 @@ App.HierarchyView = class HierarchyView {
     return (App.ROLES[role] || { label: role || 'Member' }).label;
   }
 
-  companyChip(companyId) {
-    const co = App.COMPANIES[companyId];
-    return co ? `<span class="pill ${co.pill}">${App.utils.escapeHtml(co.label)}</span>` : '';
+  companyChips(companyIds) {
+    if (!Array.isArray(companyIds) || !companyIds.length) return '';
+    return companyIds
+      .map(id => App.COMPANIES[id])
+      .filter(Boolean)
+      .map(co => `<span class="pill ${co.pill}">${App.utils.escapeHtml(co.label)}</span>`)
+      .join(' ');
   }
 
   render() {
@@ -65,7 +69,7 @@ App.HierarchyView = class HierarchyView {
           name: this.person(s.member_id).full,
           color: this.person(s.member_id).color,
           role: this.roleLabel(s.role),
-          companyId: s.company_id || null,
+          companyIds: Array.isArray(s.company_ids) ? s.company_ids : [],
           reports: directReports(s.member_id),
         }));
     } else {
@@ -73,7 +77,7 @@ App.HierarchyView = class HierarchyView {
         name: `${this.person(me.member_id).full} (You)`,
         color: this.person(me.member_id).color,
         role: this.roleLabel(me.role),
-        companyId: me.company_id || null,
+        companyIds: Array.isArray(me.company_ids) ? me.company_ids : [],
         reports: directReports(me.member_id),
       });
     }
@@ -106,7 +110,7 @@ App.HierarchyView = class HierarchyView {
     const avatar = section.pool
       ? `<span class="avatar-xs org-pool-icon"><i class="ti ti-users"></i></span>`
       : `<span class="avatar-xs" style="background:${section.color};">${App.utils.initials(section.name)}</span>`;
-    const co = section.pool ? '' : this.companyChip(section.companyId);
+    const co = section.pool ? '' : this.companyChips(section.companyIds);
     return `
       <div class="org-node ${section.pool ? 'org-node-pool' : ''}">
         <div class="org-super">
@@ -127,7 +131,7 @@ App.HierarchyView = class HierarchyView {
 
   renderReport(profile) {
     const person = this.person(profile.member_id);
-    const co = this.companyChip(profile.company_id);
+    const co = this.companyChips(profile.company_ids);
     return `
       <div class="org-report">
         <span class="avatar-xs" style="background:${person.color};">${App.utils.initials(person.full)}</span>
