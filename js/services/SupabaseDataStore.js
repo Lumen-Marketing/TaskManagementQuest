@@ -264,8 +264,28 @@ App.SupabaseDataStore = class SupabaseDataStore {
         read: false,
       }));
     if (!rows.length) return;
-    const res = await this.supabase.from('notifications').insert(rows);
+    let res = await this.supabase.from('notifications').insert(rows);
+    // notifications.task_id is a FK to tasks.id, but it's only a deep-link —
+    // the message in `html` stands on its own. If the task isn't persisted
+    // (a just-created task still mid-save, or one already deleted) the insert
+    // trips notifications_task_id_fkey and the whole statement rolls back. Re-
+    // try once with task_id cleared so the recipient still gets the alert
+    // rather than losing it to a transient/edge condition.
+    if (this._isTaskFkViolation(res.error) && rows.some(row => row.task_id)) {
+      res = await this.supabase
+        .from('notifications')
+        .insert(rows.map(row => ({ ...row, task_id: null })));
+    }
     this._throwIfError(res, 'sending notifications');
+  }
+
+  // True only for a foreign-key violation (23503) on the task_id FK — so we
+  // retry by dropping the deep-link, not for an unrelated FK (e.g. member_id),
+  // where a null task_id wouldn't help and the error should surface.
+  _isTaskFkViolation(error) {
+    if (!error || error.code !== '23503') return false;
+    const msg = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`.toLowerCase();
+    return msg.includes('task_id');
   }
 
   /* Best-effort email via the `notify-email` Edge Function. Returns
