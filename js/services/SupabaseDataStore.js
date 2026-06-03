@@ -303,6 +303,19 @@ App.SupabaseDataStore = class SupabaseDataStore {
     return res.data;
   }
 
+  /* Remove a user's access by hard-deleting their profile row. RLS gates
+     this to managers (migration 024's "managers can delete profiles"
+     policy) and forbids deleting your own profile. We leave the matching
+     team_members row in place on purpose — it's referenced by NOT NULL FKs
+     on tasks, and dropping it would orphan their historical tasks. With no
+     profile the account is treated as unapproved and is gated out of the
+     app (AuthModel.isApproved). */
+  async deleteProfile(profileId) {
+    if (!profileId) return;
+    const res = await this.supabase.from('profiles').delete().eq('id', profileId);
+    this._throwIfError(res, 'deleting profile');
+  }
+
   _mapTaskRow(row) {
     return {
       id: row.id,

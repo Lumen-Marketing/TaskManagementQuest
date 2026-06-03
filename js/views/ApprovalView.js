@@ -54,6 +54,8 @@ App.ApprovalView = class ApprovalView {
   }
 
   renderRow(profile) {
+    // You can't delete your own account — hide the button and RLS blocks it too.
+    const isSelf = !!(App.currentAuthUser && App.currentAuthUser.id === profile.id);
     const person = App.PEOPLE[profile.member_id] || {
       name: profile.full_name || profile.email || 'Member',
       full: profile.full_name || profile.email || 'Member',
@@ -76,7 +78,7 @@ App.ApprovalView = class ApprovalView {
       </label>
     `).join('');
     return `
-      <tr data-profile-id="${profile.id}" data-member-id="${profile.member_id || ''}">
+      <tr data-profile-id="${profile.id}" data-member-id="${profile.member_id || ''}" data-person-name="${App.utils.escapeHtml(person.full)}">
         <td>
           <span style="display:inline-flex;align-items:center;gap:8px;">
             ${App.utils.avatarHtml(person)}
@@ -93,7 +95,12 @@ App.ApprovalView = class ApprovalView {
           </label>
         </td>
         <td>${App.utils.escapeHtml(profile.email || '')}</td>
-        <td><button class="btn btn-sm btn-primary" data-action="save-access">Save</button></td>
+        <td>
+          <div class="approval-actions">
+            <button class="btn btn-sm btn-primary" data-action="save-access">Save</button>
+            ${isSelf ? '' : `<button class="btn btn-sm btn-danger" data-action="delete-user" title="Remove this user's access"><i class="ti ti-trash"></i></button>`}
+          </div>
+        </td>
       </tr>
     `;
   }
@@ -131,6 +138,27 @@ App.ApprovalView = class ApprovalView {
           this.controller.toastView.show({ title: 'Access update failed', sub: (err && err.message) || 'Try again.' });
           button.disabled = false;
           button.textContent = 'Save';
+        }
+      });
+    });
+
+    this.wrap.querySelectorAll('[data-action="delete-user"]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const row = button.closest('[data-profile-id]');
+        const profileId = row.dataset.profileId;
+        const name = row.dataset.personName || 'this user';
+        const ok = window.confirm(
+          `Remove access for ${name}?\n\nThey'll be signed out of the app and disappear from this list. Their login email stays reserved and their past tasks are kept.`
+        );
+        if (!ok) return;
+        button.disabled = true;
+        try {
+          await this.dataStore.deleteProfile(profileId);
+          this.controller.toastView.show({ title: 'User removed', sub: 'Their access has been revoked.' });
+          await this.reloadAndRender();
+        } catch (err) {
+          this.controller.toastView.show({ title: 'Delete failed', sub: (err && err.message) || 'Try again.' });
+          button.disabled = false;
         }
       });
     });

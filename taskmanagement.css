@@ -589,6 +589,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .approval-head .time-section-title { margin-bottom: 0; }
 .approval-scroll { overflow-x: auto; }
 .approval-scroll .time-table { min-width: 920px; }
+.approval-actions { display: inline-flex; align-items: center; gap: 6px; }
+.approval-actions .btn-danger { padding: 7px 9px; }
 
 /* Team hierarchy / org chart */
 .org-sub { font-size: 12px; color: var(--ink-3); margin: -4px 0 14px; }
