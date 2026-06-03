@@ -203,6 +203,50 @@ App.AppController = class AppController {
     }
   }
 
+  /* JS-side mirror of migration 017's RLS — used to gate the destructive
+     Delete-task affordance in the UI. Workers are explicitly excluded
+     server-side, so showing them a button that would 401 is worse than
+     not showing it. */
+  canDeleteTasks() {
+    const role = (App.currentProfile && App.currentProfile.role) || 'member';
+    return ['admin', 'construction_supervisor', 'developer', 'supervisor', 'sales'].includes(role);
+  }
+
+  /* Hard-delete a single task after a confirm prompt. Optimistic:
+     removes from the in-memory model immediately so the list collapses
+     instantly, then fires the network DELETE. If the server rejects
+     (RLS blocked, network blip), surfaces a toast and the next page
+     load will resurrect the task from the source of truth. */
+  deleteTask(id) {
+    if (!this.canDeleteTasks()) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot delete tasks.' });
+      return;
+    }
+    const task = this.taskModel.find(id);
+    if (!task) return;
+    const snippet = task.title && task.title.length > 50 ? task.title.slice(0, 50) + '…' : (task.title || 'this task');
+    if (!window.confirm(`Delete "${snippet}"? This cannot be undone.`)) return;
+
+    this._stopTimerIfOnTask(id);
+    if (this.uiState && this.uiState.selectedTaskId === id) this.closeDetail();
+
+    this.taskModel.remove(id);
+
+    if (this.dataStore && typeof this.dataStore.deleteTask === 'function') {
+      this.dataStore.deleteTask(id).catch(err => {
+        console.error('[task] delete failed', err);
+        if (this.toastView) {
+          this.toastView.show({
+            title: 'Delete failed',
+            sub: (err && err.message) || 'The task may reappear on refresh.',
+          });
+        }
+      });
+    }
+
+    if (this.toastView) this.toastView.show({ title: 'Task deleted', sub: '' });
+  }
+
   /* Soft-clear every done task, after a confirm prompt. Rows stay in
      Supabase for a 30-day grace window (boot-time purge does the real
      delete), so a fat-finger is recoverable by SQL update. */

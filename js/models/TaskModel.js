@@ -241,6 +241,15 @@ App.TaskModel = class TaskModel {
     App.EventBus.emit('tasks:changed');
   }
 
+  remove(id) {
+    const i = this.tasks.findIndex(t => t.id === id);
+    if (i === -1) return false;
+    this.tasks.splice(i, 1);
+    this._dirty.delete(id);
+    App.EventBus.emit('tasks:changed');
+    return true;
+  }
+
   update(id, updates) {
     const t = this.find(id);
     if (!t) return;

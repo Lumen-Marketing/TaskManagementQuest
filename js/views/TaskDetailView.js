@@ -192,6 +192,14 @@ App.TaskDetailView = class TaskDetailView {
           <div class="detail-section-title">Activity</div>
           ${activityHtml}
         </div>
+
+        ${this.controller.canDeleteTasks() ? `
+        <div class="detail-danger-zone">
+          <button class="btn-link-danger" data-action="delete-task" type="button">
+            <i class="ti ti-trash"></i> Delete task
+          </button>
+        </div>
+        ` : ''}
       </div>
     `;
 
@@ -220,5 +228,8 @@ App.TaskDetailView = class TaskDetailView {
     this.pane.querySelectorAll('[data-action="toggle-subtask"]').forEach(el => {
       el.addEventListener('click', () => this.controller.toggleSubtask(t.id, parseInt(el.dataset.idx, 10)));
     });
+
+    const deleteBtn = this.pane.querySelector('[data-action="delete-task"]');
+    if (deleteBtn) deleteBtn.addEventListener('click', () => this.controller.deleteTask(t.id));
   }
 };

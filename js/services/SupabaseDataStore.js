@@ -167,6 +167,18 @@ App.SupabaseDataStore = class SupabaseDataStore {
     };
   }
 
+  /* Hard-delete a single task on demand. RLS gates this to the same
+     roles allowed by migration 017's "role users can delete tasks"
+     policy (admin / construction_supervisor / developer / supervisor /
+     sales). All child rows hanging off task_id (time_entries,
+     active_timers, notifications) cascade-delete via the schema FKs. */
+  async deleteTask(id) {
+    if (!id) return;
+    const res = await this.supabase.from('tasks').delete().eq('id', id);
+    this._throwIfError(res, 'deleting task');
+    delete this._taskVersions[id];
+  }
+
   /* Hard-delete tasks whose cleared_at is older than the grace window.
      Runs on app boot (best-effort); RLS gates this to the same roles
      allowed by migration 017's "role users can delete tasks" policy.
