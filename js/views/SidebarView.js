@@ -197,7 +197,7 @@ App.SidebarView = class SidebarView {
     }
     const adminItems = [];
     if (App.can('roles.manage')) adminItems.push({ view: 'approvals',   label: 'Approvals',       icon: 'ti-user-check' });
-    if (App.can('clock.admin'))  adminItems.push({ view: 'admin:clock', label: 'Clock dashboard', icon: 'ti-stopwatch', count: this.timeModel.allActive().length });
+    if (App.can('clock.admin'))  adminItems.push({ view: 'admin:clock', label: 'Clock dashboard', icon: 'ti-clock-play', count: this.timeModel.allActive().length });
     if (adminItems.length) sections.push({ key: 'admin', label: 'Admin', items: adminItems });
 
     return sections;
