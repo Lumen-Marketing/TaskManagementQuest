@@ -44,6 +44,7 @@
   --type-invoicing:   oklch(34% 0.07 168);   --type-invoicing-ink: oklch(84% 0.10 168);
   --type-ar:          oklch(33% 0.08 40);    --type-ar-ink:        oklch(82% 0.08 42);
   --type-meeting:     oklch(34% 0.09 305);   --type-meeting-ink:   oklch(82% 0.10 305);
+  --type-web-dev:     oklch(34% 0.09 200);   --type-web-dev-ink:   oklch(82% 0.10 200);
 
   /* urgency ladder — bold, full-colour */
   --u-critical: oklch(50% 0.19 5);
@@ -109,6 +110,7 @@
   --type-invoicing:   oklch(91% 0.06 168);  --type-invoicing-ink: oklch(38% 0.11 168);
   --type-ar:          oklch(92% 0.06 40);   --type-ar-ink:        oklch(40% 0.13 38);
   --type-meeting:     oklch(92% 0.06 305);  --type-meeting-ink:   oklch(42% 0.12 305);
+  --type-web-dev:     oklch(92% 0.06 200);  --type-web-dev-ink:   oklch(40% 0.13 205);
 
   /* Priority hues — soft full-color (used as the ring/dot/bar pivot) */
   --u-critical: oklch(72% 0.16 5);

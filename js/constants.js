@@ -16,12 +16,13 @@ App.COMPANIES = {
 };
 
 App.TASK_TYPES = {
-  lead:      { id: 'lead',      label: 'Lead',           cls: 'type-lead'      },
-  bid:       { id: 'bid',       label: 'Bid / Estimate', cls: 'type-bid'       },
-  admin:     { id: 'admin',     label: 'Admin',          cls: 'type-admin'     },
-  invoicing: { id: 'invoicing', label: 'Invoicing',      cls: 'type-invoicing' },
-  ar:        { id: 'ar',        label: 'AR',             cls: 'type-ar'        },
-  meeting:   { id: 'meeting',   label: 'Meeting',        cls: 'type-meeting'   },
+  lead:      { id: 'lead',      label: 'Lead',            cls: 'type-lead'      },
+  bid:       { id: 'bid',       label: 'Bid / Estimate',  cls: 'type-bid'       },
+  admin:     { id: 'admin',     label: 'Admin',           cls: 'type-admin'     },
+  invoicing: { id: 'invoicing', label: 'Invoicing',       cls: 'type-invoicing' },
+  ar:        { id: 'ar',        label: 'AR',              cls: 'type-ar'        },
+  meeting:   { id: 'meeting',   label: 'Meeting',         cls: 'type-meeting'   },
+  web_dev:   { id: 'web_dev',   label: 'Web development', cls: 'type-web-dev'   },
 };
 
 App.BID_STATUSES = {

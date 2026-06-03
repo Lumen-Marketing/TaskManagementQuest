@@ -436,6 +436,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .type-invoicing { background: var(--type-invoicing); color: var(--type-invoicing-ink); }
 .type-ar        { background: var(--type-ar);        color: var(--type-ar-ink); }
 .type-meeting   { background: var(--type-meeting);   color: var(--type-meeting-ink); }
+.type-web-dev   { background: var(--type-web-dev);   color: var(--type-web-dev-ink); }
 
 /* Bid status sub-pill (only shown when type=bid) */
 .pill-bid-status {
@@ -2174,7 +2175,10 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   align-items: center;
 }
 .deck.minimized .side-item i { font-size: 16px; }
-.deck.minimized .dot-co { width: 10px; height: 10px; }
+/* Match the dot's visual weight to the 16px Tabler icons around it —
+   the previous 10px made the company dots look noticeably smaller
+   than the workspace icons stacked above them. */
+.deck.minimized .dot-co { width: 14px; height: 14px; }
 
 /* ============================================================
    MOBILE POLISH — appended last so the cascade wins without
@@ -2860,6 +2864,42 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   text-decoration: underline;
 }
 .btn-link-danger i { font-size: 14px; }
+
+/* ============================================================
+   TASK DETAIL — minimize / expand (collapses the right panel to
+   a thin strip so the main task list gets more room without
+   losing the current selection).
+   ============================================================ */
+.detail-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.detail-expand-btn {
+  display: none;
+  width: 100%;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.detail-expand-btn:hover { background: var(--bg-2); color: var(--ink); }
+.detail-expand-btn i { font-size: 18px; }
+
+.detail.minimized {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.detail.minimized .detail-head,
+.detail.minimized .detail-body { display: none; }
+.detail.minimized .detail-expand-btn { display: flex; }
 
 /* ============================================================
    APPROVAL TABLE — multi-company chip-checkbox group.
