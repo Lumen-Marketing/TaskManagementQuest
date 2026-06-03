@@ -142,7 +142,7 @@ App.TimeView = class TimeView {
       `;
     }).join('');
 
-    const peopleRows = Object.values(App.PEOPLE).map(p => {
+    const peopleRows = App.utils.activePeople().map(p => {
       const todayMs = this.timeModel.totalForUser(p.id, today0.getTime());
       const weekMs = this.timeModel.totalForUser(p.id, week0.getTime());
       const isActive = this.timeModel.isRunning(p.id);

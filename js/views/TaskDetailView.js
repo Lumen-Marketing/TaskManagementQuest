@@ -69,7 +69,7 @@ App.TaskDetailView = class TaskDetailView {
         <button class="watcher-remove" data-action="remove-watcher" data-member-id="${App.utils.escapeHtml(w)}" aria-label="Remove ${App.utils.escapeHtml(p.name)}" type="button">×</button>
       </span>`;
     }).join('');
-    const addableWatchers = Object.values(App.PEOPLE).filter(p =>
+    const addableWatchers = App.utils.activePeople().filter(p =>
       p.id !== t.assignee && !watcherIds.includes(p.id)
     );
     const watcherAddSelect = addableWatchers.length ? `
@@ -173,7 +173,7 @@ App.TaskDetailView = class TaskDetailView {
         <div class="detail-row">
           <span class="label">Assignee</span>
           <select data-action="reassign" style="font-size:12px; padding:4px 8px;">
-            ${Object.values(App.PEOPLE).map(p => `<option value="${p.id}" ${t.assignee === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+            ${App.utils.activePeople(t.assignee).map(p => `<option value="${p.id}" ${t.assignee === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
           </select>
         </div>
         <div class="detail-row">

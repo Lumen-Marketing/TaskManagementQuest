@@ -25,6 +25,32 @@ App.utils = {
     return `<span class="${cls}" style="background:${person.color || 'var(--ink-3)'};">${App.utils.initials(person.full || person.name || '')}</span>`;
   },
 
+  /* People eligible to appear in assignment pickers and team dashboards:
+     team_members (App.PEOPLE) that are backed by an approved profile.
+
+     The roster accumulates rows that no longer map to a login — leftover
+     demo seeds and members whose profile was deleted from Approvals (their
+     team_members row is kept so historical tasks don't break). Those
+     shouldn't show up as assignable people, which is why the picker and
+     the clock dashboard otherwise drift from the Approvals list.
+
+     Falls back to the full roster when profiles aren't loaded (non-manager
+     sessions don't fetch them) so a picker never renders empty. Pass
+     `includeIds` (e.g. a task's current assignee) to keep an existing
+     selection visible even if it's no longer backed by a profile. */
+  activePeople(includeIds) {
+    const all = Object.values(App.PEOPLE || {});
+    const profiles = App.PROFILES || [];
+    if (!profiles.length) return all;
+    const allowed = new Set(
+      profiles.filter(p => p.approved !== false && p.member_id).map(p => p.member_id)
+    );
+    const keep = Array.isArray(includeIds) ? includeIds : (includeIds ? [includeIds] : []);
+    keep.forEach(id => { if (id) allowed.add(id); });
+    const list = all.filter(p => allowed.has(p.id));
+    return list.length ? list : all;
+  },
+
   todayISO(offset = 0) {
     const d = new Date();
     d.setDate(d.getDate() + offset);

@@ -35,7 +35,7 @@ App.FilterBarView = class FilterBarView {
     }
     const f = this.controller.uiState.filters;
 
-    const peopleChips = Object.values(App.PEOPLE).map(p => this.chip({
+    const peopleChips = App.utils.activePeople().map(p => this.chip({
       group: 'assignees', value: p.id, label: p.name,
       swatch: p.color, active: f.assignees.includes(p.id),
     })).join('');

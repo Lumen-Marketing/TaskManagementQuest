@@ -58,7 +58,7 @@ App.ClockDashboardView = class ClockDashboardView {
       `;
     }).join('');
 
-    const everyone = Object.values(App.PEOPLE).map(p => {
+    const everyone = App.utils.activePeople().map(p => {
       const todayMs = this.timeModel.totalForUser(p.id, today0.getTime());
       const weekMs = this.timeModel.totalForUser(p.id, week0.getTime());
       const isLive = this.timeModel.isRunning(p.id);

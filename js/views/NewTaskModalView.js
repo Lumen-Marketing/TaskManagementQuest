@@ -56,7 +56,7 @@ App.NewTaskModalView = class NewTaskModalView {
             <div>
               <div class="field-label">Assigned to</div>
               <select id="nt-assignee" class="assigned-field" style="width:100%; padding: 6px 10px; font-size: 12px;">
-                ${Object.values(App.PEOPLE).map(p => `<option value="${p.id}" ${p.id === this.currentUser ? 'selected' : ''}>${p.name}</option>`).join('')}
+                ${App.utils.activePeople(this.currentUser).map(p => `<option value="${p.id}" ${p.id === this.currentUser ? 'selected' : ''}>${p.name}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -304,7 +304,7 @@ App.NewTaskModalView = class NewTaskModalView {
       e.stopPropagation();
       const assigneeId = document.getElementById('nt-assignee').value;
       dropdown.innerHTML = '';
-      Object.values(App.PEOPLE).filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
+      App.utils.activePeople().filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
         const item = document.createElement('div');
         item.className = 'watcher-dropdown-item';
         item.innerHTML = `${App.utils.avatarHtml(p)}${p.full}`;
