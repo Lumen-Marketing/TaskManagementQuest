@@ -97,8 +97,8 @@ App.NewTaskModalView = class NewTaskModalView {
 
           <div class="field" style="margin-top:14px;">
             <div class="field-label">Time <span class="field-optional">Optional</span></div>
-            <input type="time" id="nt-time" class="picker-input" placeholder="--:--" style="width:100%; padding: 6px 10px; font-size: 12px;" />
-            <div class="user-menu-hint" style="margin-top:5px;">Leave blank if this task isn't tied to a specific time.</div>
+            <input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM or 14:30" style="width:100%; padding: 6px 10px; font-size: 12px;" />
+            <div class="user-menu-hint" style="margin-top:5px;">Type a time like <strong>9am</strong>, <strong>2:30 PM</strong> or <strong>14:30</strong> — or leave blank.</div>
           </div>
 
           <div id="nt-bid-status-row" class="field hidden" style="margin-top:14px;">
@@ -157,6 +157,7 @@ App.NewTaskModalView = class NewTaskModalView {
             <button class="btn btn-primary" data-action="submit">Create &amp; notify</button>
           </div>
         </div>
+        <div class="modal-resize-handle" data-stop title="Drag to resize"></div>
       </div>
     `;
   }
@@ -188,6 +189,87 @@ App.NewTaskModalView = class NewTaskModalView {
         try { input.showPicker(); } catch (e) { /* unsupported or not user-activated */ }
       });
     });
+
+    // Free-typed time: normalise to HH:MM on blur so it matches what the
+    // validator/DB expect (e.g. "2:30 pm" -> "14:30"). Left as-typed if it
+    // can't be parsed, so submit can surface a clear error.
+    const timeInput = document.getElementById('nt-time');
+    if (timeInput) {
+      timeInput.addEventListener('blur', () => {
+        const parsed = this._parseTime(timeInput.value);
+        if (parsed) timeInput.value = parsed;
+      });
+    }
+
+    this._bindResize();
+  }
+
+  // Drag-to-resize from the bottom-right handle. Sizing is per-open (the modal
+  // is rebuilt on each open), which is the intent: "manually adjust the size".
+  _bindResize() {
+    const handle = this.modal.querySelector('.modal-resize-handle');
+    const panel = this.modal.querySelector('.modal');
+    if (!handle || !panel) return;
+
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX, startY = e.clientY;
+      const rect = panel.getBoundingClientRect();
+      const startW = rect.width, startH = rect.height;
+
+      const onMove = (ev) => {
+        const maxW = window.innerWidth * 0.97;
+        const maxH = window.innerHeight * 0.95;
+        panel.style.maxWidth = 'none';
+        panel.style.maxHeight = 'none';
+        panel.style.width = Math.max(380, Math.min(maxW, startW + (ev.clientX - startX))) + 'px';
+        panel.style.height = Math.max(320, Math.min(maxH, startH + (ev.clientY - startY))) + 'px';
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.userSelect = '';
+      };
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  // Parse a loosely-typed time into strict 24h "HH:MM", or null if unusable.
+  // Accepts: "9", "930", "0930", "1430", "9:30", "9am", "2:30 pm", "12am"...
+  _parseTime(raw) {
+    let s = String(raw == null ? '' : raw).trim().toLowerCase();
+    if (!s) return null;
+
+    let ap = null;
+    const apMatch = s.match(/\s*([ap])\.?\s*m\.?$/);
+    if (apMatch) { ap = apMatch[1]; s = s.slice(0, apMatch.index).trim(); }
+
+    let h, min = 0;
+    if (s.includes(':')) {
+      const parts = s.split(':');
+      if (parts.length !== 2 || parts[1].length !== 2) return null;
+      h = parseInt(parts[0], 10);
+      min = parseInt(parts[1], 10);
+    } else {
+      if (!/^\d+$/.test(s)) return null;
+      if (s.length <= 2) { h = parseInt(s, 10); min = 0; }
+      else if (s.length === 3) { h = parseInt(s.slice(0, 1), 10); min = parseInt(s.slice(1), 10); }
+      else if (s.length === 4) { h = parseInt(s.slice(0, 2), 10); min = parseInt(s.slice(2), 10); }
+      else return null;
+    }
+
+    if (isNaN(h) || isNaN(min) || min > 59) return null;
+    if (ap) {
+      if (h < 1 || h > 12) return null;
+      if (ap === 'p' && h !== 12) h += 12;
+      if (ap === 'a' && h === 12) h = 0;
+    } else if (h > 23) {
+      return null;
+    }
+    return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
   }
 
   updateBidStatusRow() {
@@ -260,6 +342,7 @@ App.NewTaskModalView = class NewTaskModalView {
   }
 
   submit() {
+    const timeRaw = document.getElementById('nt-time').value.trim();
     const rawPayload = {
       title: document.getElementById('nt-title').value,
       description: document.getElementById('nt-desc').value,
@@ -268,7 +351,7 @@ App.NewTaskModalView = class NewTaskModalView {
       bidStatus: document.getElementById('nt-bid-status').value,
       company: document.getElementById('nt-company').value,
       due: document.getElementById('nt-due').value,
-      dueTime: document.getElementById('nt-time').value || null,
+      dueTime: timeRaw ? (this._parseTime(timeRaw) || timeRaw) : null,
       priority: document.getElementById('nt-priority').value,
       status: document.getElementById('nt-status').value,
       watchers: Array.from(this.watchers),
