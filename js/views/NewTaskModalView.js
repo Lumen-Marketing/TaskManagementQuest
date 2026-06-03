@@ -164,7 +164,9 @@ App.NewTaskModalView = class NewTaskModalView {
 
   bindEvents() {
     this.modal.addEventListener('click', (e) => {
-      if (e.target === this.modal) this.close();
+      // Ignore the click that fires when a resize-drag is released over the
+      // backdrop — otherwise dragging to enlarge would close the modal.
+      if (e.target === this.modal && !this._resizing) this.close();
       if (e.target.closest('[data-stop]') && !e.target.closest('[data-action]')) e.stopPropagation();
     });
     this.modal.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', () => this.close()));
@@ -204,8 +206,12 @@ App.NewTaskModalView = class NewTaskModalView {
     this._bindResize();
   }
 
-  // Drag-to-resize from the bottom-right handle. Sizing is per-open (the modal
-  // is rebuilt on each open), which is the intent: "manually adjust the size".
+  // Drag-to-resize from the bottom-left grip. Sizing is per-open (the modal is
+  // rebuilt on each open), which is the intent: "manually adjust the size".
+  // The backdrop centres the panel horizontally, so width grows symmetrically —
+  // a 1px cursor move widens each side by 1px, hence the x2 on the horizontal
+  // delta so the grip tracks the pointer. Vertically the panel is top-aligned,
+  // so height tracks 1:1. Dragging left/down enlarges (bottom-left corner).
   _bindResize() {
     const handle = this.modal.querySelector('.modal-resize-handle');
     const panel = this.modal.querySelector('.modal');
@@ -214,6 +220,7 @@ App.NewTaskModalView = class NewTaskModalView {
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      this._resizing = true;
       const startX = e.clientX, startY = e.clientY;
       const rect = panel.getBoundingClientRect();
       const startW = rect.width, startH = rect.height;
@@ -223,13 +230,15 @@ App.NewTaskModalView = class NewTaskModalView {
         const maxH = window.innerHeight * 0.95;
         panel.style.maxWidth = 'none';
         panel.style.maxHeight = 'none';
-        panel.style.width = Math.max(380, Math.min(maxW, startW + (ev.clientX - startX))) + 'px';
+        panel.style.width = Math.max(380, Math.min(maxW, startW + (startX - ev.clientX) * 2)) + 'px';
         panel.style.height = Math.max(320, Math.min(maxH, startH + (ev.clientY - startY))) + 'px';
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
         document.body.style.userSelect = '';
+        // Clear after the trailing click event has been dispatched.
+        setTimeout(() => { this._resizing = false; }, 0);
       };
       document.body.style.userSelect = 'none';
       document.addEventListener('mousemove', onMove);
