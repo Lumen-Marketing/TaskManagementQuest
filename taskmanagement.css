@@ -1593,7 +1593,14 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
   padding: 18px 24px 18px 38px;
   gap: 16px;
   align-items: center;
+  /* Wrap the title block + widgets onto separate lines when the work
+     surface narrows (typically when the detail pane is open on a
+     mid-width viewport). Without this the 360px widgets stayed
+     flex-shrink:0 and visually overlapped the page title. */
+  flex-wrap: wrap;
 }
+.page-title-block { overflow: hidden; }
+.page-head-widgets { flex-shrink: 1; min-width: 0; }
 .page-title-block { padding-left: 0; }
 .page-eyebrow {
   font-family: var(--font-mono);
@@ -1892,6 +1899,13 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
 }
 @media (max-width: 900px) {
   .page-head-widgets { display: none; }
+}
+/* When the detail pane is open on a mid-width viewport, the list-pane
+   gets squeezed below the threshold where the 220px widgets can fit
+   without colliding with the page title. Hide them in that case so
+   the work surface stays readable. */
+@media (max-width: 1300px) {
+  .main.with-detail .page-head-widgets { display: none; }
 }
 
 /* Progress card — flat horizontal strip, sized to match Up Next */
@@ -2900,6 +2914,51 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 .detail.minimized .detail-head,
 .detail.minimized .detail-body { display: none; }
 .detail.minimized .detail-expand-btn { display: flex; }
+
+/* ============================================================
+   TASK DETAIL — Watchers row: chip-with-x to remove + an
+   inline select to add new watchers without opening any modal.
+   ============================================================ */
+.watchers-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.watcher-chip-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-2);
+  padding: 2px 4px 2px 7px;
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--ink);
+}
+.watcher-chip-detail .avatar-xs { width: 16px; height: 16px; font-size: 9px; }
+.watcher-remove {
+  background: transparent;
+  border: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 50%;
+}
+.watcher-remove:hover { color: var(--rust); background: var(--bg-3); }
+.watcher-add-select {
+  font-size: 11px;
+  padding: 3px 6px;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  color: var(--ink-3);
+  cursor: pointer;
+  max-width: 140px;
+}
+.watcher-add-select:hover { border-color: var(--amber); color: var(--ink); }
+.watcher-add-select:focus { outline: none; border-color: var(--amber); }
 
 /* ============================================================
    APPROVAL TABLE — multi-company chip-checkbox group.

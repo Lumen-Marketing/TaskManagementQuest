@@ -203,6 +203,44 @@ App.AppController = class AppController {
     }
   }
 
+  /* Add a watcher to a task. Idempotent — if they're already watching,
+     this is a no-op rather than a duplicate entry. */
+  addWatcher(taskId, memberId) {
+    if (!App.can('tasks.write')) return;
+    if (!memberId) return;
+    const task = this.taskModel.find(taskId);
+    if (!task) return;
+    const watchers = Array.isArray(task.watchers) ? task.watchers : [];
+    if (watchers.includes(memberId)) return;
+    this.taskModel.update(taskId, { watchers: [...watchers, memberId] });
+    const person = App.PEOPLE[memberId];
+    if (person) {
+      this.taskModel.addActivity(taskId, {
+        who: this.getUserName(this.currentUser),
+        what: `added ${person.name} as a watcher`,
+        when: 'just now',
+      });
+    }
+  }
+
+  removeWatcher(taskId, memberId) {
+    if (!App.can('tasks.write')) return;
+    if (!memberId) return;
+    const task = this.taskModel.find(taskId);
+    if (!task) return;
+    const watchers = Array.isArray(task.watchers) ? task.watchers : [];
+    if (!watchers.includes(memberId)) return;
+    this.taskModel.update(taskId, { watchers: watchers.filter(w => w !== memberId) });
+    const person = App.PEOPLE[memberId];
+    if (person) {
+      this.taskModel.addActivity(taskId, {
+        who: this.getUserName(this.currentUser),
+        what: `removed ${person.name} as a watcher`,
+        when: 'just now',
+      });
+    }
+  }
+
   /* JS-side mirror of migration 017's RLS — used to gate the destructive
      Delete-task affordance in the UI. Workers are explicitly excluded
      server-side, so showing them a button that would 401 is worse than

@@ -59,10 +59,33 @@ App.TaskDetailView = class TaskDetailView {
     const myTimerOnThis = myActive && myActive.taskId === t.id;
     const totalMs = this.timeModel.totalForTask(t.id);
 
-    const watchersHtml = (t.watchers || []).map(w => {
+    const watcherIds = t.watchers || [];
+    const watcherChipsHtml = watcherIds.map(w => {
       const p = App.PEOPLE[w];
-      return `<span style="display:inline-flex; align-items:center; gap:4px; background:var(--bg-2); padding:2px 7px; border-radius:10px; font-size:11px; margin-right:4px;"><span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>${p.name}</span>`;
-    }).join('') || `<span style="color:var(--ink-3); font-size:11px;">No watchers</span>`;
+      if (!p) return '';
+      return `<span class="watcher-chip-detail" data-watcher-id="${App.utils.escapeHtml(w)}">
+        <span class="avatar-xs" style="background:${p.color};">${App.utils.initials(p.full)}</span>
+        ${App.utils.escapeHtml(p.name)}
+        <button class="watcher-remove" data-action="remove-watcher" data-member-id="${App.utils.escapeHtml(w)}" aria-label="Remove ${App.utils.escapeHtml(p.name)}" type="button">×</button>
+      </span>`;
+    }).join('');
+    const addableWatchers = Object.values(App.PEOPLE).filter(p =>
+      p.id !== t.assignee && !watcherIds.includes(p.id)
+    );
+    const watcherAddSelect = addableWatchers.length ? `
+      <select class="watcher-add-select" data-action="add-watcher">
+        <option value="">+ Add watcher…</option>
+        ${addableWatchers.map(p =>
+          `<option value="${App.utils.escapeHtml(p.id)}">${App.utils.escapeHtml(p.full)}</option>`
+        ).join('')}
+      </select>
+    ` : '';
+    const watchersHtml = `
+      <div class="watchers-cell">
+        ${watcherChipsHtml || (addableWatchers.length ? '' : '<span style="color:var(--ink-3); font-size:11px;">No watchers</span>')}
+        ${watcherAddSelect}
+      </div>
+    `;
 
     const subtasksHtml = (t.subtasks || []).map((s, i) =>
       `<div class="subtask ${s.d ? 'done' : ''}" data-action="toggle-subtask" data-idx="${i}">
@@ -142,7 +165,7 @@ App.TaskDetailView = class TaskDetailView {
           </select>
         </div>
         <div class="detail-row">
-          <span class="label">Owner</span>
+          <span class="label">Assignee</span>
           <select data-action="reassign" style="font-size:12px; padding:4px 8px;">
             ${Object.values(App.PEOPLE).map(p => `<option value="${p.id}" ${t.assignee === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
           </select>
@@ -252,5 +275,19 @@ App.TaskDetailView = class TaskDetailView {
 
     const deleteBtn = this.pane.querySelector('[data-action="delete-task"]');
     if (deleteBtn) deleteBtn.addEventListener('click', () => this.controller.deleteTask(t.id));
+
+    this.pane.querySelectorAll('[data-action="remove-watcher"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.controller.removeWatcher(t.id, btn.dataset.memberId);
+      });
+    });
+    const addWatcherSel = this.pane.querySelector('[data-action="add-watcher"]');
+    if (addWatcherSel) {
+      addWatcherSel.addEventListener('change', () => {
+        const id = addWatcherSel.value;
+        if (id) this.controller.addWatcher(t.id, id);
+      });
+    }
   }
 };
