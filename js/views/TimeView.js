@@ -116,11 +116,29 @@ App.TimeView = class TimeView {
     `;
   }
 
+  /* Predicate that narrows the Team workload board to the viewer's own team:
+     themselves plus their direct reports (profiles whose supervisor_id points
+     at the viewer's member_id) — mirrors the report scoping in
+     TaskListView.getFilteredTasks. When the viewer has no direct reports
+     (an admin/developer who supervises nobody, a developer previewing "as
+     supervisor", or a hierarchy that isn't set up yet) we DON'T narrow, so the
+     board never collapses to a single self row. */
+  teamScope() {
+    const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
+    const reportIds = new Set((App.PROFILES || [])
+      .filter(p => p.supervisor_id === me && p.approved !== false)
+      .map(p => p.member_id));
+    if (reportIds.size === 0) return () => true;
+    reportIds.add(me);
+    return (id) => reportIds.has(id);
+  }
+
   renderResource() {
     const today0 = new Date(); today0.setHours(0, 0, 0, 0);
     const week0 = new Date(); week0.setDate(week0.getDate() - 7); week0.setHours(0, 0, 0, 0);
 
-    const active = this.timeModel.allActive();
+    const inTeam = this.teamScope();
+    const active = this.timeModel.allActive().filter(timer => inTeam(timer.userId));
 
     const liveRows = active.map(timer => {
       const p = App.PEOPLE[timer.userId] || App.utils.unknownPerson(timer.userId);
@@ -143,27 +161,30 @@ App.TimeView = class TimeView {
 
     // Roster from team_members, unioned with anyone who actually tracked time
     // (a live timer or an entry in the last 7 days) so their hours always show
-    // here — otherwise the current user / non-roster members are dropped.
-    // Shared with ClockDashboardView so the two boards stay in lockstep.
-    const peopleRows = App.utils.rosterWithActivity(this.timeModel, week0.getTime()).map(p => {
-      const todayMs = this.timeModel.totalForUser(p.id, today0.getTime());
-      const weekMs = this.timeModel.totalForUser(p.id, week0.getTime());
-      const isActive = this.timeModel.isRunning(p.id);
-      return `
-        <tr>
-          <td>
-            <span style="display:inline-flex; align-items:center; gap:6px;">
-              ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}
-            </span>
-          </td>
-          <td class="mono">${App.utils.formatHours(todayMs)}</td>
-          <td class="mono">${App.utils.formatHours(weekMs)}</td>
-          <td>${isActive
-              ? '<span style="color:var(--green-ink); font-size:11px;">● Clocked in</span>'
-              : '<span style="color:var(--ink-3); font-size:11px;">Off the clock</span>'}</td>
-        </tr>
-      `;
-    }).join('');
+    // here — otherwise the current user / non-roster members are dropped. Then
+    // narrowed to the viewer's own team (teamScope): unlike the admin Clock
+    // dashboard, the Team workload board is a supervisor's view of THEIR people.
+    const peopleRows = App.utils.rosterWithActivity(this.timeModel, week0.getTime())
+      .filter(p => inTeam(p.id))
+      .map(p => {
+        const todayMs = this.timeModel.totalForUser(p.id, today0.getTime());
+        const weekMs = this.timeModel.totalForUser(p.id, week0.getTime());
+        const isActive = this.timeModel.isRunning(p.id);
+        return `
+          <tr>
+            <td>
+              <span style="display:inline-flex; align-items:center; gap:6px;">
+                ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}
+              </span>
+            </td>
+            <td class="mono">${App.utils.formatHours(todayMs)}</td>
+            <td class="mono">${App.utils.formatHours(weekMs)}</td>
+            <td>${isActive
+                ? '<span style="color:var(--green-ink); font-size:11px;">● Clocked in</span>'
+                : '<span style="color:var(--ink-3); font-size:11px;">Off the clock</span>'}</td>
+          </tr>
+        `;
+      }).join('');
 
     return `
       <div class="time-page">
