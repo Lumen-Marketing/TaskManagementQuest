@@ -1,0 +1,11 @@
+# Keep these out of the Vercel deploy bundle — they're CI/test infra only.
+tests/
+playwright.config.js
+playwright-report/
+test-results/
+node_modules/
+tools/dev-server.mjs
+.github/
+
+# Everything else (js/, css, html, vendor/, supabase/sql/, env.example.json,
+# tools/build-env.mjs, vercel.json) IS shipped to the Vercel build server.

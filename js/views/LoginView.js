@@ -256,7 +256,16 @@ App.LoginView = class LoginView {
     if (nameEl) nameEl.textContent = name;
     if (avatarEl) {
       if (meta.avatar_url) {
-        avatarEl.innerHTML = `<img src="${meta.avatar_url}" alt="" />`;
+        // Build the <img> via the DOM, not an innerHTML template. meta.avatar_url
+        // comes from auth user_metadata, which the account owner can set to an
+        // arbitrary string; interpolating it as `<img src="${url}">` lets a value
+        // like `"><img src=x onerror=...>` execute on the LOGIN page (the auth
+        // origin, where the session token lives). Setting img.src as a DOM
+        // property is XSS-safe. Mirrors the pattern in auth-guard.js.
+        const img = document.createElement('img');
+        img.src = meta.avatar_url;
+        img.alt = '';
+        avatarEl.replaceChildren(img);
       } else {
         const initial = (name || '?').trim().charAt(0).toUpperCase();
         avatarEl.textContent = initial;

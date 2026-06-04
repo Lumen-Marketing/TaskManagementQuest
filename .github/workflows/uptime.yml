@@ -1,0 +1,126 @@
+name: Uptime
+
+# Scheduled URL probe against the production deployment. Hits /env.json so we
+# catch both (a) the static site being down AND (b) the Vercel build step
+# silently breaking (e.g. SUPABASE_URL env var got unset). On failure, opens
+# a GitHub issue tagged with `incident` — a deliberately low-tech alerting
+# path that works without paying for PagerDuty.
+#
+# Granularity is hourly (GitHub's free-tier minimum for scheduled workflows).
+# If you need finer (3-5 min), point a Better Stack / UptimeRobot monitor at
+# the same URL — this workflow is just a no-cost belt-and-suspenders check.
+
+on:
+  schedule:
+    - cron: '17 * * * *'  # offset minute so we don't pile on the top-of-hour scheduler
+  workflow_dispatch:        # let you trigger it manually from the Actions tab
+
+permissions:
+  contents: read
+  issues: write             # needs write to open an incident issue
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+env:
+  # Set this in repo Settings -> Secrets and variables -> Actions -> Variables
+  # (not Secrets — it's a public URL).
+  PROD_URL: ${{ vars.PROD_URL }}
+
+jobs:
+  probe:
+    name: probe production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate config
+        run: |
+          if [ -z "$PROD_URL" ]; then
+            echo "::warning::PROD_URL repo variable is not set. Skipping probe."
+            exit 0
+          fi
+          echo "Probing $PROD_URL"
+
+      - name: HEAD the root
+        id: head
+        run: |
+          if [ -z "$PROD_URL" ]; then exit 0; fi
+          set +e
+          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$PROD_URL")
+          echo "root_status=$status" >> $GITHUB_OUTPUT
+          if [ "$status" != "200" ] && [ "$status" != "301" ] && [ "$status" != "302" ]; then
+            echo "::error::Root returned HTTP $status"
+            exit 1
+          fi
+
+      - name: GET /env.json (build verification)
+        id: env
+        run: |
+          if [ -z "$PROD_URL" ]; then exit 0; fi
+          set +e
+          # env.json must be 200 AND parse as JSON AND contain the expected fields.
+          body=$(curl -s --max-time 15 "$PROD_URL/env.json")
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "::error::curl failed (exit $status)"
+            exit 1
+          fi
+          echo "$body" | node -e "
+            let raw = '';
+            process.stdin.on('data', c => raw += c);
+            process.stdin.on('end', () => {
+              try {
+                const e = JSON.parse(raw);
+                if (!e.supabaseUrl || !e.supabaseAnonKey) {
+                  console.error('env.json missing required fields');
+                  process.exit(1);
+                }
+                if (/^sb_secret_|service_role/i.test(e.supabaseAnonKey)) {
+                  console.error('CRITICAL: env.json contains a service_role key!');
+                  process.exit(2);
+                }
+                console.log('env.json OK');
+              } catch (err) {
+                console.error('env.json not parseable:', err.message);
+                process.exit(1);
+              }
+            });
+          "
+
+      - name: Open incident issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = process.env.PROD_URL || '<unset>';
+            const sha = context.sha.slice(0, 7);
+            const title = `[uptime] Production probe failed at ${new Date().toISOString()}`;
+            const body = [
+              `**URL:** ${url}`,
+              `**Workflow run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `**Commit:** ${sha}`,
+              ``,
+              `Probe failed — either the static site is down, the Vercel build`,
+              `silently dropped env.json, or Vercel changed the URL. Check Sentry`,
+              `for client-side errors around the same time.`,
+            ].join('\n');
+            // Don't open duplicates — if there's an open incident already, comment instead.
+            const { data: issues } = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: 'open',
+              labels: 'incident',
+            });
+            if (issues.length > 0) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issues[0].number,
+                body: `Probe failed again at ${new Date().toISOString()}.\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                ...context.repo,
+                title,
+                body,
+                labels: ['incident', 'uptime'],
+              });
+            }

@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Hardened defaults: the workflow can only read the repo. Anything that needs
+# write access (commenting on PRs, pushing artifacts) must opt-in per job.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hygiene:
+    name: env + secret hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # gitleaks needs full history to scan past commits
+
+      - name: Block committed env files
+        # If env.json or .env ever lands in the working tree we want CI to
+        # fail loudly. The vercel.json buildCommand writes env.json on the
+        # build server only — it must never be in the repo.
+        run: |
+          set -e
+          for f in env.json .env .env.local .env.production supabase/.env; do
+            if [ -f "$f" ]; then
+              echo "::error file=$f::Forbidden file committed: $f (should be gitignored / built at deploy time)"
+              exit 1
+            fi
+          done
+          echo "OK: no env files committed."
+
+      - name: Verify env.example.json parses
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('env.example.json','utf8'))"
+          echo "OK: env.example.json is valid JSON."
+
+      - name: Scan history for secrets (gitleaks)
+        # Pinned to a specific tag so a compromised upstream can't suddenly
+        # run arbitrary code on our runner.
+        uses: gitleaks/gitleaks-action@v2.3.7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  syntax:
+    name: js syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: node --check every .js file
+        # No deps required. node --check is a fast syntax-only parse — it
+        # won't catch logic bugs but will catch typos that would crash on load.
+        run: |
+          set -e
+          found=$(find js tools -type f -name '*.js' -o -name '*.mjs' 2>/dev/null)
+          fail=0
+          for f in $found; do
+            if ! node --check "$f"; then
+              echo "::error file=$f::syntax error"
+              fail=1
+            fi
+          done
+          if [ $fail -ne 0 ]; then exit 1; fi
+          echo "OK: all JS files parsed cleanly."
+
+  vercel-config:
+    name: vercel + sql config sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate vercel.json is parseable
+        run: node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
+
+      - name: Smoke-test build-env.mjs with placeholder vars
+        # We don't want the real Supabase values in CI — but we DO want to
+        # know that the build script itself is structurally sound. Use a
+        # dummy URL that passes the URL regex but is obviously fake.
+        env:
+          SUPABASE_URL: https://example-ci.supabase.co
+          SUPABASE_ANON_KEY: sb_publishable_ci_smoke_test_placeholder
+        run: |
+          node tools/build-env.mjs
+          # Verify the generated file looks right, then delete it so it
+          # never gets committed even by accident.
+          test -f env.json
+          node -e "const e=require('./env.json'); if(!e.supabaseUrl||!e.supabaseAnonKey){throw new Error('bad env.json shape')}"
+          rm env.json
+          echo "OK: build-env.mjs produces a valid env.json."
+
+      - name: Sanity-check SQL migration filenames are ordered
+        # Migrations must apply in lexical order. Catch a typo like 005a / 5 / 13
+        # before it confuses the Supabase CLI.
+        run: |
+          set -e
+          ls supabase/sql/*.sql | sort -c
+          echo "OK: SQL migrations are in lexical order."

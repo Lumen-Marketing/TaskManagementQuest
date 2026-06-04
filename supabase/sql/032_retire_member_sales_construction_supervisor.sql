@@ -1,4 +1,9 @@
--- 026: Fully retire the Member, Sales and Construction supervisor roles.
+-- 032: Fully retire the Member, Sales and Construction supervisor roles.
+--
+-- (Renumbered from a duplicate "026" — there were two 026_* files, which on a
+-- filename-sorted manual apply caused this one to be skipped on the live DB.
+-- The companion identity/role-integrity hardening lives in 033 and depends on
+-- this one having run first.)
 --
 -- These three roles were removed from the app's role list (App.ROLES) and from
 -- the Approvals role picker. This migration brings the database in line:

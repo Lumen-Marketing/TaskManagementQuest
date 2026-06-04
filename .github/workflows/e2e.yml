@@ -1,0 +1,137 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Also run preview-smoke automatically whenever Vercel finishes a deployment.
+  deployment_status:
+
+permissions:
+  contents: read
+  # actions: read is needed by the deployment_status filter below.
+  actions: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ----------------------------------------------------------------------
+  # Local E2E — full critical-path suite against a Node static server +
+  # a TEST Supabase project. Required secrets (set in repo Settings ->
+  # Secrets and variables -> Actions):
+  #   - SUPABASE_URL_TEST          (test project URL)
+  #   - SUPABASE_ANON_KEY_TEST     (test project publishable / anon key)
+  #   - TEST_ADMIN_EMAIL           (an approved admin user in the test project)
+  #   - TEST_ADMIN_PASSWORD
+  #   - TEST_WORKER_EMAIL          (an approved worker user)
+  #   - TEST_WORKER_PASSWORD
+  # If TEST_WORKER_* are unset, the worker tests skip themselves rather
+  # than fail — the admin tests are the must-pass critical path.
+  # ----------------------------------------------------------------------
+  local-e2e:
+    # Skip this job on deployment_status events (preview-smoke runs instead).
+    if: github.event_name != 'deployment_status'
+    name: critical paths (local)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browser
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate test env.json
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_TEST }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_TEST }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Test Supabase secrets are not configured. Set SUPABASE_URL_TEST and SUPABASE_ANON_KEY_TEST in repo secrets."
+            exit 1
+          fi
+          node tools/build-env.mjs
+
+      - name: Run Playwright (local project)
+        env:
+          TEST_ADMIN_EMAIL:    ${{ secrets.TEST_ADMIN_EMAIL }}
+          TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}
+          TEST_WORKER_EMAIL:   ${{ secrets.TEST_WORKER_EMAIL }}
+          TEST_WORKER_PASSWORD:${{ secrets.TEST_WORKER_PASSWORD }}
+        run: npx playwright test --project=local
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-local
+          path: playwright-report/
+          retention-days: 14
+
+  # ----------------------------------------------------------------------
+  # Preview-smoke — runs whenever Vercel finishes a Preview deploy. Hits
+  # the live URL, asserts env.json, headers, console-clean, and that the
+  # preview-bypass is dead on a non-localhost hostname. No DB writes —
+  # zero credentials required.
+  # ----------------------------------------------------------------------
+  preview-smoke:
+    if: >
+      github.event_name == 'deployment_status' &&
+      github.event.deployment_status.state == 'success' &&
+      contains(github.event.deployment_status.environment_url, 'vercel.app')
+    name: preview-smoke (Vercel preview URL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browser
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run preview-smoke against deployed URL
+        env:
+          PREVIEW_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+          PLAYWRIGHT_NO_WEBSERVER: '1'
+        run: |
+          echo "Running smoke tests against: $PREVIEW_BASE_URL"
+          npx playwright test --project=preview-smoke
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-preview
+          path: playwright-report/
+          retention-days: 14

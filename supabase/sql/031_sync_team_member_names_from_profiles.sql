@@ -10,7 +10,7 @@
 -- roles.manage). Non-managers see the stale roster row, so the SAME assignee
 -- appears under two different names depending on who is looking.
 --
--- Root cause: handle_new_user() (migrations 026/029) seeds team_members from the
+-- Root cause: handle_new_user() (migrations 032/029/033) seeds team_members from the
 -- email / auth metadata at signup, and migration 011 lets a user update their
 -- own team_members row — but nothing re-syncs an existing roster row when the
 -- profile name/avatar is changed later, and the client-side sync in ProfileView
