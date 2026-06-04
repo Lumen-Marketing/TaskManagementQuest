@@ -107,8 +107,11 @@ App.TaskListView = class TaskListView {
     const role = App.effectiveRole();
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
     // Supervisors are scoped to their direct reports (profiles whose
-    // supervisor_id points at this supervisor's member_id).
-    const reportMemberIds = role === 'supervisor'
+    // supervisor_id points at this supervisor's member_id). When a DEVELOPER
+    // previews "as supervisor", they have no real reports, so we leave this
+    // null — the supervisor preview then shows the whole selected company's
+    // team (company-level supervisor view).
+    const reportMemberIds = (role === 'supervisor' && App.realRole() !== 'developer')
       ? new Set((App.PROFILES || [])
           .filter(p => p.supervisor_id === me)
           .map(p => p.member_id))

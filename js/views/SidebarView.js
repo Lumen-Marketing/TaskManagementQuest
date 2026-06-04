@@ -182,7 +182,10 @@ App.SidebarView = class SidebarView {
     // companies this user can access (plus "All companies" for developers).
     // Picking one re-scopes the whole app via controller.setCompany. Shown
     // only when there's more than one choice.
-    const companies = this.controller.uiState.companies || [];
+    // "All companies" (*) is only meaningful for an actual developer; when
+    // previewing another role, drop it so the preview is scoped to one company.
+    const companies = (this.controller.uiState.companies || [])
+      .filter(id => id !== '*' || App.effectiveRole() === 'developer');
     if (companies.length > 1) {
       const cur = this.controller.uiState.currentCompany;
       const dotMap = { roofing: 'dot-roof', drafting: 'dot-draft', lumen: 'dot-lumen' };
@@ -285,7 +288,9 @@ App.SidebarView = class SidebarView {
     }
     if (role === 'worker') {
       base = base.filter(t => t.assignee === this.currentUser || t.id === clockId);
-    } else if (role === 'supervisor') {
+    } else if (role === 'supervisor' && App.realRole() !== 'developer') {
+      // Real supervisor: narrow to their direct reports. A developer previewing
+      // as supervisor sees the whole selected company's team (no narrowing).
       const reports = new Set((App.PROFILES || [])
         .filter(p => p.supervisor_id === me).map(p => p.member_id));
       base = base.filter(t =>
