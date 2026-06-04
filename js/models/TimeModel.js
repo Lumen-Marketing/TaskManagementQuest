@@ -29,6 +29,16 @@ App.TimeModel = class TimeModel {
     return Math.min(Date.now() - startedAt, App.MAX_SHIFT_MS);
   }
 
+  // Live contribution of an open timer that falls within [sinceMs, now). A
+  // shift that began before the window (e.g. clocked in at 11pm, asked for
+  // "today") still counts the portion since the boundary — otherwise an
+  // overnight/over-week shift drops out of the windowed total entirely while
+  // the row still reads "clocked in". Still capped at the max shift.
+  _liveMsSince(startedAt, sinceMs) {
+    const from = sinceMs ? Math.max(startedAt, sinceMs) : startedAt;
+    return Math.min(Date.now() - from, App.MAX_SHIFT_MS);
+  }
+
   // Closes any of THIS user's timers that have run past the max shift, logging a
   // capped entry. Returns the closed entry (or null). Server-side cleanup would
   // be needed for other users; here we only touch the current user's own timer.
@@ -98,8 +108,8 @@ App.TimeModel = class TimeModel {
   totalForUser(userId, sinceMs = null) {
     let total = this.entriesForUser(userId, sinceMs).reduce((s, e) => s + (e.durationMs || 0), 0);
     const active = this.activeTimers[userId];
-    if (active && (!sinceMs || active.startedAt >= sinceMs)) {
-      total += this._liveMs(active.startedAt);
+    if (active) {
+      total += this._liveMsSince(active.startedAt, sinceMs);
     }
     return total;
   }

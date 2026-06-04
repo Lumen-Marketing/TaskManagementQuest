@@ -37,7 +37,7 @@ App.ClockDashboardView = class ClockDashboardView {
     const week0 = new Date(); week0.setDate(week0.getDate() - 7); week0.setHours(0, 0, 0, 0);
 
     const liveRows = active.map(timer => {
-      const p = App.PEOPLE[timer.userId] || { name: timer.userId, full: timer.userId, color: '#E8A03A' };
+      const p = App.PEOPLE[timer.userId] || App.utils.unknownPerson(timer.userId);
       const t = this.taskModel.find(timer.taskId);
       const company = t ? App.COMPANIES[t.company] : null;
       const startedAtLabel = new Date(timer.startedAt).toLocaleString('en-US', {
@@ -58,7 +58,12 @@ App.ClockDashboardView = class ClockDashboardView {
       `;
     }).join('');
 
-    const everyone = App.utils.activePeople().map(p => {
+    // Roster from team_members unioned with anyone who actually tracked time in
+    // the last 7 days (shared with TimeView so the two boards can't drift) —
+    // otherwise people not on the company-scoped, approval-filtered roster (the
+    // developer account, a member whose profile was removed) are dropped and
+    // team totals read 0h.
+    const everyone = App.utils.rosterWithActivity(this.timeModel, week0.getTime()).map(p => {
       const todayMs = this.timeModel.totalForUser(p.id, today0.getTime());
       const weekMs = this.timeModel.totalForUser(p.id, week0.getTime());
       const isLive = this.timeModel.isRunning(p.id);

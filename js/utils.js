@@ -22,7 +22,38 @@ App.utils = {
       // the migration-022 CHECK constraint were ever bypassed.
       return `<span class="${cls}" style="background:transparent; padding:0;"><img src="${App.utils.escapeHtml(person.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" /></span>`;
     }
-    return `<span class="${cls}" style="background:${person.color || 'var(--ink-3)'};">${App.utils.initials(person.full || person.name || '')}</span>`;
+    const bg = person.color ? App.utils.safeColor(person.color) : 'var(--ink-3)';
+    return `<span class="${cls}" style="background:${bg};">${App.utils.initials(person.full || person.name || '')}</span>`;
+  },
+
+  /* A minimal stand-in for someone who has tracked time but isn't in
+     App.PEOPLE (left the roster, demo seed, or the current developer account).
+     Centralises the synthesized shape so every board agrees on the fields —
+     notably `id`, which earlier hand-rolled copies sometimes omitted, breaking
+     any later totalForUser(p.id, ...) call. */
+  unknownPerson(id) {
+    return { id, name: id, full: id, color: '#E8A03A' };
+  },
+
+  /* The set of people to show on a team time board: the approved roster
+     (activePeople) unioned with anyone who has actual activity in the window —
+     a live timer now, or a completed entry since `sinceMs` — so their hours
+     always surface even if they're not on the (company-scoped, approval-
+     filtered) roster. People with activity but absent from App.PEOPLE are
+     synthesized via unknownPerson() so they still appear and count.
+
+     Shared by TimeView.renderResource and ClockDashboardView.render; keep the
+     union semantics here so the two boards can't drift. */
+  rosterWithActivity(timeModel, sinceMs) {
+    const activityIds = new Set();
+    timeModel.allActive().forEach(t => activityIds.add(t.userId));
+    timeModel.entries.forEach(e => { if (e.start >= sinceMs) activityIds.add(e.userId); });
+    const roster = App.utils.activePeople([...activityIds]);
+    const rosterIds = new Set(roster.map(p => p.id));
+    const orphans = [...activityIds]
+      .filter(id => !rosterIds.has(id))
+      .map(id => App.PEOPLE[id] || App.utils.unknownPerson(id));
+    return [...roster, ...orphans];
   },
 
   /* People eligible to appear in assignment pickers and team dashboards:

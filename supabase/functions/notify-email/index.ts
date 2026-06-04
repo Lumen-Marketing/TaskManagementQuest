@@ -118,11 +118,19 @@ Deno.serve(async (req: Request) => {
     if (profileErr || !callerProfile) {
       return json(req, { error: "Not authorized." }, 403);
     }
-    const ALLOWED_CALLER_ROLES = new Set([
-      "admin", "construction_supervisor", "developer",
-      "supervisor", "sales",
-    ]);
-    if (!callerProfile.approved || !ALLOWED_CALLER_ROLES.has(callerProfile.role)) {
+    // Authorize the caller to send notification emails: approved === true AND a
+    // non-empty role. We deliberately avoid a hardcoded allowlist of role names
+    // mirroring App.ROLES — it's a second source of truth that rots (add a role
+    // to App.ROLES + the UI, forget this file, and that role's "Email assignee"
+    // send 403s) and is sensitive to deploy ordering (a profile still on a
+    // retired role before migration 032/033 ran would 403, even though the
+    // retired roles map to permitted ones). migration 033's profiles_role_check
+    // already constrains role to the live set (worker/supervisor/admin/
+    // developer), and every live role may send, so "approved with a role" is the
+    // correct, drift-proof, order-independent gate. Approval is the real wall;
+    // RLS enforces what each row can actually do.
+    const callerRole = typeof callerProfile.role === "string" ? callerProfile.role.trim() : "";
+    if (!callerProfile.approved || !callerRole) {
       return json(req, { error: "Not authorized." }, 403);
     }
 

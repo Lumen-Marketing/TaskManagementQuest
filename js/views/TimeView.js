@@ -36,7 +36,6 @@ App.TimeView = class TimeView {
     const view = this.controller.uiState.view;
     if (view === 'time:mine')         this.wrap.innerHTML = this.renderMyTime();
     else if (view === 'time:resource')  this.wrap.innerHTML = this.renderResource();
-    else if (view === 'time:analytics') this.wrap.innerHTML = this.renderAnalytics();
 
     this.bindHandlers();
   }
@@ -124,14 +123,14 @@ App.TimeView = class TimeView {
     const active = this.timeModel.allActive();
 
     const liveRows = active.map(timer => {
-      const p = App.PEOPLE[timer.userId];
+      const p = App.PEOPLE[timer.userId] || App.utils.unknownPerson(timer.userId);
       const t = this.taskModel.find(timer.taskId);
       const company = t ? App.COMPANIES[t.company] : null;
       return `
         <tr class="live">
           <td>
             <span style="display:inline-flex; align-items:center; gap:6px;">
-              ${App.utils.avatarHtml(p)}${p.name}
+              ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}
             </span>
           </td>
           <td>${t ? App.utils.escapeHtml(t.title) : '—'}</td>
@@ -142,7 +141,11 @@ App.TimeView = class TimeView {
       `;
     }).join('');
 
-    const peopleRows = App.utils.activePeople().map(p => {
+    // Roster from team_members, unioned with anyone who actually tracked time
+    // (a live timer or an entry in the last 7 days) so their hours always show
+    // here — otherwise the current user / non-roster members are dropped.
+    // Shared with ClockDashboardView so the two boards stay in lockstep.
+    const peopleRows = App.utils.rosterWithActivity(this.timeModel, week0.getTime()).map(p => {
       const todayMs = this.timeModel.totalForUser(p.id, today0.getTime());
       const weekMs = this.timeModel.totalForUser(p.id, week0.getTime());
       const isActive = this.timeModel.isRunning(p.id);
@@ -150,7 +153,7 @@ App.TimeView = class TimeView {
         <tr>
           <td>
             <span style="display:inline-flex; align-items:center; gap:6px;">
-              ${App.utils.avatarHtml(p)}${p.name}
+              ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}
             </span>
           </td>
           <td class="mono">${App.utils.formatHours(todayMs)}</td>
@@ -180,90 +183,6 @@ App.TimeView = class TimeView {
             <thead><tr><th>Person</th><th>Today</th><th>Last 7 days</th><th>Status</th></tr></thead>
             <tbody>${peopleRows}</tbody>
           </table>
-        </div>
-      </div>
-    `;
-  }
-
-  renderAnalytics() {
-    const companyTotals = Object.keys(App.COMPANIES).map(c => {
-      const taskIds = this.taskModel.byCompany(c).map(t => t.id);
-      return {
-        id: c,
-        label: App.COMPANIES[c].label,
-        ms: this.timeModel.totalForTaskIds(taskIds),
-      };
-    });
-    const grand = companyTotals.reduce((s, c) => s + c.ms, 0);
-
-    const companyBars = companyTotals.map(c => {
-      const pct = grand > 0 ? Math.max(2, Math.round((c.ms / grand) * 100)) : 0;
-      return `
-        <div class="bar-row">
-          <div>${c.label}</div>
-          <div class="bar-track"><div class="bar-fill ${c.id}" style="width:${pct}%;"></div></div>
-          <div class="bar-value">${App.utils.formatHours(c.ms)}</div>
-        </div>
-      `;
-    }).join('');
-
-    const taskTotals = this.taskModel.all()
-      .map(t => ({ t, ms: this.timeModel.totalForTask(t.id) }))
-      .filter(x => x.ms > 0)
-      .sort((a, b) => b.ms - a.ms)
-      .slice(0, 10);
-
-    const topTaskRows = taskTotals.map(x => {
-      const company = App.COMPANIES[x.t.company];
-      const person = App.PEOPLE[x.t.assignee];
-      return `
-        <tr>
-          <td>${App.utils.escapeHtml(x.t.title)}</td>
-          <td><span class="pill ${company.pill}">${company.label}</span></td>
-          <td>
-            <span style="display:inline-flex; align-items:center; gap:6px;">
-              ${App.utils.avatarHtml(person)}${person.name}
-            </span>
-          </td>
-          <td class="mono">${App.utils.formatHours(x.ms)}</td>
-        </tr>
-      `;
-    }).join('');
-
-    return `
-      <div class="time-page">
-        <div class="time-section">
-          <div class="time-card-grid">
-            ${companyTotals.map(c => `
-              <div class="time-card">
-                <div class="time-card-label">${c.label}</div>
-                <div class="time-card-value">${App.utils.formatHours(c.ms)}</div>
-                <div class="time-card-sub">${grand > 0 ? Math.round(c.ms / grand * 100) : 0}% of total</div>
-              </div>
-            `).join('')}
-            <div class="time-card">
-              <div class="time-card-label">Total tracked</div>
-              <div class="time-card-value">${App.utils.formatHours(grand)}</div>
-              <div class="time-card-sub">All projects, all time</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="time-section">
-          <div class="time-section-title">Hours by project</div>
-          <div class="time-card" style="padding:18px;">
-            ${companyBars}
-          </div>
-        </div>
-
-        <div class="time-section">
-          <div class="time-section-title">Top tasks by time spent</div>
-          ${taskTotals.length ? `
-            <table class="time-table">
-              <thead><tr><th>Task</th><th>Project</th><th>Owner</th><th>Hours</th></tr></thead>
-              <tbody>${topTaskRows}</tbody>
-            </table>
-          ` : `<div class="empty"><i class="ti ti-chart-bar"></i><div class="empty-title">No data yet</div><div class="empty-sub">Track time on a few tasks to see the breakdown.</div></div>`}
         </div>
       </div>
     `;

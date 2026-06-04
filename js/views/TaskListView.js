@@ -57,7 +57,6 @@ App.TaskListView = class TaskListView {
       'watching':  { eyebrow: 'Tasks you\'re watching', title: 'Watching' },
       'time:mine':      { eyebrow: 'Time tracking', title: 'My time' },
       'time:resource':  { eyebrow: 'Time tracking', title: 'Team workload' },
-      'time:analytics': { eyebrow: 'Time tracking', title: 'Reports' },
       'approvals':      { eyebrow: 'Admin', title: 'Approvals' },
       'admin:clock':    { eyebrow: 'Admin', title: 'Clock dashboard' },
       'team:hierarchy': { eyebrow: 'Org', title: 'Team hierarchy' },
