@@ -16,6 +16,10 @@ App.TimeView = class TimeView {
     App.EventBus.on('tasks:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('time:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('view:changed', () => { if (this.visible()) this.render(); });
+    // The Team workload roster + its teamScope() read App.PEOPLE / App.PROFILES,
+    // which can load (or change) after the board first renders. Re-render on
+    // people:changed so it doesn't sit empty/stale until an unrelated event.
+    App.EventBus.on('people:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('clock:tick', () => this.tickLive());
   }
 
@@ -142,8 +146,11 @@ App.TimeView = class TimeView {
 
     const liveRows = active.map(timer => {
       const p = App.PEOPLE[timer.userId] || App.utils.unknownPerson(timer.userId);
+      // Prefer the loaded task; fall back to the label snapshotted on the timer
+      // at clock-in so a task the viewer can't load still shows its name.
       const t = this.taskModel.find(timer.taskId);
-      const company = t ? App.COMPANIES[t.company] : null;
+      const title = t ? t.title : timer.taskTitle;
+      const company = App.COMPANIES[t ? t.company : timer.taskCompany];
       return `
         <tr class="live">
           <td>
@@ -151,7 +158,7 @@ App.TimeView = class TimeView {
               ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}
             </span>
           </td>
-          <td>${t ? App.utils.escapeHtml(t.title) : '—'}</td>
+          <td>${title ? App.utils.escapeHtml(title) : '—'}</td>
           <td>${company ? `<span class="pill ${company.pill}">${company.label}</span>` : '—'}</td>
           <td class="mono" data-live-timer="${timer.userId}">${App.utils.formatDuration(Date.now() - timer.startedAt)}</td>
           <td><span style="display:inline-flex; align-items:center; gap:4px; color:var(--green-ink); font-size:11px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);"></span>Live</span></td>

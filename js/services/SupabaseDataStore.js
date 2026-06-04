@@ -78,7 +78,12 @@ App.SupabaseDataStore = class SupabaseDataStore {
       })),
       activeTimers: Object.fromEntries((timersRes.data || []).map(row => [
         row.user_id,
-        { taskId: row.task_id, startedAt: Date.parse(row.started_at) },
+        {
+          taskId: row.task_id,
+          startedAt: Date.parse(row.started_at),
+          taskTitle: row.task_title || null,
+          taskCompany: row.task_company || null,
+        },
       ])),
       notifications: (notificationsRes.data || []).map(row => this._mapNotificationRow(row)),
     };
@@ -247,6 +252,8 @@ App.SupabaseDataStore = class SupabaseDataStore {
         user_id: this.currentUser,
         task_id: mine.taskId,
         started_at: new Date(mine.startedAt).toISOString(),
+        task_title: mine.taskTitle || null,
+        task_company: mine.taskCompany || null,
       }], { onConflict: 'user_id' });
       this._throwIfError(res, 'saving active timer');
     } else {

@@ -38,8 +38,11 @@ App.ClockDashboardView = class ClockDashboardView {
 
     const liveRows = active.map(timer => {
       const p = App.PEOPLE[timer.userId] || App.utils.unknownPerson(timer.userId);
+      // Prefer the loaded task; fall back to the label snapshotted on the timer
+      // at clock-in so a task the viewer can't load still shows its name.
       const t = this.taskModel.find(timer.taskId);
-      const company = t ? App.COMPANIES[t.company] : null;
+      const title = t ? t.title : timer.taskTitle;
+      const company = App.COMPANIES[t ? t.company : timer.taskCompany];
       const startedAtLabel = new Date(timer.startedAt).toLocaleString('en-US', {
         hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric',
       });
@@ -50,7 +53,7 @@ App.ClockDashboardView = class ClockDashboardView {
               ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.full)}
             </span>
           </td>
-          <td>${t ? App.utils.escapeHtml(t.title) : '<em>unknown task</em>'}</td>
+          <td>${title ? App.utils.escapeHtml(title) : '<em>unknown task</em>'}</td>
           <td>${company ? `<span class="pill ${company.pill}">${company.label}</span>` : '—'}</td>
           <td class="mono">${App.utils.escapeHtml(startedAtLabel)}</td>
           <td class="mono" data-live-timer="${timer.userId}">${App.utils.formatDuration(Math.min(Date.now() - timer.startedAt, App.MAX_SHIFT_MS))}</td>

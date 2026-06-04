@@ -581,7 +581,13 @@ App.AppController = class AppController {
   /* ---------- timer actions ---------- */
   startTimer(userId, taskId) {
     if (!App.can('clock.use')) return;
-    const { priorEntry } = this.timeModel.startTimer(userId, taskId);
+    // Snapshot the task label onto the timer so the team boards can still name
+    // it if the task row isn't loadable for whoever's viewing (RLS scope).
+    const task = this.taskModel.find(taskId);
+    const { priorEntry } = this.timeModel.startTimer(userId, taskId, {
+      taskTitle: task ? task.title : null,
+      taskCompany: task ? task.company : null,
+    });
     if (priorEntry) {
       this.taskModel.addActivity(priorEntry.taskId, {
         who: this.getUserName(userId),
@@ -589,7 +595,6 @@ App.AppController = class AppController {
         when: 'just now',
       });
     }
-    const task = this.taskModel.find(taskId);
     if (task) {
       this.taskModel.addActivity(taskId, {
         who: this.getUserName(userId),

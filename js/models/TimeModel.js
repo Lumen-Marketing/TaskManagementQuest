@@ -5,7 +5,7 @@ window.App = window.App || {};
 App.TimeModel = class TimeModel {
   constructor() {
     this.entries = [];
-    this.activeTimers = {}; // { userId: { taskId, startedAt } }
+    this.activeTimers = {}; // { userId: { taskId, startedAt, taskTitle, taskCompany } }
     this._unsaved = new Set(); // ids of time entries not yet persisted
   }
 
@@ -126,13 +126,22 @@ App.TimeModel = class TimeModel {
   }
 
   /* ---------- mutations ---------- */
-  startTimer(userId, taskId) {
+  // `meta` carries a snapshot of the task label ({ taskTitle, taskCompany }) so
+  // a board can still name the running task when the task row itself isn't
+  // loadable for the viewer (RLS company/role scope). The model stays
+  // task-agnostic; the controller looks the task up and passes the snapshot.
+  startTimer(userId, taskId, meta = {}) {
     // If already running for this user, stop the prior timer first (silent — caller decides).
     let priorEntry = null;
     if (this.activeTimers[userId]) {
       priorEntry = this._closeTimerEntry(userId);
     }
-    this.activeTimers[userId] = { taskId, startedAt: Date.now() };
+    this.activeTimers[userId] = {
+      taskId,
+      startedAt: Date.now(),
+      taskTitle: meta.taskTitle || null,
+      taskCompany: meta.taskCompany || null,
+    };
     App.EventBus.emit('time:changed');
     return { priorEntry };
   }
