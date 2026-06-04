@@ -97,8 +97,8 @@ App.NewTaskModalView = class NewTaskModalView {
 
           <div class="field" style="margin-top:14px;">
             <div class="field-label">Time <span class="field-optional">Optional</span></div>
-            <input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM or 14:30" style="width:100%; padding: 6px 10px; font-size: 12px;" />
-            <div class="user-menu-hint" style="margin-top:5px;">Type a time like <strong>9am</strong>, <strong>2:30 PM</strong> or <strong>14:30</strong> — or leave blank.</div>
+            <input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" style="width:100%; padding: 6px 10px; font-size: 12px;" />
+            <div class="user-menu-hint" style="margin-top:5px;">Type digits like <strong>930</strong> then <strong>a</strong> or <strong>p</strong> — the time formats itself. Leave blank if not needed.</div>
           </div>
 
           <div id="nt-bid-status-row" class="field hidden" style="margin-top:14px;">
@@ -192,14 +192,23 @@ App.NewTaskModalView = class NewTaskModalView {
       });
     });
 
-    // Free-typed time: normalise to HH:MM on blur so it matches what the
-    // validator/DB expect (e.g. "2:30 pm" -> "14:30"). Left as-typed if it
-    // can't be parsed, so submit can surface a clear error.
+    // Free-typed time, displayed as standard 12h time. We auto-insert the colon
+    // as digits are typed and the AM/PM as soon as an "a"/"p" is hit; on blur we
+    // settle on a clean "2:30 PM". The stored value is converted back to 24h
+    // "HH:MM" at submit (what the validator/DB expect).
     const timeInput = document.getElementById('nt-time');
     if (timeInput) {
+      timeInput.addEventListener('input', () => {
+        const formatted = this._maskTime(timeInput.value);
+        if (formatted !== timeInput.value) {
+          timeInput.value = formatted;
+          // Keep the caret at the end while typing forward.
+          timeInput.setSelectionRange(formatted.length, formatted.length);
+        }
+      });
       timeInput.addEventListener('blur', () => {
         const parsed = this._parseTime(timeInput.value);
-        if (parsed) timeInput.value = parsed;
+        if (parsed) timeInput.value = App.utils.formatClock(parsed); // -> "2:30 PM"
       });
     }
 
@@ -252,6 +261,25 @@ App.NewTaskModalView = class NewTaskModalView {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
+  }
+
+  // Live input mask: auto-insert the colon as digits are typed, and expand a
+  // typed "a"/"p" into " AM"/" PM". Returns the prettified display string.
+  // e.g. "230"->"2:30", "230p"->"2:30 PM", "1430"->"14:30" (settled on blur).
+  _maskTime(raw) {
+    let s = String(raw == null ? '' : raw).toLowerCase();
+    let ap = '';
+    if (s.includes('p')) ap = ' PM';
+    else if (s.includes('a')) ap = ' AM';
+
+    const digits = s.replace(/\D/g, '').slice(0, 4);
+    if (!digits) return ap ? digits + ap : '';
+
+    let body;
+    if (digits.length <= 2) body = digits;            // "2", "12" — colon comes next
+    else if (digits.length === 3) body = digits.slice(0, 1) + ':' + digits.slice(1);
+    else body = digits.slice(0, 2) + ':' + digits.slice(2);
+    return body + ap;
   }
 
   // Parse a loosely-typed time into strict 24h "HH:MM", or null if unusable.

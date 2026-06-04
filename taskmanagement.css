@@ -271,6 +271,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   padding: 14px 24px;
   border-bottom: 1px solid var(--bg-3);
   font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   background: var(--surface);
   transition: background var(--dur-fast) var(--ease-out);
@@ -287,7 +288,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   text-transform: none;
   letter-spacing: 0;
   color: var(--ink-3);
-  font-weight: 600;
+  font-weight: 700;
   font-family: var(--font-body);
   background: transparent;
   border-bottom: none;
@@ -370,7 +371,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   margin-left: auto;
   font-family: var(--font-mono);
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--ink-3);
   background: var(--bg-3);
@@ -380,8 +381,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .group-body { background: var(--surface); }
 .task-group.collapsed .group-body { display: none; }
 
-.task-title-cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.task-title-cell.done { text-decoration: line-through; color: var(--ink-3); font-weight: 400; }
+.task-title-cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.task-title-cell.done { text-decoration: line-through; color: var(--ink-3); font-weight: 600; }
 
 /* Worker task view — scheduled Time and Task name side-by-side */
 .worker-task-list { background: var(--surface); }
@@ -416,7 +417,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .due-overdue { color: var(--rust); font-weight: 600; }
 .due-time { display: block; font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); margin-top: 1px; }
 
-.pill { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-body); font-size: 13px; padding: 4px 11px; border-radius: var(--radius-pill); font-weight: 600; letter-spacing: 0.01em; }
+.pill { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-body); font-size: 13px; padding: 4px 11px; border-radius: var(--radius-pill); font-weight: 700; letter-spacing: 0.01em; }
 .pill-roof    { background: var(--pastel-peach);  color: var(--pastel-peach-ink); }
 .pill-draft   { background: var(--pastel-blue);   color: var(--pastel-blue-ink); }
 .pill-lumen   { background: var(--pastel-yellow); color: var(--pastel-yellow-ink); }
@@ -427,7 +428,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pill-type {
   display: inline-flex; align-items: center;
   padding: 4px 11px; border-radius: var(--radius-pill);
-  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  font-family: var(--font-body); font-size: 13px; font-weight: 700;
   letter-spacing: 0.01em;
   background: var(--bg-3);
   border: none;
@@ -456,7 +457,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .bid-started  { color: var(--blue); }
 .bid-supplier { color: var(--amber); }
 .bid-ready    { color: var(--green); }
-.pill-status { padding: 4px 11px; border-radius: var(--radius-pill); font-family: var(--font-body); font-size: 13px; font-weight: 600; letter-spacing: 0.01em; }
+.pill-status { padding: 4px 11px; border-radius: var(--radius-pill); font-family: var(--font-body); font-size: 13px; font-weight: 700; letter-spacing: 0.01em; }
 .status-todo    { background: var(--pastel-blue);   color: var(--pastel-blue-ink); }
 .status-doing   { background: var(--pastel-blue);   color: var(--pastel-blue-ink); }
 .status-review  { background: var(--pastel-yellow); color: var(--pastel-yellow-ink); }
@@ -468,7 +469,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .priority-block {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 6px 14px; border-radius: var(--radius-pill);
-  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  font-family: var(--font-body); font-size: 13px; font-weight: 700;
   letter-spacing: 0.01em;
   text-align: center;
   min-width: 80px;
@@ -2142,7 +2143,7 @@ body.role-developer .list-row > :nth-child(7) {
   background: color-mix(in oklch, var(--group-color, var(--ink-3)) 5%, var(--surface));
   border-bottom: 1px solid var(--border);
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   gap: 10px;
   letter-spacing: -0.005em;
 }
