@@ -63,9 +63,15 @@ App.ApprovalView = class ApprovalView {
       color: '#E8A03A',
       avatar_url: profile.avatar_url || null,
     };
-    const roles = Object.entries(App.ROLES).map(([id, role]) =>
-      `<option value="${id}" ${profile.role === id ? 'selected' : ''}>${role.label}</option>`
-    ).join('');
+    // Roles retired from the assignable list. Still resolve for display/labels
+    // elsewhere, and still shown here if a user already holds one (so saving
+    // doesn't silently change their role).
+    const retiredRoles = ['member', 'sales', 'construction_supervisor'];
+    const roles = Object.entries(App.ROLES)
+      .filter(([id]) => !retiredRoles.includes(id) || profile.role === id)
+      .map(([id, role]) =>
+        `<option value="${id}" ${profile.role === id ? 'selected' : ''}>${role.label}</option>`
+      ).join('');
     const supervisorOpts = ['<option value="">— None —</option>']
       .concat(this.supervisorOptions(profile.member_id).map(s =>
         `<option value="${s.id}" ${profile.supervisor_id === s.id ? 'selected' : ''}>${App.utils.escapeHtml(s.name)}</option>`
