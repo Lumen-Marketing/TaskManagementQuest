@@ -56,29 +56,63 @@ App.utils = {
     return [...roster, ...orphans];
   },
 
-  /* People eligible to appear in assignment pickers and team dashboards:
-     team_members (App.PEOPLE) that are backed by an approved profile.
+  /* Synthesize the standard person shape (matching SupabaseDataStore._mapPeople)
+     from an approved profile, for when no team_members row backs its member_id
+     (linkage drift — the profile's slug was generated from the sign-up email but
+     the matching roster row was pruned or never created). Lets an approved user
+     still appear on boards/pickers; a later roster sync / migration 035 fills in
+     the real team_members row. */
+  personFromProfile(profile) {
+    const full = (profile.full_name && profile.full_name.trim())
+      || (profile.email ? profile.email.split('@')[0] : profile.member_id);
+    return {
+      id: profile.member_id,
+      name: String(full).split(' ')[0] || full,
+      full,
+      email: profile.email || '',
+      color: App.utils.safeColor(profile.color),
+      avatar_url: profile.avatar_url || null,
+    };
+  },
 
-     The roster accumulates rows that no longer map to a login — leftover
-     demo seeds and members whose profile was deleted from Approvals (their
-     team_members row is kept so historical tasks don't break). Those
-     shouldn't show up as assignable people, which is why the picker and
-     the clock dashboard otherwise drift from the Approvals list.
+  /* People eligible to appear in assignment pickers and team dashboards.
+
+     Source of truth is the set of APPROVED profiles (the real users), NOT the
+     team_members roster — the roster drifts: it keeps leftover demo seeds and
+     members whose profile was removed, and it MISSES approved users whose
+     profiles.member_id points at a slug with no matching roster row. Building
+     from profiles fixes both: each approved profile maps to its team_members
+     row for display, or a synthesized person when that row is missing, so an
+     approved user is never silently dropped.
 
      Falls back to the full roster when profiles aren't loaded (non-manager
      sessions don't fetch them) so a picker never renders empty. Pass
      `includeIds` (e.g. a task's current assignee) to keep an existing
-     selection visible even if it's no longer backed by a profile. */
+     selection visible even if it's no longer backed by an approved profile. */
   activePeople(includeIds) {
-    const all = Object.values(App.PEOPLE || {});
+    const byId = App.PEOPLE || {};
+    const all = Object.values(byId);
     const profiles = App.PROFILES || [];
     if (!profiles.length) return all;
-    const allowed = new Set(
-      profiles.filter(p => p.approved !== false && p.member_id).map(p => p.member_id)
-    );
+
+    const seen = new Set();
+    const list = [];
+    profiles
+      .filter(p => p.approved !== false && p.member_id)
+      .forEach(p => {
+        if (seen.has(p.member_id)) return;
+        seen.add(p.member_id);
+        list.push(byId[p.member_id] || App.utils.personFromProfile(p));
+      });
+
     const keep = Array.isArray(includeIds) ? includeIds : (includeIds ? [includeIds] : []);
-    keep.forEach(id => { if (id) allowed.add(id); });
-    const list = all.filter(p => allowed.has(p.id));
+    keep.forEach(id => {
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        list.push(byId[id] || App.utils.unknownPerson(id));
+      }
+    });
+
     return list.length ? list : all;
   },
 
