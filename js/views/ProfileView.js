@@ -241,11 +241,16 @@ App.ProfileView = class ProfileView {
       const memberUpdate = { name: firstName, full_name: fullName };
       if (avatarChanged) memberUpdate.avatar_url = avatarUrl;
 
+      // Best-effort: only managers can write team_members (RLS). For everyone
+      // else this is rejected — that's fine, the profile is the source of truth
+      // and the UI overlays profile name/avatar onto the roster anyway.
       const memberRes = await App.supabase
         .from('team_members')
         .update(memberUpdate)
         .eq('id', memberId);
-      if (memberRes.error) throw memberRes.error;
+      if (memberRes.error) {
+        console.warn('[profile] team_members sync skipped (likely RLS):', memberRes.error.message);
+      }
     }
 
     if (avatarChanged) {

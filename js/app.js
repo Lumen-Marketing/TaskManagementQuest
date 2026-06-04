@@ -100,6 +100,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // A user's display name + photo live on their PROFILE, but the task list
+  // and pickers read from the team_members roster (App.PEOPLE). Non-managers
+  // can't write team_members (RLS), so the roster can lag behind the profile.
+  // Overlay profile name/avatar onto App.PEOPLE so the chosen display name and
+  // photo show everywhere, regardless of whether team_members was synced.
+  overlayProfilesOntoPeople();
+
   const controller = new App.AppController({
     taskModel,
     timeModel,
@@ -327,6 +334,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     doSave().catch(err => console.warn('[app] final Supabase save failed', err));
   });
 });
+
+// Merge profile display-name + avatar into the in-memory people roster.
+function overlayProfilesOntoPeople() {
+  const apply = (prof) => {
+    if (!prof || !prof.member_id) return;
+    const person = App.PEOPLE && App.PEOPLE[prof.member_id];
+    if (!person) return;
+    if (prof.full_name) {
+      person.full = prof.full_name;
+      person.name = prof.full_name.split(/\s+/)[0] || prof.full_name;
+    }
+    if (prof.avatar_url) person.avatar_url = prof.avatar_url;
+  };
+  (App.PROFILES || []).forEach(apply);
+  apply(App.currentProfile); // own profile, even when the full list isn't loaded
+}
+App.overlayProfilesOntoPeople = overlayProfilesOntoPeople;
 
 App.applyRoleChrome = applyRoleChrome;
 function applyRoleChrome(controller) {
