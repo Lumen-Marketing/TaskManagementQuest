@@ -25,27 +25,37 @@ App.SidebarView = class SidebarView {
   }
 
   bindStaticItems() {
-    // Roles scoped to their own work (no team supervision): they don't need
-    // the Watching view, since it shows direct reports.
-    const role = (App.currentProfile && App.currentProfile.role) || 'member';
-    const isSelfOnlyRole = ['worker', 'member', 'sales', 'developer'].includes(role);
-
+    // Attach click handlers once to every static item; visibility is applied
+    // separately so it can be re-evaluated when a developer switches view-as.
     document.querySelectorAll('.side-item[data-view]').forEach(el => {
-      if (!this.controller.canView(el.dataset.view)) {
-        el.classList.add('hidden');
-        return;
-      }
-      if (isSelfOnlyRole && el.dataset.view === 'watching') {
-        el.classList.add('hidden');
-        return;
-      }
       el.addEventListener('click', () => this.controller.setView(el.dataset.view));
+    });
+    this.applyStaticVisibility();
+  }
+
+  applyStaticVisibility() {
+    // Roles scoped to their own work (no team supervision) don't need the
+    // Watching view, since it shows direct reports.
+    const isSelfOnlyRole = ['worker', 'member', 'sales', 'developer'].includes(App.effectiveRole());
+    document.querySelectorAll('.side-item[data-view]').forEach(el => {
+      const view = el.dataset.view;
+      let hidden = !this.controller.canView(view);
+      if (!hidden && isSelfOnlyRole && view === 'watching') hidden = true;
+      el.classList.toggle('hidden', hidden);
     });
   }
 
   applyRoleVisibility() {
     const viewsGroup = document.querySelector('.grp-views');
     if (viewsGroup) viewsGroup.classList.toggle('hidden', !App.can('tasks.view'));
+  }
+
+  // Re-gate the whole sidebar after a developer switches the previewed role.
+  refreshForRole() {
+    this.applyRoleVisibility();
+    this.applyStaticVisibility();
+    this.renderExtraGroups();
+    this.renderCounts();
   }
 
   /* ---------- Minimize / expand ---------- */
@@ -237,7 +247,7 @@ App.SidebarView = class SidebarView {
   // role row-scope), so sidebar badges match the task list. Mirrors the
   // scoping in TaskModel.getFiltered / migration 028.
   _scopedActiveTasks() {
-    const role = (App.currentProfile && App.currentProfile.role) || 'member';
+    const role = App.effectiveRole();
     const cur = this.controller.uiState.currentCompany;
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
     const clockId = App.DEFAULT_CLOCK_TASK_ID;
@@ -262,6 +272,7 @@ App.SidebarView = class SidebarView {
     App.EventBus.on('time:changed',  () => { this.renderCounts(); this.renderExtraGroups(); });
     App.EventBus.on('view:changed',  (view) => this.updateActive(view));
     App.EventBus.on('company:changed', () => { this.renderCounts(); this.renderExtraGroups(); });
+    App.EventBus.on('role:changed', () => this.refreshForRole());
   }
 
   updateActive(view) {

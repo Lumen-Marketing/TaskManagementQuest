@@ -20,6 +20,7 @@ App.TopbarView = class TopbarView {
 
     this.searchInput = document.getElementById('searchInput');
     this.companySwitcher = document.getElementById('companySwitcher');
+    this.viewAsSwitcher = document.getElementById('viewAsSwitcher');
     this.avatar = document.getElementById('userAvatar');
     this.userMenu = null;
 
@@ -69,12 +70,46 @@ App.TopbarView = class TopbarView {
     App.EventBus.on('notifs:refreshed', () => this.renderNotifs());
     App.EventBus.on('clock:tick', () => this.tickLive());
     App.EventBus.on('company:changed', () => this.renderCompanySwitcher());
+    App.EventBus.on('role:changed', () => { this.renderViewAsSwitcher(); this.renderCompanySwitcher(); });
   }
 
   render() {
     this.renderClockWidget();
     this.renderNotifs();
     this.renderCompanySwitcher();
+    this.renderViewAsSwitcher();
+  }
+
+  // Developer-only: preview the app as another role. Shown only to real
+  // developers (uses realRole so it never hides itself while previewing).
+  renderViewAsSwitcher() {
+    const mount = this.viewAsSwitcher;
+    if (!mount) return;
+    if (App.realRole() !== 'developer') {
+      mount.classList.add('hidden');
+      mount.innerHTML = '';
+      return;
+    }
+    const current = App.viewAsRole || 'developer';
+    const active = !!App.viewAsRole;
+    mount.classList.remove('hidden');
+    mount.classList.toggle('active', active);
+    const opts = [
+      ['developer', 'Developer (you)'],
+      ['admin', 'Admin'],
+      ['supervisor', 'Supervisor'],
+      ['worker', 'Worker'],
+    ];
+    mount.innerHTML = `
+      <i class="ti ti-eye"></i>
+      <span class="viewas-label">View as</span>
+      <select id="viewAsSelect" aria-label="Preview as role">
+        ${opts.map(([val, label]) =>
+          `<option value="${val}" ${val === current ? 'selected' : ''}>${label}</option>`).join('')}
+      </select>`;
+    mount.querySelector('#viewAsSelect').addEventListener('change', (e) => {
+      this.controller.setViewAs(e.target.value);
+    });
   }
 
   // A compact company selector, shown only when the user can access more than

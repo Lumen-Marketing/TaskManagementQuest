@@ -62,7 +62,9 @@ App.AppController = class AppController {
   // Developers bypass scoping entirely (every company). Everyone else is
   // confined to their profiles.company_ids. Mirrors migration 028 RLS.
   initCompanyContext() {
-    const role = (App.currentProfile && App.currentProfile.role) || 'member';
+    // Company access follows the real account (a developer keeps all-company
+    // access even while previewing another role).
+    const role = App.realRole();
     const all = Object.keys(App.COMPANIES || {});
     let companies;
     if (role === 'developer') {
@@ -87,6 +89,40 @@ App.AppController = class AppController {
   _companyKey() {
     const uid = (App.currentProfile && App.currentProfile.id) || 'anon';
     return `questhq:current-company:${uid}`;
+  }
+
+  // Developer-only: preview the app as another role (worker/supervisor/admin),
+  // or pass 'developer'/null to return to full god mode. Re-gates every
+  // permission-dependent surface and re-renders.
+  setViewAs(role) {
+    if (App.realRole() !== 'developer') return;
+    const next = (!role || role === 'developer') ? null : role;
+    if (App.viewAsRole === next) return;
+    App.viewAsRole = next;
+
+    // Reflect the effective role on <body> for CSS (column hiding etc.).
+    const eff = App.effectiveRole();
+    document.body.className = document.body.className.replace(/\brole-\S+/g, '').trim();
+    document.body.classList.add('role-' + eff);
+    document.body.classList.toggle('viewing-as-role', !!next);
+
+    // A previewed non-developer role is company-scoped; "All companies" (*)
+    // isn't a real scope for them, so focus the first real company.
+    if (next && this.uiState.currentCompany === '*') {
+      this.uiState.currentCompany = this.uiState.companies.find(c => c !== '*') || null;
+    }
+
+    // The current view may no longer be permitted under the previewed role.
+    if (!this.canView(this.uiState.view)) {
+      this.uiState.view = App.can('tasks.view') ? 'all' : 'time:mine';
+      this._togglePanes();
+    }
+    if (App.applyRoleChrome) App.applyRoleChrome(this);
+
+    this.uiState.selectedTaskId = null;
+    App.EventBus.emit('role:changed', eff);
+    App.EventBus.emit('view:changed', this.uiState.view);
+    App.EventBus.emit('selection:changed');
   }
 
   setCompany(id) {

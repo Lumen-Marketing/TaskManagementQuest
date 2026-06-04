@@ -87,7 +87,18 @@ App.CURRENT_USER = 'abraham';
 // Forgotten clock-ins are auto-closed (and their live display capped) at this length.
 App.MAX_SHIFT_MS = 12 * 60 * 60 * 1000; // 12 hours
 
+// Developer "view as": when a developer previews the app as another role,
+// App.viewAsRole holds that role and every permission/scoping check reads the
+// EFFECTIVE role below. realRole() always reflects the actual account, so the
+// view-as switcher itself never disappears.
+App.viewAsRole = null;
+App.realRole = function realRole() {
+  return (App.currentProfile && App.currentProfile.role) || 'member';
+};
+App.effectiveRole = function effectiveRole() {
+  return App.viewAsRole || App.realRole();
+};
+
 App.can = function can(permission) {
-  const role = (App.currentProfile && App.currentProfile.role) || 'member';
-  return (App.ROLE_PERMISSIONS[role] || []).includes(permission);
+  return (App.ROLE_PERMISSIONS[App.effectiveRole()] || []).includes(permission);
 };

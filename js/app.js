@@ -172,9 +172,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyRoleChrome(controller);
 
   // Expose the role as a body class so CSS can scope per-role tweaks
-  // (e.g. hide the Assignee column for workers/members).
-  const _role = (App.currentProfile && App.currentProfile.role) || 'member';
-  document.body.classList.add('role-' + _role);
+  // (e.g. hide the Assignee column for workers/members). Uses the effective
+  // role so a developer previewing another role gets that role's chrome.
+  document.body.classList.add('role-' + App.effectiveRole());
 
   // Preview-only: ?view= lets you deep-link an initial view for screenshots/testing.
   if (App.previewMode) {
@@ -328,6 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
+App.applyRoleChrome = applyRoleChrome;
 function applyRoleChrome(controller) {
   const search = document.querySelector('.search');
   const notifWrap = document.getElementById('notifBtn') && document.getElementById('notifBtn').parentElement;
@@ -335,7 +336,7 @@ function applyRoleChrome(controller) {
   const filterBtn = document.getElementById('filterBtn');
   const quickAdd = document.querySelector('.quick-add');
   const layoutSwitcher = document.getElementById('viewBtn');
-  const isWorker = (App.currentProfile && App.currentProfile.role) === 'worker';
+  const isWorker = App.effectiveRole() === 'worker';
 
   if (search) search.classList.toggle('hidden', !App.can('tasks.view'));
   if (notifWrap) notifWrap.classList.toggle('hidden', !App.can('tasks.view'));

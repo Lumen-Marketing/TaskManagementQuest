@@ -36,6 +36,7 @@ App.TaskListView = class TaskListView {
       if (this.visible()) this.render();
     });
     App.EventBus.on('company:changed', () => { if (this.visible()) this.render(); });
+    App.EventBus.on('role:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('filters:changed', () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('sort:changed',    () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('group:changed',   () => { if (this.visible()) this.renderList(); });
@@ -103,7 +104,7 @@ App.TaskListView = class TaskListView {
   }
 
   getFilteredTasks() {
-    const role = (App.currentProfile && App.currentProfile.role) || 'member';
+    const role = App.effectiveRole();
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
     // Supervisors are scoped to their direct reports (profiles whose
     // supervisor_id points at this supervisor's member_id).

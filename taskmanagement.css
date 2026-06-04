@@ -125,6 +125,43 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
   outline: none;
 }
 
+/* Developer "view as role" switcher — same shell as the company switcher,
+   turns amber while a role is being previewed. */
+.viewas-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+.viewas-switcher.hidden { display: none; }
+.viewas-switcher i { font-size: 14px; color: var(--ink-2); }
+.viewas-switcher .viewas-label { font-size: 11px; color: var(--ink-2); font-weight: 600; }
+.viewas-switcher select {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  padding: 0 2px;
+  cursor: pointer;
+  outline: none;
+}
+.viewas-switcher.active {
+  background: var(--amber-bg);
+  border-color: var(--amber);
+}
+.viewas-switcher.active i,
+.viewas-switcher.active .viewas-label,
+.viewas-switcher.active select { color: var(--amber-ink); }
+
+/* Thin reminder strip while a developer is previewing another role. */
+body.viewing-as-role .topbar { box-shadow: inset 0 -2px 0 var(--amber); }
+
 /* Body grid */
 .body {
   display: grid;
