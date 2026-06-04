@@ -204,7 +204,6 @@ App.SidebarView = class SidebarView {
     }
     if (App.can('time.team')) {
       timeItems.push({ view: 'time:resource',  label: 'Team workload', icon: 'ti-users', count: this.timeModel.allActive().length });
-      timeItems.push({ view: 'time:analytics', label: 'Reports',       icon: 'ti-chart-bar' });
     }
     if (timeItems.length) sections.push({ key: 'time', label: 'Time', items: timeItems });
 
