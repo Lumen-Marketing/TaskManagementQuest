@@ -175,7 +175,6 @@ App.SidebarView = class SidebarView {
           { view: 'company:roofing',  label: 'Roofing',  dot: 'dot-roof',    count: this.companyCount('roofing')  },
           { view: 'company:drafting', label: 'Drafting', dot: 'dot-draft',   count: this.companyCount('drafting') },
           { view: 'company:lumen',    label: 'Lumen',    dot: 'dot-lumen',   count: this.companyCount('lumen')    },
-          { view: 'company:website',  label: 'Website',  dot: 'dot-website', count: this.companyCount('website')  },
         ],
       });
     }
