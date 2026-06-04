@@ -3107,8 +3107,11 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 /* ============================================================
    GLOBAL READABILITY OVERRIDES (requested)
    - Bold every piece of text in the app.
-   - Scale the whole UI up so everything reads larger.
+   Larger type comes from the enlarged type-scale tokens in tokens.css.
+   We intentionally do NOT set `zoom` here: the app already has its own
+   zoom (.app { zoom: var(--ui-scale) }, the topbar scale slider). A second
+   zoom on <body> compounded with it and broke the 100vh grid layout
+   (blank strip on the right, widgets overlapping the title).
    Icons use an icon font, so font-weight doesn't affect them.
    ============================================================ */
-body { zoom: 1.05; }
 body, body * { font-weight: 700 !important; }
