@@ -217,6 +217,10 @@ App.NewTaskModalView = class NewTaskModalView {
     const panel = this.modal.querySelector('.modal');
     if (!handle || !panel) return;
 
+    // The popup's natural opening width is the 1.0 zoom baseline. Text scales
+    // up/down from here as the panel is widened/narrowed.
+    const baseW = panel.getBoundingClientRect().width || 540;
+
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -230,8 +234,12 @@ App.NewTaskModalView = class NewTaskModalView {
         const maxH = window.innerHeight * 0.95;
         panel.style.maxWidth = 'none';
         panel.style.maxHeight = 'none';
-        panel.style.width = Math.max(380, Math.min(maxW, startW + (startX - ev.clientX) * 2)) + 'px';
+        const w = Math.max(380, Math.min(maxW, startW + (startX - ev.clientX) * 2));
+        panel.style.width = w + 'px';
         panel.style.height = Math.max(320, Math.min(maxH, startH + (ev.clientY - startY))) + 'px';
+        // Zoom the text with the popup (clamped so it stays usable).
+        const scale = Math.max(0.85, Math.min(2, w / baseW));
+        panel.style.setProperty('--nt-scale', scale.toFixed(3));
       };
       const onUp = () => {
         document.removeEventListener('mousemove', onMove);
