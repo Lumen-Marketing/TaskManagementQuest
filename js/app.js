@@ -255,6 +255,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!App.previewMode && App.can('tasks.view')) {
     const seenNotifIds = new Set(notifModel.all().map(n => n.id));
     setInterval(async () => {
+      // Tasks have no realtime subscription, so re-pull them here too: a task
+      // created/edited by someone else won't appear until the next poll
+      // otherwise. Merged non-destructively so unsaved local edits survive.
+      try {
+        if (dataStore.loadTasks) {
+          const freshTasks = await dataStore.loadTasks(taskModel.dirtyIds());
+          taskModel.mergeServer(freshTasks);
+        }
+      } catch (e) { /* transient poll error — ignore, retry next tick */ }
       try {
         const fresh = await dataStore.loadNotifications();
         const arrivals = fresh.filter(n => !seenNotifIds.has(n.id) && !n.read);

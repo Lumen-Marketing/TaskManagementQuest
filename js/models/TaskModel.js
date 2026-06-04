@@ -33,6 +33,39 @@ App.TaskModel = class TaskModel {
     App.EventBus.emit('tasks:changed');
   }
 
+  // Snapshot of the ids with unsaved edits — passed to the data store's poll
+  // so it won't advance their optimistic-lock version out from under a pending save.
+  dirtyIds() { return new Set(this._dirty); }
+
+  /* Merge a fresh server snapshot into the local tasks WITHOUT discarding
+     unsaved local edits. Tasks the user has touched since the last successful
+     save (the dirty set) keep their local copy — the pending delta-save will
+     reconcile them — while every other task is replaced by the server row, so
+     work created by other people shows up. Locally-created tasks the server
+     doesn't know about yet are preserved. Emits 'tasks:changed' only when the
+     merge actually changed something, so an idle poll causes no re-render or
+     save churn. Returns true if it emitted. */
+  mergeServer(serverTasks) {
+    if (!Array.isArray(serverTasks)) return false;
+    const serverIds = new Set(serverTasks.map(t => t.id));
+    const merged = serverTasks.map(t =>
+      this._dirty.has(t.id) ? (this.find(t.id) || t) : t
+    );
+    for (const id of this._dirty) {
+      if (!serverIds.has(id)) {
+        const local = this.find(id);
+        if (local) merged.push(local);
+      }
+    }
+    const sig = list => JSON.stringify(
+      [...list].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    );
+    const changed = sig(this.tasks) !== sig(merged);
+    this.tasks = merged;
+    if (changed) App.EventBus.emit('tasks:changed');
+    return changed;
+  }
+
   seedDefaults() {
     const iso = App.utils.todayISO;
     this.tasks = [

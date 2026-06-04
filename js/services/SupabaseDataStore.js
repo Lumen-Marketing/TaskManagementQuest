@@ -84,6 +84,26 @@ App.SupabaseDataStore = class SupabaseDataStore {
     };
   }
 
+  /* Tasks-only refresh for the background sync poll. Mirrors the tasks query in
+     load(). The optimistic-lock version map (_taskVersions) is advanced to the
+     server's latest for every task EXCEPT those the caller flags as dirty: a
+     dirty task has an unsaved local edit whose pending save must still lock
+     against the version that edit was based on, so refreshing it here would mask
+     a genuine concurrent-edit conflict. RLS scopes the rows as on initial load. */
+  async loadTasks(skipVersionIds) {
+    const res = await this.supabase
+      .from('tasks')
+      .select('*')
+      .order('created_at', { ascending: true });
+    this._throwIfError(res, 'tasks');
+    return (res.data || []).map(row => {
+      if (!skipVersionIds || !skipVersionIds.has(row.id)) {
+        this._taskVersions[row.id] = row.updated_at;
+      }
+      return this._mapTaskRow(row);
+    });
+  }
+
   /* ---------- save (non-destructive: upserts + deltas) ----------
      `tasks` and `timeEntries` are the CHANGED subset (the models track what's
      dirty). Nothing is deleted-and-reinserted; the only deletes are clearing
