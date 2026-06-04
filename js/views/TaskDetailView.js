@@ -51,9 +51,14 @@ App.TaskDetailView = class TaskDetailView {
     this.pane.classList.remove('hidden');
     this.mainEl.classList.add('with-detail');
 
-    const creator = App.PEOPLE[t.creator];
-    const assignee = App.PEOPLE[t.assignee];
-    const company = App.COMPANIES[t.company];
+    try {
+    // Fall back gracefully if a task references a person or company that no
+    // longer exists (e.g. a removed company or a deleted member). Without these
+    // guards a single missing lookup throws while building the template and the
+    // detail pane renders blank.
+    const creator = App.PEOPLE[t.creator] || { name: t.creator || 'Unknown', full: t.creator || 'Unknown', color: 'var(--ink-3)' };
+    const assignee = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: 'var(--ink-3)' };
+    const company = App.COMPANIES[t.company] || { pill: '', label: t.company || '—' };
     const delegated = t.creator !== t.assignee;
     const myActive = this.timeModel.activeFor(this.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
@@ -239,6 +244,23 @@ App.TaskDetailView = class TaskDetailView {
     `;
 
     this.bindHandlers(t);
+    } catch (err) {
+      // Never leave the pane blank: show a message with a working Close button.
+      if (App.observability) App.observability.captureException(err, { source: 'TaskDetailView.render' });
+      console.error('[TaskDetailView] render failed', err);
+      this.pane.innerHTML = `
+        <div class="detail-head"><div class="detail-head-top">
+          <span></span>
+          <div class="detail-head-actions">
+            <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
+          </div>
+        </div></div>
+        <div style="padding:20px; font-size:13px; color:var(--ink-2); line-height:1.5;">
+          Couldn't open this task's details — it may reference a removed company or person.
+        </div>`;
+      const closeBtn = this.pane.querySelector('[data-action="close"]');
+      if (closeBtn) closeBtn.addEventListener('click', () => this.controller.closeDetail());
+    }
   }
 
   bindHandlers(t) {

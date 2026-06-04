@@ -330,8 +330,7 @@ App.AppController = class AppController {
      server-side, so showing them a button that would 401 is worse than
      not showing it. */
   canDeleteTasks() {
-    const role = (App.currentProfile && App.currentProfile.role) || 'member';
-    return ['admin', 'construction_supervisor', 'developer', 'supervisor', 'sales'].includes(role);
+    return ['admin', 'construction_supervisor', 'developer', 'supervisor', 'sales'].includes(App.effectiveRole());
   }
 
   /* Hard-delete a single task after a confirm prompt. Optimistic:
