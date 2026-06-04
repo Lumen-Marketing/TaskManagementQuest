@@ -682,15 +682,17 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
      with the popup. Defaults to 1 (no scaling) until the user drags. */
   --nt-scale: 1;
 }
-/* Open large by default on widescreen — boss shouldn't have to resize it. */
+/* Scale the popup with the screen: comfortable on normal displays, bigger on a
+   genuinely wide one (boss) — without ever dominating the viewport. The grip is
+   still there for manual fine-tuning. */
 @media (min-width: 1280px) {
-  #newTaskModal .modal { width: 880px; }
+  #newTaskModal .modal { width: 640px; }
 }
 @media (min-width: 1600px) {
-  #newTaskModal .modal { width: 1040px; }
+  #newTaskModal .modal { width: 720px; }
 }
-@media (min-width: 1920px) {
-  #newTaskModal .modal { width: 1200px; }
+@media (min-width: 2000px) {
+  #newTaskModal .modal { width: 900px; }
 }
 /* Bottom-LEFT grip — kept clear of the Cancel/Create buttons on the right. */
 .modal-resize-handle {
@@ -3085,5 +3087,5 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
    - Scale the whole UI up so everything reads larger.
    Icons use an icon font, so font-weight doesn't affect them.
    ============================================================ */
-body { zoom: 1.1; }
+body { zoom: 1.05; }
 body, body * { font-weight: 700 !important; }
