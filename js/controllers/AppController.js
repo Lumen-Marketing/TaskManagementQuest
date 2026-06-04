@@ -23,6 +23,10 @@ App.AppController = class AppController {
       sortDir: 'asc',
       groupBy: 'due',
       collapsedGroups: new Set(),
+      // Company scoping: the companies this user may access, and the one
+      // currently in focus. Populated by initCompanyContext().
+      currentCompany: null,
+      companies: [],
     };
 
     // Views are attached after construction by app.js
@@ -51,6 +55,50 @@ App.AppController = class AppController {
     if (view === 'time:mine') return App.can('time.own') || App.can('clock.use');
     if (view === 'time:resource' || view === 'time:analytics') return App.can('time.team');
     return App.can('tasks.view');
+  }
+
+  /* ---------- company context ---------- */
+  // Determine which companies this user can access and pick the active one.
+  // Developers bypass scoping entirely (every company). Everyone else is
+  // confined to their profiles.company_ids. Mirrors migration 028 RLS.
+  initCompanyContext() {
+    const role = (App.currentProfile && App.currentProfile.role) || 'member';
+    const all = Object.keys(App.COMPANIES || {});
+    let companies;
+    if (role === 'developer') {
+      // Developers get an "All companies" sentinel ('*') plus the ability to
+      // focus any single company. '*' means no company filter (god mode).
+      companies = ['*'].concat(all);
+    } else {
+      const assigned = (App.currentProfile && App.currentProfile.company_ids) || [];
+      companies = all.filter(id => assigned.includes(id));
+    }
+    this.uiState.companies = companies;
+
+    let current = null;
+    try {
+      const stored = localStorage.getItem(this._companyKey());
+      if (stored && companies.includes(stored)) current = stored;
+    } catch (e) { /* localStorage unavailable */ }
+    if (!current) current = companies[0] || null;
+    this.uiState.currentCompany = current;
+  }
+
+  _companyKey() {
+    const uid = (App.currentProfile && App.currentProfile.id) || 'anon';
+    return `questhq:current-company:${uid}`;
+  }
+
+  setCompany(id) {
+    if (!this.uiState.companies.includes(id)) return;
+    if (this.uiState.currentCompany === id) return;
+    this.uiState.currentCompany = id;
+    try { localStorage.setItem(this._companyKey(), id); } catch (e) { /* ignore */ }
+    this.uiState.selectedTaskId = null;
+    App.EventBus.emit('company:changed', id);
+    // Reuse the existing re-render path so every list/sidebar refreshes.
+    App.EventBus.emit('view:changed', this.uiState.view);
+    App.EventBus.emit('selection:changed');
   }
 
   /* ---------- UI state ---------- */

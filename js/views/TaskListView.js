@@ -35,6 +35,7 @@ App.TaskListView = class TaskListView {
       this.applyHeader(view);
       if (this.visible()) this.render();
     });
+    App.EventBus.on('company:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('filters:changed', () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('sort:changed',    () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('group:changed',   () => { if (this.visible()) this.renderList(); });
@@ -102,19 +103,24 @@ App.TaskListView = class TaskListView {
   }
 
   getFilteredTasks() {
-    let tasks = this.taskModel.getFiltered({
+    const role = (App.currentProfile && App.currentProfile.role) || 'member';
+    const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
+    // Supervisors are scoped to their direct reports (profiles whose
+    // supervisor_id points at this supervisor's member_id).
+    const reportMemberIds = role === 'supervisor'
+      ? new Set((App.PROFILES || [])
+          .filter(p => p.supervisor_id === me)
+          .map(p => p.member_id))
+      : null;
+    return this.taskModel.getFiltered({
       view: this.controller.uiState.view,
       searchQuery: this.controller.uiState.searchQuery,
       currentUser: this.currentUser,
       activeFilters: this.controller.uiState.filters,
+      currentCompany: this.controller.uiState.currentCompany,
+      role,
+      reportMemberIds,
     });
-    // Self-only roles (worker / member / sales / developer) only see their
-    // own tasks regardless of the active view.
-    const role = (App.currentProfile && App.currentProfile.role) || 'member';
-    if (['worker', 'member', 'sales', 'developer'].includes(role)) {
-      tasks = tasks.filter(t => t.assignee === this.currentUser);
-    }
-    return tasks;
   }
 
   renderList() {

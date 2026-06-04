@@ -60,12 +60,34 @@ App.TaskModel = class TaskModel {
   byCompany(companyId) { return this.tasks.filter(t => t.company === companyId); }
   byAssignee(userId) { return this.tasks.filter(t => t.assignee === userId); }
 
-  getFiltered({ view, searchQuery, currentUser, activeFilters }) {
+  getFiltered({ view, searchQuery, currentUser, activeFilters, currentCompany, role, reportMemberIds }) {
     // Soft-cleared rows (Clear-done-group action) stay in memory so the
     // optimistic-lock save still works, but they never appear in any
     // view — boot-time purge hard-deletes them after the 30-day grace.
     let tasks = this.tasks.filter(t => !t.clearedAt);
     const t0 = App.utils.todayISO(0);
+    const clockTaskId = App.DEFAULT_CLOCK_TASK_ID;
+
+    // Company scoping — UI mirror of migration 028 RLS. A specific company
+    // narrows to that company; the developer-only '*' sentinel means "all
+    // companies" (god mode). The shared clock task is always visible so timers
+    // work regardless of company.
+    if (currentCompany && currentCompany !== '*') {
+      tasks = tasks.filter(t => t.company === currentCompany || t.id === clockTaskId);
+    }
+
+    // Role row-scope. Worker = only their own tasks; Supervisor = own/created
+    // or assigned to a direct report. Admin/developer see everything in scope.
+    if (role === 'worker') {
+      tasks = tasks.filter(t => t.assignee === currentUser || t.id === clockTaskId);
+    } else if (role === 'supervisor' && reportMemberIds) {
+      tasks = tasks.filter(t =>
+        t.assignee === currentUser ||
+        t.creator === currentUser ||
+        reportMemberIds.has(t.assignee) ||
+        t.id === clockTaskId
+      );
+    }
 
     if (view === 'mine') tasks = tasks.filter(t => t.assignee === currentUser);
     else if (view === 'hot') tasks = tasks.filter(t => (t.priority === 'critical' || t.priority === 'urgent') && t.status !== 'done');

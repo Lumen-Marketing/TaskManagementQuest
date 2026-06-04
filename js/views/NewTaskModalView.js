@@ -56,7 +56,7 @@ App.NewTaskModalView = class NewTaskModalView {
             <div>
               <div class="field-label">Assigned to</div>
               <select id="nt-assignee" class="assigned-field" style="width:100%; padding: 6px 10px; font-size: 12px;">
-                ${App.utils.activePeople(this.currentUser).map(p => `<option value="${p.id}" ${p.id === this.currentUser ? 'selected' : ''}>${p.name}</option>`).join('')}
+                ${App.utils.peopleInCompany(this.controller.uiState.currentCompany, this.currentUser).map(p => `<option value="${p.id}" ${p.id === this.currentUser ? 'selected' : ''}>${p.name}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -84,9 +84,18 @@ App.NewTaskModalView = class NewTaskModalView {
             <div>
               <div class="field-label">Company</div>
               <select id="nt-company" style="width:100%; padding: 6px 10px; font-size: 12px;">
-                <option value="roofing">Roofing</option>
-                <option value="drafting">Drafting</option>
-                <option value="lumen">Lumen</option>
+                ${(() => {
+                  // A task needs a real company, so exclude the developer '*'
+                  // sentinel and fall back to all companies if none are scoped.
+                  let ids = (this.controller.uiState.companies || []).filter(id => id !== '*');
+                  if (!ids.length) ids = Object.keys(App.COMPANIES || {});
+                  const cur = this.controller.uiState.currentCompany;
+                  const sel = (cur && cur !== '*') ? cur : ids[0];
+                  return ids.map(id => {
+                    const c = App.COMPANIES[id] || { label: id };
+                    return `<option value="${id}" ${id === sel ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`;
+                  }).join('');
+                })()}
               </select>
             </div>
             <div>
@@ -349,7 +358,7 @@ App.NewTaskModalView = class NewTaskModalView {
       e.stopPropagation();
       const assigneeId = document.getElementById('nt-assignee').value;
       dropdown.innerHTML = '';
-      App.utils.activePeople().filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
+      App.utils.peopleInCompany(this.controller.uiState.currentCompany).filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
         const item = document.createElement('div');
         item.className = 'watcher-dropdown-item';
         item.innerHTML = `${App.utils.avatarHtml(p)}${p.full}`;

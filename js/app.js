@@ -71,6 +71,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         created_at: new Date().toISOString(),
       };
     });
+    // Mirror the previewed member's company_ids onto the active profile so the
+    // company switcher / scoping works in preview (the auth-guard stub omits it).
+    const mineCfg = previewRoles[App.currentProfile.member_id];
+    if (mineCfg && !App.currentProfile.company_ids) {
+      App.currentProfile.company_ids = Array.isArray(mineCfg.company_ids) ? mineCfg.company_ids : [];
+    }
   } else {
     try {
       const saved = await dataStore.load();
@@ -101,6 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUser: App.CURRENT_USER,
     dataStore,
   });
+
+  // Resolve the user's accessible companies + active company before any view
+  // renders, so the first paint is already company-scoped.
+  controller.initCompanyContext();
 
   // Expose models on App for console debugging (read-only contract — don't
   // mutate from console in production, but inspect freely).

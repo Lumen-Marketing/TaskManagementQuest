@@ -100,6 +100,31 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
 .clock-widget.running i { color: var(--green); }
 .clock-timer { font-family: var(--font-mono); font-size: 11px; }
 
+/* Company switcher — sits in the topbar between search and the clock widget. */
+.company-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+.company-switcher.hidden { display: none; }
+.company-switcher i { font-size: 14px; color: var(--ink-2); }
+.company-switcher select {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 0 2px;
+  cursor: pointer;
+  outline: none;
+}
+
 /* Body grid */
 .body {
   display: grid;

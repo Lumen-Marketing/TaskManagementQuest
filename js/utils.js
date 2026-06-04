@@ -51,6 +51,27 @@ App.utils = {
     return list.length ? list : all;
   },
 
+  /* Active people who belong to a given company, for company-scoped pickers
+     (e.g. assignee/watcher lists in the New task modal). Builds on
+     activePeople() and intersects with profiles whose company_ids include the
+     company. Falls back to activePeople() when profiles aren't loaded
+     (non-manager sessions) so the picker never renders empty. Pass includeIds
+     to keep an existing selection visible. */
+  peopleInCompany(companyId, includeIds) {
+    const base = this.activePeople(includeIds);
+    const profiles = App.PROFILES || [];
+    if (!companyId || !profiles.length) return base;
+    const inCompany = new Set(
+      profiles
+        .filter(p => p.member_id && Array.isArray(p.company_ids) && p.company_ids.includes(companyId))
+        .map(p => p.member_id)
+    );
+    const keep = Array.isArray(includeIds) ? includeIds : (includeIds ? [includeIds] : []);
+    keep.forEach(id => { if (id) inCompany.add(id); });
+    const list = base.filter(p => inCompany.has(p.id));
+    return list.length ? list : base;
+  },
+
   todayISO(offset = 0) {
     const d = new Date();
     d.setDate(d.getDate() + offset);

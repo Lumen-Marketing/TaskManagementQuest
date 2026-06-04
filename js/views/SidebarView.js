@@ -164,20 +164,9 @@ App.SidebarView = class SidebarView {
 
   _buildSections() {
     const sections = [];
-    const role = (App.currentProfile && App.currentProfile.role) || 'member';
-    const isSelfOnlyRole = ['worker', 'member', 'sales', 'developer'].includes(role);
-    // Self-only roles see only their own tasks, so the cross-company filter
-    // section is noise for them.
-    if (App.can('tasks.view') && !isSelfOnlyRole) {
-      sections.push({
-        key: 'company', label: 'Company',
-        items: [
-          { view: 'company:roofing',  label: 'Roofing',  dot: 'dot-roof',    count: this.companyCount('roofing')  },
-          { view: 'company:drafting', label: 'Drafting', dot: 'dot-draft',   count: this.companyCount('drafting') },
-          { view: 'company:lumen',    label: 'Lumen',    dot: 'dot-lumen',   count: this.companyCount('lumen')    },
-        ],
-      });
-    }
+    // Company navigation is handled by the topbar company switcher now (the
+    // whole app is scoped to the active company), so there's no cross-company
+    // filter section in the sidebar.
     const timeItems = [];
     if (App.can('time.own') || App.can('clock.use')) {
       timeItems.push({ view: 'time:mine', label: 'My time', icon: 'ti-clock', count: App.utils.formatHours(this.timeModel.totalForUser(this.currentUser)) });
@@ -244,14 +233,35 @@ App.SidebarView = class SidebarView {
 
   /* ---------- counts ---------- */
 
-  companyCount(companyId) {
-    return this.taskModel.all().filter(t => t.company === companyId && t.status !== 'done').length;
+  // The set of tasks this user can actually see right now (active company +
+  // role row-scope), so sidebar badges match the task list. Mirrors the
+  // scoping in TaskModel.getFiltered / migration 028.
+  _scopedActiveTasks() {
+    const role = (App.currentProfile && App.currentProfile.role) || 'member';
+    const cur = this.controller.uiState.currentCompany;
+    const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
+    const clockId = App.DEFAULT_CLOCK_TASK_ID;
+    let base = this.taskModel.all().filter(t => t.status !== 'done' && !t.clearedAt);
+    if (cur && cur !== '*') {
+      base = base.filter(t => t.company === cur || t.id === clockId);
+    }
+    if (role === 'worker') {
+      base = base.filter(t => t.assignee === this.currentUser || t.id === clockId);
+    } else if (role === 'supervisor') {
+      const reports = new Set((App.PROFILES || [])
+        .filter(p => p.supervisor_id === me).map(p => p.member_id));
+      base = base.filter(t =>
+        t.assignee === this.currentUser || t.creator === this.currentUser ||
+        reports.has(t.assignee) || t.id === clockId);
+    }
+    return base;
   }
 
   subscribe() {
     App.EventBus.on('tasks:changed', () => { this.renderCounts(); this.renderExtraGroups(); });
     App.EventBus.on('time:changed',  () => { this.renderCounts(); this.renderExtraGroups(); });
     App.EventBus.on('view:changed',  (view) => this.updateActive(view));
+    App.EventBus.on('company:changed', () => { this.renderCounts(); this.renderExtraGroups(); });
   }
 
   updateActive(view) {
@@ -261,7 +271,7 @@ App.SidebarView = class SidebarView {
   }
 
   renderCounts() {
-    const all = this.taskModel.all().filter(t => t.status !== 'done');
+    const all = this._scopedActiveTasks();
     const today = App.utils.todayISO(0);
 
     const set = (id, value) => {
