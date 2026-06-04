@@ -2133,48 +2133,9 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
    with the cell content inside each card. */
 #taskViewWrap .list-header { margin: 0 24px; }
 
-/* Self-only roles don't need the Assignee column — they only see their own
-   tasks. Hide the column and drop its slot from the grid template. */
-body.role-worker .list-row > :nth-child(4),
-body.role-member .list-row > :nth-child(4),
-body.role-sales  .list-row > :nth-child(4),
-body.role-developer .list-row > :nth-child(4),
-body.role-worker #taskViewWrap .list-header > span:nth-child(4),
-body.role-member #taskViewWrap .list-header > span:nth-child(4),
-body.role-sales  #taskViewWrap .list-header > span:nth-child(4),
-body.role-developer #taskViewWrap .list-header > span:nth-child(4) {
-  display: none;
-}
-body.role-worker .list-row,
-body.role-worker #taskViewWrap .list-header,
-body.role-member .list-row,
-body.role-member #taskViewWrap .list-header,
-body.role-sales  .list-row,
-body.role-sales  #taskViewWrap .list-header,
-body.role-developer .list-row,
-body.role-developer #taskViewWrap .list-header {
-  grid-template-columns: minmax(160px, 1fr) 90px 90px 120px 80px minmax(120px, 1.4fr) 28px 36px;
-}
-/* Recenter the now-shifted middle columns (Type/Priority/Status/Due) */
-body.role-worker .list-row > :nth-child(3),
-body.role-member .list-row > :nth-child(3),
-body.role-sales  .list-row > :nth-child(3),
-body.role-developer .list-row > :nth-child(3),
-body.role-worker .list-row > :nth-child(5),
-body.role-member .list-row > :nth-child(5),
-body.role-sales  .list-row > :nth-child(5),
-body.role-developer .list-row > :nth-child(5),
-body.role-worker .list-row > :nth-child(6),
-body.role-member .list-row > :nth-child(6),
-body.role-sales  .list-row > :nth-child(6),
-body.role-developer .list-row > :nth-child(6),
-body.role-worker .list-row > :nth-child(7),
-body.role-member .list-row > :nth-child(7),
-body.role-sales  .list-row > :nth-child(7),
-body.role-developer .list-row > :nth-child(7) {
-  justify-self: center;
-  text-align: center;
-}
+/* All roles share the same clean task-table layout (the Assignee column and
+   grid template are identical for workers, supervisors, admins, developers).
+   Workers simply only have their own tasks in the list. */
 
 /* Center the middle columns (Type / Assignee / Priority / Status / Due) —
    keep Task and Description left-aligned since they're prose. nth-child counts

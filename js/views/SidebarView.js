@@ -170,13 +170,34 @@ App.SidebarView = class SidebarView {
     this.extraMount.querySelectorAll('.side-item[data-view]').forEach(el => {
       el.addEventListener('click', () => this.controller.setView(el.dataset.view));
     });
+    this.extraMount.querySelectorAll('.side-item[data-company]').forEach(el => {
+      el.addEventListener('click', () => this.controller.setCompany(el.dataset.company));
+    });
   }
 
   _buildSections() {
     const sections = [];
-    // Company navigation is handled by the topbar company switcher now (the
-    // whole app is scoped to the active company), so there's no cross-company
-    // filter section in the sidebar.
+
+    // Company context lives in the sidebar: a single-select list of the
+    // companies this user can access (plus "All companies" for developers).
+    // Picking one re-scopes the whole app via controller.setCompany. Shown
+    // only when there's more than one choice.
+    const companies = this.controller.uiState.companies || [];
+    if (companies.length > 1) {
+      const cur = this.controller.uiState.currentCompany;
+      const dotMap = { roofing: 'dot-roof', drafting: 'dot-draft', lumen: 'dot-lumen' };
+      sections.push({
+        key: 'company', label: 'Company',
+        items: companies.map(id => ({
+          company: id,
+          label: id === '*' ? 'All companies' : (App.COMPANIES[id] || { label: id }).label,
+          dot: id === '*' ? null : dotMap[id],
+          icon: id === '*' ? 'ti-building' : null,
+          active: id === cur,
+        })),
+      });
+    }
+
     const timeItems = [];
     if (App.can('time.own') || App.can('clock.use')) {
       timeItems.push({ view: 'time:mine', label: 'My time', icon: 'ti-clock', count: App.utils.formatHours(this.timeModel.totalForUser(this.currentUser)) });
@@ -203,13 +224,21 @@ App.SidebarView = class SidebarView {
 
   _renderSection(sec) {
     const collapsed = this.collapsed.has(sec.key);
-    const itemsHtml = sec.items.map(it => `
-      <div class="side-item" data-view="${App.utils.escapeHtml(it.view)}" title="${App.utils.escapeHtml(it.label)}">
+    const itemsHtml = sec.items.map(it => {
+      // Company items drive the company context (data-company + setCompany);
+      // everything else navigates to a view (data-view + setView).
+      const isCompany = it.company != null;
+      const attr = isCompany
+        ? `data-company="${App.utils.escapeHtml(it.company)}"`
+        : `data-view="${App.utils.escapeHtml(it.view)}"`;
+      const activeCls = (isCompany && it.active) ? ' active' : '';
+      return `
+      <div class="side-item${activeCls}" ${attr} title="${App.utils.escapeHtml(it.label)}">
         ${it.dot ? `<span class="dot-co ${it.dot}"></span>` : `<i class="ti ${it.icon || 'ti-circle'}"></i>`}
         <span class="side-item-label">${App.utils.escapeHtml(it.label)}</span>
         ${it.count != null ? `<span class="side-count">${App.utils.escapeHtml(String(it.count))}</span>` : ''}
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
 
     return `
       <div class="side-group side-group-collapsible ${collapsed ? 'collapsed' : ''}" data-section="${sec.key}">
@@ -276,7 +305,9 @@ App.SidebarView = class SidebarView {
   }
 
   updateActive(view) {
-    document.querySelectorAll('.side-item').forEach(el => {
+    // Only navigation (data-view) items track the active view; company items
+    // (data-company) manage their own active state on company:changed.
+    document.querySelectorAll('.side-item[data-view]').forEach(el => {
       el.classList.toggle('active', el.dataset.view === view);
     });
   }

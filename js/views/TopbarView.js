@@ -19,7 +19,6 @@ App.TopbarView = class TopbarView {
     this.markAllReadBtn = document.getElementById('markAllRead');
 
     this.searchInput = document.getElementById('searchInput');
-    this.companySwitcher = document.getElementById('companySwitcher');
     this.viewAsSwitcher = document.getElementById('viewAsSwitcher');
     this.avatar = document.getElementById('userAvatar');
     this.userMenu = null;
@@ -69,14 +68,12 @@ App.TopbarView = class TopbarView {
     App.EventBus.on('notifs:changed', () => this.renderNotifs());
     App.EventBus.on('notifs:refreshed', () => this.renderNotifs());
     App.EventBus.on('clock:tick', () => this.tickLive());
-    App.EventBus.on('company:changed', () => this.renderCompanySwitcher());
-    App.EventBus.on('role:changed', () => { this.renderViewAsSwitcher(); this.renderCompanySwitcher(); });
+    App.EventBus.on('role:changed', () => this.renderViewAsSwitcher());
   }
 
   render() {
     this.renderClockWidget();
     this.renderNotifs();
-    this.renderCompanySwitcher();
     this.renderViewAsSwitcher();
   }
 
@@ -112,31 +109,6 @@ App.TopbarView = class TopbarView {
     });
   }
 
-  // A compact company selector, shown only when the user can access more than
-  // one company. Changing it re-scopes the whole app via controller.setCompany.
-  renderCompanySwitcher() {
-    const mount = this.companySwitcher;
-    if (!mount) return;
-    const companies = this.controller.uiState.companies || [];
-    if (companies.length <= 1) {
-      mount.classList.add('hidden');
-      mount.innerHTML = '';
-      return;
-    }
-    mount.classList.remove('hidden');
-    const current = this.controller.uiState.currentCompany;
-    mount.innerHTML = `
-      <i class="ti ti-building"></i>
-      <select id="companySelect" aria-label="Current company">
-        ${companies.map(id => {
-          const label = id === '*' ? 'All companies' : (App.COMPANIES[id] || { label: id }).label;
-          return `<option value="${id}" ${id === current ? 'selected' : ''}>${App.utils.escapeHtml(label)}</option>`;
-        }).join('')}
-      </select>`;
-    mount.querySelector('#companySelect').addEventListener('change', (e) => {
-      this.controller.setCompany(e.target.value);
-    });
-  }
 
   renderClockWidget() {
     const active = this.timeModel.activeFor(this.currentUser);
