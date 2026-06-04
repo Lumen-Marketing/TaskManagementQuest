@@ -74,8 +74,9 @@
   --bg-3:          oklch(92% 0.025 86);
   --surface:       oklch(99.5% 0.005 90);
   --ink:           oklch(20% 0.012 70);
-  --ink-2:         oklch(42% 0.018 78);
-  --ink-3:         oklch(62% 0.018 80);
+  /* Muted grays promoted to near-black for maximum contrast (requested). */
+  --ink-2:         oklch(22% 0.012 72);
+  --ink-3:         oklch(26% 0.012 74);
   --border:        oklch(91% 0.012 86);
   --border-strong: oklch(82% 0.018 86);
 
@@ -147,10 +148,10 @@
   --space-sm:  12px; --space-md:  16px; --space-lg: 24px;
   --space-xl:  32px; --space-2xl: 48px; --space-3xl: 72px;
 
-  /* type scale */
-  --text-2xs: 10px;  --text-xs: 11px;  --text-sm: 12px;
-  --text-base: 13px; --text-md: 15px;  --text-lg: 18px;
-  --text-xl:  22px;  --text-2xl: 28px; --text-3xl: 34px;
+  /* type scale — enlarged for readability (requested) */
+  --text-2xs: 12px;  --text-xs: 13px;  --text-sm: 14px;
+  --text-base: 15px; --text-md: 17px;  --text-lg: 21px;
+  --text-xl:  25px;  --text-2xl: 31px; --text-3xl: 38px;
   --text-display-s: clamp(2rem, 4vw, 2.75rem);
   --text-display:   clamp(2.75rem, 6vw, 4.5rem);
 

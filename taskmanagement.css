@@ -682,11 +682,15 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
      with the popup. Defaults to 1 (no scaling) until the user drags. */
   --nt-scale: 1;
 }
+/* Open large by default on widescreen — boss shouldn't have to resize it. */
 @media (min-width: 1280px) {
-  #newTaskModal .modal { width: 720px; }
+  #newTaskModal .modal { width: 880px; }
 }
 @media (min-width: 1600px) {
-  #newTaskModal .modal { width: 820px; }
+  #newTaskModal .modal { width: 1040px; }
+}
+@media (min-width: 1920px) {
+  #newTaskModal .modal { width: 1200px; }
 }
 /* Bottom-LEFT grip — kept clear of the Cancel/Create buttons on the right. */
 .modal-resize-handle {
@@ -3074,3 +3078,12 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   background: var(--amber-bg, oklch(96% 0.04 80));
   border-color: var(--amber);
 }
+
+/* ============================================================
+   GLOBAL READABILITY OVERRIDES (requested)
+   - Bold every piece of text in the app.
+   - Scale the whole UI up so everything reads larger.
+   Icons use an icon font, so font-weight doesn't affect them.
+   ============================================================ */
+body { zoom: 1.1; }
+body, body * { font-weight: 700 !important; }
