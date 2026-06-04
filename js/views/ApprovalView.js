@@ -16,7 +16,7 @@ App.ApprovalView = class ApprovalView {
 
   // People who can be picked as a supervisor (have an overseeing role + a member id).
   supervisorOptions(excludeMemberId) {
-    const overseeing = ['supervisor', 'construction_supervisor', 'admin', 'developer'];
+    const overseeing = ['supervisor', 'admin', 'developer'];
     return (App.PROFILES || [])
       .filter(p => p.member_id && p.member_id !== excludeMemberId && overseeing.includes(p.role))
       .map(p => {
@@ -63,15 +63,17 @@ App.ApprovalView = class ApprovalView {
       color: '#E8A03A',
       avatar_url: profile.avatar_url || null,
     };
-    // Roles retired from the assignable list. Still resolve for display/labels
-    // elsewhere, and still shown here if a user already holds one (so saving
-    // doesn't silently change their role).
-    const retiredRoles = ['member', 'sales', 'construction_supervisor'];
-    const roles = Object.entries(App.ROLES)
-      .filter(([id]) => !retiredRoles.includes(id) || profile.role === id)
-      .map(([id, role]) =>
-        `<option value="${id}" ${profile.role === id ? 'selected' : ''}>${role.label}</option>`
-      ).join('');
+    // Assignable roles. If this profile still holds a retired/unknown role
+    // (e.g. a pending "member", or one not yet migrated), show it as the
+    // current selection so simply saving the row won't silently reassign them.
+    const roleEntries = Object.entries(App.ROLES);
+    if (profile.role && !App.ROLES[profile.role]) {
+      const retiredLabels = { member: 'Member', sales: 'Sales', construction_supervisor: 'Construction supervisor' };
+      roleEntries.unshift([profile.role, { label: `${retiredLabels[profile.role] || profile.role} (retired)` }]);
+    }
+    const roles = roleEntries.map(([id, role]) =>
+      `<option value="${id}" ${profile.role === id ? 'selected' : ''}>${role.label}</option>`
+    ).join('');
     const supervisorOpts = ['<option value="">— None —</option>']
       .concat(this.supervisorOptions(profile.member_id).map(s =>
         `<option value="${s.id}" ${profile.supervisor_id === s.id ? 'selected' : ''}>${App.utils.escapeHtml(s.name)}</option>`

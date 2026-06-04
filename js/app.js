@@ -342,7 +342,7 @@ function applyRoleChrome(controller) {
 
 function renderRoleGate() {
   const profile = App.currentProfile || {};
-  const roleLabel = (App.ROLES[profile.role || 'member'] || App.ROLES.member).label;
+  const roleLabel = (App.ROLES[profile.role] || { label: 'Member' }).label;
   document.body.innerHTML = `
     <div style="min-height:100vh;display:grid;place-items:center;background:#0E0E10;color:#F5F1E6;font-family:Inter,system-ui,sans-serif;padding:24px;">
       <div style="max-width:520px;background:#131315;border:1px solid #2A2A2E;border-radius:10px;padding:24px;box-shadow:0 24px 48px rgba(0,0,0,.5);">

@@ -68,21 +68,15 @@ App.GROUP_OPTIONS = {
 };
 
 App.ROLES = {
-  member: { label: 'Member' },
   worker: { label: 'Worker' },
-  sales: { label: 'Sales' },
   supervisor: { label: 'Supervisor' },
-  construction_supervisor: { label: 'Construction supervisor' },
   admin: { label: 'Admin' },
   developer: { label: 'Developer' },
 };
 
 App.ROLE_PERMISSIONS = {
-  member: [],
   worker: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write'],
-  sales: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own'],
   supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view'],
-  construction_supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'team.view'],
   admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view'],
   developer: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'debug.access'],
 };
