@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         sendNotifications: async () => {},
         sendEmail: async () => ({ ok: false, skipped: true }),
+        deleteProfile: async (id) => {
+          App.PROFILES = (App.PROFILES || []).filter(pr => pr.id !== id);
+          return { emailFreed: true };
+        },
       }
     : new App.SupabaseDataStore({
         supabase: App.supabase,

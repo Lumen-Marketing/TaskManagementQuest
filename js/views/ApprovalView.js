@@ -157,13 +157,17 @@ App.ApprovalView = class ApprovalView {
         const memberId = row.dataset.memberId || null;
         const name = row.dataset.personName || 'this user';
         const ok = window.confirm(
-          `Remove access for ${name}?\n\nThey'll be signed out of the app and disappear from this list. Their login email stays reserved and their past tasks are kept.`
+          `Delete ${name}?\n\nThey'll be signed out, removed from this list, and their login email freed so it can be used to sign up again. Their past tasks are kept.`
         );
         if (!ok) return;
         button.disabled = true;
         try {
-          await this.dataStore.deleteProfile(profileId, memberId);
-          this.controller.toastView.show({ title: 'User removed', sub: 'Their access has been revoked.' });
+          const result = await this.dataStore.deleteProfile(profileId, memberId);
+          this.controller.toastView.show(
+            (result && result.emailFreed)
+              ? { title: 'User deleted', sub: 'Access revoked and the email is free to reuse.' }
+              : { title: 'Access revoked', sub: 'Email stays reserved until the delete-user function is deployed.' }
+          );
           await this.reloadAndRender();
         } catch (err) {
           this.controller.toastView.show({ title: 'Delete failed', sub: (err && err.message) || 'Try again.' });

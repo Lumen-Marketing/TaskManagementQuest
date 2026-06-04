@@ -335,18 +335,35 @@ App.SupabaseDataStore = class SupabaseDataStore {
      orphaned members (no remaining references) actually get removed, which
      mirrors the prune in migration 025. With no profile the account is
      treated as unapproved and gated out of the app (AuthModel.isApproved). */
+  /* Fully delete a user. Prefers the delete-user Edge Function, which also
+     removes the Auth login (freeing the email for re-registration) using the
+     service role. Falls back to a profile-only delete if the function isn't
+     deployed yet, so the button still revokes access in the meantime.
+     Returns { emailFreed: boolean }. */
   async deleteProfile(profileId, memberId) {
-    if (!profileId) return;
-    const res = await this.supabase.from('profiles').delete().eq('id', profileId);
-    this._throwIfError(res, 'deleting profile');
-    if (memberId) {
-      const memberRes = await this.supabase.from('team_members').delete().eq('id', memberId);
-      // FK RESTRICT (still referenced by a task) is expected and fine — keep
-      // the member for history. Other errors are surfaced to the console but
-      // don't fail the delete: the profile is already gone, access is revoked.
-      if (memberRes && memberRes.error) {
-        console.warn('[datastore] team_member kept (still referenced or blocked):', memberRes.error.message);
+    if (!profileId) return { emailFreed: false };
+
+    try {
+      const { data, error } = await this.supabase.functions.invoke('delete-user', {
+        body: { profileId, memberId: memberId || null },
+      });
+      if (error) throw error;
+      if (data && data.ok) return { emailFreed: data.emailFreed !== false };
+      throw new Error((data && data.error) || 'delete-user did not confirm success');
+    } catch (err) {
+      // Function unavailable (not deployed) or errored — fall back to removing
+      // the profile directly so access is still revoked. The email stays
+      // reserved until the function is deployed.
+      console.warn('[datastore] delete-user function unavailable; profile-only fallback:', err && err.message);
+      const res = await this.supabase.from('profiles').delete().eq('id', profileId);
+      this._throwIfError(res, 'deleting profile');
+      if (memberId) {
+        const memberRes = await this.supabase.from('team_members').delete().eq('id', memberId);
+        if (memberRes && memberRes.error) {
+          console.warn('[datastore] team_member kept (still referenced or blocked):', memberRes.error.message);
+        }
       }
+      return { emailFreed: false };
     }
   }
 
