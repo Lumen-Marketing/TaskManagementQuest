@@ -112,15 +112,11 @@ App.TaskDetailView = class TaskDetailView {
       : `<div style="font-size:11.5px; color:var(--ink-3);">No time logged yet</div>`;
 
     this.pane.innerHTML = `
-      <button class="detail-expand-btn" data-action="expand-detail" aria-label="Expand task details" type="button">
-        <i class="ti ti-chevrons-left"></i>
-      </button>
       <div class="detail-head">
         <div class="detail-head-top">
           <span class="pill ${company.pill}">${company.label}</span>
           <div class="detail-head-actions">
             ${App.can('tasks.write') ? `<button class="icon-btn" data-action="edit-task" aria-label="Edit task" title="Edit task" type="button"><i class="ti ti-pencil"></i></button>` : ''}
-            <button class="icon-btn" data-action="minimize-detail" aria-label="Minimize" title="Minimize" type="button"><i class="ti ti-chevrons-right"></i></button>
             <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
           </div>
         </div>
@@ -252,21 +248,6 @@ App.TaskDetailView = class TaskDetailView {
   bindHandlers(t) {
     this.pane.querySelector('[data-action="close"]').addEventListener('click', () => this.controller.closeDetail());
 
-    // Restore prior minimize preference whenever this view rerenders.
-    if (localStorage.getItem('questhq:detail-minimized') === '1') {
-      this.pane.classList.add('minimized');
-    }
-    const minBtn = this.pane.querySelector('[data-action="minimize-detail"]');
-    if (minBtn) minBtn.addEventListener('click', () => {
-      this.pane.classList.add('minimized');
-      try { localStorage.setItem('questhq:detail-minimized', '1'); } catch (e) {}
-    });
-    const expandBtn = this.pane.querySelector('[data-action="expand-detail"]');
-    if (expandBtn) expandBtn.addEventListener('click', () => {
-      this.pane.classList.remove('minimized');
-      try { localStorage.setItem('questhq:detail-minimized', '0'); } catch (e) {}
-    });
-
     const editBtn = this.pane.querySelector('[data-action="edit-task"]');
     if (editBtn) editBtn.addEventListener('click', () => {
       this.editingId = t.id;
@@ -361,7 +342,6 @@ App.TaskDetailView = class TaskDetailView {
        </div>`
     ).join('') : `<div style="font-size:11.5px; color:var(--ink-3);">No subtasks</div>`;
 
-    this.pane.classList.remove('minimized');
     this.pane.innerHTML = `
       <div class="detail-head">
         <div class="detail-head-top">

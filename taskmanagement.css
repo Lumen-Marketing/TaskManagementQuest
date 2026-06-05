@@ -2992,40 +2992,13 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 .btn-link-danger i { font-size: 14px; }
 
 /* ============================================================
-   TASK DETAIL — minimize / expand (collapses the right panel to
-   a thin strip so the main task list gets more room without
-   losing the current selection).
+   TASK DETAIL — header actions (Edit / Close).
    ============================================================ */
 .detail-head-actions {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-.detail-expand-btn {
-  display: none;
-  width: 100%;
-  height: 40px;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface);
-  border: none;
-  border-bottom: 1px solid var(--border);
-  color: var(--ink-2);
-  cursor: pointer;
-}
-.detail-expand-btn:hover { background: var(--bg-2); color: var(--ink); }
-.detail-expand-btn i { font-size: 18px; }
-
-.detail.minimized {
-  width: 44px !important;
-  min-width: 44px !important;
-  max-width: 44px !important;
-  padding: 0 !important;
-  overflow: hidden;
-}
-.detail.minimized .detail-head,
-.detail.minimized .detail-body { display: none; }
-.detail.minimized .detail-expand-btn { display: flex; }
 
 /* ============================================================
    TASK DETAIL — Watchers row: chip-with-x to remove + an
