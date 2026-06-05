@@ -66,6 +66,17 @@ App.ProfileView = class ProfileView {
             <input type="text" id="pf-name" value="${App.utils.escapeHtml(currentName)}" placeholder="Your name" maxlength="80" />
           </div>
 
+          <div class="field" style="margin-top:18px;">
+            <label class="field-label" for="pf-password">New password</label>
+            <input type="password" id="pf-password" placeholder="Leave blank to keep current" autocomplete="new-password" maxlength="128" />
+            <div class="profile-hint">At least 8 characters, with an uppercase letter, a number, and a special character.</div>
+          </div>
+
+          <div class="field" style="margin-top:12px;">
+            <label class="field-label" for="pf-password-confirm">Confirm new password</label>
+            <input type="password" id="pf-password-confirm" placeholder="Re-enter new password" autocomplete="new-password" maxlength="128" />
+          </div>
+
           <div class="modal-actions">
             <button class="btn" data-action="close">Cancel</button>
             <button class="btn btn-primary" data-action="submit">Save changes</button>
@@ -146,6 +157,25 @@ App.ProfileView = class ProfileView {
       return;
     }
 
+    // Password change is optional: blank fields mean "keep current password".
+    // Validate the strength + match BEFORE we touch the network so the user
+    // gets the precise rule that failed without a half-applied save.
+    const pw = document.getElementById('pf-password').value || '';
+    const pwConfirm = document.getElementById('pf-password-confirm').value || '';
+    const wantsPasswordChange = pw.length > 0 || pwConfirm.length > 0;
+    if (wantsPasswordChange) {
+      try {
+        App.validate.strongPassword(pw, { field: 'password' });
+      } catch (err) {
+        this._inlineError((err && err.message) || 'Password does not meet the requirements.');
+        return;
+      }
+      if (pw !== pwConfirm) {
+        this._inlineError('Passwords do not match.');
+        return;
+      }
+    }
+
     const submitBtn = this.modal.querySelector('[data-action="submit"]');
     const originalLabel = submitBtn.textContent;
     submitBtn.disabled = true;
@@ -165,8 +195,18 @@ App.ProfileView = class ProfileView {
 
       await this._saveProfile(nameRaw, avatarUrl, avatarChanged);
 
+      // Update the auth credential last — Supabase verifies the strong-password
+      // policy server-side too and updates the active session in place.
+      if (wantsPasswordChange) {
+        const { error } = await App.supabase.auth.updateUser({ password: pw });
+        if (error) throw error;
+      }
+
       if (this.controller && this.controller.toastView) {
-        this.controller.toastView.show({ title: 'Profile updated', sub: '' });
+        this.controller.toastView.show({
+          title: wantsPasswordChange ? 'Profile & password updated' : 'Profile updated',
+          sub: '',
+        });
       }
       this.close();
     } catch (err) {

@@ -18,6 +18,7 @@ App.validate = (function () {
     description: 5000,
     watchers: 25,
     passwordMin: 6,
+    passwordStrongMin: 8,
     passwordMax: 128,
   };
 
@@ -34,6 +35,21 @@ App.validate = (function () {
     if (!v) throw new ValidationError('Password is required.', { field });
     if (v.length < min) throw new ValidationError(`Password must be at least ${min} characters.`, { field });
     if (v.length > max) throw new ValidationError(`Password is too long (max ${max}).`, { field });
+    return v;
+  }
+
+  /* Stricter password policy for setting/changing a password (sign-up,
+     change-password). At least `passwordStrongMin` chars with an uppercase
+     letter, a number, and a special character. Throws on the FIRST unmet rule
+     so the message tells the user exactly what's missing. */
+  function strongPassword(value, { field = 'password', min = LIMITS.passwordStrongMin } = {}) {
+    const v = String(value == null ? '' : value);
+    if (!v) throw new ValidationError('Password is required.', { field });
+    if (v.length < min) throw new ValidationError(`Password must be at least ${min} characters.`, { field });
+    if (v.length > LIMITS.passwordMax) throw new ValidationError(`Password is too long (max ${LIMITS.passwordMax}).`, { field });
+    if (!/[A-Z]/.test(v)) throw new ValidationError('Password must include an uppercase letter.', { field });
+    if (!/[0-9]/.test(v)) throw new ValidationError('Password must include a number.', { field });
+    if (!/[^A-Za-z0-9]/.test(v)) throw new ValidationError('Password must include a special character.', { field });
     return v;
   }
 
@@ -114,7 +130,7 @@ App.validate = (function () {
   }
 
   return {
-    email, password, displayName, nonEmpty, oneOf, isoDate, isoTime, newTask,
+    email, password, strongPassword, displayName, nonEmpty, oneOf, isoDate, isoTime, newTask,
     EMAIL_RE, LIMITS,
   };
 })();
