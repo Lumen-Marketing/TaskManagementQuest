@@ -28,9 +28,25 @@ App.SidebarView = class SidebarView {
     // Attach click handlers once to every static item; visibility is applied
     // separately so it can be re-evaluated when a developer switches view-as.
     document.querySelectorAll('.side-item[data-view]').forEach(el => {
-      el.addEventListener('click', () => this.controller.setView(el.dataset.view));
+      this._makeActivatable(el, () => this.controller.setView(el.dataset.view));
     });
     this.applyStaticVisibility();
+  }
+
+  /* The sidebar items are <div>s (not <button>s) for layout reasons, so they
+     aren't keyboard-reachable by default. Promote each to a focusable button
+     for screen-reader / keyboard users: Tab to reach it, Enter/Space to fire
+     the same action a click would. */
+  _makeActivatable(el, handler) {
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.addEventListener('click', handler);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        handler();
+      }
+    });
   }
 
   applyStaticVisibility() {
@@ -168,10 +184,10 @@ App.SidebarView = class SidebarView {
       head.addEventListener('click', () => this._toggleSection(key));
     });
     this.extraMount.querySelectorAll('.side-item[data-view]').forEach(el => {
-      el.addEventListener('click', () => this.controller.setView(el.dataset.view));
+      this._makeActivatable(el, () => this.controller.setView(el.dataset.view));
     });
     this.extraMount.querySelectorAll('.side-item[data-company]').forEach(el => {
-      el.addEventListener('click', () => this.controller.setCompany(el.dataset.company));
+      this._makeActivatable(el, () => this.controller.setCompany(el.dataset.company));
     });
   }
 

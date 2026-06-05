@@ -384,13 +384,18 @@ App.TaskModel = class TaskModel {
 
   pushActivity(task, who, what) {
     task.activity = task.activity || [];
-    task.activity.unshift({ who, what, when: 'just now' });
+    // `at` is a real timestamp so the detail view can show elapsed time
+    // ("2m ago") instead of a frozen "just now". `when` kept for any legacy
+    // reader that still expects the label.
+    task.activity.unshift({ who, what, at: new Date().toISOString(), when: 'just now' });
   }
 
   addActivity(taskId, entry) {
     const t = this.find(taskId);
     if (!t) return;
     t.activity = t.activity || [];
+    // Stamp a timestamp if the caller didn't supply one, so relative time works.
+    if (!entry.at) entry.at = new Date().toISOString();
     t.activity.unshift(entry);
     this._markDirty(taskId);
     App.EventBus.emit('tasks:changed');

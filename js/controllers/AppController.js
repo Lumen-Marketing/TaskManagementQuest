@@ -148,8 +148,42 @@ App.AppController = class AppController {
     this.uiState.view = view;
     this.uiState.selectedTaskId = null;
     this._togglePanes();
+    this._persistUiState();
     App.EventBus.emit('view:changed', view);
     App.EventBus.emit('selection:changed');
+  }
+
+  /* ---------- last-state persistence ----------
+     Persist the lightweight "where was I" UI state (current view + layout) so
+     that force-closing and reopening the app restores the last screen instead
+     of always dropping the user back on the default All-tasks table. Kept tiny
+     and versioned so a future shape change is ignored rather than crashing on
+     a stale blob written by an older app version (data-integrity-on-update). */
+  _uiStateKey() {
+    const uid = (App.currentProfile && App.currentProfile.id) || 'anon';
+    return `questhq:ui-state:${uid}`;
+  }
+
+  _persistUiState() {
+    try {
+      localStorage.setItem(this._uiStateKey(), JSON.stringify({
+        v: 1,
+        view: this.uiState.view,
+        layout: this.uiState.layout,
+      }));
+    } catch (e) { /* localStorage unavailable / quota — last-state is best-effort */ }
+  }
+
+  // Called once from app.js after all views are wired. Re-checks canView so a
+  // view the user could open last session but not now (role change) falls back
+  // to the default instead of opening a forbidden screen.
+  restoreUiState() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(this._uiStateKey()) || 'null'); }
+    catch (e) { saved = null; }
+    if (!saved || saved.v !== 1) return;
+    if (['table', 'timeline', 'kanban'].includes(saved.layout)) this.setLayout(saved.layout);
+    if (typeof saved.view === 'string' && this.canView(saved.view)) this.setView(saved.view);
   }
 
   setSearchQuery(q) {
@@ -161,6 +195,7 @@ App.AppController = class AppController {
     if (!['table', 'timeline', 'kanban'].includes(layout)) return;
     if (this.uiState.layout === layout) return;
     this.uiState.layout = layout;
+    this._persistUiState();
     App.EventBus.emit('layout:changed', layout);
   }
 
@@ -606,6 +641,7 @@ App.AppController = class AppController {
         what: payload.assignee === this.currentUser
           ? 'created this task'
           : `assigned this to ${App.PEOPLE[payload.assignee].name}`,
+        at: new Date().toISOString(),
         when: 'just now',
       }],
     };

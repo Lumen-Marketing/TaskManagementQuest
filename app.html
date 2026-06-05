@@ -24,6 +24,17 @@
 </script>
 </head>
 <body>
+<!-- Accessibility: lets keyboard / screen-reader users jump straight past the
+     top bar and sidebar into the task list. Visually hidden until focused. -->
+<a href="#mainPane" class="skip-link">Skip to main content</a>
+
+<!-- Network resilience: a persistent, clearly-worded banner shown by
+     ConnectionView whenever the browser goes offline. -->
+<div id="offlineBanner" class="offline-banner hidden" role="status">
+  <i class="ti ti-wifi-off" aria-hidden="true"></i>
+  You're offline — your changes are kept and will sync automatically when the connection returns.
+</div>
+
 <div class="app">
 
   <!-- TOP BAR -->
@@ -37,8 +48,8 @@
     </div>
     <div class="topbar-right">
       <div class="search">
-        <i class="ti ti-search"></i>
-        <input type="text" id="searchInput" placeholder="Search tasks, people, projects" />
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="text" id="searchInput" aria-label="Search tasks, people, projects" placeholder="Search tasks, people, projects" />
       </div>
 
       <!-- Developer-only "view as role" switcher -->
@@ -73,7 +84,7 @@
   </div>
 
   <!-- LEFT SIDEBAR -->
-  <nav class="deck">
+  <nav class="deck" aria-label="Primary">
     <div class="sidebar">
       <button class="side-minimize-btn" id="sideMinimizeBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
         <i class="ti ti-layout-sidebar-left-collapse"></i>
@@ -94,7 +105,7 @@
   </nav>
 
   <!-- WORK SURFACE -->
-  <main class="main" id="mainPane">
+  <main class="main" id="mainPane" tabindex="-1" aria-label="Tasks">
     <div class="list-pane" id="listPane">
 
       <div class="work-toolbar">
@@ -143,11 +154,13 @@
     <div class="resize-handle hidden" id="resizeHandle" aria-hidden="true"></div>
 
     <!-- Detail panel (toggled) -->
-    <aside class="detail hidden" id="detailPane"></aside>
+    <aside class="detail hidden" id="detailPane" aria-label="Task details"></aside>
   </main>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
+<!-- aria-live so screen readers announce toasts (saves, errors, offline) as
+     they appear without the user having to find them. -->
+<div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="false"></div>
 
 <!-- ============ MVC SCRIPT LOAD ORDER ============
      Foundation → Models → Views → Controllers → Bootstrap.
@@ -175,6 +188,7 @@
 
 <!-- Views -->
 <script src="js/views/ToastView.js"></script>
+<script src="js/views/ConnectionView.js"></script>
 <script src="js/views/TopbarView.js"></script>
 <script src="js/views/SidebarView.js"></script>
 <script src="js/views/TaskListView.js"></script>
