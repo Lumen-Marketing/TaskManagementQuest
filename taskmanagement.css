@@ -443,8 +443,65 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .group-body { background: var(--surface); }
 .task-group.collapsed .group-body { display: none; }
 
-.task-title-cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
-.task-title-cell.done { text-decoration: line-through; color: var(--ink-3); font-weight: 600; }
+.task-title-cell { min-width: 0; display: flex; align-items: center; gap: 6px; font-weight: 700; }
+.task-title-cell .tt-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-title-cell.done { color: var(--ink-3); font-weight: 600; }
+.task-title-cell.done .tt-text { text-decoration: line-through; }
+
+/* Subtask expander chevron + count badge inside the title cell */
+.subtask-toggle {
+  flex: none; display: inline-grid; place-items: center;
+  width: 18px; height: 18px; padding: 0; border: 0; border-radius: 4px;
+  background: transparent; color: var(--ink-3); cursor: pointer;
+}
+.subtask-toggle:hover { background: var(--bg-3); color: var(--ink-2); }
+.subtask-toggle i { font-size: 16px; transition: transform var(--dur-fast) var(--ease-out); }
+.subtask-toggle.expanded i { transform: rotate(90deg); }
+.subtask-badge {
+  flex: none; font-size: 11px; font-weight: 700; color: var(--ink-3);
+  background: var(--bg-3); border-radius: 999px; padding: 1px 7px; text-decoration: none;
+}
+
+/* Collapsible subtask drawer under a list row */
+.subtask-drawer {
+  background: var(--bg-2); border-bottom: 1px solid var(--bg-3);
+  padding: 6px 24px 10px 64px; display: flex; flex-direction: column; gap: 4px;
+}
+.subtask-drawer.hidden { display: none; }
+.subtask-line {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer;
+}
+.subtask-line input { cursor: pointer; }
+.subtask-line.done span { text-decoration: line-through; color: var(--ink-3); }
+
+/* New task modal — subtask entry row + chips */
+.subtask-add-row { display: flex; gap: 8px; }
+.subtask-add-row input { flex: 1; padding: 6px 10px; font-size: 12px; }
+.subtask-chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.subtask-chip {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+  background: var(--bg-2); border: 1px solid var(--bg-3); border-radius: 6px;
+  padding: 4px 8px; color: var(--ink-2);
+}
+.subtask-chip > .ti-circle { color: var(--ink-3); font-size: 13px; }
+.subtask-chip .remove { cursor: pointer; color: var(--ink-3); font-size: 14px; }
+.subtask-chip .remove:hover { color: var(--rust); }
+
+/* Detail Edit form — subtask rows with a remove button */
+.edit-subtask-row { display: flex; align-items: center; gap: 6px; }
+.subtask-remove {
+  flex: none; border: 0; background: transparent; color: var(--ink-3);
+  font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+}
+.subtask-remove:hover { color: var(--rust); background: var(--bg-3); }
+
+/* Kanban / timeline card — subtask completion badge */
+.kanban-subtask-badge {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; color: var(--ink-3);
+}
+.kanban-subtask-badge i { font-size: 13px; }
 
 /* Worker task view — scheduled Time and Task name side-by-side */
 .worker-task-list { background: var(--surface); }

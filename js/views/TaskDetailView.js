@@ -393,10 +393,13 @@ App.TaskDetailView = class TaskDetailView {
       </select>` : '';
 
     const subtaskRows = d.subtasks.length ? d.subtasks.map((s, i) =>
-      `<div class="subtask ${s.d ? 'done' : ''}" data-action="toggle-subtask" data-idx="${i}" style="cursor:pointer;">
-         <i class="ti ${s.d ? 'ti-circle-check-filled' : 'ti-circle'}"></i>${App.utils.escapeHtml(s.t)}
+      `<div class="edit-subtask-row">
+         <div class="subtask ${s.d ? 'done' : ''}" data-action="toggle-subtask" data-idx="${i}" style="cursor:pointer; flex:1;">
+           <i class="ti ${s.d ? 'ti-circle-check-filled' : 'ti-circle'}"></i>${App.utils.escapeHtml(s.t)}
+         </div>
+         <button class="subtask-remove" data-action="remove-subtask" data-idx="${i}" aria-label="Remove subtask" title="Remove" type="button">×</button>
        </div>`
-    ).join('') : `<div style="font-size:11.5px; color:var(--ink-3);">No subtasks</div>`;
+    ).join('') : `<div style="font-size:11.5px; color:var(--ink-3);">No subtasks yet</div>`;
 
     this.pane.innerHTML = `
       <div class="detail-head">
@@ -475,6 +478,10 @@ App.TaskDetailView = class TaskDetailView {
         <div class="detail-section">
           <div class="detail-section-title">Subtasks</div>
           ${subtaskRows}
+          <div class="subtask-add-row" style="margin-top:8px;">
+            <input type="text" id="edit-subtask-input" maxlength="200" placeholder="Add a step and press Enter" />
+            <button class="btn btn-sm" data-action="add-subtask" type="button">Add</button>
+          </div>
         </div>
 
         <div class="modal-actions" style="margin-top:18px; display:flex; gap:8px; justify-content:flex-end;">
@@ -531,6 +538,34 @@ App.TaskDetailView = class TaskDetailView {
         this.renderEditMode(t);
       })
     );
+    this.pane.querySelectorAll('[data-action="remove-subtask"]').forEach(el =>
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const i = parseInt(el.dataset.idx, 10);
+        this._syncDraftFromDom();
+        this.editDraft.subtasks.splice(i, 1);
+        this.renderEditMode(t);
+      })
+    );
+    // Add a new subtask to the draft (Add button or Enter in the input). Re-
+    // renders and refocuses the input so several can be added in a row.
+    const addSubtask = () => {
+      const inp = this.pane.querySelector('#edit-subtask-input');
+      if (!inp) return;
+      const text = inp.value.trim();
+      if (!text) return;
+      this._syncDraftFromDom();
+      this.editDraft.subtasks.push({ t: text.slice(0, 200), d: false });
+      this.renderEditMode(t);
+      const next = this.pane.querySelector('#edit-subtask-input');
+      if (next) next.focus();
+    };
+    const addSubtaskBtn = this.pane.querySelector('[data-action="add-subtask"]');
+    if (addSubtaskBtn) addSubtaskBtn.addEventListener('click', addSubtask);
+    const subtaskInput = this.pane.querySelector('#edit-subtask-input');
+    if (subtaskInput) subtaskInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); e.stopPropagation(); addSubtask(); }
+    });
 
     this.pane.querySelectorAll('.picker-input').forEach(input =>
       input.addEventListener('click', () => {

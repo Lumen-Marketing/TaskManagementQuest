@@ -6,11 +6,13 @@ App.NewTaskModalView = class NewTaskModalView {
     this.currentUser = currentUser;
     this.modal = null;
     this.watchers = new Set();
+    this.subtasks = []; // array of strings, in entry order
   }
 
   open() {
     if (this.modal) return; // already open
     this.watchers = new Set();
+    this.subtasks = [];
     this.modal = document.createElement('div');
     this.modal.className = 'modal-backdrop';
     this.modal.id = 'newTaskModal';
@@ -20,6 +22,7 @@ App.NewTaskModalView = class NewTaskModalView {
     this.bindEvents();
     setTimeout(() => document.getElementById('nt-title').focus(), 50);
     this.renderWatcherChips();
+    this.renderSubtaskChips();
     this.updateDelegationBanner();
   }
 
@@ -72,6 +75,15 @@ App.NewTaskModalView = class NewTaskModalView {
               <div class="watcher-tags" id="nt-watchers"></div>
               <div class="watcher-dropdown hidden" id="nt-watcher-dropdown"></div>
             </div>
+          </div>
+
+          <div class="field" style="margin-top:14px;">
+            <div class="field-label">Subtasks <span class="field-optional">Optional</span></div>
+            <div class="subtask-add-row">
+              <input type="text" id="nt-subtask-input" maxlength="200" placeholder="Add a step and press Enter" />
+              <button class="btn btn-sm" type="button" data-action="add-subtask">Add</button>
+            </div>
+            <div class="subtask-chip-list" id="nt-subtasks"></div>
           </div>
 
           <div class="field-row-3">
@@ -193,6 +205,13 @@ App.NewTaskModalView = class NewTaskModalView {
     document.getElementById('nt-assignee').addEventListener('change', () => this.updateDelegationBanner());
     document.getElementById('nt-type').addEventListener('change', () => this.updateBidStatusRow());
     this.updateBidStatusRow();
+
+    // Subtasks: Add button or Enter in the input appends a step.
+    this.modal.querySelector('[data-action="add-subtask"]').addEventListener('click', () => this.addSubtask());
+    const subtaskInput = document.getElementById('nt-subtask-input');
+    if (subtaskInput) subtaskInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); this.addSubtask(); }
+    });
 
     // Clicking anywhere on a date/time box opens its native picker (not just the icon).
     this.modal.querySelectorAll('.picker-input').forEach(input => {
@@ -377,6 +396,41 @@ App.NewTaskModalView = class NewTaskModalView {
     watchersEl.appendChild(addBtn);
   }
 
+  addSubtask() {
+    const input = document.getElementById('nt-subtask-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    if (this.subtasks.length >= App.validate.LIMITS.subtasks) {
+      if (this.controller.toastView) {
+        this.controller.toastView.show({ title: 'Too many subtasks', sub: `Max ${App.validate.LIMITS.subtasks} per task.` });
+      }
+      return;
+    }
+    this.subtasks.push(text.slice(0, App.validate.LIMITS.title));
+    input.value = '';
+    input.focus();
+    this.renderSubtaskChips();
+  }
+
+  renderSubtaskChips() {
+    const list = document.getElementById('nt-subtasks');
+    if (!list) return;
+    list.innerHTML = '';
+    this.subtasks.forEach((text, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'subtask-chip';
+      chip.innerHTML = `<i class="ti ti-circle"></i><span class="subtask-chip-text"></span><i class="ti ti-x remove"></i>`;
+      chip.querySelector('.subtask-chip-text').textContent = text;
+      chip.querySelector('.remove').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.subtasks.splice(i, 1);
+        this.renderSubtaskChips();
+      });
+      list.appendChild(chip);
+    });
+  }
+
   updateDelegationBanner() {
     const assigneeId = document.getElementById('nt-assignee').value;
     const banner = document.getElementById('nt-delegation-banner');
@@ -397,6 +451,10 @@ App.NewTaskModalView = class NewTaskModalView {
 
   submit() {
     const timeRaw = document.getElementById('nt-time').value.trim();
+    // Fold in any subtask text the user typed but didn't explicitly "Add".
+    const pendingSubtask = document.getElementById('nt-subtask-input');
+    const subtasks = this.subtasks.slice();
+    if (pendingSubtask && pendingSubtask.value.trim()) subtasks.push(pendingSubtask.value.trim());
     const rawPayload = {
       title: document.getElementById('nt-title').value,
       description: document.getElementById('nt-desc').value,
@@ -409,6 +467,7 @@ App.NewTaskModalView = class NewTaskModalView {
       priority: document.getElementById('nt-priority').value,
       status: document.getElementById('nt-status').value,
       watchers: Array.from(this.watchers),
+      subtasks,
     };
 
     let clean;
