@@ -10,6 +10,10 @@ App.TaskDetailView = class TaskDetailView {
     this.pane = document.getElementById('detailPane');
     this.mainEl = document.getElementById('mainPane');
 
+    // Id of the task currently open in the staged Edit form, or null. While set,
+    // background re-renders are suppressed so unsaved input survives.
+    this.editingId = null;
+
     this.subscribe();
     this.render();
   }
@@ -33,6 +37,14 @@ App.TaskDetailView = class TaskDetailView {
   render() {
     const selId = this.controller.uiState.selectedTaskId;
     const view = this.controller.uiState.view;
+
+    // Mid-edit: keep the staged form on screen and don't clobber unsaved input
+    // on background re-renders (sync polls, time ticks). Drop edit mode only if
+    // the selection moved to another task or a time view.
+    if (this.editingId) {
+      if (this.editingId === selId && !view.startsWith('time:')) return;
+      this.editingId = null;
+    }
 
     // Time-tracking views don't show a detail pane
     if (!selId || view.startsWith('time:')) {
@@ -121,6 +133,7 @@ App.TaskDetailView = class TaskDetailView {
         <div class="detail-head-top">
           <span class="pill ${company.pill}">${company.label}</span>
           <div class="detail-head-actions">
+            ${App.can('tasks.write') ? `<button class="icon-btn" data-action="edit-task" aria-label="Edit task" title="Edit task" type="button"><i class="ti ti-pencil"></i></button>` : ''}
             <button class="icon-btn" data-action="minimize-detail" aria-label="Minimize" title="Minimize" type="button"><i class="ti ti-chevrons-right"></i></button>
             <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
           </div>
@@ -281,6 +294,12 @@ App.TaskDetailView = class TaskDetailView {
       try { localStorage.setItem('questhq:detail-minimized', '0'); } catch (e) {}
     });
 
+    const editBtn = this.pane.querySelector('[data-action="edit-task"]');
+    if (editBtn) editBtn.addEventListener('click', () => {
+      this.editingId = t.id;
+      this.renderEditMode(t);
+    });
+
     const timerBtn = this.pane.querySelector('[data-action="toggle-timer"]');
     if (timerBtn) timerBtn.addEventListener('click', () => this.controller.toggleTimerForTask(t.id));
 
@@ -317,5 +336,89 @@ App.TaskDetailView = class TaskDetailView {
         if (id) this.controller.addWatcher(t.id, id);
       });
     }
+  }
+
+  /* Staged Edit form for the editable fields (title, description, due, priority).
+     Rendered once on demand; changes live only in the inputs until Save commits
+     them via the controller, so Cancel discards everything untouched. */
+  renderEditMode(t) {
+    const company = App.COMPANIES[t.company] || { pill: '', label: t.company || '—' };
+    this.pane.classList.remove('minimized');
+    this.pane.innerHTML = `
+      <div class="detail-head">
+        <div class="detail-head-top">
+          <span class="pill ${company.pill}">${company.label}</span>
+          <div class="detail-head-actions">
+            <button class="icon-btn" data-action="cancel-edit" aria-label="Cancel" title="Cancel" type="button"><i class="ti ti-x"></i></button>
+          </div>
+        </div>
+        <div class="detail-title">Edit task</div>
+      </div>
+      <div class="detail-body">
+        <div class="field">
+          <label class="field-label" for="edit-title">Title</label>
+          <input type="text" id="edit-title" value="${App.utils.escapeHtml(t.title)}" maxlength="200" style="width:100%; font-size:13px; padding:6px 8px;" />
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label class="field-label" for="edit-desc">Description</label>
+          <textarea id="edit-desc" rows="5" maxlength="5000" placeholder="Add a description…" style="width:100%; font-size:12.5px; padding:6px 8px; resize:vertical;">${App.utils.escapeHtml(t.description || '')}</textarea>
+        </div>
+        <div class="detail-row" style="margin-top:12px;">
+          <span class="label">Due</span>
+          <input type="date" id="edit-due" value="${App.utils.escapeHtml(t.due || '')}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
+        </div>
+        <div class="detail-row">
+          <span class="label">Priority</span>
+          <select id="edit-priority" style="font-size:12px; padding:4px 8px;">
+            ${Object.entries(App.PRIORITIES).map(([k, v]) => `<option value="${k}" ${(t.priority || 'medium') === k ? 'selected' : ''}>${v.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="modal-actions" style="margin-top:18px; display:flex; gap:8px; justify-content:flex-end;">
+          <button class="btn" data-action="cancel-edit" type="button">Cancel</button>
+          <button class="btn btn-primary" data-action="save-edit" type="button">Save</button>
+        </div>
+      </div>
+    `;
+    this.bindEditHandlers(t);
+  }
+
+  bindEditHandlers(t) {
+    const exitEdit = () => { this.editingId = null; this.render(); };
+
+    this.pane.querySelectorAll('[data-action="cancel-edit"]').forEach(el =>
+      el.addEventListener('click', exitEdit)
+    );
+
+    const saveBtn = this.pane.querySelector('[data-action="save-edit"]');
+    const save = () => {
+      const ok = this.controller.updateTaskDetails(t.id, {
+        title: document.getElementById('edit-title').value,
+        description: document.getElementById('edit-desc').value,
+        due: document.getElementById('edit-due').value,
+        priority: document.getElementById('edit-priority').value,
+      });
+      // Stay in edit mode (input preserved) when validation rejects the save.
+      if (ok) exitEdit();
+    };
+    if (saveBtn) saveBtn.addEventListener('click', save);
+
+    const dueInput = this.pane.querySelector('#edit-due');
+    if (dueInput) dueInput.addEventListener('click', () => {
+      try { dueInput.showPicker(); } catch (e) { /* unsupported or not user-activated */ }
+    });
+
+    // Scope the keydown to the edit body (replaced on every render) rather than
+    // this.pane (which survives re-renders) so listeners can't stack across
+    // repeated edits and double-fire Save.
+    const editBody = this.pane.querySelector('.detail-body');
+    if (editBody) editBody.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') exitEdit();
+      // Cmd/Ctrl+Enter saves — but not while the multiline description has focus,
+      // where Enter should insert a newline.
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); save(); }
+    });
+
+    const titleInput = document.getElementById('edit-title');
+    if (titleInput) { titleInput.focus(); titleInput.select(); }
   }
 };

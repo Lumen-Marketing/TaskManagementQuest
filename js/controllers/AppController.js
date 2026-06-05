@@ -403,6 +403,43 @@ App.AppController = class AppController {
     }
   }
 
+  /* Batch-save the editable detail fields from the task detail pane's Edit mode
+     (title, description, due date, priority). Staged together so Cancel — which
+     simply never calls this — leaves the task untouched, and a refresh shows the
+     saved values (taskModel.update marks the row dirty for the next sync).
+     Returns true on success; on a validation problem it toasts and returns false
+     so the view can stay in edit mode without losing the user's input. */
+  updateTaskDetails(id, fields) {
+    if (!App.can('tasks.write')) return false;
+    const task = this.taskModel.find(id);
+    if (!task) return false;
+
+    let title, description, due, priority;
+    try {
+      title = App.validate.nonEmpty(fields.title, 'Title', { field: 'title', max: App.validate.LIMITS.title });
+      description = String(fields.description == null ? '' : fields.description).trim().slice(0, App.validate.LIMITS.description);
+      due = App.validate.isoDate(fields.due, { field: 'due', required: true });
+      priority = App.validate.oneOf(fields.priority, Object.keys(App.PRIORITIES), { field: 'priority', label: 'Priority' });
+    } catch (err) {
+      if (this.toastView) this.toastView.show({ title: 'Couldn’t save', sub: (err && err.message) || 'Check the fields and try again.' });
+      return false;
+    }
+
+    const prevPriority = task.priority;
+    this.taskModel.update(id, { title, description, due, priority });
+    this.taskModel.addActivity(id, {
+      who: this.getUserName(this.currentUser),
+      what: 'edited this task',
+      when: 'just now',
+    });
+    if (prevPriority !== priority) {
+      const label = (App.PRIORITIES[priority] && App.PRIORITIES[priority].label) || priority;
+      this._notifyTaskChange(task, `changed priority to ${label}`);
+    }
+    if (this.toastView) this.toastView.show({ title: 'Task updated', sub: '' });
+    return true;
+  }
+
   toggleSubtask(taskId, idx) {
     if (!App.can('tasks.write')) return;
     this.taskModel.toggleSubtask(taskId, idx);
