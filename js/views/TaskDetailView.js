@@ -183,6 +183,10 @@ App.TaskDetailView = class TaskDetailView {
           <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(t.dueTime) : '—'}</span>
         </div>
         <div class="detail-row">
+          <span class="label">Reminder</span>
+          <span style="font-size:12px; color:var(--ink-2);">${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span>
+        </div>
+        <div class="detail-row">
           <span class="label">Priority</span>
           <span class="priority-block ${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).cls}">${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).label}</span>
         </div>
@@ -284,6 +288,7 @@ App.TaskDetailView = class TaskDetailView {
       assignee: t.assignee,
       due: t.due || '',
       dueTime: t.dueTime || '',
+      reminderAt: t.reminderAt || '',
       priority: t.priority || 'medium',
       watchers: (t.watchers || []).slice(),
       subtasks: (t.subtasks || []).map(s => ({ t: s.t, d: !!s.d })),
@@ -308,7 +313,16 @@ App.TaskDetailView = class TaskDetailView {
     set('assignee', 'edit-assignee');
     set('due', 'edit-due');
     set('dueTime', 'edit-dueTime');
+    set('reminderAt', 'edit-reminderAt');
     set('priority', 'edit-priority');
+  }
+
+  _formatReminder(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(s || ''));
+    if (!m) return s || '—';
+    const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
   /* Staged Edit form for every editable field. Renders entirely from this.editDraft
@@ -400,6 +414,10 @@ App.TaskDetailView = class TaskDetailView {
         <div class="detail-row">
           <span class="label">Time <span class="field-optional">Optional</span></span>
           <input type="time" id="edit-dueTime" value="${App.utils.escapeHtml(d.dueTime)}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
+        </div>
+        <div class="detail-row">
+          <span class="label">Reminder <span class="field-optional">Optional</span></span>
+          <input type="datetime-local" id="edit-reminderAt" value="${App.utils.escapeHtml(d.reminderAt)}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
         </div>
         <div class="detail-row">
           <span class="label">Priority</span>

@@ -460,11 +460,16 @@ App.AppController = class AppController {
     const subtasks = Array.isArray(fields.subtasks)
       ? fields.subtasks.map(s => ({ t: s.t, d: !!s.d }))
       : (task.subtasks || []);
+    // User-set reminder ("YYYY-MM-DDTHH:MM" local, or null to clear). Anything
+    // not matching the datetime-local shape is treated as cleared.
+    const reminderAt = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(fields.reminderAt || '')
+      ? String(fields.reminderAt).slice(0, 16)
+      : null;
 
     const prevStatus = task.status, prevPriority = task.priority, prevAssignee = task.assignee;
 
     this.taskModel.update(id, {
-      title, description, company, type, due, dueTime, priority, status, assignee, watchers, subtasks,
+      title, description, company, type, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
       ...(type === 'bid' ? { bidStatus } : {}),
     });
 

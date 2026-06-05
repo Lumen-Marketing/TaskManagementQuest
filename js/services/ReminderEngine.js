@@ -43,19 +43,17 @@ App.ReminderEngine = class ReminderEngine {
     const now = Date.now();
     let added = 0;
     this.taskModel.all().forEach(t => {
-      if (!this._isMyTask(t) || !t.due || t.status === 'done') return;
-      const dueTs = this._taskDueTimestamp(t);
-      if (!dueTs) return;
+      if (!this._isMyTask(t) || t.status === 'done') return;
 
-      const windows = this._windowsFor(t, dueTs);
+      const windows = this._windowsFor(t);
       windows.forEach(w => {
         const key = `${t.id}:${w.id}`;
         if (this.fired.has(key)) return;
-        // Window must have just passed (within the grace) so we don't fire
-        // long-stale reminders on fresh sessions.
         if (now < w.at) return;
-        if (now - w.at > this.GRACE_MS) {
-          // Past the grace window — silently mark fired so we don't ever fire it.
+        // Automatic (priority) windows are suppressed once stale so a fresh
+        // session isn't flooded with old pings. A user-set reminder is honoured
+        // even if late — the user explicitly asked to be told about this task.
+        if (!w.custom && now - w.at > this.GRACE_MS) {
           this.fired.add(key);
           return;
         }
@@ -88,7 +86,34 @@ App.ReminderEngine = class ReminderEngine {
     return new Date(y, m - 1, d, hh, mm).getTime();
   }
 
-  _windowsFor(t, dueTs) {
+  /* Parse a `datetime-local` string ("YYYY-MM-DDTHH:MM") as LOCAL wall-clock —
+     mirroring how due dates are handled, so a reminder fires at the intended
+     local time regardless of timezone. */
+  _parseLocal(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(s || ''));
+    if (!m) return null;
+    const ts = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime();
+    return Number.isNaN(ts) ? null : ts;
+  }
+
+  /* All reminder windows for a task: the user-set reminder (if any, independent
+     of the due date) plus the automatic priority-derived windows (which need a
+     due date). */
+  _windowsFor(t) {
+    const out = [];
+    if (t.reminderAt) {
+      const ts = this._parseLocal(t.reminderAt);
+      // Key on the value so changing the reminder re-arms it.
+      if (ts) out.push({ id: `custom:${t.reminderAt}`, at: ts, custom: true });
+    }
+    if (t.due) {
+      const dueTs = this._taskDueTimestamp(t);
+      if (dueTs) out.push(...this._priorityWindows(t, dueTs));
+    }
+    return out;
+  }
+
+  _priorityWindows(t, dueTs) {
     const prio = t.priority || 'medium';
     const morning = this._morningOf(dueTs);
     const out = [];
@@ -115,8 +140,16 @@ App.ReminderEngine = class ReminderEngine {
   }
 
   _fire(task, window) {
-    const prio = App.PRIORITIES[task.priority] || App.PRIORITIES.medium;
     const title = App.utils.escapeHtml(task.title);
+    if (window.custom) {
+      this.notifModel.add({
+        taskId: task.id,
+        meta: 'Reminder',
+        html: `<strong>Reminder</strong>: <em>${title}</em>`,
+      });
+      return;
+    }
+    const prio = App.PRIORITIES[task.priority] || App.PRIORITIES.medium;
     const label = {
       pre:     `Due in <strong>4 hours</strong>`,
       at:      `<strong>Due now</strong>`,
