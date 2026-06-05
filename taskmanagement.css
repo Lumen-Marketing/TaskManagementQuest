@@ -729,6 +729,19 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .modal-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
 .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); background: var(--bg-2); display: flex; justify-content: space-between; align-items: center; }
 
+/* Task detail rendered as a centered popup (same shell as the New task modal)
+   instead of a right-hand side panel. The #detailPane markup is moved into a
+   .modal panel at runtime, so we just drop the side-panel border and let the
+   detail body scroll within the modal's height cap. */
+#taskDetailModal .modal { max-width: 560px; }
+.modal-detail .detail {
+  border-left: 0;
+  background: transparent;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 /* New task modal: a comfortable default that scales up on widescreen, plus a
    drag handle (bottom-right) so it can be resized by hand. Uses `width` (not
    `max-width`) for the breakpoints so a manual drag can still grow it up to the

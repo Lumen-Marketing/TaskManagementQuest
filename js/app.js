@@ -188,9 +188,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('role-' + App.effectiveRole());
 
   // Preview-only: ?view= lets you deep-link an initial view for screenshots/testing.
+  // Otherwise, restore the view/layout the user left off on last session.
   if (App.previewMode) {
     const pv = new URLSearchParams(window.location.search).get('view');
     if (pv) controller.setView(pv);
+  } else {
+    controller.restoreUiState();
   }
 
   let persistTimer = null;
@@ -240,6 +243,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   App.EventBus.on('tasks:changed', persist);
   App.EventBus.on('time:changed', persist);
   App.EventBus.on('notifs:changed', persist);
+
+  // Network resilience: show an offline banner while disconnected and flush any
+  // queued changes the moment we're back online. Dirty tasks/entries are
+  // re-flagged by doSave's catch above when a save fails mid-outage, so this
+  // reconnect flush picks them up rather than losing them.
+  new App.ConnectionView({ toastView, onReconnect: doSave });
 
   // Close the current user's timer if it's been running past the max shift.
   const staleEntry = timeModel.autoCloseStaleForUser(App.CURRENT_USER, App.MAX_SHIFT_MS);

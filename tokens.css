@@ -186,3 +186,42 @@ html, body { overflow-x: clip; }
     scroll-behavior: auto !important;
   }
 }
+
+/* Skip link — visually hidden until focused, then drops into the top-left so
+   keyboard users can jump past the chrome straight into the task list. */
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 12px;
+  z-index: 1000;
+  padding: 10px 16px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-weight: 700;
+  border-radius: var(--radius-xs, 6px);
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 12px; }
+
+/* Offline banner — full-width, clearly-worded strip pinned to the top while the
+   browser reports no connection. Hidden via the shared .hidden utility. */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--rust-bg);
+  color: var(--rust-ink);
+  border-bottom: 1px solid var(--rust);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.offline-banner.hidden { display: none; }

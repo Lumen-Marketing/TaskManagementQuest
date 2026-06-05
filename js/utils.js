@@ -163,8 +163,16 @@ App.utils = {
     return `${hours.toFixed(1)}h`;
   },
 
+  // Accepts a ms timestamp, a Date, or an ISO string (activity entries store
+  // an ISO string in `at`). Returns '' for missing/unparseable input so callers
+  // can fall back to a legacy label.
   timeAgo(timestamp) {
-    const diff = Date.now() - timestamp;
+    if (timestamp == null || timestamp === '') return '';
+    const ms = typeof timestamp === 'number'
+      ? timestamp
+      : (timestamp instanceof Date ? timestamp.getTime() : Date.parse(timestamp));
+    if (Number.isNaN(ms)) return '';
+    const diff = Date.now() - ms;
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'just now';
     if (mins < 60) return `${mins}m ago`;

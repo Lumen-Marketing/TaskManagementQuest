@@ -9,6 +9,10 @@ App.TaskDetailView = class TaskDetailView {
 
     this.pane = document.getElementById('detailPane');
     this.mainEl = document.getElementById('mainPane');
+    // The detail pane is shown as a centered popup (same shell as the New task
+    // modal). We relocate the existing #detailPane node into this backdrop on
+    // open so all the render/query code below keeps targeting `this.pane`.
+    this.backdrop = null;
 
     // Id of the task currently open in the staged Edit form, or null. While set,
     // background re-renders are suppressed so unsaved input survives. editDraft
@@ -36,6 +40,44 @@ App.TaskDetailView = class TaskDetailView {
     }
   }
 
+  /* Mount the detail pane inside a centered modal backdrop (idempotent — called
+     on every re-render). The #detailPane node is moved into the panel so the
+     rest of this view's innerHTML/querySelector code is unchanged. */
+  _openModal() {
+    if (this.backdrop) return;
+    this.backdrop = document.createElement('div');
+    this.backdrop.className = 'modal-backdrop';
+    this.backdrop.id = 'taskDetailModal';
+
+    const panel = document.createElement('div');
+    panel.className = 'modal modal-detail';
+    panel.setAttribute('data-stop', '');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'true');
+    panel.setAttribute('aria-label', 'Task details');
+
+    this.pane.classList.remove('hidden');
+    panel.appendChild(this.pane);
+    this.backdrop.appendChild(panel);
+    document.body.appendChild(this.backdrop);
+
+    // Click outside the panel closes, like the New task modal.
+    this.backdrop.addEventListener('click', (e) => {
+      if (e.target === this.backdrop) this.controller.closeDetail();
+    });
+  }
+
+  _closeModal() {
+    // Legacy side-panel layout class (no longer used, kept defensive).
+    this.mainEl.classList.remove('with-detail');
+    if (this.backdrop) {
+      // Removing the backdrop detaches #detailPane with it; we keep the JS
+      // reference in this.pane and re-attach it on the next _openModal().
+      this.backdrop.remove();
+      this.backdrop = null;
+    }
+  }
+
   render() {
     const selId = this.controller.uiState.selectedTaskId;
     const view = this.controller.uiState.view;
@@ -50,20 +92,17 @@ App.TaskDetailView = class TaskDetailView {
 
     // Time-tracking views don't show a detail pane
     if (!selId || view.startsWith('time:')) {
-      this.pane.classList.add('hidden');
-      this.mainEl.classList.remove('with-detail');
+      this._closeModal();
       return;
     }
 
     const t = this.taskModel.find(selId);
     if (!t) {
-      this.pane.classList.add('hidden');
-      this.mainEl.classList.remove('with-detail');
+      this._closeModal();
       return;
     }
 
-    this.pane.classList.remove('hidden');
-    this.mainEl.classList.add('with-detail');
+    this._openModal();
 
     try {
     // Fall back gracefully if a task references a person or company that no
@@ -96,9 +135,12 @@ App.TaskDetailView = class TaskDetailView {
        </div>`
     ).join('') || `<div style="font-size:11.5px; color:var(--ink-3);">No subtasks yet</div>`;
 
-    const activityHtml = (t.activity || []).map(a =>
-      `<div class="activity-item"><span class="who">${App.utils.escapeHtml(a.who)}</span> ${App.utils.escapeHtml(a.what)} · ${App.utils.escapeHtml(a.when)}</div>`
-    ).join('') || `<div style="font-size:11.5px; color:var(--ink-3);">No activity yet</div>`;
+    const activityHtml = (t.activity || []).map(a => {
+      // Prefer the real timestamp (relative); fall back to the legacy `when`
+      // label for seed data / rows written before activity carried a timestamp.
+      const ago = App.utils.timeAgo(a.at) || a.when || '';
+      return `<div class="activity-item"><span class="who">${App.utils.escapeHtml(a.who)}</span> ${App.utils.escapeHtml(a.what)}${ago ? ` · ${App.utils.escapeHtml(ago)}` : ''}</div>`;
+    }).join('') || `<div style="font-size:11.5px; color:var(--ink-3);">No activity yet</div>`;
 
     const recentEntries = this.timeModel.entriesForTask(t.id).slice(0, 5);
     const entriesHtml = recentEntries.length
