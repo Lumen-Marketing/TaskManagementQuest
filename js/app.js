@@ -352,8 +352,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 function overlayProfilesOntoPeople() {
   const apply = (prof) => {
     if (!prof || !prof.member_id) return;
-    const person = App.PEOPLE && App.PEOPLE[prof.member_id];
-    if (!person) return;
+    if (!App.PEOPLE) App.PEOPLE = {};
+    const person = App.PEOPLE[prof.member_id];
+    if (!person) {
+      // No team_members row backs this profile (member_id drift — its slug was
+      // pruned or never created). Synthesize the roster entry from the profile
+      // so the chosen display name resolves everywhere App.PEOPLE is read
+      // (assignee chips, getUserName), not just the profile-sourced boards.
+      App.PEOPLE[prof.member_id] = App.utils.personFromProfile(prof);
+      return;
+    }
     if (prof.full_name) {
       person.full = prof.full_name;
       person.name = prof.full_name.split(/\s+/)[0] || prof.full_name;
