@@ -75,6 +75,13 @@ App.configReady = (async function loadRuntimeConfig() {
     App.supabase = window.supabase.createClient(url, key, {
       global: { fetch: timedFetch },
     });
+
+    // Expose the public connection params so a flow that needs a short-lived,
+    // ISOLATED client can build one — e.g. verifying the current password on a
+    // throwaway client so it never disturbs the live session. The anon key is
+    // publishable by design (the same one already shipped to the browser).
+    App.supabaseUrl = url;
+    App.supabaseAnonKey = key;
   } catch (err) {
     const message = (err && err.message) ? err.message : String(err);
     App.supabaseLoadError = `Configuration unavailable: ${message}`;

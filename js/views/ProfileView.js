@@ -67,6 +67,11 @@ App.ProfileView = class ProfileView {
           </div>
 
           <div class="field" style="margin-top:18px;">
+            <label class="field-label" for="pf-current-password">Current password</label>
+            <input type="password" id="pf-current-password" placeholder="Required only to change your password" autocomplete="current-password" maxlength="128" />
+          </div>
+
+          <div class="field" style="margin-top:12px;">
             <label class="field-label" for="pf-password">New password</label>
             <input type="password" id="pf-password" placeholder="Leave blank to keep current" autocomplete="new-password" maxlength="128" />
             <div class="profile-hint">At least 8 characters, with an uppercase letter, a number, and a special character.</div>
@@ -160,10 +165,15 @@ App.ProfileView = class ProfileView {
     // Password change is optional: blank fields mean "keep current password".
     // Validate the strength + match BEFORE we touch the network so the user
     // gets the precise rule that failed without a half-applied save.
+    const currentPw = document.getElementById('pf-current-password').value || '';
     const pw = document.getElementById('pf-password').value || '';
     const pwConfirm = document.getElementById('pf-password-confirm').value || '';
     const wantsPasswordChange = pw.length > 0 || pwConfirm.length > 0;
     if (wantsPasswordChange) {
+      if (!currentPw) {
+        this._inlineError('Enter your current password to change it.');
+        return;
+      }
       try {
         App.validate.strongPassword(pw, { field: 'password' });
       } catch (err) {
@@ -172,6 +182,10 @@ App.ProfileView = class ProfileView {
       }
       if (pw !== pwConfirm) {
         this._inlineError('Passwords do not match.');
+        return;
+      }
+      if (pw === currentPw) {
+        this._inlineError('New password must be different from your current one.');
         return;
       }
     }
@@ -195,9 +209,11 @@ App.ProfileView = class ProfileView {
 
       await this._saveProfile(nameRaw, avatarUrl, avatarChanged);
 
-      // Update the auth credential last — Supabase verifies the strong-password
-      // policy server-side too and updates the active session in place.
+      // Update the auth credential last. Verify the CURRENT password first
+      // (Supabase's updateUser would otherwise let anyone on an unlocked session
+      // change it), then set the new one on the live session.
       if (wantsPasswordChange) {
+        await this._verifyCurrentPassword(currentPw);
         const { error } = await App.supabase.auth.updateUser({ password: pw });
         if (error) throw error;
       }
@@ -214,6 +230,35 @@ App.ProfileView = class ProfileView {
       submitBtn.disabled = false;
       submitBtn.textContent = originalLabel;
       this._inlineError((err && err.message) || 'Could not save profile.');
+    }
+  }
+
+  /* Confirm the caller knows the current password before changing it. Supabase
+     has no "verify password" endpoint, so we sign in on a SHORT-LIVED, ISOLATED
+     client (persistSession:false) — a wrong or right attempt there never touches
+     the live session or fires the app's onAuthStateChange. Throws a user-safe
+     Error on mismatch / when verification can't run. */
+  async _verifyCurrentPassword(currentPw) {
+    const email = (App.currentAuthUser && App.currentAuthUser.email)
+      || (App.currentProfile && App.currentProfile.email) || '';
+    if (!email) throw new Error('Could not determine your account email.');
+    if (!window.supabase || !App.supabaseUrl || !App.supabaseAnonKey) {
+      throw new Error('Password change is unavailable right now.');
+    }
+
+    const probe = window.supabase.createClient(App.supabaseUrl, App.supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { error } = await probe.auth.signInWithPassword({ email, password: currentPw });
+    try { await probe.auth.signOut(); } catch (e) { /* nothing was persisted */ }
+
+    if (error) {
+      // A configured captcha (Turnstile) would block this sign-in for lack of a
+      // token — surface that distinctly so it isn't mistaken for a wrong password.
+      if (/captcha/i.test(error.message || '')) {
+        throw new Error('Could not verify your password — captcha is enabled on sign-in for this project.');
+      }
+      throw new Error('Current password is incorrect.');
     }
   }
 
