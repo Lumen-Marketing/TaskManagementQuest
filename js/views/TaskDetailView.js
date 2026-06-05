@@ -11,8 +11,10 @@ App.TaskDetailView = class TaskDetailView {
     this.mainEl = document.getElementById('mainPane');
 
     // Id of the task currently open in the staged Edit form, or null. While set,
-    // background re-renders are suppressed so unsaved input survives.
+    // background re-renders are suppressed so unsaved input survives. editDraft
+    // holds the staged field values until Save (or is discarded on Cancel).
     this.editingId = null;
+    this.editDraft = null;
 
     this.subscribe();
     this.render();
@@ -76,36 +78,20 @@ App.TaskDetailView = class TaskDetailView {
     const myTimerOnThis = myActive && myActive.taskId === t.id;
     const totalMs = this.timeModel.totalForTask(t.id);
 
+    // Read-only watcher chips — editing watchers lives in the Edit form.
     const watcherIds = t.watchers || [];
-    const watcherChipsHtml = watcherIds.map(w => {
-      const p = App.PEOPLE[w];
-      if (!p) return '';
-      return `<span class="watcher-chip-detail" data-watcher-id="${App.utils.escapeHtml(w)}">
-        ${App.utils.avatarHtml(p)}
-        ${App.utils.escapeHtml(p.name)}
-        <button class="watcher-remove" data-action="remove-watcher" data-member-id="${App.utils.escapeHtml(w)}" aria-label="Remove ${App.utils.escapeHtml(p.name)}" type="button">×</button>
-      </span>`;
-    }).join('');
-    const addableWatchers = App.utils.activePeople().filter(p =>
-      p.id !== t.assignee && !watcherIds.includes(p.id)
-    );
-    const watcherAddSelect = addableWatchers.length ? `
-      <select class="watcher-add-select" data-action="add-watcher">
-        <option value="">+ Add watcher…</option>
-        ${addableWatchers.map(p =>
-          `<option value="${App.utils.escapeHtml(p.id)}">${App.utils.escapeHtml(p.full)}</option>`
-        ).join('')}
-      </select>
-    ` : '';
     const watchersHtml = `
       <div class="watchers-cell">
-        ${watcherChipsHtml || (addableWatchers.length ? '' : '<span style="color:var(--ink-3); font-size:11px;">No watchers</span>')}
-        ${watcherAddSelect}
+        ${watcherIds.map(w => {
+          const p = App.PEOPLE[w];
+          return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
+        }).join('') || '<span style="color:var(--ink-3); font-size:11px;">No watchers</span>'}
       </div>
     `;
 
-    const subtasksHtml = (t.subtasks || []).map((s, i) =>
-      `<div class="subtask ${s.d ? 'done' : ''}" data-action="toggle-subtask" data-idx="${i}">
+    // Read-only subtasks — toggling moved into the Edit form.
+    const subtasksHtml = (t.subtasks || []).map((s) =>
+      `<div class="subtask ${s.d ? 'done' : ''}">
          <i class="ti ${s.d ? 'ti-circle-check-filled' : 'ti-circle'}"></i>${App.utils.escapeHtml(s.t)}
        </div>`
     ).join('') || `<div style="font-size:11.5px; color:var(--ink-3);">No subtasks yet</div>`;
@@ -165,57 +151,44 @@ App.TaskDetailView = class TaskDetailView {
 
         <div class="detail-row">
           <span class="label">Company</span>
-          <select data-field="company" style="font-size:12px; padding:4px 8px;">
-            ${Object.values(App.COMPANIES).map(c => `<option value="${App.utils.escapeHtml(c.id)}" ${t.company === c.id ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`).join('')}
-          </select>
+          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(company.label)}</span>
         </div>
         <div class="detail-row">
           <span class="label">Type</span>
-          <select data-field="type" style="font-size:12px; padding:4px 8px;">
-            ${Object.entries(App.TASK_TYPES).map(([k, v]) => `<option value="${k}" ${(t.type || 'admin') === k ? 'selected' : ''}>${v.label}</option>`).join('')}
-          </select>
+          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' }).label)}</span>
         </div>
         ${t.type === 'bid' ? `
         <div class="detail-row">
           <span class="label">Bid status</span>
-          <select data-field="bidStatus" style="font-size:12px; padding:4px 8px;">
-            ${Object.entries(App.BID_STATUSES).map(([k, v]) => `<option value="${k}" ${(t.bidStatus || 'queue') === k ? 'selected' : ''}>${v.label}</option>`).join('')}
-          </select>
+          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' }).label)}</span>
         </div>` : ''}
         <div class="detail-row">
           <span class="label">Status</span>
-          <select data-field="status" style="font-size:12px; padding:4px 8px;">
-            ${Object.entries(App.STATUSES).map(([k, v]) => `<option value="${k}" ${t.status === k ? 'selected' : ''}>${v.label}</option>`).join('')}
-          </select>
+          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.STATUSES[t.status] || { label: t.status || '—' }).label)}</span>
         </div>
         <div class="detail-row">
           <span class="label">Assignee</span>
-          <select data-action="reassign" style="font-size:12px; padding:4px 8px;">
-            ${App.utils.activePeople(t.assignee).map(p => `<option value="${p.id}" ${t.assignee === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
-          </select>
+          <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
+            ${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}
+          </span>
         </div>
         <div class="detail-row">
           <span class="label">Created by</span>
           <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
-            ${App.utils.avatarHtml(creator)}${creator.name}
+            ${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}
           </span>
         </div>
         <div class="detail-row">
           <span class="label">Due</span>
-          <input type="date" value="${t.due}" data-field="due" class="picker-input" style="font-size:12px; padding:4px 8px;" />
+          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(this._formatDue(t.due))}</span>
         </div>
         <div class="detail-row">
-          <span class="label">Time <span class="field-optional">Optional</span></span>
-          <input type="time" value="${t.dueTime || ''}" data-field="dueTime" class="picker-input" style="font-size:12px; padding:4px 8px;" />
+          <span class="label">Time</span>
+          <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(t.dueTime) : '—'}</span>
         </div>
         <div class="detail-row">
           <span class="label">Priority</span>
-          <div class="detail-priority-cell">
-            <span class="priority-block ${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).cls}">${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).label}</span>
-            <select data-field="priority" class="detail-priority-select" style="font-size:12px; padding:4px 8px;">
-              ${Object.entries(App.PRIORITIES).map(([k, v]) => `<option value="${k}" ${(t.priority || 'medium') === k ? 'selected' : ''}>${v.label}</option>`).join('')}
-            </select>
-          </div>
+          <span class="priority-block ${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).cls}">${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).label}</span>
         </div>
         <div class="detail-row">
           <span class="label">Time spent</span>
@@ -297,57 +270,102 @@ App.TaskDetailView = class TaskDetailView {
     const editBtn = this.pane.querySelector('[data-action="edit-task"]');
     if (editBtn) editBtn.addEventListener('click', () => {
       this.editingId = t.id;
-      this.renderEditMode(t);
+      this.editDraft = this._draftFromTask(t);
+      this.renderEditMode(t, { focusTitle: true });
     });
 
     const timerBtn = this.pane.querySelector('[data-action="toggle-timer"]');
     if (timerBtn) timerBtn.addEventListener('click', () => this.controller.toggleTimerForTask(t.id));
 
-    this.pane.querySelectorAll('[data-field]').forEach(el => {
-      el.addEventListener('change', () => this.controller.updateTaskField(t.id, el.dataset.field, el.value || null));
-    });
-
-    this.pane.querySelectorAll('.picker-input').forEach(input => {
-      input.addEventListener('click', () => {
-        try { input.showPicker(); } catch (e) { /* unsupported or not user-activated */ }
-      });
-    });
-
-    const reassignSelect = this.pane.querySelector('[data-action="reassign"]');
-    if (reassignSelect) reassignSelect.addEventListener('change', () => this.controller.reassignTask(t.id, reassignSelect.value));
-
-    this.pane.querySelectorAll('[data-action="toggle-subtask"]').forEach(el => {
-      el.addEventListener('click', () => this.controller.toggleSubtask(t.id, parseInt(el.dataset.idx, 10)));
-    });
-
+    // View mode is read-only — all field editing lives behind the Edit button.
     const deleteBtn = this.pane.querySelector('[data-action="delete-task"]');
     if (deleteBtn) deleteBtn.addEventListener('click', () => this.controller.deleteTask(t.id));
-
-    this.pane.querySelectorAll('[data-action="remove-watcher"]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.controller.removeWatcher(t.id, btn.dataset.memberId);
-      });
-    });
-    const addWatcherSel = this.pane.querySelector('[data-action="add-watcher"]');
-    if (addWatcherSel) {
-      addWatcherSel.addEventListener('change', () => {
-        const id = addWatcherSel.value;
-        if (id) this.controller.addWatcher(t.id, id);
-      });
-    }
   }
 
-  /* Staged Edit form for the editable fields (title, description, due, priority).
-     Rendered once on demand; changes live only in the inputs until Save commits
-     them via the controller, so Cancel discards everything untouched. */
-  renderEditMode(t) {
-    const company = App.COMPANIES[t.company] || { pill: '', label: t.company || '—' };
+  _formatDue(due) {
+    if (!due) return '—';
+    const d = new Date(due + 'T00:00:00');
+    if (isNaN(d.getTime())) return due;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  /* Snapshot the task's editable fields into a mutable draft. The Edit form
+     reads and writes only this draft; nothing reaches the model until Save, so
+     Cancel discards the draft and the task is untouched. */
+  _draftFromTask(t) {
+    return {
+      title: t.title || '',
+      description: t.description || '',
+      company: t.company,
+      type: t.type || 'admin',
+      bidStatus: t.bidStatus || 'queue',
+      status: t.status || 'todo',
+      assignee: t.assignee,
+      due: t.due || '',
+      dueTime: t.dueTime || '',
+      priority: t.priority || 'medium',
+      watchers: (t.watchers || []).slice(),
+      subtasks: (t.subtasks || []).map(s => ({ t: s.t, d: !!s.d })),
+    };
+  }
+
+  /* Pull the current scalar input values back into the draft. Called before any
+     re-render (type toggle, watcher/subtask change) so unsaved text/selections
+     survive, and before Save. The watcher/subtask lists already live on the
+     draft and are mutated directly by their handlers. */
+  _syncDraftFromDom() {
+    const d = this.editDraft;
+    if (!d) return;
+    const val = (id) => { const el = document.getElementById(id); return el ? el.value : undefined; };
+    const set = (key, id) => { const v = val(id); if (v !== undefined) d[key] = v; };
+    set('title', 'edit-title');
+    set('description', 'edit-desc');
+    set('company', 'edit-company');
+    set('type', 'edit-type');
+    set('bidStatus', 'edit-bidStatus');
+    set('status', 'edit-status');
+    set('assignee', 'edit-assignee');
+    set('due', 'edit-due');
+    set('dueTime', 'edit-dueTime');
+    set('priority', 'edit-priority');
+  }
+
+  /* Staged Edit form for every editable field. Renders entirely from this.editDraft
+     (initialised on entering edit mode), so it can re-render on a type toggle or a
+     watcher/subtask change without losing other unsaved input. Save commits the
+     draft via the controller; Cancel throws it away. */
+  renderEditMode(t, { focusTitle = false } = {}) {
+    const d = this.editDraft;
+    const company = App.COMPANIES[d.company] || { pill: '', label: d.company || '—' };
+    const opts = (entries, selected) => entries
+      .map(([k, label]) => `<option value="${App.utils.escapeHtml(k)}" ${k === selected ? 'selected' : ''}>${App.utils.escapeHtml(label)}</option>`)
+      .join('');
+
+    const watcherChips = d.watchers.map(w => {
+      const p = App.PEOPLE[w] || App.utils.unknownPerson(w);
+      return `<span class="watcher-chip-detail" data-watcher-id="${App.utils.escapeHtml(w)}">
+        ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}
+        <button class="watcher-remove" data-action="remove-watcher" data-member-id="${App.utils.escapeHtml(w)}" aria-label="Remove ${App.utils.escapeHtml(p.name)}" type="button">×</button>
+      </span>`;
+    }).join('');
+    const addable = App.utils.activePeople().filter(p => p.id !== d.assignee && !d.watchers.includes(p.id));
+    const watcherAdd = addable.length ? `
+      <select class="watcher-add-select" data-action="add-watcher">
+        <option value="">+ Add watcher…</option>
+        ${addable.map(p => `<option value="${App.utils.escapeHtml(p.id)}">${App.utils.escapeHtml(p.full)}</option>`).join('')}
+      </select>` : '';
+
+    const subtaskRows = d.subtasks.length ? d.subtasks.map((s, i) =>
+      `<div class="subtask ${s.d ? 'done' : ''}" data-action="toggle-subtask" data-idx="${i}" style="cursor:pointer;">
+         <i class="ti ${s.d ? 'ti-circle-check-filled' : 'ti-circle'}"></i>${App.utils.escapeHtml(s.t)}
+       </div>`
+    ).join('') : `<div style="font-size:11.5px; color:var(--ink-3);">No subtasks</div>`;
+
     this.pane.classList.remove('minimized');
     this.pane.innerHTML = `
       <div class="detail-head">
         <div class="detail-head-top">
-          <span class="pill ${company.pill}">${company.label}</span>
+          <span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>
           <div class="detail-head-actions">
             <button class="icon-btn" data-action="cancel-edit" aria-label="Cancel" title="Cancel" type="button"><i class="ti ti-x"></i></button>
           </div>
@@ -357,68 +375,139 @@ App.TaskDetailView = class TaskDetailView {
       <div class="detail-body">
         <div class="field">
           <label class="field-label" for="edit-title">Title</label>
-          <input type="text" id="edit-title" value="${App.utils.escapeHtml(t.title)}" maxlength="200" style="width:100%; font-size:13px; padding:6px 8px;" />
+          <input type="text" id="edit-title" value="${App.utils.escapeHtml(d.title)}" maxlength="200" style="width:100%; font-size:13px; padding:6px 8px;" />
         </div>
         <div class="field" style="margin-top:12px;">
           <label class="field-label" for="edit-desc">Description</label>
-          <textarea id="edit-desc" rows="5" maxlength="5000" placeholder="Add a description…" style="width:100%; font-size:12.5px; padding:6px 8px; resize:vertical;">${App.utils.escapeHtml(t.description || '')}</textarea>
+          <textarea id="edit-desc" rows="5" maxlength="5000" placeholder="Add a description…" style="width:100%; font-size:12.5px; padding:6px 8px; resize:vertical;">${App.utils.escapeHtml(d.description)}</textarea>
         </div>
-        <div class="detail-row" style="margin-top:12px;">
+
+        <div class="detail-row" style="margin-top:14px;">
+          <span class="label">Company</span>
+          <select id="edit-company" style="font-size:12px; padding:4px 8px;">
+            ${opts(Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}
+          </select>
+        </div>
+        <div class="detail-row">
+          <span class="label">Type</span>
+          <select id="edit-type" data-action="type-change" style="font-size:12px; padding:4px 8px;">
+            ${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}
+          </select>
+        </div>
+        ${d.type === 'bid' ? `
+        <div class="detail-row">
+          <span class="label">Bid status</span>
+          <select id="edit-bidStatus" style="font-size:12px; padding:4px 8px;">
+            ${opts(Object.entries(App.BID_STATUSES).map(([k, v]) => [k, v.label]), d.bidStatus)}
+          </select>
+        </div>` : ''}
+        <div class="detail-row">
+          <span class="label">Status</span>
+          <select id="edit-status" style="font-size:12px; padding:4px 8px;">
+            ${opts(Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]), d.status)}
+          </select>
+        </div>
+        <div class="detail-row">
+          <span class="label">Assignee</span>
+          <select id="edit-assignee" style="font-size:12px; padding:4px 8px;">
+            ${App.utils.activePeople(d.assignee).map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="detail-row">
           <span class="label">Due</span>
-          <input type="date" id="edit-due" value="${App.utils.escapeHtml(t.due || '')}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
+          <input type="date" id="edit-due" value="${App.utils.escapeHtml(d.due)}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
+        </div>
+        <div class="detail-row">
+          <span class="label">Time <span class="field-optional">Optional</span></span>
+          <input type="time" id="edit-dueTime" value="${App.utils.escapeHtml(d.dueTime)}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
         </div>
         <div class="detail-row">
           <span class="label">Priority</span>
           <select id="edit-priority" style="font-size:12px; padding:4px 8px;">
-            ${Object.entries(App.PRIORITIES).map(([k, v]) => `<option value="${k}" ${(t.priority || 'medium') === k ? 'selected' : ''}>${v.label}</option>`).join('')}
+            ${opts(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), d.priority)}
           </select>
         </div>
+        <div class="detail-row">
+          <span class="label">Watchers</span>
+          <div class="watchers-cell">${watcherChips}${watcherAdd}</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Subtasks</div>
+          ${subtaskRows}
+        </div>
+
         <div class="modal-actions" style="margin-top:18px; display:flex; gap:8px; justify-content:flex-end;">
           <button class="btn" data-action="cancel-edit" type="button">Cancel</button>
           <button class="btn btn-primary" data-action="save-edit" type="button">Save</button>
         </div>
       </div>
     `;
-    this.bindEditHandlers(t);
+    this.bindEditHandlers(t, { focusTitle });
   }
 
-  bindEditHandlers(t) {
-    const exitEdit = () => { this.editingId = null; this.render(); };
+  bindEditHandlers(t, { focusTitle = false } = {}) {
+    const exitEdit = () => { this.editingId = null; this.editDraft = null; this.render(); };
+    const rerender = () => { this._syncDraftFromDom(); this.renderEditMode(t); };
 
     this.pane.querySelectorAll('[data-action="cancel-edit"]').forEach(el =>
       el.addEventListener('click', exitEdit)
     );
 
-    const saveBtn = this.pane.querySelector('[data-action="save-edit"]');
     const save = () => {
-      const ok = this.controller.updateTaskDetails(t.id, {
-        title: document.getElementById('edit-title').value,
-        description: document.getElementById('edit-desc').value,
-        due: document.getElementById('edit-due').value,
-        priority: document.getElementById('edit-priority').value,
-      });
-      // Stay in edit mode (input preserved) when validation rejects the save.
-      if (ok) exitEdit();
+      this._syncDraftFromDom();
+      const ok = this.controller.updateTaskDetails(t.id, this.editDraft);
+      if (ok) exitEdit(); // else stay in edit mode with input preserved
     };
+    const saveBtn = this.pane.querySelector('[data-action="save-edit"]');
     if (saveBtn) saveBtn.addEventListener('click', save);
 
-    const dueInput = this.pane.querySelector('#edit-due');
-    if (dueInput) dueInput.addEventListener('click', () => {
-      try { dueInput.showPicker(); } catch (e) { /* unsupported or not user-activated */ }
-    });
+    // Type toggle re-renders so the Bid-status row appears/disappears.
+    const typeSel = this.pane.querySelector('[data-action="type-change"]');
+    if (typeSel) typeSel.addEventListener('change', rerender);
 
-    // Scope the keydown to the edit body (replaced on every render) rather than
-    // this.pane (which survives re-renders) so listeners can't stack across
-    // repeated edits and double-fire Save.
+    // Watchers + subtasks mutate the draft in place, then re-render.
+    this.pane.querySelectorAll('[data-action="remove-watcher"]').forEach(btn =>
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._syncDraftFromDom();
+        this.editDraft.watchers = this.editDraft.watchers.filter(w => w !== btn.dataset.memberId);
+        this.renderEditMode(t);
+      })
+    );
+    const addWatcherSel = this.pane.querySelector('[data-action="add-watcher"]');
+    if (addWatcherSel) addWatcherSel.addEventListener('change', () => {
+      const id = addWatcherSel.value;
+      if (!id) return;
+      this._syncDraftFromDom();
+      if (!this.editDraft.watchers.includes(id)) this.editDraft.watchers.push(id);
+      this.renderEditMode(t);
+    });
+    this.pane.querySelectorAll('[data-action="toggle-subtask"]').forEach(el =>
+      el.addEventListener('click', () => {
+        const i = parseInt(el.dataset.idx, 10);
+        this._syncDraftFromDom();
+        if (this.editDraft.subtasks[i]) this.editDraft.subtasks[i].d = !this.editDraft.subtasks[i].d;
+        this.renderEditMode(t);
+      })
+    );
+
+    this.pane.querySelectorAll('.picker-input').forEach(input =>
+      input.addEventListener('click', () => {
+        try { input.showPicker(); } catch (e) { /* unsupported or not user-activated */ }
+      })
+    );
+
+    // Keydown on the edit body (replaced each render) so listeners can't stack.
     const editBody = this.pane.querySelector('.detail-body');
     if (editBody) editBody.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') exitEdit();
-      // Cmd/Ctrl+Enter saves — but not while the multiline description has focus,
-      // where Enter should insert a newline.
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); save(); }
     });
 
-    const titleInput = document.getElementById('edit-title');
-    if (titleInput) { titleInput.focus(); titleInput.select(); }
+    if (focusTitle) {
+      const titleInput = document.getElementById('edit-title');
+      if (titleInput) { titleInput.focus(); titleInput.select(); }
+    }
   }
 };

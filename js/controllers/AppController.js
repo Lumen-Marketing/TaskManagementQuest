@@ -403,39 +403,68 @@ App.AppController = class AppController {
     }
   }
 
-  /* Batch-save the editable detail fields from the task detail pane's Edit mode
-     (title, description, due date, priority). Staged together so Cancel — which
-     simply never calls this — leaves the task untouched, and a refresh shows the
-     saved values (taskModel.update marks the row dirty for the next sync).
-     Returns true on success; on a validation problem it toasts and returns false
-     so the view can stay in edit mode without losing the user's input. */
+  /* Batch-save every editable detail field from the task detail pane's Edit
+     mode (title, description, company, type, bidStatus, status, assignee, due,
+     dueTime, priority, watchers, subtasks). The whole set is staged in the view
+     and only reaches here on Save, so Cancel — which never calls this — leaves
+     the task untouched; a refresh shows the saved values (taskModel.update marks
+     the row dirty for the next sync). Returns true on success; on a validation
+     problem it toasts and returns false so the view keeps the user's input. */
   updateTaskDetails(id, fields) {
     if (!App.can('tasks.write')) return false;
     const task = this.taskModel.find(id);
     if (!task) return false;
 
-    let title, description, due, priority;
+    let title, description, due, dueTime;
     try {
       title = App.validate.nonEmpty(fields.title, 'Title', { field: 'title', max: App.validate.LIMITS.title });
       description = String(fields.description == null ? '' : fields.description).trim().slice(0, App.validate.LIMITS.description);
       due = App.validate.isoDate(fields.due, { field: 'due', required: true });
-      priority = App.validate.oneOf(fields.priority, Object.keys(App.PRIORITIES), { field: 'priority', label: 'Priority' });
+      dueTime = fields.dueTime ? App.validate.isoTime(fields.dueTime, { field: 'dueTime' }) : null;
     } catch (err) {
       if (this.toastView) this.toastView.show({ title: 'Couldn’t save', sub: (err && err.message) || 'Check the fields and try again.' });
       return false;
     }
 
-    const prevPriority = task.priority;
-    this.taskModel.update(id, { title, description, due, priority });
+    // The remaining fields come from constrained <select>s / staged lists; fall
+    // back to the task's current value when a field wasn't provided.
+    const company = fields.company || task.company;
+    const type = fields.type || task.type || 'admin';
+    const priority = fields.priority || task.priority || 'medium';
+    const status = fields.status || task.status || 'todo';
+    const assignee = fields.assignee || task.assignee;
+    const bidStatus = type === 'bid' ? (fields.bidStatus || task.bidStatus || 'queue') : null;
+    const watchers = Array.isArray(fields.watchers) ? [...new Set(fields.watchers)] : (task.watchers || []);
+    const subtasks = Array.isArray(fields.subtasks)
+      ? fields.subtasks.map(s => ({ t: s.t, d: !!s.d }))
+      : (task.subtasks || []);
+
+    const prevStatus = task.status, prevPriority = task.priority, prevAssignee = task.assignee;
+
+    this.taskModel.update(id, {
+      title, description, company, type, due, dueTime, priority, status, assignee, watchers, subtasks,
+      ...(type === 'bid' ? { bidStatus } : {}),
+    });
+
+    // Done has a side effect the inline path also applies: stop a running timer.
+    if (status === 'done' && prevStatus !== 'done') this._stopTimerIfOnTask(id);
+
+    // Notify watchers of the meaningful changes (mirrors updateTaskField/reassign).
+    if (status !== prevStatus) {
+      const label = (App.STATUSES[status] && App.STATUSES[status].label) || status;
+      this._notifyTaskChange(task, `changed status to ${label}`);
+    }
+    if (priority !== prevPriority) {
+      const label = (App.PRIORITIES[priority] && App.PRIORITIES[priority].label) || priority;
+      this._notifyTaskChange(task, `changed priority to ${label}`);
+    }
+    if (assignee !== prevAssignee) this._notifyTaskChange(task, 'reassigned this task');
+
     this.taskModel.addActivity(id, {
       who: this.getUserName(this.currentUser),
       what: 'edited this task',
       when: 'just now',
     });
-    if (prevPriority !== priority) {
-      const label = (App.PRIORITIES[priority] && App.PRIORITIES[priority].label) || priority;
-      this._notifyTaskChange(task, `changed priority to ${label}`);
-    }
     if (this.toastView) this.toastView.show({ title: 'Task updated', sub: '' });
     return true;
   }
