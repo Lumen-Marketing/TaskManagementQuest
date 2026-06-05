@@ -119,18 +119,23 @@ Deno.serve(async (req: Request) => {
       return json(req, { error: "Not authorized." }, 403);
     }
     // Authorize the caller to send notification emails: approved === true AND a
-    // non-empty role. We deliberately avoid a hardcoded allowlist of role names
-    // mirroring App.ROLES — it's a second source of truth that rots (add a role
-    // to App.ROLES + the UI, forget this file, and that role's "Email assignee"
-    // send 403s) and is sensitive to deploy ordering (a profile still on a
-    // retired role before migration 032/033 ran would 403, even though the
-    // retired roles map to permitted ones). migration 033's profiles_role_check
-    // already constrains role to the live set (worker/supervisor/admin/
-    // developer), and every live role may send, so "approved with a role" is the
-    // correct, drift-proof, order-independent gate. Approval is the real wall;
-    // RLS enforces what each row can actually do.
+    // MANAGEMENT role. This is a fail-CLOSED allowlist on purpose. The send is a
+    // privileged capability — it emits arbitrary (sanitized) HTML from the
+    // official Quest HQ address to any teammate on the roster — so the lowest-
+    // privilege role (worker) must not have it, or a single approved/compromised
+    // worker account becomes an internal phishing/spam vector. A "any approved
+    // role" gate fails OPEN (every future role can send by default); an explicit
+    // allowlist fails SAFE (a new role is denied until added here), which is the
+    // correct direction for a security gate. Enforced by
+    // tests/role-gate.spec.js ("worker invoking notify-email gets a 403").
+    // Retired roles (construction_supervisor, sales) are kept inert for parity
+    // with the SQL RLS role lists. Approval is still required; RLS enforces
+    // row-level access.
+    const SEND_ROLES = new Set([
+      "admin", "construction_supervisor", "supervisor", "sales", "developer",
+    ]);
     const callerRole = typeof callerProfile.role === "string" ? callerProfile.role.trim() : "";
-    if (!callerProfile.approved || !callerRole) {
+    if (!callerProfile.approved || !SEND_ROLES.has(callerRole)) {
       return json(req, { error: "Not authorized." }, 403);
     }
 
