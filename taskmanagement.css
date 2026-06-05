@@ -858,6 +858,20 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .toast-sub { font-size: 11px; opacity: 0.7; }
 .toast-close { opacity: 0.5; cursor: pointer; }
 .toast-close:hover { opacity: 1; }
+.toast-action {
+  flex: none;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  color: var(--amber);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  cursor: pointer;
+  opacity: 0.9;
+}
+.toast-action:hover { opacity: 1; }
 
 /* Empty state */
 .empty {

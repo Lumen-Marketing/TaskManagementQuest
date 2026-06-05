@@ -347,26 +347,48 @@ App.AppController = class AppController {
     const task = this.taskModel.find(id);
     if (!task) return;
     const snippet = task.title && task.title.length > 50 ? task.title.slice(0, 50) + '…' : (task.title || 'this task');
-    if (!window.confirm(`Delete "${snippet}"? This cannot be undone.`)) return;
 
+    // Undo-able delete: remove from the UI now but DEFER the irreversible DB
+    // delete until the Undo window closes. A deep snapshot lets Undo restore the
+    // task fully (watchers/subtasks/activity live on the row; time entries aren't
+    // touched because we never actually deleted yet). No confirm dialog — the
+    // Undo toast is the safety net.
+    const snapshot = JSON.parse(JSON.stringify(task));
     this._stopTimerIfOnTask(id);
     if (this.uiState && this.uiState.selectedTaskId === id) this.closeDetail();
-
     this.taskModel.remove(id);
 
-    if (this.dataStore && typeof this.dataStore.deleteTask === 'function') {
-      this.dataStore.deleteTask(id).catch(err => {
-        console.error('[task] delete failed', err);
-        if (this.toastView) {
-          this.toastView.show({
-            title: 'Delete failed',
-            sub: (err && err.message) || 'The task may reappear on refresh.',
-          });
-        }
+    const UNDO_MS = 6000;
+    let undone = false;
+    const timer = setTimeout(() => {
+      if (undone) return;
+      if (this.dataStore && typeof this.dataStore.deleteTask === 'function') {
+        this.dataStore.deleteTask(id).catch(err => {
+          console.error('[task] delete failed', err);
+          if (this.toastView) {
+            this.toastView.show({ title: 'Delete failed', sub: (err && err.message) || 'The task may reappear on refresh.' });
+          }
+        });
+      }
+    }, UNDO_MS);
+
+    if (this.toastView) {
+      this.toastView.show({
+        title: 'Task deleted',
+        sub: snippet,
+        duration: UNDO_MS,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            if (undone) return;
+            undone = true;
+            clearTimeout(timer);
+            this.taskModel.add(snapshot); // never hit the DB — the row is intact
+            if (this.toastView) this.toastView.show({ title: 'Delete undone', sub: snippet });
+          },
+        },
       });
     }
-
-    if (this.toastView) this.toastView.show({ title: 'Task deleted', sub: '' });
   }
 
   /* Soft-clear every done task, after a confirm prompt. Rows stay in
