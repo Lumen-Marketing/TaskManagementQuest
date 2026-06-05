@@ -177,7 +177,13 @@ App.LoginView = class LoginView {
       const confirm = this.suConfirm.value;
       if (!name) return this.showError('Enter a display name.');
       if (!email || !pw) return this.showError('Enter an email and password.');
-      if (pw.length < 6) return this.showError('Password must be at least 6 characters.');
+      // Same strong-password policy as the change-password flow (App.validate.
+      // strongPassword): >=8 chars with an uppercase letter, number, and symbol.
+      try {
+        App.validate.strongPassword(pw);
+      } catch (err) {
+        return this.showError((err && err.message) || 'Password does not meet the requirements.');
+      }
       if (pw !== confirm) return this.showError('Passwords do not match.');
       let captchaToken;
       try { captchaToken = await this._getCaptchaToken(); }

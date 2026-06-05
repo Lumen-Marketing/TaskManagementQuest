@@ -74,7 +74,7 @@ App.ProfileView = class ProfileView {
           <div class="field" style="margin-top:12px;">
             <label class="field-label" for="pf-password">New password</label>
             <input type="password" id="pf-password" placeholder="Leave blank to keep current" autocomplete="new-password" maxlength="128" />
-            <div class="profile-hint">At least 8 characters, with an uppercase letter, a number, and a special character.</div>
+            <div class="profile-hint">At least 8 characters, with upper- and lowercase letters, a number, and a special character.</div>
           </div>
 
           <div class="field" style="margin-top:12px;">
