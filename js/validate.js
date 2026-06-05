@@ -17,6 +17,7 @@ App.validate = (function () {
     title: 200,
     description: 5000,
     watchers: 25,
+    subtasks: 50,      // max checklist items per task
     passwordMin: 6,
     passwordStrongMin: 8,
     passwordMax: 128,
@@ -120,6 +121,14 @@ App.validate = (function () {
       if (!(App.PEOPLE || {})[w]) throw new ValidationError(`Unknown watcher: ${w}`, { field: 'watchers' });
     }
 
+    // Subtasks (optional). Accept either plain strings (from the New task
+    // modal) or {t,d} objects; drop blanks, trim, cap the count and text length.
+    const subtasks = (Array.isArray(payload.subtasks) ? payload.subtasks : [])
+      .map(s => (typeof s === 'string' ? { t: s, d: false } : { t: s && s.t, d: !!(s && s.d) }))
+      .filter(s => s.t != null && String(s.t).trim() !== '')
+      .slice(0, LIMITS.subtasks)
+      .map(s => ({ t: String(s.t).trim().slice(0, LIMITS.title), d: !!s.d }));
+
     const due = isoDate(payload.due, { field: 'due' });
     const dueTime = isoTime(payload.dueTime, { field: 'dueTime' });
     const bidStatus = type === 'bid'
@@ -128,7 +137,7 @@ App.validate = (function () {
 
     return Object.freeze({
       title, description, type, company, priority, status,
-      assignee, watchers: watchers.slice(), due, dueTime, bidStatus,
+      assignee, watchers: watchers.slice(), subtasks, due, dueTime, bidStatus,
     });
   }
 

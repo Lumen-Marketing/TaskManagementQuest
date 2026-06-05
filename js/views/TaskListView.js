@@ -12,6 +12,10 @@ App.TaskListView = class TaskListView {
     this.pageEyebrow = document.getElementById('pageEyebrow');
     this.pageTitle = document.getElementById('pageTitle');
 
+    // Task ids whose subtask drawer is expanded in the table. Held here (not on
+    // the task) so it survives the frequent full re-renders without persisting.
+    this.expandedRows = new Set();
+
     this.bindStaticButtons();
     this.subscribe();
     this.render();
@@ -416,6 +420,8 @@ App.TaskListView = class TaskListView {
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
     const isDone = t.status === 'done';
+    const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+    const subDone = subs.filter(s => s.d).length;
 
     const card = document.createElement('div');
     card.className = 'kanban-card' + (selected ? ' selected' : '') + (isDone ? ' done' : '');
@@ -433,6 +439,7 @@ App.TaskListView = class TaskListView {
       <div class="kanban-card-foot">
         ${App.utils.avatarHtml(person)}
         <span class="kanban-card-assignee">${App.utils.escapeHtml(person.name)}</span>
+        ${subs.length ? `<span class="kanban-subtask-badge" title="${subDone}/${subs.length} subtasks done"><i class="ti ti-checklist"></i>${subDone}/${subs.length}</span>` : ''}
       </div>
     `;
     card.addEventListener('click', () => this.controller.selectTask(t.id));
@@ -497,12 +504,23 @@ App.TaskListView = class TaskListView {
     const myActive = this.timeModel.activeFor(this.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
 
+    // Subtasks: a collapsible drawer hangs under the row. The title cell gets a
+    // chevron + "done/total" badge when there are any.
+    const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+    const subCount = subs.length;
+    const subDone = subs.filter(s => s.d).length;
+    const expanded = this.expandedRows.has(t.id);
+
     const row = document.createElement('div');
     row.className = 'list-row' + (selected ? ' selected' : '');
     row.dataset.id = t.id;
     row.innerHTML = `
       <input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${App.can('tasks.write') ? '' : 'disabled'} />
-      <div class="task-title-cell ${isDone ? 'done' : ''}">${App.utils.escapeHtml(t.title)}</div>
+      <div class="task-title-cell ${isDone ? 'done' : ''}">
+        ${subCount ? `<button class="subtask-toggle${expanded ? ' expanded' : ''}" data-action="toggle-subtasks" aria-label="Toggle subtasks" title="${subDone}/${subCount} subtasks done"><i class="ti ti-chevron-right"></i></button>` : ''}
+        <span class="tt-text">${App.utils.escapeHtml(t.title)}</span>
+        ${subCount ? `<span class="subtask-badge">${subDone}/${subCount}</span>` : ''}
+      </div>
       <div class="type-cell">
         <span class="pill-type ${type.cls}">${type.label}</span>
         ${t.type === 'bid' && App.BID_STATUSES[t.bidStatus] ? `<span class="pill-bid-status ${App.BID_STATUSES[t.bidStatus].cls}">${App.BID_STATUSES[t.bidStatus].label}</span>` : ''}
@@ -531,11 +549,45 @@ App.TaskListView = class TaskListView {
         else if (action === 'cycle-priority') this.controller.cycleTaskPriority(t.id);
         else if (action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
         else if (action === 'finish-task') this.controller.completeTask(t.id);
+        else if (action === 'toggle-subtasks') this._toggleSubtaskDrawer(t.id, row, target);
         return;
       }
       this.controller.selectTask(t.id);
     });
 
-    return row;
+    if (!subCount) return row;
+
+    // Drawer sits as a sibling right after the row inside the group body.
+    const drawer = document.createElement('div');
+    drawer.className = 'subtask-drawer' + (expanded ? '' : ' hidden');
+    drawer.dataset.for = t.id;
+    drawer.innerHTML = subs.map((s, i) =>
+      `<label class="subtask-line ${s.d ? 'done' : ''}">
+        <input type="checkbox" ${s.d ? 'checked' : ''} data-action="toggle-subtask" data-idx="${i}" ${App.can('tasks.write') ? '' : 'disabled'} />
+        <span>${App.utils.escapeHtml(s.t)}</span>
+      </label>`
+    ).join('');
+    drawer.addEventListener('click', (e) => {
+      const cb = e.target.closest('[data-action="toggle-subtask"]');
+      if (!cb) return;
+      e.stopPropagation();
+      this.controller.toggleSubtask(t.id, parseInt(cb.dataset.idx, 10));
+    });
+
+    const frag = document.createDocumentFragment();
+    frag.appendChild(row);
+    frag.appendChild(drawer);
+    return frag;
+  }
+
+  _toggleSubtaskDrawer(taskId, row, toggleBtn) {
+    const willExpand = !this.expandedRows.has(taskId);
+    if (willExpand) this.expandedRows.add(taskId);
+    else this.expandedRows.delete(taskId);
+    const drawer = row.nextElementSibling;
+    if (drawer && drawer.classList.contains('subtask-drawer')) {
+      drawer.classList.toggle('hidden', !willExpand);
+    }
+    if (toggleBtn) toggleBtn.classList.toggle('expanded', willExpand);
   }
 };

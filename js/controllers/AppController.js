@@ -635,7 +635,9 @@ App.AppController = class AppController {
       creator: this.currentUser,
       assignee: payload.assignee,
       watchers: payload.watchers || [],
-      subtasks: [],
+      subtasks: Array.isArray(payload.subtasks)
+        ? payload.subtasks.map(s => ({ t: s.t, d: !!s.d }))
+        : [],
       activity: [{
         who: this.getUserName(this.currentUser),
         what: payload.assignee === this.currentUser
