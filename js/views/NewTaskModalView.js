@@ -212,18 +212,10 @@ App.NewTaskModalView = class NewTaskModalView {
     document.getElementById('nt-type').addEventListener('change', () => this.updateBidStatusRow());
     this.updateBidStatusRow();
 
-    // Project list follows the selected company; "+ New project…" creates one inline.
+    // Project list follows the selected company. (Create new projects from the
+    // sidebar's "+ New project" modal.)
     const companySel = document.getElementById('nt-company');
     if (companySel) companySel.addEventListener('change', () => this.renderProjectOptions(companySel.value));
-    const projectSel = document.getElementById('nt-project');
-    if (projectSel) projectSel.addEventListener('change', async () => {
-      if (projectSel.value !== '__new__') return;
-      const company = document.getElementById('nt-company').value;
-      const name = window.prompt('New project name:');
-      if (!name || !name.trim()) { this.renderProjectOptions(company); return; }
-      const proj = await this.controller.createProject(name.trim(), company);
-      this.renderProjectOptions(company, proj ? proj.id : '');
-    });
 
     // Subtasks: Add button or Enter in the input appends a step.
     this.modal.querySelector('[data-action="add-subtask"]').addEventListener('click', () => this.addSubtask());
@@ -377,8 +369,7 @@ App.NewTaskModalView = class NewTaskModalView {
     const projects = this.controller.projectsForCompany(companyId);
     sel.innerHTML =
       `<option value="">No project</option>` +
-      projects.map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('') +
-      `<option value="__new__">+ New project…</option>`;
+      projects.map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('');
   }
 
   renderWatcherChips() {

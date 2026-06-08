@@ -34,10 +34,19 @@ App.AppController = class AppController {
     this.newTaskModal = null;
   }
 
-  attachViews({ toastView, newTaskModal, profileView }) {
+  attachViews({ toastView, newTaskModal, profileView, newProjectModal }) {
     this.toastView = toastView;
     this.newTaskModal = newTaskModal;
     this.profileView = profileView;
+    this.newProjectModal = newProjectModal;
+  }
+
+  openNewProjectModal() {
+    if (!App.can('tasks.write')) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot create projects.' });
+      return;
+    }
+    if (this.newProjectModal) this.newProjectModal.open();
   }
 
   openProfile() {
@@ -157,7 +166,7 @@ App.AppController = class AppController {
 
   // Create a project in the active company (developers fall back to the first
   // real company). Returns the new project, or null on empty name / failure.
-  async createProject(name, companyId) {
+  async createProject(name, companyId, opts = {}) {
     const clean = String(name || '').trim().slice(0, 120);
     if (!clean) return null;
     companyId = companyId || this.uiState.currentCompany;
@@ -169,7 +178,7 @@ App.AppController = class AppController {
       return null;
     }
     try {
-      const proj = await this.dataStore.createProject({ name: clean, companyId });
+      const proj = await this.dataStore.createProject({ name: clean, companyId, address: opts.address || '', status: opts.status || 'active' });
       App.projects = App.projects || [];
       App.projects.push(proj);
       App.EventBus.emit('projects:changed');
