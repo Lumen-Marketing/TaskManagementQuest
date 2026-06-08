@@ -143,7 +143,19 @@
           <span></span>
         </div>
 
-        <div id="listBody"></div>
+        <div id="listBody">
+          <!-- Skeleton placeholder shown while the app boots + loads tasks from
+               Supabase. Cleared automatically when the real list first renders
+               (TaskListView wipes #listBody), or removed defensively in app.js. -->
+          <div id="listSkeleton" class="skeleton-list" aria-hidden="true">
+            <div class="skeleton-row"><span class="sk sk-check"></span><span class="sk sk-title"></span><span class="sk sk-pill"></span><span class="sk sk-avatar"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-date"></span></div>
+            <div class="skeleton-row"><span class="sk sk-check"></span><span class="sk sk-title"></span><span class="sk sk-pill"></span><span class="sk sk-avatar"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-date"></span></div>
+            <div class="skeleton-row"><span class="sk sk-check"></span><span class="sk sk-title"></span><span class="sk sk-pill"></span><span class="sk sk-avatar"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-date"></span></div>
+            <div class="skeleton-row"><span class="sk sk-check"></span><span class="sk sk-title"></span><span class="sk sk-pill"></span><span class="sk sk-avatar"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-date"></span></div>
+            <div class="skeleton-row"><span class="sk sk-check"></span><span class="sk sk-title"></span><span class="sk sk-pill"></span><span class="sk sk-avatar"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-date"></span></div>
+            <div class="skeleton-row"><span class="sk sk-check"></span><span class="sk sk-title"></span><span class="sk sk-pill"></span><span class="sk sk-avatar"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-pill sk-pill-sm"></span><span class="sk sk-date"></span></div>
+          </div>
+        </div>
       </div>
 
       <!-- Time-tracking views render into this container -->
