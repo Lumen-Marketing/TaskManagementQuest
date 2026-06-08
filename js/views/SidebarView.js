@@ -190,18 +190,8 @@ App.SidebarView = class SidebarView {
       this._makeActivatable(el, () => this.controller.setCompany(el.dataset.company));
     });
     this.extraMount.querySelectorAll('.side-item[data-action="new-project"]').forEach(el => {
-      this._makeActivatable(el, () => this._promptNewProject());
+      this._makeActivatable(el, () => this.controller.openNewProjectModal());
     });
-  }
-
-  async _promptNewProject() {
-    const name = window.prompt('New project name:');
-    if (!name || !name.trim()) return;
-    const proj = await this.controller.createProject(name.trim());
-    if (proj && this.controller.toastView) {
-      this.controller.toastView.show({ title: 'Project created', sub: proj.name });
-    }
-    // controller.createProject emits 'projects:changed' → this view re-renders.
   }
 
   _buildSections() {
