@@ -84,6 +84,28 @@ App.ROLE_PERMISSIONS = {
 App.DEFAULT_CLOCK_TASK_ID = 'general-shift';
 App.CURRENT_USER = 'abraham';
 
+// Shared display timezone for true points-in-time — clock-in/out moments and
+// time-entry timestamps (stored as timestamptz / real instants). Rendering these
+// in ONE fixed zone keeps everyone in sync: a timer started at 2:00 PM reads the
+// same for every viewer regardless of their device's location, instead of each
+// browser showing its own local clock.
+//
+// Use an IANA zone id (e.g. 'America/Denver', 'America/Chicago', 'America/New_York')
+// so daylight-saving is handled automatically — NOT a fixed offset like 'UTC-6'.
+// >>> Set this to your HQ's timezone. <<<
+//
+// Per-user override (profiles.timezone) is read first when it exists; until that
+// column + picker ship, everyone resolves to this HQ default. NOTE: this only
+// affects display of instants — due dates and reminders are intentionally left on
+// wall-clock semantics and are untouched by this setting.
+// Arizona: America/Phoenix is UTC-7 year-round (no daylight saving) — do NOT use
+// America/Denver, which would be an hour off during DST.
+App.HQ_TIMEZONE = 'America/Phoenix';
+
+App.timezone = function timezone() {
+  return (App.currentProfile && App.currentProfile.timezone) || App.HQ_TIMEZONE;
+};
+
 // Forgotten clock-ins are auto-closed (and their live display capped) at this length.
 App.MAX_SHIFT_MS = 12 * 60 * 60 * 1000; // 12 hours
 

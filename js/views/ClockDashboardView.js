@@ -43,8 +43,8 @@ App.ClockDashboardView = class ClockDashboardView {
       const t = this.taskModel.find(timer.taskId);
       const title = t ? t.title : timer.taskTitle;
       const company = App.COMPANIES[t ? t.company : timer.taskCompany];
-      const startedAtLabel = new Date(timer.startedAt).toLocaleString('en-US', {
-        hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric',
+      const startedAtLabel = App.utils.formatInstant(timer.startedAt, {
+        hour: 'numeric', minute: '2-digit', month: 'short', day: 'numeric', timeZoneName: 'short',
       });
       return `
         <tr class="live">

@@ -68,7 +68,7 @@ App.TimeView = class TimeView {
         <tr>
           <td>${t ? App.utils.escapeHtml(t.title) : '<em>unknown task</em>'}</td>
           <td>${company ? `<span class="pill ${company.pill}">${company.label}</span>` : '—'}</td>
-          <td class="mono">${new Date(e.start).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+          <td class="mono">${App.utils.formatInstant(e.start, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}</td>
           <td class="mono">${App.utils.formatHours(e.durationMs)}</td>
         </tr>
       `;
