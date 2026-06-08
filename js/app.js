@@ -251,10 +251,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.ConnectionView({ toastView, onReconnect: doSave });
 
   // Close the current user's timer if it's been running past the max shift.
-  const staleEntry = timeModel.autoCloseStaleForUser(App.CURRENT_USER, App.MAX_SHIFT_MS);
-  if (staleEntry && controller.toastView) {
-    controller.toastView.show({ title: 'Auto clocked-out', sub: 'Your timer ran past 12h and was closed automatically.' });
-  }
+  // Runs on boot AND on a recurring interval so a timer that crosses 12h while
+  // the app is left open auto-closes on its own, not only on the next reload.
+  const checkStaleTimer = () => {
+    const staleEntry = timeModel.autoCloseStaleForUser(App.CURRENT_USER, App.MAX_SHIFT_MS);
+    if (staleEntry && controller.toastView) {
+      controller.toastView.show({ title: 'Auto clocked-out', sub: 'Your timer ran past 12h and was closed automatically.' });
+    }
+  };
+  checkStaleTimer();
+  // The 12h cap doesn't need second-level precision; a per-minute check is plenty.
+  setInterval(checkStaleTimer, 60 * 1000);
 
   // Poll for notifications addressed to this user by other people (assignments,
   // watcher pings) since there's no realtime subscription. Newly arrived
