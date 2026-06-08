@@ -593,7 +593,7 @@ App.AppController = class AppController {
 
   _emailBody(intro, task) {
     const when = task.dueTime
-      ? `${App.utils.escapeHtml(task.due)} at ${App.utils.escapeHtml(App.utils.formatClock(task.dueTime))}`
+      ? `${App.utils.escapeHtml(task.due)} at ${App.utils.escapeHtml(App.utils.formatClockTz(task.dueTime))}`
       : App.utils.escapeHtml(task.due || 'no due date');
     return `
       <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#23180D;line-height:1.5;">

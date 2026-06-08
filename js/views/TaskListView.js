@@ -285,7 +285,7 @@ App.TaskListView = class TaskListView {
     const myActive = this.timeModel.activeFor(this.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
     const selected = this.controller.uiState.selectedTaskId === t.id;
-    const timeLabel = t.dueTime ? App.utils.formatClock(t.dueTime) : 'All day';
+    const timeLabel = t.dueTime ? App.utils.formatClockTz(t.dueTime) : 'All day';
 
     const row = document.createElement('div');
     row.className = 'worker-row' + (selected ? ' selected' : '') + (isDone ? ' done' : '');
@@ -434,7 +434,7 @@ App.TaskListView = class TaskListView {
       <div class="kanban-card-title">${App.utils.escapeHtml(t.title)}</div>
       <div class="kanban-card-meta">
         <span class="pill ${company.pill}">${company.label}</span>
-        <span class="due-cell ${due.cls}">${due.text}${t.dueTime ? ` · ${App.utils.formatClock(t.dueTime)}` : ''}</span>
+        <span class="due-cell ${due.cls}">${due.text}${t.dueTime ? ` · ${App.utils.formatClockTz(t.dueTime)}` : ''}</span>
       </div>
       <div class="kanban-card-foot">
         ${App.utils.avatarHtml(person)}
@@ -530,7 +530,7 @@ App.TaskListView = class TaskListView {
       </div>
       <div><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
       <div><span class="pill-status ${status.cls}">${status.label}</span></div>
-      <div class="due-cell ${due.cls}">${due.text}${t.dueTime ? `<span class="due-time">${App.utils.formatClock(t.dueTime)}</span>` : ''}</div>
+      <div class="due-cell ${due.cls}">${due.text}${t.dueTime ? `<span class="due-time">${App.utils.formatClockTz(t.dueTime)}</span>` : ''}</div>
       <div class="desc-cell" title="${App.utils.escapeHtml(t.description || '')}">${App.utils.escapeHtml(t.description || '')}</div>
       <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Stop timer' : 'Start timer'}">
         <i class="ti ${myTimerOnThis ? 'ti-player-stop-filled' : 'ti-player-play'}"></i>

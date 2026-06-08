@@ -241,6 +241,31 @@ App.utils = {
     return `${hr}:${String(m).padStart(2, '0')} ${period}`;
   },
 
+  /* Short label for the HQ display zone (e.g. "MST") from App.timezone().
+     Arizona has no DST so it's constant; computed via Intl so it stays correct
+     if the HQ zone ever changes. */
+  tzAbbrev() {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: App.timezone(), timeZoneName: 'short' })
+        .formatToParts(new Date());
+      const tz = parts.find(p => p.type === 'timeZoneName');
+      return tz ? tz.value : '';
+    } catch (e) {
+      return '';
+    }
+  },
+
+  /* formatClock + the HQ zone label, for scheduled wall-clock times (task due
+     times). These aren't real instants so we don't convert them — we just tag
+     them with the HQ zone so a remote worker knows the deadline is HQ time.
+     Empty in -> empty out. */
+  formatClockTz(hhmm) {
+    const t = App.utils.formatClock(hhmm);
+    if (!t) return t;
+    const abbr = App.utils.tzAbbrev();
+    return abbr ? `${t} ${abbr}` : t;
+  },
+
   escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'

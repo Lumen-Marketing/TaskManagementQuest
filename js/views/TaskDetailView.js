@@ -256,7 +256,7 @@ App.TaskDetailView = class TaskDetailView {
         </div>
         <div class="detail-row">
           <span class="label">Time</span>
-          <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(t.dueTime) : '—'}</span>
+          <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span>
         </div>
         <div class="detail-row">
           <span class="label">Reminder</span>
