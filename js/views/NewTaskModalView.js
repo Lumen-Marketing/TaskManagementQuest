@@ -116,17 +116,17 @@ App.NewTaskModalView = class NewTaskModalView {
             </div>
           </div>
 
-          <div class="field" style="margin-top:14px;">
-            <div class="field-label">Time <span class="field-optional">Optional</span></div>
-            <input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" style="width:100%; padding: 6px 10px; font-size: 12px;" />
-            <div class="user-menu-hint" style="margin-top:5px;">Type digits like <strong>930</strong> then <strong>a</strong> or <strong>p</strong> — the time formats itself. Leave blank if not needed.</div>
-          </div>
-
           <div id="nt-bid-status-row" class="field hidden" style="margin-top:14px;">
             <div class="field-label">Bid status</div>
             <select id="nt-bid-status" style="width:100%; padding: 6px 10px; font-size: 12px;">
               ${Object.entries(App.BID_STATUSES).map(([k, v]) => `<option value="${k}" ${k === 'queue' ? 'selected' : ''}>${v.label}</option>`).join('')}
             </select>
+          </div>
+
+          <div class="field" style="margin-top:14px;">
+            <div class="field-label">Time <span class="field-optional">Optional</span></div>
+            <input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" style="width:100%; padding: 6px 10px; font-size: 12px;" />
+            <div class="user-menu-hint" style="margin-top:5px;">Type digits like <strong>930</strong> then <strong>a</strong> or <strong>p</strong> — the time formats itself. Leave blank if not needed.</div>
           </div>
 
           <div class="field-row" style="margin-top:14px;">

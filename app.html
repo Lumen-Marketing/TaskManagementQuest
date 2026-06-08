@@ -100,7 +100,17 @@
         <div class="side-item" data-view="watching" title="Watching"><i class="ti ti-eye"></i><span class="side-item-label">Watching</span><span class="side-count" id="cnt-watching">0</span></div>
       </div>
 
-      <div id="sideExtraGroups"></div>
+      <div id="sideExtraGroups">
+        <!-- Skeleton for the dynamic sidebar sections (Company / Time / Org /
+             Admin) while the app boots. Replaced by SidebarView.renderExtraGroups. -->
+        <div class="side-skeleton" aria-hidden="true">
+          <span class="sk sk-side-label"></span>
+          <span class="sk sk-side-item"></span>
+          <span class="sk sk-side-item"></span>
+          <span class="sk sk-side-label"></span>
+          <span class="sk sk-side-item"></span>
+        </div>
+      </div>
     </div>
   </nav>
 
