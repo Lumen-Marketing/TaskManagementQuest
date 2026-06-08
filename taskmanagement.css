@@ -443,17 +443,18 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .group-body { background: var(--surface); }
 .task-group.collapsed .group-body { display: none; }
 
-/* Skeleton loading rows — shown in #listBody while the app boots + fetches.
-   A gentle opacity pulse (theme-agnostic; reduced-motion disables it). */
+/* Skeleton loading primitives — shared by the list, sidebar, and detail-pane
+   boot states. A gentle opacity pulse (theme-agnostic; reduced-motion disables it). */
+.sk { display: block; height: 12px; border-radius: 6px; background: var(--bg-3); animation: sk-pulse 1.3s ease-in-out infinite; }
+@keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* Task list rows */
 .skeleton-list { background: var(--surface); }
 .skeleton-row {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 24px; border-bottom: 1px solid var(--bg-3);
 }
-.skeleton-row .sk {
-  display: block; height: 12px; border-radius: 6px; flex: none;
-  background: var(--bg-3); animation: sk-pulse 1.3s ease-in-out infinite;
-}
+.skeleton-row .sk { flex: none; }
 .skeleton-row:nth-child(even) .sk { animation-delay: 0.15s; }
 .sk-check   { width: 18px; height: 18px; border-radius: 5px; }
 .sk-title   { flex: 1 1 auto; height: 14px; max-width: 340px; }
@@ -461,7 +462,16 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .sk-pill    { width: 84px; height: 18px; border-radius: 999px; }
 .sk-pill-sm { width: 60px; }
 .sk-date    { width: 56px; }
-@keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* Sidebar dynamic sections (on the dark deck → tint from the text colour) */
+.side-skeleton { display: flex; flex-direction: column; gap: 10px; padding: 14px 14px 4px; }
+.side-skeleton .sk { background: color-mix(in oklch, currentColor 16%, transparent); }
+.sk-side-label { width: 64px; height: 10px; opacity: 0.8; }
+.sk-side-item  { width: 100%; height: 16px; }
+
+/* Detail pane */
+.detail-skeleton { display: flex; flex-direction: column; }
+.detail-skeleton .sk-line { height: 12px; margin: 7px 0; }
 
 .task-title-cell { min-width: 0; display: flex; align-items: center; gap: 6px; font-weight: 700; }
 .task-title-cell .tt-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -67,6 +67,30 @@ App.TaskDetailView = class TaskDetailView {
     });
   }
 
+  // Placeholder shown in the detail modal when a task is selected but its data
+  // hasn't loaded yet (rare — the detail normally renders instantly from the
+  // in-memory model). Keeps a working Close button.
+  _detailSkeletonHtml() {
+    const rows = Array.from({ length: 7 }).map(() =>
+      `<div class="detail-row"><span class="sk sk-line" style="width:70px;"></span><span class="sk sk-line" style="width:130px;"></span></div>`
+    ).join('');
+    return `
+      <div class="detail-head">
+        <div class="detail-head-top">
+          <span class="sk sk-pill" style="width:88px;"></span>
+          <div class="detail-head-actions">
+            <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
+          </div>
+        </div>
+        <div class="sk sk-line" style="height:24px; width:75%; margin-top:8px;"></div>
+      </div>
+      <div class="detail-body detail-skeleton" aria-hidden="true">
+        <div class="sk sk-line" style="height:38px; margin-bottom:14px;"></div>
+        ${rows}
+      </div>
+    `;
+  }
+
   _closeModal() {
     // Legacy side-panel layout class (no longer used, kept defensive).
     this.mainEl.classList.remove('with-detail');
@@ -98,6 +122,16 @@ App.TaskDetailView = class TaskDetailView {
 
     const t = this.taskModel.find(selId);
     if (!t) {
+      // Selected but not in the model. If nothing has loaded yet (e.g. a
+      // deep-linked / notification selection during boot), show a skeleton
+      // instead of closing; once tasks are loaded, a missing task is gone.
+      if (this.taskModel.all().length === 0) {
+        this._openModal();
+        this.pane.innerHTML = this._detailSkeletonHtml();
+        const cb = this.pane.querySelector('[data-action="close"]');
+        if (cb) cb.addEventListener('click', () => this.controller.closeDetail());
+        return;
+      }
       this._closeModal();
       return;
     }
