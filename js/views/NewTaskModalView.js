@@ -23,7 +23,6 @@ App.NewTaskModalView = class NewTaskModalView {
     setTimeout(() => document.getElementById('nt-title').focus(), 50);
     this.renderWatcherChips();
     this.renderSubtaskChips();
-    this.renderProjectOptions(document.getElementById('nt-company').value);
     this.updateDelegationBanner();
   }
 
@@ -117,11 +116,6 @@ App.NewTaskModalView = class NewTaskModalView {
             </div>
           </div>
 
-          <div class="field" style="margin-top:14px;">
-            <div class="field-label">Project <span class="field-optional">Optional</span></div>
-            <select id="nt-project" style="width:100%; padding: 6px 10px; font-size: 12px;"></select>
-          </div>
-
           <div id="nt-bid-status-row" class="field hidden" style="margin-top:14px;">
             <div class="field-label">Bid status</div>
             <select id="nt-bid-status" style="width:100%; padding: 6px 10px; font-size: 12px;">
@@ -211,19 +205,6 @@ App.NewTaskModalView = class NewTaskModalView {
     document.getElementById('nt-assignee').addEventListener('change', () => this.updateDelegationBanner());
     document.getElementById('nt-type').addEventListener('change', () => this.updateBidStatusRow());
     this.updateBidStatusRow();
-
-    // Project list follows the selected company; "+ New project…" creates one inline.
-    const companySel = document.getElementById('nt-company');
-    if (companySel) companySel.addEventListener('change', () => this.renderProjectOptions(companySel.value));
-    const projectSel = document.getElementById('nt-project');
-    if (projectSel) projectSel.addEventListener('change', async () => {
-      if (projectSel.value !== '__new__') return;
-      const company = document.getElementById('nt-company').value;
-      const name = window.prompt('New project name:');
-      if (!name || !name.trim()) { this.renderProjectOptions(company); return; }
-      const proj = await this.controller.createProject(name.trim(), company);
-      this.renderProjectOptions(company, proj ? proj.id : '');
-    });
 
     // Subtasks: Add button or Enter in the input appends a step.
     this.modal.querySelector('[data-action="add-subtask"]').addEventListener('click', () => this.addSubtask());
@@ -371,16 +352,6 @@ App.NewTaskModalView = class NewTaskModalView {
     row.classList.toggle('hidden', type !== 'bid');
   }
 
-  renderProjectOptions(companyId, selectedId = '') {
-    const sel = document.getElementById('nt-project');
-    if (!sel) return;
-    const projects = this.controller.projectsForCompany(companyId);
-    sel.innerHTML =
-      `<option value="">No project</option>` +
-      projects.map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('') +
-      `<option value="__new__">+ New project…</option>`;
-  }
-
   renderWatcherChips() {
     const watchersEl = document.getElementById('nt-watchers');
     const dropdown = document.getElementById('nt-watcher-dropdown');
@@ -500,7 +471,6 @@ App.NewTaskModalView = class NewTaskModalView {
       status: document.getElementById('nt-status').value,
       watchers: Array.from(this.watchers),
       subtasks,
-      project: (() => { const v = document.getElementById('nt-project').value; return v && v !== '__new__' ? v : null; })(),
     };
 
     let clean;

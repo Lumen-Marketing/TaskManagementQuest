@@ -62,7 +62,6 @@ App.GROUP_OPTIONS = {
   status:   { label: 'Status' },
   assignee: { label: 'Assignee' },
   company:  { label: 'Company' },
-  project:  { label: 'Project' },
   priority: { label: 'Priority' },
   type:     { label: 'Type' },
   none:     { label: 'No grouping' },

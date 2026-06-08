@@ -24,12 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         save: async () => ({ conflicts: [] }),
         loadProfiles: async () => App.PROFILES || [],
         loadNotifications: async () => [],
-        loadProjects: async () => App.projects || [],
-        createProject: async ({ name, companyId, address = '', status = 'active' }) => {
-          const proj = { id: App.utils.uid('p'), company: companyId, name: String(name || '').trim(), address, status };
-          (App.projects = App.projects || []).push(proj);
-          return proj;
-        },
         updateProfileAccess: async (id, updates) => {
           const p = (App.PROFILES || []).find(pr => pr.id === id);
           if (p) {
@@ -56,18 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (App.previewMode) {
     taskModel.seedDefaults();
     if (typeof timeModel.seedDefaults === 'function') timeModel.seedDefaults();
-    // Demo projects so the Projects sidebar / picker / grouping have data to show.
-    App.projects = [
-      { id: 'demo-cnl',   company: 'roofing',  name: 'CNL Roof — 123 Main St', address: 'Mesa, AZ',          status: 'active' },
-      { id: 'demo-pv',    company: 'roofing',  name: 'Paradise Valley Demo',   address: 'Paradise Valley, AZ', status: 'active' },
-      { id: 'demo-dt',    company: 'drafting', name: 'DraftTrack QA',          address: '',                   status: 'active' },
-      { id: 'demo-lumen', company: 'lumen',    name: 'Lumen Ops',              address: '',                   status: 'active' },
-    ];
-    taskModel.all().forEach(t => {
-      if (t.company === 'roofing') t.project = 'demo-cnl';
-      else if (t.company === 'drafting') t.project = 'demo-dt';
-      else if (t.company === 'lumen') t.project = 'demo-lumen';
-    });
     // Demo roles + reporting lines so role-gated views (worker, supervisor, hierarchy)
     // can be exercised in preview via ?preview=1&role=...&member=...
     const previewRoles = {
@@ -104,7 +86,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const saved = await dataStore.load();
       if (saved.people && Object.keys(saved.people).length) App.PEOPLE = saved.people;
       App.PROFILES = saved.profiles || [];
-      App.projects = saved.projects || [];
       taskModel.hydrate(saved.tasks);
       timeModel.hydrate(saved.timeEntries, saved.activeTimers);
       notifModel.hydrate(saved.notifications);

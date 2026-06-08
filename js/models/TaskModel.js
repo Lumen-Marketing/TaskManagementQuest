@@ -104,9 +104,8 @@ App.TaskModel = class TaskModel {
     // Company scoping — UI mirror of migration 028 RLS. A specific company
     // narrows to that company; the developer-only '*' sentinel means "all
     // companies" (god mode). The shared clock task is always visible so timers
-    // work regardless of company. A "project:" view is exempt — a project is
-    // company-specific, so picking one shows all its tasks directly.
-    if (currentCompany && currentCompany !== '*' && !view.startsWith('project:')) {
+    // work regardless of company.
+    if (currentCompany && currentCompany !== '*') {
       tasks = tasks.filter(t => t.company === currentCompany || t.id === clockTaskId);
     }
 
@@ -134,9 +133,6 @@ App.TaskModel = class TaskModel {
     } else if (view.startsWith('person:')) {
       const p = view.split(':')[1];
       tasks = tasks.filter(t => t.assignee === p);
-    } else if (view.startsWith('project:')) {
-      const pid = view.split(':')[1];
-      tasks = tasks.filter(t => t.project === pid);
     }
 
     if (searchQuery) {
@@ -231,11 +227,6 @@ App.TaskModel = class TaskModel {
         const c = App.COMPANIES[k];
         const cMap = { roofing: '--rust', drafting: '--green', lumen: '--blue' };
         ensure(k, c ? c.label : 'No company', colorVar(cMap[k] || '--ink-3'), Object.keys(App.COMPANIES).indexOf(k)).items.push(t);
-      } else if (groupBy === 'project') {
-        const k = t.project || 'none';
-        const proj = (App.projects || []).find(p => p.id === k);
-        const idx = (App.projects || []).findIndex(p => p.id === k);
-        ensure(k, proj ? proj.name : 'No project', colorVar('--blue'), idx === -1 ? 999 : idx).items.push(t);
       } else if (groupBy === 'priority') {
         const k = t.priority || 'medium';
         const p = App.PRIORITIES[k] || App.PRIORITIES.medium;

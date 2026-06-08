@@ -216,22 +216,6 @@ App.SidebarView = class SidebarView {
       });
     }
 
-    // Projects within the active company. Clicking one filters the task list
-    // to that project (a "project:<id>" view). Hidden when there are none.
-    const projects = this.controller.projectsForCompany(this.controller.uiState.currentCompany);
-    if (projects.length) {
-      const active = this._scopedActiveTasks();
-      sections.push({
-        key: 'projects', label: 'Projects',
-        items: projects.map(p => ({
-          view: 'project:' + p.id,
-          label: p.name,
-          icon: 'ti-folder',
-          count: active.filter(t => t.project === p.id).length,
-        })),
-      });
-    }
-
     const timeItems = [];
     if (App.can('time.own') || App.can('clock.use')) {
       timeItems.push({ view: 'time:mine', label: 'My time', icon: 'ti-clock', count: App.utils.formatHours(this.timeModel.totalForUser(this.currentUser)) });
@@ -336,7 +320,6 @@ App.SidebarView = class SidebarView {
     App.EventBus.on('time:changed',  () => { this.renderCounts(); this.renderExtraGroups(); });
     App.EventBus.on('view:changed',  (view) => this.updateActive(view));
     App.EventBus.on('company:changed', () => { this.renderCounts(); this.renderExtraGroups(); });
-    App.EventBus.on('projects:changed', () => { this.renderExtraGroups(); });
     App.EventBus.on('role:changed', () => this.refreshForRole());
   }
 
