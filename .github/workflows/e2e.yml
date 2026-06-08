@@ -14,7 +14,10 @@ permissions:
   actions: read
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  # Scope by event type as well as ref: the push-triggered critical-path run and
+  # the Vercel deployment_status-triggered preview-smoke run share a ref (main)
+  # but are different jobs, so they must NOT cancel each other.
+  group: e2e-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
