@@ -198,10 +198,9 @@ App.SidebarView = class SidebarView {
     // companies this user can access (plus "All companies" for developers).
     // Picking one re-scopes the whole app via controller.setCompany. Shown
     // only when there's more than one choice.
-    // "All companies" (*) is only meaningful for an actual developer; when
-    // previewing another role, drop it so the preview is scoped to one company.
-    const companies = (this.controller.uiState.companies || [])
-      .filter(id => id !== '*' || App.effectiveRole() === 'developer');
+    // "All companies" (*) is offered to any multi-company user (the controller
+    // only puts '*' in the list for them), so it shows for every role now.
+    const companies = (this.controller.uiState.companies || []);
     if (companies.length > 1) {
       const cur = this.controller.uiState.currentCompany;
       const dotMap = { roofing: 'dot-roof', drafting: 'dot-draft', lumen: 'dot-lumen' };

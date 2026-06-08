@@ -68,13 +68,21 @@ App.AppController = class AppController {
     const role = App.realRole();
     const all = Object.keys(App.COMPANIES || {});
     let companies;
+    let fallback;
     if (role === 'developer') {
-      // Developers get an "All companies" sentinel ('*') plus the ability to
-      // focus any single company. '*' means no company filter (god mode).
+      // Developers get an "All companies" sentinel ('*') across every company,
+      // and default to it. '*' means no company filter (god mode).
       companies = ['*'].concat(all);
+      fallback = '*';
     } else {
       const assigned = (App.currentProfile && App.currentProfile.company_ids) || [];
-      companies = all.filter(id => assigned.includes(id));
+      const mine = all.filter(id => assigned.includes(id));
+      // Anyone who spans more than one company also gets an "All companies"
+      // option. For them '*' isn't god mode — it just drops the company filter,
+      // so they see every company they can access (still RLS-scoped to those).
+      // Default to their first real company, not All.
+      companies = mine.length > 1 ? ['*'].concat(mine) : mine;
+      fallback = mine[0] || null;
     }
     this.uiState.companies = companies;
 
@@ -83,7 +91,7 @@ App.AppController = class AppController {
       const stored = localStorage.getItem(this._companyKey());
       if (stored && companies.includes(stored)) current = stored;
     } catch (e) { /* localStorage unavailable */ }
-    if (!current) current = companies[0] || null;
+    if (!current) current = fallback;
     this.uiState.currentCompany = current;
   }
 
@@ -106,12 +114,6 @@ App.AppController = class AppController {
     document.body.className = document.body.className.replace(/\brole-\S+/g, '').trim();
     document.body.classList.add('role-' + eff);
     document.body.classList.toggle('viewing-as-role', !!next);
-
-    // A previewed non-developer role is company-scoped; "All companies" (*)
-    // isn't a real scope for them, so focus the first real company.
-    if (next && this.uiState.currentCompany === '*') {
-      this.uiState.currentCompany = this.uiState.companies.find(c => c !== '*') || null;
-    }
 
     // The current view may no longer be permitted under the previewed role.
     if (!this.canView(this.uiState.view)) {
