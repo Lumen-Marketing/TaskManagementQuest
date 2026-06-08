@@ -74,7 +74,7 @@ jobs:
           TEST_ADMIN_EMAIL:    ${{ secrets.TEST_ADMIN_EMAIL }}
           TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}
           TEST_WORKER_EMAIL:   ${{ secrets.TEST_WORKER_EMAIL }}
-          TEST_WORKER_PASSWORD:${{ secrets.TEST_WORKER_PASSWORD }}
+          TEST_WORKER_PASSWORD: ${{ secrets.TEST_WORKER_PASSWORD }}
         run: npx playwright test --project=local
 
       - name: Upload report on failure
