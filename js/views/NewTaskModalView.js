@@ -7,6 +7,9 @@ App.NewTaskModalView = class NewTaskModalView {
     this.modal = null;
     this.watchers = new Set();
     this.subtasks = []; // array of strings, in entry order
+    // Persisted "pinned" popup size (Ctrl+S). Lets a user — e.g. on a very wide
+    // screen — resize the modal once and have that size reused on every open.
+    this.SIZE_KEY = 'questhq:newtask-size';
   }
 
   open() {
@@ -172,13 +175,13 @@ App.NewTaskModalView = class NewTaskModalView {
           </div>
         </div>
         <div class="modal-foot">
-          <span style="font-size:10.5px; color: var(--ink-3);">Press <kbd>Ctrl ↵</kbd> to create</span>
+          <span style="font-size:10.5px; color: var(--ink-3);">Press <kbd>Ctrl ↵</kbd> to create · <kbd>Ctrl S</kbd> to save size</span>
           <div style="display:flex; gap:6px;">
             <button class="btn" data-action="close">Cancel</button>
             <button class="btn btn-primary" data-action="submit">Create &amp; notify</button>
           </div>
         </div>
-        <div class="modal-resize-handle" data-stop title="Drag to resize"></div>
+        <div class="modal-resize-handle" data-stop title="Drag to resize · Ctrl+S to save as default · Ctrl+Shift+S to reset"></div>
       </div>
     `;
   }
@@ -197,6 +200,12 @@ App.NewTaskModalView = class NewTaskModalView {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
         this.submit();
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
+        // Pin the current popup size as the default (or, with Shift, clear it).
+        // preventDefault stops the browser's "save page" dialog.
+        e.preventDefault();
+        if (e.shiftKey) this._clearSavedSize();
+        else this._saveCurrentSize();
       } else if (e.key === 'Escape') {
         this.close();
       }
@@ -243,8 +252,8 @@ App.NewTaskModalView = class NewTaskModalView {
     this._bindResize();
   }
 
-  // Drag-to-resize from the bottom-left grip. Sizing is per-open (the modal is
-  // rebuilt on each open), which is the intent: "manually adjust the size".
+  // Drag-to-resize from the bottom-left grip. The panel opens at its natural CSS
+  // size unless the user has pinned a default (Ctrl+S) — see _applySavedSize.
   // The backdrop centres the panel horizontally, so width grows symmetrically —
   // a 1px cursor move widens each side by 1px, hence the x2 on the horizontal
   // delta so the grip tracks the pointer. Vertically the panel is top-aligned,
@@ -255,8 +264,13 @@ App.NewTaskModalView = class NewTaskModalView {
     if (!handle || !panel) return;
 
     // The popup's natural opening width is the 1.0 zoom baseline. Text scales
-    // up/down from here as the panel is widened/narrowed.
+    // up/down from here as the panel is widened/narrowed. Measured BEFORE any
+    // pinned size is applied so the baseline stays the CSS default, not the
+    // pinned width (otherwise the zoom math would drift).
     const baseW = panel.getBoundingClientRect().width || 540;
+
+    // Restore a previously pinned default size, if one exists.
+    this._applySavedSize(panel, baseW);
 
     handle.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -289,6 +303,58 @@ App.NewTaskModalView = class NewTaskModalView {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
+  }
+
+  /* ---------- pinned size (Ctrl+S) ---------- */
+
+  // Read the pinned size from storage, or null if none / unusable.
+  _loadSavedSize() {
+    try {
+      const s = JSON.parse(localStorage.getItem(this.SIZE_KEY) || 'null');
+      if (s && typeof s.w === 'number' && typeof s.h === 'number') return s;
+    } catch (e) { /* malformed / storage unavailable */ }
+    return null;
+  }
+
+  // Apply a pinned size to the panel on open. Clamped to the current viewport so
+  // a size pinned on a very wide screen still opens sanely on a smaller one, and
+  // the text zoom is re-derived from the (CSS-default) baseline width.
+  _applySavedSize(panel, baseW) {
+    const s = this._loadSavedSize();
+    if (!s) return;
+    const maxW = window.innerWidth * 0.97;
+    const maxH = window.innerHeight * 0.95;
+    const w = Math.max(380, Math.min(maxW, s.w));
+    const h = Math.max(320, Math.min(maxH, s.h));
+    panel.style.maxWidth = 'none';
+    panel.style.maxHeight = 'none';
+    panel.style.width = w + 'px';
+    panel.style.height = h + 'px';
+    const scale = Math.max(0.85, Math.min(2, w / baseW));
+    panel.style.setProperty('--nt-scale', scale.toFixed(3));
+  }
+
+  // Pin the panel's current size as the default for future opens.
+  _saveCurrentSize() {
+    const panel = this.modal && this.modal.querySelector('.modal');
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    try {
+      localStorage.setItem(this.SIZE_KEY, JSON.stringify({ w: Math.round(rect.width), h: Math.round(rect.height) }));
+    } catch (e) { /* storage unavailable — nothing to persist */ }
+    this._toast('Default size saved', 'This size will be used next time.');
+  }
+
+  // Forget the pinned size; future opens revert to the automatic default.
+  _clearSavedSize() {
+    try { localStorage.removeItem(this.SIZE_KEY); } catch (e) { /* ignore */ }
+    this._toast('Size reset', 'Back to the automatic default size.');
+  }
+
+  // Single guarded entry point for every toast this modal raises.
+  _toast(title, sub) {
+    const tv = this.controller && this.controller.toastView;
+    if (tv && tv.show) tv.show({ title, sub });
   }
 
   // Live input mask: auto-insert the colon as digits are typed, and expand a
@@ -402,9 +468,7 @@ App.NewTaskModalView = class NewTaskModalView {
     const text = input.value.trim();
     if (!text) return;
     if (this.subtasks.length >= App.validate.LIMITS.subtasks) {
-      if (this.controller.toastView) {
-        this.controller.toastView.show({ title: 'Too many subtasks', sub: `Max ${App.validate.LIMITS.subtasks} per task.` });
-      }
+      this._toast('Too many subtasks', `Max ${App.validate.LIMITS.subtasks} per task.`);
       return;
     }
     this.subtasks.push(text.slice(0, App.validate.LIMITS.title));
@@ -508,7 +572,6 @@ App.NewTaskModalView = class NewTaskModalView {
     }
     // Surface the validator's message via toast so the user sees WHY the
     // submit was rejected, not just a red underline.
-    const toast = this.controller && this.controller.toastView;
-    if (toast) toast.show({ title: 'Cannot create task', sub: err.message });
+    this._toast('Cannot create task', err.message);
   }
 };
