@@ -182,6 +182,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   applyRoleChrome(controller);
 
+  // Data is loaded and the views have rendered — drop the boot skeleton if it
+  // wasn't already replaced (e.g. clock-only users whose task list never renders).
+  const bootSkeleton = document.getElementById('listSkeleton');
+  if (bootSkeleton) bootSkeleton.remove();
+
   // Expose the role as a body class so CSS can scope per-role tweaks
   // (e.g. hide the Assignee column for workers/members). Uses the effective
   // role so a developer previewing another role gets that role's chrome.
