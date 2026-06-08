@@ -479,6 +479,9 @@ App.NewTaskModalView = class NewTaskModalView {
   }
 
   submit() {
+    // Guard against a double-submit (e.g. a fast double-tap on Create): once the
+    // modal has been torn down a second invocation has nothing to read.
+    if (!this.modal) return;
     const timeRaw = document.getElementById('nt-time').value.trim();
     // Fold in any subtask text the user typed but didn't explicitly "Add".
     const pendingSubtask = document.getElementById('nt-subtask-input');
