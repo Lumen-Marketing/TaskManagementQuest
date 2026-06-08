@@ -837,7 +837,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
    drag handle (bottom-right) so it can be resized by hand. Uses `width` (not
    `max-width`) for the breakpoints so a manual drag can still grow it up to the
    viewport cap below. */
-:is(#newTaskModal, #newProjectModal) .modal {
+#newTaskModal .modal {
   position: relative;
   width: 540px;
   min-width: 380px;
@@ -852,13 +852,13 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
    genuinely wide one (boss) — without ever dominating the viewport. The grip is
    still there for manual fine-tuning. */
 @media (min-width: 1280px) {
-  :is(#newTaskModal, #newProjectModal) .modal { width: 560px; }
+  #newTaskModal .modal { width: 560px; }
 }
 @media (min-width: 1600px) {
-  :is(#newTaskModal, #newProjectModal) .modal { width: 600px; }
+  #newTaskModal .modal { width: 600px; }
 }
 @media (min-width: 2000px) {
-  :is(#newTaskModal, #newProjectModal) .modal { width: 760px; }
+  #newTaskModal .modal { width: 760px; }
 }
 /* Bottom-LEFT grip — kept clear of the Cancel/Create buttons on the right. */
 .modal-resize-handle {
@@ -877,27 +877,27 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 }
 .modal-resize-handle:hover { opacity: 0.9; }
 /* Make room so the grip doesn't sit on top of the "Press Ctrl ↵" hint. */
-:is(#newTaskModal, #newProjectModal) .modal-foot { padding-left: 30px; }
+#newTaskModal .modal-foot { padding-left: 30px; }
 
 /* Larger, more readable type throughout the New task popup. Each size is
    multiplied by --nt-scale so the whole popup zooms as it's resized. */
-:is(#newTaskModal, #newProjectModal) .modal-title { font-size: calc(22px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .field-title input { font-size: calc(22px * var(--nt-scale)) !important; }
-:is(#newTaskModal, #newProjectModal) .field-label { font-size: calc(12px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) input,
-:is(#newTaskModal, #newProjectModal) select,
-:is(#newTaskModal, #newProjectModal) textarea { font-size: calc(14px * var(--nt-scale)) !important; }
-:is(#newTaskModal, #newProjectModal) .locked-field { font-size: calc(14px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .notify-title { font-size: calc(14px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .notify-option { font-size: calc(13px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .notify-option i { font-size: calc(16px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .user-menu-hint { font-size: calc(12px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .field-optional { font-size: calc(10px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .watcher-add { font-size: calc(12.5px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .watcher-tag { font-size: calc(13px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .modal-foot .btn { font-size: calc(13px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .modal-foot kbd { font-size: calc(11px * var(--nt-scale)); }
-:is(#newTaskModal, #newProjectModal) .modal-foot > span { font-size: calc(11px * var(--nt-scale)) !important; }
+#newTaskModal .modal-title { font-size: calc(22px * var(--nt-scale)); }
+#newTaskModal .field-title input { font-size: calc(22px * var(--nt-scale)) !important; }
+#newTaskModal .field-label { font-size: calc(12px * var(--nt-scale)); }
+#newTaskModal input,
+#newTaskModal select,
+#newTaskModal textarea { font-size: calc(14px * var(--nt-scale)) !important; }
+#newTaskModal .locked-field { font-size: calc(14px * var(--nt-scale)); }
+#newTaskModal .notify-title { font-size: calc(14px * var(--nt-scale)); }
+#newTaskModal .notify-option { font-size: calc(13px * var(--nt-scale)); }
+#newTaskModal .notify-option i { font-size: calc(16px * var(--nt-scale)); }
+#newTaskModal .user-menu-hint { font-size: calc(12px * var(--nt-scale)); }
+#newTaskModal .field-optional { font-size: calc(10px * var(--nt-scale)); }
+#newTaskModal .watcher-add { font-size: calc(12.5px * var(--nt-scale)); }
+#newTaskModal .watcher-tag { font-size: calc(13px * var(--nt-scale)); }
+#newTaskModal .modal-foot .btn { font-size: calc(13px * var(--nt-scale)); }
+#newTaskModal .modal-foot kbd { font-size: calc(11px * var(--nt-scale)); }
+#newTaskModal .modal-foot > span { font-size: calc(11px * var(--nt-scale)) !important; }
 
 .field { margin-bottom: 14px; }
 .field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); margin-bottom: 5px; display: flex; align-items: center; gap: 4px; font-weight: 600; }
