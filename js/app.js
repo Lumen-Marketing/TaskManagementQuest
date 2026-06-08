@@ -206,6 +206,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // via upserts (never delete-and-reinsert). Conflicts (a newer server version)
   // are reconciled by taking the server's copy.
   const doSave = async () => {
+    // Coalesce any pending debounce: whether we got here from the timer or from a
+    // direct controller.saveNow() call, drop the outstanding timeout so the same
+    // dirty set can't be saved twice. Returns whether the write succeeded so
+    // callers (createTask) can decide what to do next.
+    window.clearTimeout(persistTimer);
     const dirtyTasks = taskModel.takeDirty();
     const unsavedEntries = timeModel.takeUnsavedEntries();
     try {
@@ -224,6 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
         }
       }
+      return true;
     } catch (err) {
       console.error('[app] Supabase save failed', err, 'cause:', err && err.cause);
       // Re-flag the changes so the next save retries them instead of losing them.
@@ -239,6 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           sub: cause ? `${friendly} — ${cause}` : friendly,
         });
       }
+      return false;
     }
   };
   const persist = () => {
@@ -248,6 +255,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   App.EventBus.on('tasks:changed', persist);
   App.EventBus.on('time:changed', persist);
   App.EventBus.on('notifs:changed', persist);
+
+  // Let the controller force an immediate, awaitable save. createTask uses this to
+  // persist a new task BEFORE it notifies the assignee — a worker's permission to
+  // insert that notification (migration 040) requires the task row to already exist.
+  controller.saveNow = doSave;
 
   // Network resilience: show an offline banner while disconnected and flush any
   // queued changes the moment we're back online. Dirty tasks/entries are

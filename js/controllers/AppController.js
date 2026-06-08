@@ -616,7 +616,7 @@ App.AppController = class AppController {
     this.newTaskModal.open();
   }
 
-  createTask(payload) {
+  async createTask(payload) {
     if (!App.can('tasks.write')) {
       if (this.toastView) {
         this.toastView.show({ title: 'No access', sub: 'Your role cannot create tasks.' });
@@ -682,28 +682,44 @@ App.AppController = class AppController {
       });
     }
 
-    this._deliver(inapp, emails, {
-      subject: `Quest HQ — ${task.title}`,
-      html: this._emailBody(`<strong>${App.utils.escapeHtml(creatorName)}</strong> created the task <strong>${titleEsc}</strong> (assigned to ${App.utils.escapeHtml(assigneeName)}).`, task),
-    });
+    // Persist the new task to Supabase BEFORE delivering its in-app notifications.
+    // Each notification row carries task_id (a FK to tasks.id), and — crucially for
+    // a worker assigning to a teammate — the ONLY policy that lets a worker insert a
+    // notification for someone else is migration 040's creator_can_notify_member,
+    // which checks that the referenced task already exists with them as creator. The
+    // task's real save is debounced (~350ms), so delivering first hits a not-yet-
+    // saved task: the FK trips, sendNotifications retries with task_id nulled, and
+    // that strips the worker's only permission → RLS rejects the notification.
+    // Saving first (awaitable saveNow, wired in app.js) closes the race. If the save
+    // itself fails (e.g. RLS), skip delivery — it would only fail too, and doSave has
+    // already surfaced the underlying error.
+    const saved = this.saveNow ? await this.saveNow() : true;
 
-    if (delegated) {
-      this.toastView.show({
-        title: `Task assigned to ${assigneeName}`,
-        sub: payload.notify.email && assigneeEmail ? `Notifying ${assigneeEmail}` : 'In-app notification sent',
+    if (saved) {
+      this._deliver(inapp, emails, {
+        subject: `Quest HQ — ${task.title}`,
+        html: this._emailBody(`<strong>${App.utils.escapeHtml(creatorName)}</strong> created the task <strong>${titleEsc}</strong> (assigned to ${App.utils.escapeHtml(assigneeName)}).`, task),
       });
-    } else {
-      const watcherCount = (payload.watchers || []).length;
-      this.toastView.show({
-        title: 'Task created',
-        sub: watcherCount ? `${watcherCount} watcher${watcherCount > 1 ? 's' : ''} notified` : '',
-      });
-    }
-    if (payload.notify.whatsapp) {
-      this.toastView.show({ title: 'WhatsApp queued', sub: 'Ping will fire if marked urgent.' });
+
+      if (delegated) {
+        this.toastView.show({
+          title: `Task assigned to ${assigneeName}`,
+          sub: payload.notify.email && assigneeEmail ? `Notifying ${assigneeEmail}` : 'In-app notification sent',
+        });
+      } else {
+        const watcherCount = (payload.watchers || []).length;
+        this.toastView.show({
+          title: 'Task created',
+          sub: watcherCount ? `${watcherCount} watcher${watcherCount > 1 ? 's' : ''} notified` : '',
+        });
+      }
+      if (payload.notify.whatsapp) {
+        this.toastView.show({ title: 'WhatsApp queued', sub: 'Ping will fire if marked urgent.' });
+      }
     }
 
-    // If we're in a time view, switch back to a task view so the new task is visible
+    // The task lives in the local model regardless of the save outcome, so always
+    // surface it — a failed save stays dirty and retries on the next change/reconnect.
     if (this.uiState.view.startsWith('time:')) {
       this.setView('all');
     }
