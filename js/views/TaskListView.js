@@ -74,6 +74,10 @@ App.TaskListView = class TaskListView {
       const p = App.PEOPLE[view.split(':')[1]];
       t = { eyebrow: 'Assigned to', title: p.name };
     }
+    if (!t && view.startsWith('project:')) {
+      const name = this.controller.projectName(view.split(':')[1]);
+      t = { eyebrow: 'Project', title: name || 'Project' };
+    }
     if (t) {
       this.pageEyebrow.textContent = t.eyebrow;
       this.pageTitle.textContent = t.title;

@@ -39,6 +39,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       timersRes,
       notificationsRes,
       profilesRes,
+      projectsRes,
     ] = await Promise.all([
       this.supabase.from('team_members').select('*').order('name', { ascending: true }),
       this.supabase.from('tasks').select('*').order('created_at', { ascending: true }),
@@ -48,6 +49,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       (App.can('roles.manage') || App.can('team.view'))
         ? this.supabase.from('profiles').select(this._profileColumns).order('created_at', { ascending: false })
         : Promise.resolve({ data: [], error: null }),
+      this.supabase.from('projects').select('*').order('name', { ascending: true }),
     ]);
 
     this._throwIfError(peopleRes, 'people');
@@ -56,6 +58,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwIfError(timersRes, 'active timers');
     this._throwIfError(notificationsRes, 'notifications');
     this._throwIfError(profilesRes, 'profiles');
+    this._throwIfError(projectsRes, 'projects');
 
     this._taskVersions = {};
     const tasks = (tasksRes.data || []).map(row => {
@@ -86,7 +89,40 @@ App.SupabaseDataStore = class SupabaseDataStore {
         },
       ])),
       notifications: (notificationsRes.data || []).map(row => this._mapNotificationRow(row)),
+      projects: (projectsRes.data || []).map(row => this._mapProjectRow(row)),
     };
+  }
+
+  _mapProjectRow(row) {
+    return {
+      id: row.id,
+      company: row.company_id,
+      name: row.name,
+      address: row.address || '',
+      status: row.status || 'active',
+    };
+  }
+
+  // Standalone refresh (e.g. after another user adds a project). Approved users
+  // can read all projects (migration 006 RLS); the UI scopes by company.
+  async loadProjects() {
+    const res = await this.supabase.from('projects').select('*').order('name', { ascending: true });
+    this._throwIfError(res, 'projects');
+    return (res.data || []).map(row => this._mapProjectRow(row));
+  }
+
+  // Create a project. RLS lets any approved user insert (migration 006).
+  async createProject({ name, companyId, address = '', status = 'active' }) {
+    const row = {
+      id: App.utils.uid('p'),
+      company_id: companyId,
+      name: String(name || '').trim(),
+      address,
+      status,
+    };
+    const res = await this.supabase.from('projects').insert(row).select('*').single();
+    this._throwIfError(res, 'creating project');
+    return this._mapProjectRow(res.data);
   }
 
   /* Tasks-only refresh for the background sync poll. Mirrors the tasks query in
