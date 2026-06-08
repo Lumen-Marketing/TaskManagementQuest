@@ -437,6 +437,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
         email: row.email || '',
         color: App.utils.safeColor(row.color),
         avatar_url: row.avatar_url || null,
+        // Backed by an approved profile? Used to filter the assignee/watcher
+        // picker for non-manager sessions, which can't read profiles directly
+        // (migration 039). Absent column (pre-migration) -> treat as active.
+        active: row.active !== false,
       };
       return acc;
     }, {});

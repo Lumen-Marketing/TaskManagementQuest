@@ -72,6 +72,7 @@ App.utils = {
       email: profile.email || '',
       color: App.utils.safeColor(profile.color),
       avatar_url: profile.avatar_url || null,
+      active: profile.approved !== false, // synthesized only from approved profiles
     };
   },
 
@@ -85,15 +86,21 @@ App.utils = {
      row for display, or a synthesized person when that row is missing, so an
      approved user is never silently dropped.
 
-     Falls back to the full roster when profiles aren't loaded (non-manager
-     sessions don't fetch them) so a picker never renders empty. Pass
-     `includeIds` (e.g. a task's current assignee) to keep an existing
-     selection visible even if it's no longer backed by an approved profile. */
+     When profiles aren't loaded (non-manager sessions don't fetch them) we fall
+     back to the roster's own `active` flag (migration 039) — which mirrors
+     "backed by an approved profile" — so deleted/unapproved accounts stay out
+     of the picker for workers too, not just managers. Pass `includeIds` (e.g. a
+     task's current assignee) to keep an existing selection visible even if it's
+     no longer backed by an approved profile. */
   activePeople(includeIds) {
     const byId = App.PEOPLE || {};
     const all = Object.values(byId);
     const profiles = App.PROFILES || [];
-    if (!profiles.length) return all;
+    if (!profiles.length) {
+      const keepIds = Array.isArray(includeIds) ? includeIds : (includeIds ? [includeIds] : []);
+      const keepSet = new Set(keepIds.filter(Boolean));
+      return all.filter(p => p.active !== false || keepSet.has(p.id));
+    }
 
     const seen = new Set();
     const list = [];
