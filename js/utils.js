@@ -128,11 +128,15 @@ App.utils = {
      activePeople() and intersects with profiles whose company_ids include the
      company. Falls back to activePeople() when profiles aren't loaded
      (non-manager sessions) so the picker never renders empty. Pass includeIds
-     to keep an existing selection visible. */
+     to keep an existing selection visible.
+     '*' is the "All companies" scope (the developer default, and the
+     multi-company "drop the filter" option) — it means no company filter, so
+     return the full active roster rather than intersecting on a literal '*'
+     that no profile's company_ids ever contains. */
   peopleInCompany(companyId, includeIds) {
     const base = this.activePeople(includeIds);
     const profiles = App.PROFILES || [];
-    if (!companyId || !profiles.length) return base;
+    if (!companyId || companyId === '*' || !profiles.length) return base;
     const inCompany = new Set(
       profiles
         .filter(p => p.member_id && Array.isArray(p.company_ids) && p.company_ids.includes(companyId))
@@ -187,6 +191,31 @@ App.utils = {
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     return `${days}d ago`;
+  },
+
+  /* Format a true point-in-time (a real instant: clock-in moment, time-entry
+     timestamp — anything stored as timestamptz) in the shared display timezone
+     from App.timezone(), so every viewer sees the SAME wall-clock reading for the
+     same moment regardless of their device's local zone. Accepts a ms timestamp,
+     a Date, or an ISO string. Pass Intl.DateTimeFormat options (e.g.
+     { month:'short', day:'numeric', hour:'numeric', minute:'2-digit',
+       timeZoneName:'short' }); include timeZoneName so the zone (e.g. "MDT") is
+     visible and the time isn't silently ambiguous.
+
+     Do NOT use this for due dates or reminders — those are wall-clock text and
+     must stay on local parsing (see formatDue / TaskDetailView reminder format).
+     Falls back to the browser's local zone if App.timezone() is somehow invalid. */
+  formatInstant(when, options = {}) {
+    const ms = typeof when === 'number'
+      ? when
+      : (when instanceof Date ? when.getTime() : Date.parse(when));
+    if (Number.isNaN(ms)) return '';
+    try {
+      return new Intl.DateTimeFormat('en-US', { ...options, timeZone: App.timezone() }).format(new Date(ms));
+    } catch (e) {
+      // Bad/unsupported IANA id -> don't blow up a render; show local instead.
+      return new Intl.DateTimeFormat('en-US', options).format(new Date(ms));
+    }
   },
 
   formatDue(iso) {
