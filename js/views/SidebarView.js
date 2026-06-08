@@ -189,19 +189,6 @@ App.SidebarView = class SidebarView {
     this.extraMount.querySelectorAll('.side-item[data-company]').forEach(el => {
       this._makeActivatable(el, () => this.controller.setCompany(el.dataset.company));
     });
-    this.extraMount.querySelectorAll('.side-item[data-action="new-project"]').forEach(el => {
-      this._makeActivatable(el, () => this._promptNewProject());
-    });
-  }
-
-  async _promptNewProject() {
-    const name = window.prompt('New project name:');
-    if (!name || !name.trim()) return;
-    const proj = await this.controller.createProject(name.trim());
-    if (proj && this.controller.toastView) {
-      this.controller.toastView.show({ title: 'Project created', sub: proj.name });
-    }
-    // controller.createProject emits 'projects:changed' → this view re-renders.
   }
 
   _buildSections() {
@@ -229,22 +216,20 @@ App.SidebarView = class SidebarView {
       });
     }
 
-    // Projects within the active company. Clicking one filters the task list to
-    // that project (a "project:<id>" view). Always shown for task-writers (with
-    // a "+ New project" affordance) so projects are discoverable even when none
-    // exist yet; read-only roles see it only when there are projects.
+    // Projects within the active company. Clicking one filters the task list
+    // to that project (a "project:<id>" view). Hidden when there are none.
     const projects = this.controller.projectsForCompany(this.controller.uiState.currentCompany);
-    const canAddProject = App.can('tasks.write');
-    if (projects.length || canAddProject) {
+    if (projects.length) {
       const active = this._scopedActiveTasks();
-      const items = projects.map(p => ({
-        view: 'project:' + p.id,
-        label: p.name,
-        icon: 'ti-folder',
-        count: active.filter(t => t.project === p.id).length,
-      }));
-      if (canAddProject) items.push({ action: 'new-project', label: 'New project', icon: 'ti-plus' });
-      sections.push({ key: 'projects', label: 'Projects', items });
+      sections.push({
+        key: 'projects', label: 'Projects',
+        items: projects.map(p => ({
+          view: 'project:' + p.id,
+          label: p.name,
+          icon: 'ti-folder',
+          count: active.filter(t => t.project === p.id).length,
+        })),
+      });
     }
 
     const timeItems = [];
@@ -274,19 +259,14 @@ App.SidebarView = class SidebarView {
     const collapsed = this.collapsed.has(sec.key);
     const itemsHtml = sec.items.map(it => {
       // Company items drive the company context (data-company + setCompany);
-      // action items run a handler (data-action); everything else navigates to
-      // a view (data-view + setView).
+      // everything else navigates to a view (data-view + setView).
       const isCompany = it.company != null;
-      const isAction = it.action != null;
-      const attr = isAction
-        ? `data-action="${App.utils.escapeHtml(it.action)}"`
-        : isCompany
-          ? `data-company="${App.utils.escapeHtml(it.company)}"`
-          : `data-view="${App.utils.escapeHtml(it.view)}"`;
+      const attr = isCompany
+        ? `data-company="${App.utils.escapeHtml(it.company)}"`
+        : `data-view="${App.utils.escapeHtml(it.view)}"`;
       const activeCls = (isCompany && it.active) ? ' active' : '';
-      const actionCls = isAction ? ' side-item-action' : '';
       return `
-      <div class="side-item${activeCls}${actionCls}" ${attr} title="${App.utils.escapeHtml(it.label)}">
+      <div class="side-item${activeCls}" ${attr} title="${App.utils.escapeHtml(it.label)}">
         ${it.dot ? `<span class="dot-co ${it.dot}"></span>` : `<i class="ti ${it.icon || 'ti-circle'}"></i>`}
         <span class="side-item-label">${App.utils.escapeHtml(it.label)}</span>
         ${it.count != null ? `<span class="side-count">${App.utils.escapeHtml(String(it.count))}</span>` : ''}

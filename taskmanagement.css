@@ -443,10 +443,6 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .group-body { background: var(--surface); }
 .task-group.collapsed .group-body { display: none; }
 
-/* Sidebar "+ New project" action item — slightly muted until hovered. */
-.side-item.side-item-action { opacity: 0.7; }
-.side-item.side-item-action:hover { opacity: 1; }
-
 /* Skeleton loading primitives — shared by the list, sidebar, and detail-pane
    boot states. A gentle opacity pulse (theme-agnostic; reduced-motion disables it). */
 .sk { display: block; height: 12px; border-radius: 6px; background: var(--bg-3); animation: sk-pulse 1.3s ease-in-out infinite; }
