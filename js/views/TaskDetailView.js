@@ -226,6 +226,10 @@ App.TaskDetailView = class TaskDetailView {
           <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(company.label)}</span>
         </div>
         <div class="detail-row">
+          <span class="label">Project</span>
+          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(this.controller.projectName(t.project) || '—')}</span>
+        </div>
+        <div class="detail-row">
           <span class="label">Type</span>
           <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' }).label)}</span>
         </div>
@@ -358,6 +362,7 @@ App.TaskDetailView = class TaskDetailView {
       title: t.title || '',
       description: t.description || '',
       company: t.company,
+      project: t.project || '',
       type: t.type || 'admin',
       bidStatus: t.bidStatus || 'queue',
       status: t.status || 'todo',
@@ -383,6 +388,7 @@ App.TaskDetailView = class TaskDetailView {
     set('title', 'edit-title');
     set('description', 'edit-desc');
     set('company', 'edit-company');
+    set('project', 'edit-project');
     set('type', 'edit-type');
     set('bidStatus', 'edit-bidStatus');
     set('status', 'edit-status');
@@ -459,6 +465,12 @@ App.TaskDetailView = class TaskDetailView {
           <span class="label">Company</span>
           <select id="edit-company" style="font-size:12px; padding:4px 8px;">
             ${opts(Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}
+          </select>
+        </div>
+        <div class="detail-row">
+          <span class="label">Project</span>
+          <select id="edit-project" style="font-size:12px; padding:4px 8px;">
+            ${opts([['', 'No project']].concat(this.controller.projectsForCompany(d.company).map(p => [p.id, p.name])), d.project)}
           </select>
         </div>
         <div class="detail-row">
@@ -546,6 +558,15 @@ App.TaskDetailView = class TaskDetailView {
     // Type toggle re-renders so the Bid-status row appears/disappears.
     const typeSel = this.pane.querySelector('[data-action="type-change"]');
     if (typeSel) typeSel.addEventListener('change', rerender);
+
+    // Company change re-scopes the Project list; a project belongs to one
+    // company, so reset it when the company changes.
+    const companySel = this.pane.querySelector('#edit-company');
+    if (companySel) companySel.addEventListener('change', () => {
+      this._syncDraftFromDom();
+      this.editDraft.project = '';
+      this.renderEditMode(t);
+    });
 
     // Watchers + subtasks mutate the draft in place, then re-render.
     this.pane.querySelectorAll('[data-action="remove-watcher"]').forEach(btn =>

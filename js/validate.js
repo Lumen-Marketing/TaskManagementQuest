@@ -129,6 +129,8 @@ App.validate = (function () {
       .slice(0, LIMITS.subtasks)
       .map(s => ({ t: String(s.t).trim().slice(0, LIMITS.title), d: !!s.d }));
 
+    const project = payload.project ? String(payload.project) : null;
+
     const due = isoDate(payload.due, { field: 'due' });
     const dueTime = isoTime(payload.dueTime, { field: 'dueTime' });
     const bidStatus = type === 'bid'
@@ -137,7 +139,7 @@ App.validate = (function () {
 
     return Object.freeze({
       title, description, type, company, priority, status,
-      assignee, watchers: watchers.slice(), subtasks, due, dueTime, bidStatus,
+      assignee, watchers: watchers.slice(), subtasks, project, due, dueTime, bidStatus,
     });
   }
 

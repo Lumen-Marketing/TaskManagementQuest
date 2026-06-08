@@ -138,6 +138,47 @@ App.AppController = class AppController {
     App.EventBus.emit('selection:changed');
   }
 
+  /* ---------- projects ---------- */
+  // Projects belong to a company; list the ones for the active company (or all
+  // for the developer '*' scope). App.projects is the loaded roster.
+  projectsForCompany(companyId) {
+    const all = App.projects || [];
+    if (!companyId || companyId === '*') return all.slice();
+    return all.filter(p => p.company === companyId);
+  }
+
+  projectName(id) {
+    if (!id) return '';
+    const p = (App.projects || []).find(pr => pr.id === id);
+    return p ? p.name : '';
+  }
+
+  // Create a project in the active company (developers fall back to the first
+  // real company). Returns the new project, or null on empty name / failure.
+  async createProject(name, companyId) {
+    const clean = String(name || '').trim().slice(0, 120);
+    if (!clean) return null;
+    companyId = companyId || this.uiState.currentCompany;
+    if (!companyId || companyId === '*') {
+      companyId = (this.uiState.companies || []).find(c => c !== '*') || Object.keys(App.COMPANIES || {})[0];
+    }
+    if (!companyId) {
+      if (this.toastView) this.toastView.show({ title: 'Pick a company first', sub: 'Projects belong to a company.' });
+      return null;
+    }
+    try {
+      const proj = await this.dataStore.createProject({ name: clean, companyId });
+      App.projects = App.projects || [];
+      App.projects.push(proj);
+      App.EventBus.emit('projects:changed');
+      return proj;
+    } catch (err) {
+      console.error('[project] create failed', err);
+      if (this.toastView) this.toastView.show({ title: 'Could not create project', sub: (err && err.message) || 'Please try again.' });
+      return null;
+    }
+  }
+
   /* ---------- UI state ---------- */
   setView(view) {
     if (!this.canView(view)) {
@@ -486,6 +527,7 @@ App.AppController = class AppController {
     // The remaining fields come from constrained <select>s / staged lists; fall
     // back to the task's current value when a field wasn't provided.
     const company = fields.company || task.company;
+    const project = ('project' in fields) ? (fields.project || null) : (task.project || null);
     const type = fields.type || task.type || 'admin';
     const priority = fields.priority || task.priority || 'medium';
     const status = fields.status || task.status || 'todo';
@@ -504,7 +546,7 @@ App.AppController = class AppController {
     const prevStatus = task.status, prevPriority = task.priority, prevAssignee = task.assignee;
 
     this.taskModel.update(id, {
-      title, description, company, type, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
+      title, description, company, project, type, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
       ...(type === 'bid' ? { bidStatus } : {}),
     });
 
@@ -628,6 +670,7 @@ App.AppController = class AppController {
       type: payload.type || 'admin',
       bidStatus: payload.type === 'bid' ? (payload.bidStatus || 'queue') : null,
       company: payload.company,
+      project: payload.project || null,
       due: payload.due,
       dueTime: payload.dueTime || null,
       priority: payload.priority,
