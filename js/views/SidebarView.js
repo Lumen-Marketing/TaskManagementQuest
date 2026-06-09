@@ -302,7 +302,7 @@ App.SidebarView = class SidebarView {
       base = base.filter(t => t.company === cur || t.id === clockId);
     }
     if (role === 'worker') {
-      base = base.filter(t => t.assignee === this.currentUser || t.id === clockId);
+      base = base.filter(t => t.assignee === this.currentUser || t.creator === this.currentUser || t.id === clockId);
     } else if (role === 'supervisor' && App.realRole() !== 'developer') {
       // Real supervisor: narrow to their direct reports. A developer previewing
       // as supervisor sees the whole selected company's team (no narrowing).

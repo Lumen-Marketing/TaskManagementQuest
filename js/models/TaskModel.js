@@ -109,10 +109,12 @@ App.TaskModel = class TaskModel {
       tasks = tasks.filter(t => t.company === currentCompany || t.id === clockTaskId);
     }
 
-    // Role row-scope. Worker = only their own tasks; Supervisor = own/created
-    // or assigned to a direct report. Admin/developer see everything in scope.
+    // Role row-scope. Worker = tasks assigned to OR created by them (mirrors the
+    // tasks SELECT policy after migration 043, so a worker still sees a task they
+    // created and delegated to a teammate); Supervisor = own/created or assigned to
+    // a direct report. Admin/developer see everything in scope.
     if (role === 'worker') {
-      tasks = tasks.filter(t => t.assignee === currentUser || t.id === clockTaskId);
+      tasks = tasks.filter(t => t.assignee === currentUser || t.creator === currentUser || t.id === clockTaskId);
     } else if (role === 'supervisor' && reportMemberIds) {
       tasks = tasks.filter(t =>
         t.assignee === currentUser ||
