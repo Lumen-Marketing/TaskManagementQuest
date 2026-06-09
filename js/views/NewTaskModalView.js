@@ -35,8 +35,47 @@ App.NewTaskModalView = class NewTaskModalView {
     this.modal = null;
   }
 
+  /* The company the task defaults to, plus the list offered in the dropdown.
+     Excludes the developer '*' sentinel; falls back to every company when the
+     session has none scoped. The assignee/watcher pickers scope to `selected`. */
+  _companyChoices() {
+    let ids = (this.controller.uiState.companies || []).filter(id => id !== '*');
+    if (!ids.length) ids = Object.keys(App.COMPANIES || {});
+    const cur = this.controller.uiState.currentCompany;
+    const selected = (cur && cur !== '*') ? cur : ids[0];
+    return { ids, selected };
+  }
+
+  /* Assignee <option>s scoped to one company. Always keeps the current user
+     selectable (you can assign to yourself even in a company you only manage). */
+  _assigneeOptionsHtml(companyId, selectedId) {
+    return App.utils.peopleInCompany(companyId, this.currentUser)
+      .map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${p.name}</option>`)
+      .join('');
+  }
+
+  /* Re-scope the assignee + watcher pickers to a newly chosen company. Keeps the
+     current assignee if they're still in-company, else falls back to yourself,
+     else the first member; and drops any watchers who aren't in the new company. */
+  _onCompanyChanged(companyId) {
+    const sel = document.getElementById('nt-assignee');
+    if (sel) {
+      const people = App.utils.peopleInCompany(companyId, this.currentUser);
+      const has = id => people.some(p => p.id === id);
+      const next = has(sel.value) ? sel.value
+        : (has(this.currentUser) ? this.currentUser : (people[0] && people[0].id) || '');
+      sel.innerHTML = people.map(p => `<option value="${p.id}" ${p.id === next ? 'selected' : ''}>${p.name}</option>`).join('');
+      const allowed = new Set(people.map(p => p.id));
+      let pruned = false;
+      this.watchers.forEach(w => { if (!allowed.has(w)) { this.watchers.delete(w); pruned = true; } });
+      if (pruned) this.renderWatcherChips();
+    }
+    this.updateDelegationBanner();
+  }
+
   template() {
     const me = App.PEOPLE[this.currentUser];
+    const { ids: companyIds, selected: selectedCompany } = this._companyChoices();
     return `
       <div class="modal" data-stop>
         <div class="modal-head">
@@ -62,7 +101,7 @@ App.NewTaskModalView = class NewTaskModalView {
             <div>
               <div class="field-label">Assigned to</div>
               <select id="nt-assignee" class="assigned-field" style="width:100%; padding: 6px 10px; font-size: 12px;">
-                ${App.utils.peopleInCompany(this.controller.uiState.currentCompany, this.currentUser).map(p => `<option value="${p.id}" ${p.id === this.currentUser ? 'selected' : ''}>${p.name}</option>`).join('')}
+                ${this._assigneeOptionsHtml(selectedCompany, this.currentUser)}
               </select>
             </div>
           </div>
@@ -99,18 +138,10 @@ App.NewTaskModalView = class NewTaskModalView {
             <div>
               <div class="field-label">Company</div>
               <select id="nt-company" style="width:100%; padding: 6px 10px; font-size: 12px;">
-                ${(() => {
-                  // A task needs a real company, so exclude the developer '*'
-                  // sentinel and fall back to all companies if none are scoped.
-                  let ids = (this.controller.uiState.companies || []).filter(id => id !== '*');
-                  if (!ids.length) ids = Object.keys(App.COMPANIES || {});
-                  const cur = this.controller.uiState.currentCompany;
-                  const sel = (cur && cur !== '*') ? cur : ids[0];
-                  return ids.map(id => {
-                    const c = App.COMPANIES[id] || { label: id };
-                    return `<option value="${id}" ${id === sel ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`;
-                  }).join('');
-                })()}
+                ${companyIds.map(id => {
+                  const c = App.COMPANIES[id] || { label: id };
+                  return `<option value="${id}" ${id === selectedCompany ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`;
+                }).join('')}
               </select>
             </div>
             <div>
@@ -213,6 +244,9 @@ App.NewTaskModalView = class NewTaskModalView {
 
     document.getElementById('nt-assignee').addEventListener('change', () => this.updateDelegationBanner());
     document.getElementById('nt-type').addEventListener('change', () => this.updateBidStatusRow());
+    // Changing the company re-scopes who you can assign to / watch — a task can
+    // only go to people in its own company (worker INSERT is RLS-gated to that).
+    document.getElementById('nt-company').addEventListener('change', (e) => this._onCompanyChanged(e.target.value));
     this.updateBidStatusRow();
 
     // Subtasks: Add button or Enter in the input appends a step.
@@ -442,8 +476,9 @@ App.NewTaskModalView = class NewTaskModalView {
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const assigneeId = document.getElementById('nt-assignee').value;
+      const companyId = document.getElementById('nt-company').value;
       dropdown.innerHTML = '';
-      App.utils.peopleInCompany(this.controller.uiState.currentCompany).filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
+      App.utils.peopleInCompany(companyId).filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
         const item = document.createElement('div');
         item.className = 'watcher-dropdown-item';
         item.innerHTML = `${App.utils.avatarHtml(p)}${p.full}`;

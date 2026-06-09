@@ -72,6 +72,7 @@ App.utils = {
       email: profile.email || '',
       color: App.utils.safeColor(profile.color),
       avatar_url: profile.avatar_url || null,
+      company_ids: Array.isArray(profile.company_ids) ? profile.company_ids : [],
       active: profile.approved !== false, // synthesized only from approved profiles
     };
   },
@@ -135,12 +136,20 @@ App.utils = {
      that no profile's company_ids ever contains. */
   peopleInCompany(companyId, includeIds) {
     const base = this.activePeople(includeIds);
+    if (!companyId || companyId === '*') return base;
     const profiles = App.PROFILES || [];
-    if (!companyId || companyId === '*' || !profiles.length) return base;
+    // Managers have the full profiles list → scope by profiles.company_ids.
+    // Workers don't → scope by the company_ids now mirrored onto the roster
+    // (migration 045), carried on each person object. Either way we end up with
+    // the set of member_ids that belong to this company.
     const inCompany = new Set(
-      profiles
-        .filter(p => p.member_id && Array.isArray(p.company_ids) && p.company_ids.includes(companyId))
-        .map(p => p.member_id)
+      profiles.length
+        ? profiles
+            .filter(p => p.member_id && Array.isArray(p.company_ids) && p.company_ids.includes(companyId))
+            .map(p => p.member_id)
+        : base
+            .filter(p => Array.isArray(p.company_ids) && p.company_ids.includes(companyId))
+            .map(p => p.id)
     );
     const keep = Array.isArray(includeIds) ? includeIds : (includeIds ? [includeIds] : []);
     keep.forEach(id => { if (id) inCompany.add(id); });

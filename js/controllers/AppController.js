@@ -371,18 +371,29 @@ App.AppController = class AppController {
     return ['admin', 'construction_supervisor', 'developer', 'supervisor', 'sales'].includes(App.effectiveRole());
   }
 
+  /* Per-task delete permission. Managers may delete any in-company task; a worker
+     may delete ONLY a task they created (migration 044). Gates the detail view's
+     Delete button and the deleteTask action so we never show a button that 403s. */
+  canDeleteTask(task) {
+    if (this.canDeleteTasks()) return true;
+    return App.effectiveRole() === 'worker' && !!task && task.creator === this.currentUser;
+  }
+
   /* Hard-delete a single task after a confirm prompt. Optimistic:
      removes from the in-memory model immediately so the list collapses
      instantly, then fires the network DELETE. If the server rejects
      (RLS blocked, network blip), surfaces a toast and the next page
      load will resurrect the task from the source of truth. */
   deleteTask(id) {
-    if (!this.canDeleteTasks()) {
-      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot delete tasks.' });
-      return;
-    }
     const task = this.taskModel.find(id);
     if (!task) return;
+    if (!this.canDeleteTask(task)) {
+      const sub = App.effectiveRole() === 'worker'
+        ? 'You can only delete tasks you created.'
+        : 'Your role cannot delete tasks.';
+      if (this.toastView) this.toastView.show({ title: 'No access', sub });
+      return;
+    }
     const snippet = task.title && task.title.length > 50 ? task.title.slice(0, 50) + '…' : (task.title || 'this task');
 
     // Undo-able delete: remove from the UI now but DEFER the irreversible DB

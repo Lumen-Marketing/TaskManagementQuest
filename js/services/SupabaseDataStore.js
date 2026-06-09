@@ -437,6 +437,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
         email: row.email || '',
         color: App.utils.safeColor(row.color),
         avatar_url: row.avatar_url || null,
+        // Companies this member belongs to (mirrored from profiles, migration 045).
+        // Lets the assignee/watcher pickers stay company-scoped even for workers,
+        // who can't read profiles and so build the picker straight from this roster.
+        company_ids: Array.isArray(row.company_ids) ? row.company_ids : [],
         // Backed by an approved profile? Used to filter the assignee/watcher
         // picker for non-manager sessions, which can't read profiles directly
         // (migration 039). Absent column (pre-migration) -> treat as active.

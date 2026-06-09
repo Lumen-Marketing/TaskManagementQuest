@@ -295,7 +295,7 @@ App.TaskDetailView = class TaskDetailView {
           ${activityHtml}
         </div>
 
-        ${this.controller.canDeleteTasks() ? `
+        ${this.controller.canDeleteTask(t) ? `
         <div class="detail-danger-zone">
           <button class="btn-link-danger" data-action="delete-task" type="button">
             <i class="ti ti-trash"></i> Delete task
@@ -419,7 +419,7 @@ App.TaskDetailView = class TaskDetailView {
         <button class="watcher-remove" data-action="remove-watcher" data-member-id="${App.utils.escapeHtml(w)}" aria-label="Remove ${App.utils.escapeHtml(p.name)}" type="button">×</button>
       </span>`;
     }).join('');
-    const addable = App.utils.activePeople().filter(p => p.id !== d.assignee && !d.watchers.includes(p.id));
+    const addable = App.utils.peopleInCompany(d.company, d.assignee).filter(p => p.id !== d.assignee && !d.watchers.includes(p.id));
     const watcherAdd = addable.length ? `
       <select class="watcher-add-select" data-action="add-watcher">
         <option value="">+ Add watcher…</option>
@@ -483,7 +483,7 @@ App.TaskDetailView = class TaskDetailView {
         <div class="detail-row">
           <span class="label">Assignee</span>
           <select id="edit-assignee" style="font-size:12px; padding:4px 8px;">
-            ${App.utils.activePeople(d.assignee).map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('')}
+            ${App.utils.peopleInCompany(d.company, d.assignee).map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('')}
           </select>
         </div>
         <div class="detail-row">
