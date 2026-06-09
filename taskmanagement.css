@@ -1830,7 +1830,11 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
 /* Tighter, more editorial page header */
 .work-toolbar { padding: 12px 24px 4px; gap: 6px; }
 .btn { padding: 7px 13px; font-size: 12px; box-shadow: none; }
-.btn:hover { background: var(--bg-3); }
+/* Default buttons only — primary/danger keep their own (darker/rust) hover.
+   Without the :not() guards this generic rule overrides .btn-primary:hover /
+   .btn-danger:hover (same specificity, declared later), washing the button
+   light while its text stays near-white → invisible on hover. */
+.btn:not(.btn-primary):not(.btn-danger):hover { background: var(--bg-3); }
 .btn i { font-size: 13px; }
 .btn-primary { padding: 7px 14px; box-shadow: var(--shadow-sm); }
 
