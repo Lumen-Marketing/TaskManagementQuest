@@ -215,9 +215,9 @@ App.TaskDetailView = class TaskDetailView {
         ` : ''}
 
         <div style="display:flex; gap:6px; margin-bottom:14px;">
-          <button class="btn ${myTimerOnThis ? 'btn-danger' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
-            <i class="ti ${myTimerOnThis ? 'ti-player-stop-filled' : 'ti-player-play-filled'}"></i>
-            ${myTimerOnThis ? 'Clock out' : 'Clock in on this task'}
+          <button class="btn ${myTimerOnThis ? '' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
+            <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>
+            ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
           </button>
         </div>
 

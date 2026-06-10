@@ -84,7 +84,7 @@ App.NewTaskModalView = class NewTaskModalView {
         </div>
         <div class="modal-body">
           <div class="field field-title">
-            <input type="text" id="nt-title" placeholder="What needs to happen?" autofocus />
+            <input type="text" id="nt-title" placeholder="Lead Name / Task" autofocus />
           </div>
 
           <div class="field">

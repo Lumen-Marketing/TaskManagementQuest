@@ -327,7 +327,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 /* List */
 .list-row {
   display: grid;
-  grid-template-columns: 28px 1fr 170px 100px 110px 100px 80px 88px 28px 36px;
+  grid-template-columns: 28px 1fr 170px 100px 110px 124px 80px 88px 28px 36px;
   gap: 12px;
   align-items: center;
   padding: 14px 24px;
@@ -343,7 +343,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-row.selected .task-title-cell { color: var(--ink); }
 .list-header {
   display: grid;
-  grid-template-columns: 28px 1fr 170px 100px 110px 100px 80px 88px 28px 36px;
+  grid-template-columns: 28px 1fr 170px 100px 110px 124px 80px 88px 28px 36px;
   gap: 12px;
   padding: 10px 48px;
   font-size: 12.5px;
@@ -613,6 +613,20 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .status-done    { background: var(--pastel-green);  color: var(--pastel-green-ink); }
 .status-hold    { background: var(--pastel-peach);  color: var(--pastel-peach-ink); }
 .status-pending { background: var(--bg-3);          color: var(--ink-2); }
+
+/* Inline status picker in list rows — looks like the status pill but is a real
+   <select> so you can change status without opening Edit. */
+.status-select {
+  border: none;
+  cursor: pointer;
+  outline: none;
+  font: inherit;
+  max-width: 100%;
+  text-align: left;
+  transition: filter var(--dur-fast) var(--ease-out);
+}
+.status-select:hover { filter: brightness(0.96); }
+.status-select:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent, currentColor); }
 
 /* Pastel-soft priority pills (intelly vibe) */
 .priority-block {

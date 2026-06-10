@@ -97,7 +97,7 @@ App.UpNextWidgetView = class UpNextWidgetView {
             <span class="up-next-due ${overdue ? 'overdue' : ''}">${due}</span>
           </div>
         </div>
-        <button class="up-next-start ${isRunning ? 'running' : ''}" data-action="start" aria-label="${isRunning ? 'Stop timer' : 'Start timer'}">
+        <button class="up-next-start ${isRunning ? 'running' : ''}" data-action="start" aria-label="${isRunning ? 'Back to General shift' : 'Start timer'}">
           <i class="ti ti-${isRunning ? 'player-pause-filled' : 'player-play-filled'}"></i>
         </button>
       </div>

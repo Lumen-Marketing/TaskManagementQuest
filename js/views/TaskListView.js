@@ -296,8 +296,8 @@ App.TaskListView = class TaskListView {
         <div class="worker-task-title">${App.utils.escapeHtml(t.title)}</div>
         ${t.description ? `<div class="worker-task-desc">${App.utils.escapeHtml(t.description)}</div>` : ''}
       </div>
-      <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Stop timer' : 'Start timer'}">
-        <i class="ti ${myTimerOnThis ? 'ti-player-stop-filled' : 'ti-player-play'}"></i>
+      <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}">
+        <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i>
       </button>
     `;
 
@@ -529,11 +529,15 @@ App.TaskListView = class TaskListView {
         ${App.utils.avatarHtml(person)}${person.name}
       </div>
       <div><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
-      <div><span class="pill-status ${status.cls}">${status.label}</span></div>
+      <div>${App.can('tasks.write')
+        ? `<select class="pill-status status-select ${status.cls}" data-action="set-status" title="Change status" aria-label="Status">
+            ${Object.entries(App.STATUSES).map(([k, v]) => `<option value="${k}" ${k === t.status ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}
+          </select>`
+        : `<span class="pill-status ${status.cls}">${status.label}</span>`}</div>
       <div class="due-cell ${due.cls}">${due.text}${t.dueTime ? `<span class="due-time">${App.utils.formatClockTz(t.dueTime)}</span>` : ''}</div>
       <div class="desc-cell" title="${App.utils.escapeHtml(t.description || '')}">${App.utils.escapeHtml(t.description || '')}</div>
-      <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Stop timer' : 'Start timer'}">
-        <i class="ti ${myTimerOnThis ? 'ti-player-stop-filled' : 'ti-player-play'}"></i>
+      <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}">
+        <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i>
       </button>
       <button class="finish-btn ${isDone ? 'is-done' : ''} ${App.can('tasks.write') ? '' : 'hidden'}" data-action="finish-task" title="${isDone ? 'Mark as not done' : 'Finish this task'}" aria-label="${isDone ? 'Mark as not done' : 'Finish this task'}">
         <i class="ti ${isDone ? 'ti-check' : 'ti-circle-check'}"></i>
@@ -554,6 +558,19 @@ App.TaskListView = class TaskListView {
       }
       this.controller.selectTask(t.id);
     });
+
+    // Inline status change — pick a status straight from the row without
+    // opening Edit. Stop the click so opening the dropdown doesn't also select
+    // the task; the change is applied via updateTaskField (which notifies
+    // watchers and, on "done", drops a running timer back to General shift).
+    const statusSelect = row.querySelector('[data-action="set-status"]');
+    if (statusSelect) {
+      statusSelect.addEventListener('click', (e) => e.stopPropagation());
+      statusSelect.addEventListener('change', (e) => {
+        e.stopPropagation();
+        this.controller.updateTaskField(t.id, 'status', e.target.value);
+      });
+    }
 
     if (!subCount) return row;
 

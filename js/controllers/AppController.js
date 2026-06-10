@@ -232,7 +232,7 @@ App.AppController = class AppController {
     const result = this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
     if (!result || !task) return;
     if (result.becomingDone) {
-      this._stopTimerIfOnTask(id);
+      this._revertToGeneralShiftIfOnTask(id);
       this._notifyTaskChange(task, 'marked this complete');
     } else {
       this._notifyTaskChange(task, 'reopened this task');
@@ -248,7 +248,7 @@ App.AppController = class AppController {
     if (!task) return;
     const result = this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
     if (result && result.becomingDone) {
-      this._stopTimerIfOnTask(id);
+      this._revertToGeneralShiftIfOnTask(id);
       this._notifyTaskChange(task, 'marked this complete');
       this._celebrateCompletion(task);
     } else if (result) {
@@ -256,16 +256,43 @@ App.AppController = class AppController {
     }
   }
 
-  // When a task transitions to Done, stop the current user's timer if it's
-  // pointed at that task — otherwise it keeps logging time to a completed
-  // task. The user can hit Clock In again to resume general-shift tracking.
+  // Hard stop: close the current user's timer if it's pointed at this task.
+  // Used when the task is going away entirely (delete) — there's nothing to
+  // fall back to, so we clock out. stopTimer already toasts the logged time.
   _stopTimerIfOnTask(taskId) {
     const active = this.timeModel.activeFor(this.currentUser);
     if (!active || active.taskId !== taskId) return;
     this.stopTimer(this.currentUser);
-    if (this.toastView) {
-      this.toastView.show({ title: 'Timer stopped', sub: 'Task is done — clock back in if you’re still working.' });
+  }
+
+  // When a task the user is tracking transitions to Done, don't clock them all
+  // the way out — they're still on shift, just not on that task. Drop them back
+  // onto the General shift bucket so the clock keeps running.
+  _revertToGeneralShiftIfOnTask(taskId) {
+    const active = this.timeModel.activeFor(this.currentUser);
+    if (!active || active.taskId !== taskId) return;
+    this._revertToGeneralShift(this.currentUser, 'done');
+  }
+
+  // Switch the user's running timer over to the General shift bucket (logging
+  // whatever was on the prior task). Falls back to a full clock-out only when
+  // there's no general-shift task to land on, or they're already on it.
+  _revertToGeneralShift(userId, reason) {
+    if (!App.can('clock.use')) return;
+    const clockId = App.DEFAULT_CLOCK_TASK_ID;
+    const active = this.timeModel.activeFor(userId);
+    if (!active) return;
+    // Already on (or toggling off) the General shift bucket itself → clock out.
+    if (active.taskId === clockId || !this.taskModel.find(clockId)) {
+      this.stopTimer(userId);
+      return;
     }
+    this.startTimer(userId, clockId, {
+      toast: {
+        title: 'Back on General shift',
+        sub: reason === 'done' ? 'Task done — you’re still clocked in.' : 'You’re still clocked in.',
+      },
+    });
   }
 
   // Broadcast a status/priority/completion change to everyone connected to
@@ -464,7 +491,7 @@ App.AppController = class AppController {
     const prev = task[field];
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser));
     if (field === 'status' && value === 'done' && prev !== 'done') {
-      this._stopTimerIfOnTask(id);
+      this._revertToGeneralShiftIfOnTask(id);
     }
     if ((field === 'status' || field === 'priority') && prev !== value) {
       const dict = field === 'status' ? App.STATUSES : App.PRIORITIES;
@@ -521,8 +548,9 @@ App.AppController = class AppController {
       ...(type === 'bid' ? { bidStatus } : {}),
     });
 
-    // Done has a side effect the inline path also applies: stop a running timer.
-    if (status === 'done' && prevStatus !== 'done') this._stopTimerIfOnTask(id);
+    // Done has a side effect the inline path also applies: drop a running timer
+    // on this task back to General shift rather than clocking fully out.
+    if (status === 'done' && prevStatus !== 'done') this._revertToGeneralShiftIfOnTask(id);
 
     // Notify watchers of the meaningful changes (mirrors updateTaskField/reassign).
     if (status !== prevStatus) {
@@ -739,7 +767,7 @@ App.AppController = class AppController {
   }
 
   /* ---------- timer actions ---------- */
-  startTimer(userId, taskId) {
+  startTimer(userId, taskId, opts = {}) {
     if (!App.can('clock.use')) return;
     // Snapshot the task label onto the timer so the team boards can still name
     // it if the task row isn't loadable for whoever's viewing (RLS scope).
@@ -762,7 +790,7 @@ App.AppController = class AppController {
         when: 'just now',
       });
     }
-    this.toastView.show({
+    this.toastView.show(opts.toast || {
       title: 'Clocked in',
       sub: task ? `Tracking time on "${task.title}"` : 'Timer started',
     });
@@ -841,7 +869,10 @@ App.AppController = class AppController {
     if (!App.can('clock.use')) return;
     const active = this.timeModel.activeFor(this.currentUser);
     if (active && active.taskId === taskId) {
-      this.stopTimer(this.currentUser);
+      // Pausing the task you're tracking drops you back to General shift
+      // (still on the clock) so you can do other things first, rather than
+      // clocking you out entirely. Use the topbar Clock widget to clock out.
+      this._revertToGeneralShift(this.currentUser, 'pause');
     } else {
       this.startTimer(this.currentUser, taskId);
     }
