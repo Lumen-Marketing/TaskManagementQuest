@@ -1,12 +1,19 @@
 name: E2E
 
+# E2E checks paused 2026-06-11: no TEST Supabase project is configured, so the
+# local-e2e job hard-fails and reds every commit. Manual-only for now.
+# To re-enable the automated net: uncomment the push / pull_request /
+# deployment_status triggers below AND set the repo secrets the jobs need
+# (SUPABASE_URL_TEST, SUPABASE_ANON_KEY_TEST, TEST_ADMIN_EMAIL/PASSWORD, and
+# optionally TEST_WORKER_EMAIL/PASSWORD). Setup: tools/test-db-setup.sql.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  # Also run preview-smoke automatically whenever Vercel finishes a deployment.
-  deployment_status:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  # pull_request:
+  #   branches: [main]
+  # # Also run preview-smoke whenever Vercel finishes a deployment.
+  # deployment_status:
 
 permissions:
   contents: read
