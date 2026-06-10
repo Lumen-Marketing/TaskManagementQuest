@@ -2154,20 +2154,29 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
    721-900px get the existing 50/50-split flex row layout from the
    small-tablet block further down. */
 @media (max-width: 720px) {
+  /* Side-by-side instead of stacked so the two widgets take one short row, not
+     two tall ones — they were eating too much vertical space above the list. */
   .page-head-widgets {
     width: 100%;
-    flex-direction: column;
+    flex-direction: row;
     gap: 8px;
   }
   .page-head-widgets > .up-next-mount,
   .page-head-widgets > .progress-widget-mount {
-    width: 100%;
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
   }
   .page-head-widgets > * > .up-next-card,
   .page-head-widgets > * > .progress-card {
     width: 100%;
-    height: 72px;
+    height: 64px;
   }
+}
+/* Tiny phones: one column is too narrow for two cards — drop the secondary
+   progress widget and let "Up next" use the full width. */
+@media (max-width: 430px) {
+  .page-head-widgets > .progress-widget-mount { display: none; }
 }
 /* When the detail pane is open on a mid-width viewport the list-pane
    is too narrow for the widgets to coexist with the page title, so
@@ -2575,7 +2584,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     flex-wrap: wrap;
     align-items: center;
     gap: 6px 8px;
-    padding: 12px 52px 12px 14px; /* right pad reserves room for absolute finish-btn */
+    padding: 12px 58px 12px 14px; /* right pad reserves room for absolute finish-btn */
     position: relative;
     border-bottom: 1px solid var(--bg-3);
   }
@@ -2616,12 +2625,14 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   .list-row .finish-btn {
     position: absolute;
-    top: 10px;
-    right: 12px;
-    width: 40px; height: 40px;
+    top: 8px;
+    right: 10px;
+    width: 44px; height: 44px;
     flex: 0 0 auto;
+    z-index: 3;                  /* sit above the wrapped title/pills so taps land on it */
+    touch-action: manipulation;  /* no double-tap-zoom / tap delay swallowing the tap */
   }
-  .list-row .finish-btn i { font-size: 18px; }
+  .list-row .finish-btn i { font-size: 19px; }
   /* Hide noisy/duplicated columns on phones */
   .list-row > div:nth-child(4),   /* assignee (often = current user) */
   .list-row .desc-cell,
