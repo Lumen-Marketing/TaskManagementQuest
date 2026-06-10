@@ -328,9 +328,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-row {
   display: grid;
   grid-template-columns: 28px 1fr 170px 100px 110px 124px 80px 88px 28px 36px;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  padding: 18px 24px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--bg-3);
   font-size: 15px;
   font-weight: 600;
@@ -344,7 +344,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-header {
   display: grid;
   grid-template-columns: 28px 1fr 170px 100px 110px 124px 80px 88px 28px 36px;
-  gap: 14px;
+  gap: 12px;
   padding: 10px 48px;
   font-size: 12.5px;
   text-transform: none;
@@ -2265,7 +2265,7 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
 .list-row,
 #taskViewWrap .list-header {
   grid-template-columns: minmax(160px, 1fr) 90px 130px 90px 120px 80px minmax(120px, 1.4fr) 28px 36px;
-  gap: 6px;
+  gap: 10px;
   padding-left: 18px;
   padding-right: 18px;
 }
@@ -2354,9 +2354,9 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
   letter-spacing: 0;
 }
 
-/* Tighter rows inside each card */
+/* Roomier rows inside each card */
 .task-group .list-row {
-  padding: 11px 24px;
+  padding: 18px 24px;
   border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
 }
 .task-group .list-row:hover {
