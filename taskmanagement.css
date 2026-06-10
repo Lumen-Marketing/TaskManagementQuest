@@ -2247,7 +2247,11 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
 .progress-metric-num { font-size: 12px; line-height: 1.1; }
 .progress-metric-label { font-size: 9.5px; }
 
-@media (max-width: 900px) {
+/* Hide the "Today's progress / 0 of 4 done" label across the whole tablet
+   range, not just ≤900px. Between 901–1200px the widget shrinks to ~220px and
+   the label would otherwise collide with the Total/Done/Pending metrics. Only
+   full desktop (>1200px) has room for the text. */
+@media (max-width: 1200px) {
   .progress-card .progress-card-text { display: none; }
 }
 
@@ -2501,6 +2505,47 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .page-title { font-size: 40px; }
   .work-toolbar { gap: 4px; padding-left: 16px; padding-right: 16px; }
   .btn { padding: 7px 11px; }
+  /* The full desktop grid (~1030px) doesn't fit the ~686px content column at
+     1024px (after the task-card 24px side margins), so it clipped Status/Due
+     off the right edge. There isn't room for all 7 data columns here without
+     cramming, so drop the two lowest-value ones — Description and Label (both
+     empty/"—" in most rows) — and size the rest to their real content widths.
+     The Status <select> ("Working on it") gets a track that actually holds it
+     instead of spilling into Due. Task flexes to fill extra room up at 1200px;
+     Description returns in the laptop tier below, Label on full desktop. */
+  .list-row,
+  #taskViewWrap .list-header {
+    grid-template-columns: minmax(80px, 1fr) 92px 84px 80px 146px 74px 28px 34px;
+    gap: 6px;
+  }
+  #taskViewWrap .list-header > span:nth-child(4),   /* Label label */
+  #taskViewWrap .list-header > span:nth-child(9) {  /* Description label */
+    display: none;
+  }
+  .list-row .label-cell,
+  .list-row .desc-cell { display: none; }
+  /* Trim the dropdown-arrow gutter so the status pill fits its 146px track
+     without overflowing into the Due column. */
+  .list-row .status-select { padding: 4px 22px 4px 11px; }
+}
+
+/* ---- Laptop band (1201-1365px) ----
+   The full desktop grid (~1030px of tracks) needs a ~1340px+ window to fit;
+   below that it overflowed and clipped Status/Due/Description off the right
+   edge (the 1280px laptop was the worst case). This range has more room than
+   a tablet, so keep Description but drop the mostly-empty Label, and give the
+   Status select a track wide enough to not collide with Due. The untouched
+   desktop grid takes over at ≥1366px, where it provably fits. */
+@media (min-width: 1201px) and (max-width: 1365px) {
+  .list-row,
+  #taskViewWrap .list-header {
+    grid-template-columns: minmax(110px, 1fr) 76px 100px 86px 150px 80px minmax(110px, 1.3fr) 28px 34px;
+    gap: 8px;
+  }
+  #taskViewWrap .list-header > span:nth-child(4) { display: none; } /* Label label */
+  .list-row .label-cell { display: none; }
+  /* Keep the status pill inside its track instead of spilling into Due. */
+  .list-row .status-select { padding: 4px 22px 4px 11px; }
 }
 
 /* ---- Small tablets (721-900px) — collapse second-row widgets ---- */
@@ -2515,21 +2560,79 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   .work-toolbar::-webkit-scrollbar { display: none; }
   .work-toolbar > .btn { flex-shrink: 0; }
+  /* The flex spacer pushes the buttons (incl. "New task") off the right edge
+     of the narrow tablet toolbar; drop it so they left-align and scroll. */
+  .work-toolbar-spacer { display: none; }
+  /* Keep the primary "New task" action visible at the start rather than
+     scrolled off the right edge (matches the phone toolbar). */
+  .work-toolbar > .btn-primary { order: -1; }
   /* Side column gets narrower so list has more room */
   .app { grid-template-columns: 200px 1fr; }
   .topbar-left { width: 200px; }
   body.sidebar-minimized .topbar-left { width: 60px; }
-  /* List columns: drop Description (rightmost flexible col) on small tablets */
-  .list-row,
-  #taskViewWrap .list-header {
-    grid-template-columns: minmax(140px, 1.5fr) 76px 104px 100px 80px 100px 70px 28px 36px;
-  }
-  #taskViewWrap .list-header > span:nth-child(9) { display: none; } /* Description label */
-  .list-row .desc-cell { display: none; }
   /* Trim widget heights to fit two-line header */
   .page-head-widgets { width: 100%; }
   .page-head-widgets > .up-next-mount,
   .page-head-widgets > .progress-widget-mount { flex: 1; width: auto; min-width: 0; }
+}
+
+/* ---- Tablet portrait (721-900px) — task list becomes cards ----
+   With a 200px sidebar the content column is only ~560-700px wide, far too
+   narrow for the ~9-column table (columns were being silently clipped off the
+   right edge). Reuse the phone card layout here: title on its own line, meta
+   chips wrapping below, finish button pinned top-right. The surrounding chrome
+   (sidebar, topbar, modals) stays in its tablet form — only the list reflows. */
+@media (max-width: 900px) and (min-width: 721px) {
+  #taskViewWrap .list-header { display: none; }
+  .task-group .list-row,
+  .list-row {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    padding: 14px 56px 14px 18px; /* right pad reserves room for the finish btn */
+    position: relative;
+  }
+  .list-row > input[type="checkbox"] { display: none !important; }
+  .list-row .task-title-cell {
+    flex: 1 1 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
+    order: 2;
+  }
+  /* Force the meta chips onto a fresh line below the title. */
+  .list-row::after { content: ''; flex-basis: 100%; height: 0; order: 3; }
+  .list-row > :not(input):not(.task-title-cell):not(.finish-btn) {
+    flex: 0 0 auto;
+    font-size: 12px;
+    order: 4;
+    justify-self: start;
+    text-align: left;
+  }
+  .list-row .meta-cell {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .list-row .finish-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 40px; height: 40px;
+    flex: 0 0 auto;
+    z-index: 3;
+    touch-action: manipulation;
+  }
+  /* Hide the noisy/secondary cells; keep Assignee (there's room on a tablet). */
+  .list-row .desc-cell,
+  .list-row .timer-btn,
+  .list-row .more-btn { display: none !important; }
 }
 
 /* ---- Phones (≤720px) — biggest mobile rule block ---- */
