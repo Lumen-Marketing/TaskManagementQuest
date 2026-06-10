@@ -525,9 +525,9 @@ App.TaskListView = class TaskListView {
       </div>
       <div class="type-cell">
         <span class="type-text">${type.label}</span>
-        ${label ? `<span class="label-text">${label.label}</span>` : ''}
         ${t.type === 'bid' && App.BID_STATUSES[t.bidStatus] ? `<span class="pill-bid-status ${App.BID_STATUSES[t.bidStatus].cls}">${App.BID_STATUSES[t.bidStatus].label}</span>` : ''}
       </div>
+      <div class="label-cell">${label ? `<span class="label-text">${label.label}</span>` : '<span class="label-empty">—</span>'}</div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
         ${App.utils.avatarHtml(person)}${person.name}
       </div>

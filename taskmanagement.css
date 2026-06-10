@@ -327,7 +327,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 /* List */
 .list-row {
   display: grid;
-  grid-template-columns: 28px 1fr 170px 100px 110px 124px 80px 88px 28px 36px;
+  grid-template-columns: 28px 1fr 150px 116px 100px 110px 124px 80px 88px 28px 36px;
   gap: 12px;
   align-items: center;
   padding: 14px 24px;
@@ -343,7 +343,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-row.selected .task-title-cell { color: var(--ink); }
 .list-header {
   display: grid;
-  grid-template-columns: 28px 1fr 170px 100px 110px 124px 80px 88px 28px 36px;
+  grid-template-columns: 28px 1fr 150px 116px 100px 110px 124px 80px 88px 28px 36px;
   gap: 12px;
   padding: 10px 48px;
   font-size: 12.5px;
@@ -572,10 +572,15 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pill-lumen   { background: var(--pastel-yellow); color: var(--pastel-yellow-ink); }
 .pill-website { background: var(--pastel-green);  color: var(--pastel-green-ink); }
 
-/* Task type / label — plain text (pill design removed) */
-.type-cell { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
-.type-text { font-size: 13px; font-weight: 600; color: var(--ink-1); letter-spacing: 0.01em; }
-.label-text { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+/* Task type / label — plain text (pill design removed), each in its own column */
+.type-cell { display: flex; align-items: center; justify-content: center; gap: 6px 8px; flex-wrap: wrap; }
+.type-text { font-size: 13px; font-weight: 600; color: var(--ink-1); letter-spacing: 0.01em; white-space: nowrap; }
+.label-cell { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.label-text {
+  font-size: 12.5px; font-weight: 500; color: var(--ink-2);
+  line-height: 1.25; text-align: center; text-wrap: balance;
+}
+.label-empty { font-size: 12.5px; color: var(--ink-3); opacity: 0.55; }
 
 /* Legacy task type pills — soft filled pastel (retained for backward compat) */
 .pill-type {
@@ -1463,10 +1468,10 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
   }
   .list-row .type-cell { order: 3; }
   .list-row .due-cell  { order: 4; }
-  .list-row > div:nth-child(8) { order: 5; } /* status pill */
+  .list-row > div:nth-child(9) { order: 5; } /* status pill */
   /* Hide the lower-signal columns on a phone */
-  .list-row > div:nth-child(4),  /* company */
-  .list-row > div:nth-child(6),  /* priority */
+  .list-row > div:nth-child(5),  /* company */
+  .list-row > div:nth-child(7),  /* priority */
   .list-row .timer-btn,
   .list-row .more-btn { display: none; }
   /* .meta-cell carries an inline display:flex, so override needs !important */
@@ -2263,12 +2268,12 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
 
 /* Hide the per-row checkbox column AND collapse the 28px column it lived in,
    so the task title is the first column instead.
-   Column order: Task | Type | Assignee | Priority | Status | Due | Description | timer | finish */
+   Column order: Task | Type | Label | Assignee | Priority | Status | Due | Description | timer | finish */
 .list-row > input[type="checkbox"] { display: none; }
 #taskViewWrap .list-header > span:first-child { display: none; }
 .list-row,
 #taskViewWrap .list-header {
-  grid-template-columns: minmax(160px, 1fr) 90px 130px 90px 120px 80px minmax(120px, 1.4fr) 28px 36px;
+  grid-template-columns: minmax(150px, 1fr) 86px 118px 124px 90px 118px 78px minmax(110px, 1.3fr) 28px 36px;
   gap: 10px;
   padding-left: 18px;
   padding-right: 18px;
@@ -2289,14 +2294,16 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
 #taskViewWrap .list-header > span:nth-child(4),
 #taskViewWrap .list-header > span:nth-child(5),
 #taskViewWrap .list-header > span:nth-child(6),
-#taskViewWrap .list-header > span:nth-child(7) {
+#taskViewWrap .list-header > span:nth-child(7),
+#taskViewWrap .list-header > span:nth-child(8) {
   text-align: center;
 }
 .list-row > :nth-child(3),
 .list-row > :nth-child(4),
 .list-row > :nth-child(5),
 .list-row > :nth-child(6),
-.list-row > :nth-child(7) {
+.list-row > :nth-child(7),
+.list-row > :nth-child(8) {
   justify-self: center;
   text-align: center;
 }
@@ -2512,9 +2519,9 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* List columns: drop Description (rightmost flexible col) on small tablets */
   .list-row,
   #taskViewWrap .list-header {
-    grid-template-columns: minmax(140px, 1.5fr) 80px 110px 80px 100px 70px 28px 36px;
+    grid-template-columns: minmax(140px, 1.5fr) 76px 104px 100px 80px 100px 70px 28px 36px;
   }
-  #taskViewWrap .list-header > span:nth-child(8) { display: none; } /* Description label */
+  #taskViewWrap .list-header > span:nth-child(9) { display: none; } /* Description label */
   .list-row .desc-cell { display: none; }
   /* Trim widget heights to fit two-line header */
   .page-head-widgets { width: 100%; }
@@ -2652,7 +2659,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   .list-row .finish-btn i { font-size: 19px; }
   /* Hide noisy/duplicated columns on phones */
-  .list-row > div:nth-child(4),   /* assignee (often = current user) */
+  .list-row > div:nth-child(5),   /* assignee (often = current user) */
   .list-row .desc-cell,
   .list-row .timer-btn,
   .list-row .more-btn { display: none !important; }
