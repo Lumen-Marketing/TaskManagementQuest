@@ -416,6 +416,7 @@ App.TaskListView = class TaskListView {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
+    const label = App.TASK_LABELS[t.label];
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
@@ -428,7 +429,7 @@ App.TaskListView = class TaskListView {
     card.dataset.id = t.id;
     card.innerHTML = `
       <div class="kanban-card-head">
-        <span class="pill-type ${type.cls}">${type.label}</span>
+        <span class="type-text">${type.label}${label ? ` · ${label.label}` : ''}</span>
         <span class="priority-dot ${priority.cls}" title="${priority.label}"></span>
       </div>
       <div class="kanban-card-title">${App.utils.escapeHtml(t.title)}</div>
@@ -496,6 +497,7 @@ App.TaskListView = class TaskListView {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
+    const label = App.TASK_LABELS[t.label];
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
@@ -522,7 +524,8 @@ App.TaskListView = class TaskListView {
         ${subCount ? `<span class="subtask-badge">${subDone}/${subCount}</span>` : ''}
       </div>
       <div class="type-cell">
-        <span class="pill-type ${type.cls}">${type.label}</span>
+        <span class="type-text">${type.label}</span>
+        ${label ? `<span class="label-text">${label.label}</span>` : ''}
         ${t.type === 'bid' && App.BID_STATUSES[t.bidStatus] ? `<span class="pill-bid-status ${App.BID_STATUSES[t.bidStatus].cls}">${App.BID_STATUSES[t.bidStatus].label}</span>` : ''}
       </div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">

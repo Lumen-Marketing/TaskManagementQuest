@@ -25,6 +25,13 @@ App.TASK_TYPES = {
   web_dev:   { id: 'web_dev',   label: 'Web development', cls: 'type-web-dev'   },
 };
 
+// Job scope tag shown alongside Type. Combo-box choices in the New task popup.
+App.TASK_LABELS = {
+  roof:         { id: 'roof',         label: 'Roof' },
+  roof_framing: { id: 'roof_framing', label: 'Roof & Framing' },
+  framing:      { id: 'framing',      label: 'Framing' },
+};
+
 App.BID_STATUSES = {
   queue:    { id: 'queue',    label: 'In queue',          cls: 'bid-queue'    },
   started:  { id: 'started',  label: 'Started',           cls: 'bid-started'  },

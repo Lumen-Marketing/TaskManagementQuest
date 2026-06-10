@@ -229,6 +229,10 @@ App.TaskDetailView = class TaskDetailView {
           <span class="label">Type</span>
           <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' }).label)}</span>
         </div>
+        <div class="detail-row">
+          <span class="label">Label</span>
+          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_LABELS[t.label] || { label: '—' }).label)}</span>
+        </div>
         ${t.type === 'bid' ? `
         <div class="detail-row">
           <span class="label">Bid status</span>
@@ -359,6 +363,7 @@ App.TaskDetailView = class TaskDetailView {
       description: t.description || '',
       company: t.company,
       type: t.type || 'admin',
+      label: t.label || 'roof',
       bidStatus: t.bidStatus || 'queue',
       status: t.status || 'todo',
       assignee: t.assignee,
@@ -384,6 +389,7 @@ App.TaskDetailView = class TaskDetailView {
     set('description', 'edit-desc');
     set('company', 'edit-company');
     set('type', 'edit-type');
+    set('label', 'edit-label');
     set('bidStatus', 'edit-bidStatus');
     set('status', 'edit-status');
     set('assignee', 'edit-assignee');
@@ -465,6 +471,12 @@ App.TaskDetailView = class TaskDetailView {
           <span class="label">Type</span>
           <select id="edit-type" data-action="type-change" style="font-size:12px; padding:4px 8px;">
             ${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}
+          </select>
+        </div>
+        <div class="detail-row">
+          <span class="label">Label</span>
+          <select id="edit-label" style="font-size:12px; padding:4px 8px;">
+            ${opts(Object.entries(App.TASK_LABELS).map(([k, v]) => [k, v.label]), d.label)}
           </select>
         </div>
         ${d.type === 'bid' ? `

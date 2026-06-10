@@ -527,6 +527,7 @@ App.AppController = class AppController {
     // back to the task's current value when a field wasn't provided.
     const company = fields.company || task.company;
     const type = fields.type || task.type || 'admin';
+    const label = fields.label || task.label || 'roof';
     const priority = fields.priority || task.priority || 'medium';
     const status = fields.status || task.status || 'todo';
     const assignee = fields.assignee || task.assignee;
@@ -544,7 +545,7 @@ App.AppController = class AppController {
     const prevStatus = task.status, prevPriority = task.priority, prevAssignee = task.assignee;
 
     this.taskModel.update(id, {
-      title, description, company, type, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
+      title, description, company, type, label, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
       ...(type === 'bid' ? { bidStatus } : {}),
     });
 
@@ -667,6 +668,7 @@ App.AppController = class AppController {
       title: payload.title,
       description: payload.description,
       type: payload.type || 'admin',
+      label: payload.label || 'roof',
       bidStatus: payload.type === 'bid' ? (payload.bidStatus || 'queue') : null,
       company: payload.company,
       due: payload.due,

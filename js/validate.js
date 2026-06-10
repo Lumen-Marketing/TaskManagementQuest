@@ -107,6 +107,7 @@ App.validate = (function () {
     const title = nonEmpty(payload.title, 'Title', { field: 'title', max: LIMITS.title });
     const description = String(payload.description || '').slice(0, LIMITS.description);
     const type = oneOf(payload.type || 'admin', Object.keys(App.TASK_TYPES || {}), { field: 'type', label: 'Type' });
+    const label = oneOf(payload.label || 'roof', Object.keys(App.TASK_LABELS || {}), { field: 'label', label: 'Label' });
     const company = oneOf(payload.company, Object.keys(App.COMPANIES || {}), { field: 'company', label: 'Company' });
     const priority = oneOf(payload.priority || 'medium', Object.keys(App.PRIORITIES || {}), { field: 'priority', label: 'Priority' });
     const status = oneOf(payload.status || 'todo', Object.keys(App.STATUSES || {}), { field: 'status', label: 'Status' });
@@ -136,7 +137,7 @@ App.validate = (function () {
       : null;
 
     return Object.freeze({
-      title, description, type, company, priority, status,
+      title, description, type, label, company, priority, status,
       assignee, watchers: watchers.slice(), subtasks, due, dueTime, bidStatus,
     });
   }

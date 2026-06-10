@@ -150,6 +150,13 @@ App.NewTaskModalView = class NewTaskModalView {
             </div>
           </div>
 
+          <div class="field" style="margin-top:14px;">
+            <div class="field-label">Label</div>
+            <select id="nt-label" style="width:100%; padding: 6px 10px; font-size: 12px;">
+              ${Object.entries(App.TASK_LABELS).map(([k, v]) => `<option value="${k}" ${k === 'roof' ? 'selected' : ''}>${v.label}</option>`).join('')}
+            </select>
+          </div>
+
           <div id="nt-bid-status-row" class="field hidden" style="margin-top:14px;">
             <div class="field-label">Bid status</div>
             <select id="nt-bid-status" style="width:100%; padding: 6px 10px; font-size: 12px;">
@@ -562,6 +569,7 @@ App.NewTaskModalView = class NewTaskModalView {
       description: document.getElementById('nt-desc').value,
       assignee: document.getElementById('nt-assignee').value,
       type: document.getElementById('nt-type').value,
+      label: document.getElementById('nt-label').value,
       bidStatus: document.getElementById('nt-bid-status').value,
       company: document.getElementById('nt-company').value,
       due: document.getElementById('nt-due').value,
@@ -595,7 +603,7 @@ App.NewTaskModalView = class NewTaskModalView {
   _showFieldError(err) {
     const fieldMap = {
       title: 'nt-title', description: 'nt-desc', assignee: 'nt-assignee',
-      type: 'nt-type', company: 'nt-company', due: 'nt-due',
+      type: 'nt-type', label: 'nt-label', company: 'nt-company', due: 'nt-due',
       dueTime: 'nt-time', priority: 'nt-priority', status: 'nt-status',
       bidStatus: 'nt-bid-status',
     };
