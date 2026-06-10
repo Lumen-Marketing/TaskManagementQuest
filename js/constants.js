@@ -76,6 +76,11 @@ App.GROUP_OPTIONS = {
 
 App.ROLES = {
   worker: { label: 'Worker' },
+  // 'sales' is a worker by another name — identical permissions, distinct label
+  // so salespeople can be tagged in the roster. At the DB layer the
+  // current_profile_role() helper resolves sales -> worker (migration 048), so
+  // RLS treats them the same; this list keeps the two perm sets in lockstep.
+  sales: { label: 'Sales' },
   supervisor: { label: 'Supervisor' },
   admin: { label: 'Admin' },
   developer: { label: 'Developer' },
@@ -83,6 +88,8 @@ App.ROLES = {
 
 App.ROLE_PERMISSIONS = {
   worker: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write'],
+  // Identical to worker — keep these two arrays in sync.
+  sales: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write'],
   supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view'],
   admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view'],
   developer: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'debug.access'],
@@ -125,7 +132,13 @@ App.realRole = function realRole() {
   return (App.currentProfile && App.currentProfile.role) || 'member';
 };
 App.effectiveRole = function effectiveRole() {
-  return App.viewAsRole || App.realRole();
+  const r = App.viewAsRole || App.realRole();
+  // 'sales' is a worker by another name: resolve it to 'worker' for all
+  // permission/scoping checks (App.can + the `=== 'worker'` row-scope branches in
+  // TaskModel/AppController/etc.), mirroring the server-side current_profile_role()
+  // alias (migration 048). realRole() still returns the literal 'sales' so the
+  // roster/labels show it distinctly.
+  return r === 'sales' ? 'worker' : r;
 };
 
 App.can = function can(permission) {

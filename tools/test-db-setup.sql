@@ -527,7 +527,13 @@ security definer
 set search_path = public, pg_temp
 stable
 as $$
-  select coalesce((select p.role from public.profiles p where p.id = auth.uid()), 'member');
+  -- 'sales' is a worker by another name (migration 048): resolve it to 'worker'
+  -- here so every worker RLS branch applies and stale manager `in (...,'sales')`
+  -- entries stay inert.
+  select case when role_raw = 'sales' then 'worker' else role_raw end
+  from (
+    select coalesce((select p.role from public.profiles p where p.id = auth.uid()), 'member') as role_raw
+  ) t;
 $$;
 
 create or replace function public.current_member_id()
@@ -2206,7 +2212,7 @@ update public.profiles set role = 'supervisor' where role = 'construction_superv
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles
   add constraint profiles_role_check
-  check (role in ('worker', 'supervisor', 'admin', 'developer'));
+  check (role in ('worker', 'sales', 'supervisor', 'admin', 'developer'));
 
 commit;
 

@@ -48,7 +48,7 @@ App.HierarchyView = class HierarchyView {
     }
 
     const overseeing = ['supervisor', 'construction_supervisor', 'admin', 'developer'];
-    const poolRoles = ['worker', 'member'];
+    const poolRoles = ['worker', 'sales', 'member'];
     const profiles = (App.PROFILES || []).filter(p => p.member_id);
     const me = App.currentProfile || {};
     const isManager = App.can('roles.manage');

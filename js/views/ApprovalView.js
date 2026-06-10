@@ -68,7 +68,7 @@ App.ApprovalView = class ApprovalView {
     // current selection so simply saving the row won't silently reassign them.
     const roleEntries = Object.entries(App.ROLES);
     if (profile.role && !App.ROLES[profile.role]) {
-      const retiredLabels = { member: 'Member', sales: 'Sales', construction_supervisor: 'Construction supervisor' };
+      const retiredLabels = { member: 'Member', construction_supervisor: 'Construction supervisor' };
       roleEntries.unshift([profile.role, { label: `${retiredLabels[profile.role] || profile.role} (retired)` }]);
     }
     const roles = roleEntries.map(([id, role]) =>

@@ -128,11 +128,13 @@ Deno.serve(async (req: Request) => {
     // allowlist fails SAFE (a new role is denied until added here), which is the
     // correct direction for a security gate. Enforced by
     // tests/role-gate.spec.js ("worker invoking notify-email gets a 403").
-    // Retired roles (construction_supervisor, sales) are kept inert for parity
-    // with the SQL RLS role lists. Approval is still required; RLS enforces
-    // row-level access.
+    // Retired role construction_supervisor is kept inert for parity with the SQL
+    // RLS role lists. Approval is still required; RLS enforces row-level access.
+    // NOTE: 'sales' is intentionally NOT here. It is a worker by another name
+    // (migration 048 resolves sales -> worker), and workers must not send mail —
+    // so sales is denied exactly like a worker.
     const SEND_ROLES = new Set([
-      "admin", "construction_supervisor", "supervisor", "sales", "developer",
+      "admin", "construction_supervisor", "supervisor", "developer",
     ]);
     const callerRole = typeof callerProfile.role === "string" ? callerProfile.role.trim() : "";
     if (!callerProfile.approved || !SEND_ROLES.has(callerRole)) {
