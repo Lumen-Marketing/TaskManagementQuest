@@ -615,7 +615,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .bid-started  { color: var(--blue); }
 .bid-supplier { color: var(--amber); }
 .bid-ready    { color: var(--green); }
-.pill-status { padding: 4px 11px; border-radius: var(--radius-pill); font-family: var(--font-body); font-size: 13px; font-weight: 700; letter-spacing: 0.01em; }
+.pill-status { padding: 4px 11px; border-radius: var(--radius-pill); font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: 0.01em; }
 .status-todo    { background: var(--pastel-blue);   color: var(--pastel-blue-ink); }
 .status-doing   { background: var(--pastel-blue);   color: var(--pastel-blue-ink); }
 .status-review  { background: var(--pastel-yellow); color: var(--pastel-yellow-ink); }
@@ -632,9 +632,12 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   font: inherit;
   max-width: 100%;
   text-align: left;
-  /* Reserve room on the right so the native dropdown arrow isn't crammed
-     against the label (overrides .pill-status' 11px right padding). */
-  padding: 4px 26px 4px 12px;
+  /* `font: inherit` would pull the larger row font and re-widen the pill (a
+     <select> sizes to its widest option), so pin the size down explicitly. */
+  font-size: 12px;
+  /* Reserve room on the right for the native dropdown arrow, but keep it tight
+     so the pill stays short (overrides .pill-status' 11px right padding). */
+  padding: 4px 18px 4px 10px;
   transition: filter var(--dur-fast) var(--ease-out);
 }
 .status-select:hover { filter: brightness(0.96); }
@@ -2524,9 +2527,6 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   .list-row .label-cell,
   .list-row .desc-cell { display: none; }
-  /* Trim the dropdown-arrow gutter so the status pill fits its 146px track
-     without overflowing into the Due column. */
-  .list-row .status-select { padding: 4px 22px 4px 11px; }
 }
 
 /* ---- Laptop band (1201-1365px) ----
@@ -2544,8 +2544,6 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   #taskViewWrap .list-header > span:nth-child(4) { display: none; } /* Label label */
   .list-row .label-cell { display: none; }
-  /* Keep the status pill inside its track instead of spilling into Due. */
-  .list-row .status-select { padding: 4px 22px 4px 11px; }
 }
 
 /* ---- Small tablets (721-900px) — collapse second-row widgets ---- */
