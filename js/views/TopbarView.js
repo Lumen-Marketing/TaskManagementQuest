@@ -117,7 +117,7 @@ App.TopbarView = class TopbarView {
       this.clockWidget.classList.add('running');
       this.clockLabel.textContent = task ? (task.title.slice(0, 18) + (task.title.length > 18 ? '…' : '')) : 'Tracking';
       this.clockTimer.classList.remove('hidden');
-      this.clockTimer.textContent = App.utils.formatDuration(Date.now() - active.startedAt);
+      this.clockTimer.textContent = App.utils.formatDuration(this._liveShiftMs(active));
       this.clockIcon.className = 'ti ti-player-stop-filled';
     } else {
       this.clockWidget.classList.remove('running');
@@ -127,10 +127,18 @@ App.TopbarView = class TopbarView {
     }
   }
 
+  // Total time on the *currently tracked task* so far today (logged sessions +
+  // the live one), so the clock resumes its running total when you switch back
+  // to a task — e.g. General shift continues from 2h instead of restarting at 0.
+  _liveShiftMs(active) {
+    const day0 = new Date(); day0.setHours(0, 0, 0, 0);
+    return this.timeModel.sessionTotalForUserTask(this.currentUser, active.taskId, day0.getTime());
+  }
+
   tickLive() {
     const active = this.timeModel.activeFor(this.currentUser);
     if (active && !this.clockTimer.classList.contains('hidden')) {
-      this.clockTimer.textContent = App.utils.formatDuration(Date.now() - active.startedAt);
+      this.clockTimer.textContent = App.utils.formatDuration(this._liveShiftMs(active));
     }
   }
 

@@ -114,6 +114,23 @@ App.TimeModel = class TimeModel {
     return total;
   }
 
+  // Cumulative time ONE user has spent on ONE task within [sinceMs, now),
+  // including the live portion of a still-open timer on that task. Backs the
+  // live clock display so switching away from and back to a task (e.g. General
+  // shift) resumes the running total instead of restarting at 0: every switch
+  // closes the prior session as a logged entry, and this sums those entries
+  // plus the current live session.
+  sessionTotalForUserTask(userId, taskId, sinceMs = null) {
+    let total = this.entries
+      .filter(e => e.userId === userId && e.taskId === taskId && (!sinceMs || e.start >= sinceMs))
+      .reduce((s, e) => s + (e.durationMs || 0), 0);
+    const active = this.activeTimers[userId];
+    if (active && active.taskId === taskId) {
+      total += this._liveMsSince(active.startedAt, sinceMs);
+    }
+    return total;
+  }
+
   totalForTaskIds(taskIds) {
     const idSet = new Set(taskIds);
     let total = this.entries

@@ -32,7 +32,16 @@ App.TimeView = class TimeView {
     this.wrap.querySelectorAll('[data-live-timer]').forEach(el => {
       const uid = el.getAttribute('data-live-timer');
       const at = this.timeModel.activeFor(uid);
-      if (at) el.textContent = App.utils.formatDuration(Date.now() - at.startedAt);
+      if (!at) return;
+      // The "Currently tracking" banner (data-live-shift) shows today's running
+      // total for the active task so it resumes across task switches; the team
+      // board's rows show only the current session's elapsed.
+      if (el.hasAttribute('data-live-shift')) {
+        const day0 = new Date(); day0.setHours(0, 0, 0, 0);
+        el.textContent = App.utils.formatDuration(this.timeModel.sessionTotalForUserTask(uid, at.taskId, day0.getTime()));
+      } else {
+        el.textContent = App.utils.formatDuration(Date.now() - at.startedAt);
+      }
     });
   }
 
@@ -80,7 +89,7 @@ App.TimeView = class TimeView {
           <div class="timer-banner" style="margin: 16px 0 0;">
             <i class="ti ti-player-record-filled"></i>
             <span>Currently tracking: <strong>${App.utils.escapeHtml((this.taskModel.find(active.taskId) || {}).title || 'task')}</strong></span>
-            <span class="live-time" data-live-timer="${me}">${App.utils.formatDuration(Date.now() - active.startedAt)}</span>
+            <span class="live-time" data-live-timer="${me}" data-live-shift="1">${App.utils.formatDuration(this.timeModel.sessionTotalForUserTask(me, active.taskId, today0.getTime()))}</span>
             <button class="btn btn-danger btn-sm" data-action="stop-timer" data-user="${me}"><i class="ti ti-player-stop-filled"></i>Clock out</button>
           </div>
         ` : ''}
