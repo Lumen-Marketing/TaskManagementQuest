@@ -632,6 +632,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   font: inherit;
   max-width: 100%;
   text-align: left;
+  /* Reserve room on the right so the native dropdown arrow isn't crammed
+     against the label (overrides .pill-status' 11px right padding). */
+  padding: 4px 26px 4px 12px;
   transition: filter var(--dur-fast) var(--ease-out);
 }
 .status-select:hover { filter: brightness(0.96); }
@@ -2670,6 +2673,8 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     font-size: 11px;
     padding: 5px 11px;
   }
+  /* Keep room for the native dropdown arrow on the status <select>. */
+  .list-row .status-select { padding: 5px 26px 5px 12px; }
   .list-row .type-text { font-size: 12px; }
   .list-row .label-text { font-size: 11px; }
   .list-row .priority-block { min-width: 0; }
