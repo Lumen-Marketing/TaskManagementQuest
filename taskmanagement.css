@@ -518,8 +518,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   padding: 4px 8px; color: var(--ink-2);
 }
 .subtask-chip > .ti-circle { color: var(--ink-3); font-size: 13px; }
-.subtask-chip .remove { cursor: pointer; color: var(--ink-3); font-size: 14px; }
+.subtask-chip .remove { cursor: pointer; color: var(--ink-3); font-size: 14px; transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
 .subtask-chip .remove:hover { color: var(--rust); }
+.subtask-chip .remove:active { transform: scale(0.85); }
 
 /* Detail Edit form — subtask rows with a remove button */
 .edit-subtask-row { display: flex; align-items: center; gap: 6px; }
@@ -1002,16 +1003,26 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 
 .notify-box { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
 .notify-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.notify-option { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 12px; cursor: pointer; }
+.notify-option {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 8px; margin: 0 -8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px; cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.notify-option:hover { background: var(--bg-3); }
+.notify-option:active { transform: scale(0.99); }
 .notify-option i { font-size: 14px; color: var(--ink-2); }
 .notify-option .email-hint { margin-left: auto; font-size: 10.5px; color: var(--ink-3); font-family: var(--font-mono); }
 
 .watcher-tags { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px 7px; border: 1px solid var(--border); border-radius: var(--radius-sm); min-height: 32px; align-items: center; }
 .watcher-tag { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-2); padding: 3px 8px; border-radius: var(--radius-sm); font-size: 11px; }
-.watcher-tag .remove { cursor: pointer; opacity: 0.5; transition: opacity 0.12s; }
+.watcher-tag .remove { cursor: pointer; opacity: 0.5; transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
 .watcher-tag .remove:hover { opacity: 1; color: var(--rust); }
-.watcher-add { font-size: 11px; color: var(--ink-3); padding: 3px 6px; cursor: pointer; }
+.watcher-tag .remove:active { transform: scale(0.85); }
+.watcher-add { font-size: 11px; color: var(--ink-3); padding: 3px 6px; cursor: pointer; transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
 .watcher-add:hover { color: var(--ink); }
+.watcher-add:active { transform: scale(0.96); }
 .watcher-picker { position: relative; }
 .watcher-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); z-index: 10; padding: 4px; }
 .watcher-dropdown-item { padding: 6px 10px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 12px; }
@@ -1024,9 +1035,17 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   box-shadow: var(--shadow-lg); font-size: 12.5px; max-width: 380px;
   border: 1px solid var(--border-strong);
   display: flex; gap: 10px; align-items: flex-start;
-  animation: slideInRight var(--dur-mid) var(--ease-out);
+  /* Transition (not keyframe) so stacked toasts retarget smoothly when several
+     arrive or leave at once. @starting-style animates insertion with no JS
+     timing; browsers without it just show the toast instantly. Exit is driven
+     by the .leaving class so it shares the same easing as the entrance. */
+  opacity: 1; transform: translateX(0);
+  transition: opacity var(--dur-mid) var(--ease-out), transform var(--dur-mid) var(--ease-out);
 }
-@keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@starting-style {
+  .toast { opacity: 0; transform: translateX(16px); }
+}
+.toast.leaving { opacity: 0; transform: translateX(16px); }
 .toast i.icon-main { font-size: 16px; margin-top: 1px; color: var(--amber); }
 .toast-body { flex: 1; line-height: 1.4; }
 .toast-title { font-weight: 600; margin-bottom: 2px; }
@@ -1051,10 +1070,12 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 /* Empty state */
 .empty {
   padding: 60px 24px; text-align: center; color: var(--ink-3);
+  display: flex; flex-direction: column; align-items: center;
 }
 .empty i { font-size: 48px; color: var(--border-strong); }
 .empty-title { font-family: var(--font-display); font-size: 22px; color: var(--ink-2); margin-top: 8px; }
-.empty-sub { font-size: 12.5px; margin-top: 4px; }
+.empty-sub { font-size: 12.5px; margin-top: 4px; max-width: 44ch; }
+.empty-cta { margin-top: 18px; }
 
 /* User menu (avatar dropdown) */
 .user-menu {
@@ -1076,10 +1097,11 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   padding: 7px 10px; border-radius: var(--radius-sm);
   background: var(--bg-2); border: 1px solid var(--border);
   font-size: 12px; color: var(--ink-2);
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 .theme-opt i { font-size: 14px; }
 .theme-opt:hover { background: var(--bg-3); color: var(--ink); }
+.theme-opt:active { transform: scale(0.97); }
 .theme-opt.active { background: var(--surface); color: var(--amber); border-color: var(--amber); }
 
 /* Notif inbox */
@@ -3295,6 +3317,8 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   color: var(--rust-ink);
   text-decoration: underline;
 }
+.btn-link-danger { transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.btn-link-danger:active { transform: scale(0.97); }
 .btn-link-danger i { font-size: 14px; }
 
 /* ============================================================

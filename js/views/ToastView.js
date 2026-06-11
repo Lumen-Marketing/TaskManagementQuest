@@ -32,10 +32,11 @@ App.ToastView = class ToastView {
     }
     const dwell = duration || (variant === 'celebrate' ? 5500 : 4500);
     setTimeout(() => {
-      el.style.transition = 'opacity 0.3s, transform 0.3s';
-      el.style.opacity = '0';
-      el.style.transform = 'translateX(20px)';
-      setTimeout(() => el.remove(), 300);
+      // Exit via the shared .leaving class (CSS owns the easing/duration), then
+      // remove once it has played. Guard against double-remove on manual close.
+      if (!el.isConnected) return;
+      el.classList.add('leaving');
+      setTimeout(() => el.remove(), 320);
     }, dwell);
   }
 };

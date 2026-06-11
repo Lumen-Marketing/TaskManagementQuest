@@ -253,7 +253,7 @@ App.TaskListView = class TaskListView {
     if (header) header.classList.add('hidden');
 
     if (tasks.length === 0) {
-      this.body.innerHTML = `<div class="empty"><i class="ti ti-checks"></i><div class="empty-title">Nothing scheduled</div><div class="empty-sub">No tasks assigned to you yet.</div></div>`;
+      this._renderEmpty({ icon: 'ti-coffee', title: 'Nothing scheduled', sub: 'No tasks are assigned to you right now.' });
       return;
     }
 
@@ -319,7 +319,7 @@ App.TaskListView = class TaskListView {
     this.body.innerHTML = '';
 
     if (tasks.length === 0) {
-      this.body.innerHTML = `<div class="empty"><i class="ti ti-checks"></i><div class="empty-title">Nothing here</div><div class="empty-sub">No tasks match this view.</div></div>`;
+      this._renderEmpty(this._emptyConfig());
       return;
     }
 
@@ -383,7 +383,7 @@ App.TaskListView = class TaskListView {
     this.body.innerHTML = '';
 
     if (tasks.length === 0) {
-      this.body.innerHTML = `<div class="empty"><i class="ti ti-checks"></i><div class="empty-title">Nothing here</div><div class="empty-sub">No tasks match this view.</div></div>`;
+      this._renderEmpty(this._emptyConfig());
       return;
     }
 
@@ -453,7 +453,7 @@ App.TaskListView = class TaskListView {
     this.body.innerHTML = '';
 
     if (tasks.length === 0) {
-      this.body.innerHTML = `<div class="empty"><i class="ti ti-checks"></i><div class="empty-title">Nothing here</div><div class="empty-sub">No tasks match this view.</div></div>`;
+      this._renderEmpty(this._emptyConfig());
       return;
     }
 
@@ -598,6 +598,38 @@ App.TaskListView = class TaskListView {
       drawer.classList.toggle('hidden', !willExpand);
     }
     if (toggleBtn) toggleBtn.classList.toggle('expanded', willExpand);
+  }
+
+  // ---- Empty states --------------------------------------------------------
+  // Copy is tailored to the active view: a "good" empty (nothing overdue) reads
+  // as reassurance with no CTA, while a "blank slate" empty (no tasks at all)
+  // offers a New task button when the user can create.
+  _emptyConfig() {
+    const view = this.controller.uiState.view;
+    const byView = {
+      all:     { icon: 'ti-clipboard-list', title: 'No tasks yet',          sub: 'Create the first task and it shows up here.',           cta: true },
+      mine:    { icon: 'ti-coffee',         title: 'Nothing on your plate', sub: 'No tasks are assigned to you right now.',               cta: true },
+      hot:     { icon: 'ti-flame',          title: 'Nothing urgent',        sub: 'No critical or urgent tasks. All calm.' },
+      today:   { icon: 'ti-sun',            title: 'Nothing due today',     sub: "You're clear for the day." },
+      overdue: { icon: 'ti-circle-check',   title: 'Nothing overdue',       sub: 'Everything is on schedule.' },
+    };
+    if (byView[view]) return byView[view];
+    if (view.startsWith('person:'))  return { icon: 'ti-user',     title: 'No tasks assigned', sub: 'This person has no tasks in the current scope.', cta: true };
+    if (view.startsWith('company:')) return { icon: 'ti-building', title: 'No tasks here',     sub: 'No tasks for this company yet.',                cta: true };
+    return { icon: 'ti-checks', title: 'Nothing here', sub: 'No tasks match this view.' };
+  }
+
+  _renderEmpty({ icon, title, sub, cta }) {
+    const showCta = cta && App.can('tasks.write');
+    this.body.className = '';
+    this.body.innerHTML = `<div class="empty">
+      <i class="ti ${icon}"></i>
+      <div class="empty-title">${App.utils.escapeHtml(title)}</div>
+      <div class="empty-sub">${App.utils.escapeHtml(sub)}</div>
+      ${showCta ? `<button class="btn btn-primary empty-cta" type="button" data-action="empty-new-task"><i class="ti ti-plus"></i>New task</button>` : ''}
+    </div>`;
+    const btn = this.body.querySelector('[data-action="empty-new-task"]');
+    if (btn) btn.addEventListener('click', () => this.controller.openNewTaskModal());
   }
 
   // ---- Inline status menu --------------------------------------------------
