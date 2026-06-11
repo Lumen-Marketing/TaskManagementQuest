@@ -533,9 +533,10 @@ App.TaskListView = class TaskListView {
       </div>
       <div><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
       <div>${App.can('tasks.write')
-        ? `<select class="pill-status status-select ${status.cls}" data-action="set-status" title="Change status" aria-label="Status">
-            ${Object.entries(App.STATUSES).map(([k, v]) => `<option value="${k}" ${k === t.status ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}
-          </select>`
+        ? `<button class="pill-status status-pill-trigger ${status.cls}" data-action="open-status" data-current="${t.status || 'todo'}" title="Change status" aria-haspopup="listbox" aria-expanded="false">
+            <span class="status-pill-label">${App.utils.escapeHtml(status.label)}</span>
+            <i class="ti ti-chevron-down status-pill-caret"></i>
+          </button>`
         : `<span class="pill-status ${status.cls}">${status.label}</span>`}</div>
       <div class="due-cell ${due.cls}">${due.text}${t.dueTime ? `<span class="due-time">${App.utils.formatClockTz(t.dueTime)}</span>` : ''}</div>
       <div class="desc-cell" title="${App.utils.escapeHtml(t.description || '')}">${App.utils.escapeHtml(t.description || '')}</div>
@@ -557,23 +558,11 @@ App.TaskListView = class TaskListView {
         else if (action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
         else if (action === 'finish-task') this.controller.completeTask(t.id);
         else if (action === 'toggle-subtasks') this._toggleSubtaskDrawer(t.id, row, target);
+        else if (action === 'open-status') this._openStatusMenu(t.id, target);
         return;
       }
       this.controller.selectTask(t.id);
     });
-
-    // Inline status change — pick a status straight from the row without
-    // opening Edit. Stop the click so opening the dropdown doesn't also select
-    // the task; the change is applied via updateTaskField (which notifies
-    // watchers and, on "done", drops a running timer back to General shift).
-    const statusSelect = row.querySelector('[data-action="set-status"]');
-    if (statusSelect) {
-      statusSelect.addEventListener('click', (e) => e.stopPropagation());
-      statusSelect.addEventListener('change', (e) => {
-        e.stopPropagation();
-        this.controller.updateTaskField(t.id, 'status', e.target.value);
-      });
-    }
 
     if (!subCount) return row;
 
@@ -609,5 +598,122 @@ App.TaskListView = class TaskListView {
       drawer.classList.toggle('hidden', !willExpand);
     }
     if (toggleBtn) toggleBtn.classList.toggle('expanded', willExpand);
+  }
+
+  // ---- Inline status menu --------------------------------------------------
+  // A single shared popover (one per view, mounted on <body>) replaces the old
+  // native <select>. Anchored with position:fixed so it escapes the row's
+  // overflow clipping, and fully keyboard-operable (arrows / Enter / Esc).
+  _ensureStatusMenu() {
+    if (this._statusMenuEl) return this._statusMenuEl;
+    const el = document.createElement('div');
+    el.className = 'status-menu hidden';
+    el.setAttribute('role', 'listbox');
+    el.setAttribute('aria-label', 'Set status');
+    document.body.appendChild(el);
+    this._statusMenuEl = el;
+
+    // Dismiss when interaction lands outside the menu/trigger, or on scroll/resize
+    // (the popover is fixed and would otherwise float away from its anchor).
+    this._statusMenuDismiss = (e) => {
+      if (!this._statusMenuEl || this._statusMenuEl.classList.contains('hidden')) return;
+      if (this._statusMenuEl.contains(e.target)) return;
+      if (this._statusMenuTrigger && this._statusMenuTrigger.contains(e.target)) return;
+      this._closeStatusMenu();
+    };
+    document.addEventListener('pointerdown', this._statusMenuDismiss, true);
+    window.addEventListener('resize', () => this._closeStatusMenu());
+    window.addEventListener('scroll', () => this._closeStatusMenu(), true);
+    return el;
+  }
+
+  _openStatusMenu(taskId, trigger) {
+    const el = this._ensureStatusMenu();
+    // Re-clicking the open trigger toggles it shut.
+    if (this._statusMenuTrigger === trigger && !el.classList.contains('hidden')) {
+      this._closeStatusMenu();
+      return;
+    }
+    const current = trigger.dataset.current || 'todo';
+    el.innerHTML = Object.entries(App.STATUSES).map(([k, v]) =>
+      `<button class="status-menu-item" role="option" data-key="${k}" aria-selected="${k === current}">
+        <span class="status-dot ${v.cls}"></span>
+        <span class="status-menu-label">${App.utils.escapeHtml(v.label)}</span>
+        <i class="ti ti-check status-menu-check"></i>
+      </button>`
+    ).join('');
+
+    this._statusMenuTaskId = taskId;
+    this._statusMenuTrigger = trigger;
+    trigger.setAttribute('aria-expanded', 'true');
+
+    el.querySelectorAll('.status-menu-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._applyStatus(this._statusMenuTaskId, item.dataset.key);
+      });
+    });
+
+    el.classList.remove('hidden');
+    this._positionStatusMenu(trigger);
+
+    this._statusMenuKeydown = (e) => this._onStatusMenuKey(e);
+    el.addEventListener('keydown', this._statusMenuKeydown);
+
+    const sel = el.querySelector('[aria-selected="true"]') || el.querySelector('.status-menu-item');
+    if (sel) sel.focus();
+  }
+
+  _positionStatusMenu(trigger) {
+    const el = this._statusMenuEl;
+    const r = trigger.getBoundingClientRect();
+    el.style.minWidth = Math.max(r.width, 168) + 'px';
+    const mh = el.offsetHeight;
+    const mw = el.offsetWidth;
+    const gap = 6;
+    let top = r.bottom + gap;
+    let origin = 'top';
+    if (top + mh > window.innerHeight - 8) {
+      top = r.top - gap - mh;     // flip above when there's no room below
+      origin = 'bottom';
+    }
+    let left = r.left;
+    if (left + mw > window.innerWidth - 8) left = window.innerWidth - 8 - mw;
+    el.style.top = Math.max(8, top) + 'px';
+    el.style.left = Math.max(8, left) + 'px';
+    el.style.setProperty('--menu-origin', origin);
+  }
+
+  _onStatusMenuKey(e) {
+    const items = [...this._statusMenuEl.querySelectorAll('.status-menu-item')];
+    const idx = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown')      { e.preventDefault(); (items[idx + 1] || items[0]).focus(); }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); (items[idx - 1] || items[items.length - 1]).focus(); }
+    else if (e.key === 'Home')      { e.preventDefault(); items[0].focus(); }
+    else if (e.key === 'End')       { e.preventDefault(); items[items.length - 1].focus(); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (idx >= 0) this._applyStatus(this._statusMenuTaskId, items[idx].dataset.key); }
+    else if (e.key === 'Escape')    { e.preventDefault(); this._closeStatusMenu(); }
+    else if (e.key === 'Tab')       { this._closeStatusMenu(); }
+  }
+
+  _applyStatus(taskId, key) {
+    this._closeStatusMenu();
+    this.controller.updateTaskField(taskId, 'status', key);
+  }
+
+  _closeStatusMenu() {
+    const el = this._statusMenuEl;
+    if (!el || el.classList.contains('hidden')) return;
+    el.classList.add('hidden');
+    if (this._statusMenuKeydown) { el.removeEventListener('keydown', this._statusMenuKeydown); this._statusMenuKeydown = null; }
+    const trigger = this._statusMenuTrigger;
+    this._statusMenuTrigger = null;
+    this._statusMenuTaskId = null;
+    // Return focus to the trigger on keyboard dismiss; skip if the row was
+    // re-rendered out from under us (e.g. after a status change).
+    if (trigger && document.contains(trigger)) {
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.focus();
+    }
   }
 };

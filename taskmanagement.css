@@ -61,8 +61,9 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
 .search i { position: absolute; left: 14px; font-size: 14px; color: var(--ink-3); pointer-events: none; }
 .search input { width: 260px; padding-left: 36px; font-size: 12px; height: 36px; background: var(--surface); border-color: var(--border); border-radius: var(--radius-pill); }
 .search input:focus { background: var(--surface); border-color: var(--amber); }
-.icon-btn { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; color: var(--ink); background: var(--surface); border: 1px solid var(--border); transition: background 0.15s, border-color 0.15s; }
+.icon-btn { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; color: var(--ink); background: var(--surface); border: 1px solid var(--border); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
 .icon-btn:hover { background: var(--bg-2); border-color: var(--border-strong); }
+.icon-btn:active { transform: scale(0.94); }
 .icon-btn i { font-size: 16px; }
 .icon-btn .dot {
   position: absolute; top: 1px; right: 1px;
@@ -87,11 +88,12 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
   font-size: 12px; font-weight: 500;
   color: var(--ink);
   cursor: pointer;
-  transition: background var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
+  transition: background var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform var(--dur-fast) var(--ease-out);
   user-select: none;
 }
 .clock-widget i { font-size: 13px; color: var(--green); }
 .clock-widget:hover { background: var(--bg-3); color: var(--ink); }
+.clock-widget:active { transform: scale(0.97); }
 .clock-widget.running {
   background: var(--green-bg);
   border-color: var(--green);
@@ -264,7 +266,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--ink); transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); box-shadow: var(--shadow-sm); }
 .btn:hover { background: var(--bg-2); border-color: var(--border-strong); }
-.btn:active { transform: translateY(1px); }
+.btn:active { transform: scale(0.97); }
 .btn i { font-size: 14px; }
 .btn-primary { background: oklch(20% 0.01 70); color: oklch(98% 0 0); border-color: oklch(20% 0.01 70); }
 .btn-primary:hover { background: oklch(15% 0.01 70); border-color: oklch(15% 0.01 70); filter: none; }
@@ -289,10 +291,11 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   font-size: 12.5px;
   font-weight: 500;
   color: var(--ink-2);
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 .layout-btn i { font-size: 15px; }
 .layout-btn:hover { background: var(--bg-2); color: var(--ink); }
+.layout-btn:active { transform: scale(0.97); }
 .layout-btn.active {
   background: oklch(20% 0.01 70);
   color: var(--amber);
@@ -574,7 +577,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 
 /* Task type / label — plain text (pill design removed), each in its own column */
 .type-cell { display: flex; align-items: center; justify-content: center; gap: 6px 8px; flex-wrap: wrap; }
-.type-text { font-size: 13px; font-weight: 600; color: var(--ink-1); letter-spacing: 0.01em; white-space: nowrap; }
+.type-text { font-size: 13px; font-weight: 600; color: var(--ink); letter-spacing: 0.01em; white-space: nowrap; }
 .label-cell { display: flex; align-items: center; justify-content: center; min-width: 0; }
 .label-text {
   font-size: 12.5px; font-weight: 500; color: var(--ink-2);
@@ -623,25 +626,67 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .status-hold    { background: var(--pastel-peach);  color: var(--pastel-peach-ink); }
 .status-pending { background: var(--bg-3);          color: var(--ink-2); }
 
-/* Inline status picker in list rows — looks like the status pill but is a real
-   <select> so you can change status without opening Edit. */
-.status-select {
-  border: none;
-  cursor: pointer;
-  outline: none;
-  font: inherit;
+/* Inline status pill — a real button that opens the shared .status-menu popover
+   (replaces the old native <select>, whose arrow spacing + auto-width to the
+   longest option could never be tamed). Only the CURRENT status shows, so the
+   pill stays short and the column width is predictable. */
+.status-pill-trigger {
+  display: inline-flex; align-items: center; gap: 5px;
   max-width: 100%;
-  text-align: left;
-  /* `font: inherit` would pull the larger row font and re-widen the pill (a
-     <select> sizes to its widest option), so pin the size down explicitly. */
+  /* Tighter right padding leaves room for the caret without widening the pill
+     (overrides .pill-status' 11px). */
+  padding: 4px 9px 4px 11px;
   font-size: 12px;
-  /* Reserve room on the right for the native dropdown arrow, but keep it tight
-     so the pill stays short (overrides .pill-status' 11px right padding). */
-  padding: 4px 18px 4px 10px;
-  transition: filter var(--dur-fast) var(--ease-out);
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
-.status-select:hover { filter: brightness(0.96); }
-.status-select:focus-visible { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent, currentColor); }
+.status-pill-trigger .status-pill-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-pill-trigger .status-pill-caret { flex: none; font-size: 13px; opacity: 0.65; margin-right: -2px; transition: transform var(--dur-fast) var(--ease-out); }
+.status-pill-trigger:hover { filter: brightness(0.96); }
+.status-pill-trigger:active { transform: scale(0.97); }
+.status-pill-trigger[aria-expanded="true"] .status-pill-caret { transform: rotate(180deg); opacity: 0.85; }
+
+/* The popover itself — mounted on <body>, positioned with JS (position:fixed). */
+.status-menu {
+  position: fixed;
+  z-index: 220;
+  min-width: 168px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column; gap: 2px;
+  transform-origin: var(--menu-origin, top) center;
+  animation: statusMenuIn var(--dur-fast) var(--ease-out);
+}
+.status-menu.hidden { display: none; }
+@keyframes statusMenuIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+.status-menu-item {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px; font-weight: 600; color: var(--ink);
+  text-align: left;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.status-menu-item:hover { background: var(--bg-2); }
+.status-menu-item:focus-visible { outline: none; background: var(--bg-2); box-shadow: inset 0 0 0 2px var(--amber); }
+.status-menu-item .status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.status-menu-item .status-dot.status-doing   { background: var(--blue); }
+.status-menu-item .status-dot.status-pending { background: var(--ink-3); }
+.status-menu-item .status-dot.status-hold    { background: var(--rust); }
+.status-menu-item .status-dot.status-review  { background: var(--amber); }
+.status-menu-item .status-dot.status-done    { background: var(--green); }
+.status-menu-label { flex: 1; min-width: 0; }
+.status-menu-check { flex: none; font-size: 15px; color: var(--amber); opacity: 0; }
+.status-menu-item[aria-selected="true"] .status-menu-check { opacity: 1; }
+@media (hover: none) and (pointer: coarse) {
+  .status-menu-item { padding: 11px 12px; font-size: 13.5px; }
+}
 
 /* Pastel-soft priority pills (intelly vibe) */
 .priority-block {
@@ -671,9 +716,10 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   border-radius: var(--radius-sm);
   display: flex; align-items: center; justify-content: center;
   color: var(--ink-3);
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 .timer-btn:hover { background: var(--bg-3); color: var(--ink); }
+.timer-btn:active { transform: scale(0.92); }
 .timer-btn.active { color: var(--green); background: var(--green-bg); }
 .timer-btn.active:hover { color: var(--rust); }
 .timer-btn i { font-size: 14px; }
@@ -833,7 +879,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   z-index: 100; animation: fadeIn var(--dur-short) var(--ease-out);
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .modal {
   width: 100%; max-width: 540px; background: var(--surface);
   border-radius: var(--radius-sm); box-shadow: var(--shadow-lg);
@@ -1041,7 +1087,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .notif-head { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .notif-head-title { font-family: var(--font-display); font-size: 18px; }
 .notif-list { max-height: 400px; overflow-y: auto; }
-.notif-item { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+.notif-item { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background var(--dur-fast) var(--ease-out); }
 .notif-item:hover { background: var(--bg-2); }
 .notif-item.unread { background: var(--amber-bg); }
 .notif-item.unread:hover { background: color-mix(in oklch, var(--amber-bg), var(--ink) 8%); }
@@ -1128,6 +1174,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   box-shadow: var(--shadow-sm);
 }
 .kanban-card:hover { background: var(--bg-2); border-color: var(--border-strong); }
+.kanban-card:active { transform: scale(0.985); }
 .kanban-card.selected { border-color: var(--amber); box-shadow: 0 0 0 2px var(--amber-bg); }
 .kanban-card.done .kanban-card-title { text-decoration: line-through; color: var(--ink-3); }
 .kanban-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
@@ -2774,8 +2821,6 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     font-size: 11px;
     padding: 5px 11px;
   }
-  /* Keep room for the native dropdown arrow on the status <select>. */
-  .list-row .status-select { padding: 5px 26px 5px 12px; }
   .list-row .type-text { font-size: 12px; }
   .list-row .label-text { font-size: 11px; }
   .list-row .priority-block { min-width: 0; }
