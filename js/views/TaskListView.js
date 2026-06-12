@@ -32,7 +32,7 @@ App.TaskListView = class TaskListView {
   subscribe() {
     App.EventBus.on('tasks:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('time:changed', () => { if (this.visible()) this.renderList(); });
-    App.EventBus.on('selection:changed', () => { if (this.visible()) this.renderList(); });
+    App.EventBus.on('selection:changed', () => { if (this.visible()) this._syncSelectionHighlight(); });
     App.EventBus.on('search:changed', () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('layout:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('view:changed', (view) => {
@@ -131,6 +131,16 @@ App.TaskListView = class TaskListView {
   }
 
   renderList() {
+    // Preserve the scroll position across full rebuilds so a background poll
+    // merge or a timer toggle doesn't jump the user back to the top.
+    const pane = this.body.closest('.list-pane');
+    const scrollTop = pane ? pane.scrollTop : 0;
+    const out = this._renderListInner();
+    if (pane && scrollTop) pane.scrollTop = scrollTop;
+    return out;
+  }
+
+  _renderListInner() {
     // The Watching view becomes a team-supervision dashboard rather than a
     // task table: it lists direct reports with their overdue/stale flags and
     // a Ping action.
@@ -139,6 +149,19 @@ App.TaskListView = class TaskListView {
     if (layout === 'kanban') return this.renderKanban();
     if (layout === 'timeline') return this.renderTimeline();
     return this.renderTable();
+  }
+
+  /* Selecting a task only changes which row is highlighted — toggle the class
+     in place instead of rebuilding the whole list (which lost scroll position
+     and thrashed the DOM on every click). The detail pane is opened separately
+     by TaskDetailView's own selection:changed handler. */
+  _syncSelectionHighlight() {
+    const id = this.controller.uiState.selectedTaskId;
+    this.body.querySelectorAll('[data-id].selected').forEach(el => el.classList.remove('selected'));
+    if (id == null) return;
+    const safe = (window.CSS && CSS.escape) ? CSS.escape(String(id)) : String(id);
+    const el = this.body.querySelector(`[data-id="${safe}"]`);
+    if (el) el.classList.add('selected');
   }
 
   renderWatchingTeam() {
