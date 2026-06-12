@@ -70,7 +70,7 @@ App.FilterBarView = class FilterBarView {
       { value: 'month',    label: 'This month' },
     ];
     const dueChips = dueOptions.map(o =>
-      `<span class="filter-chip ${f.dueRange === o.value ? 'active' : ''}" data-due="${o.value}">${o.label}</span>`
+      `<button type="button" class="filter-chip ${f.dueRange === o.value ? 'active' : ''}" data-due="${o.value}" aria-pressed="${f.dueRange === o.value}">${o.label}</button>`
     ).join('');
 
     const count = this.controller.activeFilterCount();
@@ -128,11 +128,11 @@ App.FilterBarView = class FilterBarView {
 
   chip({ group, value, label, swatch, swatchVar, active }) {
     const dot = swatch
-      ? `<span class="swatch" style="background:${swatch};"></span>`
+      ? `<span class="swatch" style="background:${App.utils.safeColor(swatch)};"></span>`
       : swatchVar
         ? `<span class="swatch" style="background:var(${swatchVar});"></span>`
         : '';
-    return `<span class="filter-chip ${active ? 'active' : ''}" data-group="${group}" data-value="${value}">${dot}${label}</span>`;
+    return `<button type="button" class="filter-chip ${active ? 'active' : ''}" data-group="${App.utils.escapeHtml(group)}" data-value="${App.utils.escapeHtml(value)}" aria-pressed="${!!active}">${dot}${App.utils.escapeHtml(label)}</button>`;
   }
 
   bindChips() {

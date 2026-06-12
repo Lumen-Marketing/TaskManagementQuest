@@ -1,6 +1,23 @@
 window.App = window.App || {};
 
 App.utils = {
+  /* Make a non-button element behave like a button for keyboard / AT users:
+     role=button, focusable, and Enter/Space activate it. Pass a handler to run
+     directly, or omit it to synthesize a click (so an existing delegated click
+     handler fires). Optional label sets aria-label. */
+  makeActivatable(el, handler, label) {
+    if (!el) return;
+    el.setAttribute('role', 'button');
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    if (label) el.setAttribute('aria-label', label);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        if (handler) handler(e); else el.click();
+      }
+    });
+  },
+
   initials(name) {
     return String(name || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   },

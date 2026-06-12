@@ -310,6 +310,7 @@ App.TaskListView = class TaskListView {
       }
       this.controller.selectTask(t.id);
     });
+    App.utils.makeActivatable(row, null, `Open task: ${t.title}`);
     return row;
   }
 
@@ -444,6 +445,7 @@ App.TaskListView = class TaskListView {
       </div>
     `;
     card.addEventListener('click', () => this.controller.selectTask(t.id));
+    App.utils.makeActivatable(card, null, `Open task: ${t.title}`);
     return card;
   }
 
@@ -563,6 +565,10 @@ App.TaskListView = class TaskListView {
       }
       this.controller.selectTask(t.id);
     });
+
+    // Priority pill is a click-to-cycle control — make it keyboard-operable.
+    const prioBtn = row.querySelector('[data-action="cycle-priority"]');
+    if (prioBtn) App.utils.makeActivatable(prioBtn, null, `Priority: ${priority.label}. Activate to change.`);
 
     if (!subCount) return row;
 
