@@ -2620,15 +2620,13 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .page-head { flex-wrap: wrap; gap: 10px; padding: 14px 18px; }
   .page-title { font-size: 32px; }
   .work-toolbar {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    flex-wrap: wrap;
+    overflow: visible;
     padding: 10px 16px 4px;
   }
-  .work-toolbar::-webkit-scrollbar { display: none; }
-  .work-toolbar > .btn { flex-shrink: 0; }
+  .work-toolbar > .btn { flex: 0 0 auto; }
   /* The flex spacer pushes the buttons (incl. "New task") off the right edge
-     of the narrow tablet toolbar; drop it so they left-align and scroll. */
+     of the narrow tablet toolbar; drop it so they left-align and wrap. */
   .work-toolbar-spacer { display: none; }
   /* Keep the primary "New task" action visible at the start rather than
      scrolled off the right edge (matches the phone toolbar). */
@@ -2736,25 +2734,25 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .clock-widget { padding: 10px 14px; min-height: 40px; font-size: 13px; }
   .clock-widget i { font-size: 15px; }
 
-  /* Toolbar buttons — let them scroll horizontally rather than wrap */
+  /* Toolbar buttons — wrap onto multiple rows so every control stays visible
+     and reachable. (Was a hidden-scrollbar horizontal scroll, which silently
+     clipped Sort/Group off the right edge and read as broken.) */
   .work-toolbar {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    flex-wrap: wrap;
+    overflow: visible;
     padding: 10px 12px 4px;
     gap: 6px;
-    flex-wrap: nowrap;
   }
-  .work-toolbar::-webkit-scrollbar { display: none; }
   .work-toolbar-spacer { display: none; }
   .work-toolbar > .btn {
-    flex-shrink: 0;
+    flex: 0 0 auto;
     min-height: 40px;
     padding: 9px 14px;
     font-size: 13px;
   }
   .work-toolbar > .btn i { font-size: 15px; }
-  .work-toolbar > .btn-primary { order: -1; } /* New task first */
+  /* New task leads on its own full-width row; the view controls wrap below. */
+  .work-toolbar > .btn-primary { order: -1; flex: 1 0 100%; justify-content: center; }
 
   /* Page header — tighter, no oversized title */
   .page-head { padding: 12px 14px 8px; gap: 6px; }
