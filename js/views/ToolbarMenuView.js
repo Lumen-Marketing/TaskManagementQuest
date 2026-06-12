@@ -15,6 +15,9 @@ App.ToolbarMenuView = class ToolbarMenuView {
     if (sortBtn)  sortBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('sort',  sortBtn); });
     if (groupBtn) groupBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('group', groupBtn); });
     if (viewBtn)  viewBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('view',  viewBtn); });
+    [sortBtn, groupBtn, viewBtn].forEach(btn => {
+      if (btn) { btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false'); }
+    });
     document.addEventListener('click', (e) => {
       if (!this.menu) return;
       if (this.menu.contains(e.target)) return;
@@ -40,14 +43,44 @@ App.ToolbarMenuView = class ToolbarMenuView {
     this.render();
     this.position();
     anchor.classList.add('active');
+    anchor.setAttribute('aria-expanded', 'true');
+    this._onKey = this._onKey.bind(this);
+    this.menu.addEventListener('keydown', this._onKey);
+    this._focusItem(0, true);
   }
 
   close() {
-    if (this.anchor) this.anchor.classList.remove('active');
+    if (this.anchor) {
+      this.anchor.classList.remove('active');
+      this.anchor.setAttribute('aria-expanded', 'false');
+    }
     if (this.menu) this.menu.remove();
     this.menu = null;
     this.menuFor = null;
     this.anchor = null;
+  }
+
+  _items() { return this.menu ? [...this.menu.querySelectorAll('.toolbar-menu-item')] : []; }
+
+  _focusItem(idx, preferActive) {
+    const items = this._items();
+    if (!items.length) return;
+    const target = preferActive
+      ? (items.find(i => i.classList.contains('active')) || items[0])
+      : (items[idx] || items[0]);
+    target.focus();
+  }
+
+  _onKey(e) {
+    const items = this._items();
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown')      { e.preventDefault(); (items[i + 1] || items[0]).focus(); }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); (items[i - 1] || items[items.length - 1]).focus(); }
+    else if (e.key === 'Home')      { e.preventDefault(); items[0] && items[0].focus(); }
+    else if (e.key === 'End')       { e.preventDefault(); items[items.length - 1] && items[items.length - 1].focus(); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.activeElement && document.activeElement.click(); }
+    else if (e.key === 'Escape')    { e.preventDefault(); const a = this.anchor; this.close(); a && a.focus(); }
+    else if (e.key === 'Tab')       { this.close(); }
   }
 
   position() {
@@ -108,6 +141,17 @@ App.ToolbarMenuView = class ToolbarMenuView {
         el.addEventListener('click', () => { this.controller.setLayout(el.dataset.layout); this.close(); });
       });
     }
+
+    // ARIA roles for the menu + items (re-applied on every render).
+    this.menu.setAttribute('role', 'menu');
+    this.menu.querySelectorAll('.toolbar-menu-item').forEach(el => {
+      el.setAttribute('role', 'menuitemradio');
+      el.setAttribute('tabindex', '-1');
+      el.setAttribute('aria-checked', el.classList.contains('active') ? 'true' : 'false');
+    });
+    // If a re-render (e.g. flipping sort direction by keyboard) dropped focus to
+    // <body>, pull it back to the active item so keyboard nav continues.
+    if (document.activeElement === document.body) this._focusItem(0, true);
   }
 
   /* Keep the deck buttons informative — show the active option inline. */

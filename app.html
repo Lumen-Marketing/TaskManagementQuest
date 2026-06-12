@@ -57,11 +57,11 @@
       <div id="viewAsSwitcher" class="viewas-switcher hidden"></div>
 
       <!-- Clock-in / Clock-out widget -->
-      <div id="clockWidget" class="clock-widget" title="Clock in / out">
-        <i class="ti ti-player-play-filled"></i>
+      <button type="button" id="clockWidget" class="clock-widget" aria-label="Clock in / out">
+        <i class="ti ti-player-play-filled" aria-hidden="true"></i>
         <span id="clockLabel">Clock in</span>
         <span id="clockTimer" class="clock-timer hidden">00:00:00</span>
-      </div>
+      </button>
 
       <button class="icon-btn" id="scaleBtn" aria-label="Display size" title="Display size">
         <i class="ti ti-zoom-scan"></i>
@@ -80,7 +80,7 @@
           <div class="notif-list" id="notifList"></div>
         </div>
       </div>
-      <div class="avatar" id="userAvatar" title="Account" style="background: var(--amber); color: var(--color-accent-ink);">AM</div>
+      <button type="button" class="avatar" id="userAvatar" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" style="background: var(--amber); color: var(--color-accent-ink);">AM</button>
     </div>
   </div>
 

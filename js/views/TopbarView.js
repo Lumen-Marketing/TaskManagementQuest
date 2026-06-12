@@ -43,9 +43,16 @@ App.TopbarView = class TopbarView {
       });
     }
 
+    this.notifBtn.setAttribute('aria-haspopup', 'menu');
+    this.notifBtn.setAttribute('aria-expanded', 'false');
     this.notifBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.notifPanel.classList.toggle('hidden');
+      const open = !this.notifPanel.classList.toggle('hidden');
+      this.notifBtn.setAttribute('aria-expanded', String(open));
+      if (open) {
+        const first = this.notifList.querySelector('.notif-item');
+        if (first) first.focus();
+      }
     });
     this.markAllReadBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -54,6 +61,18 @@ App.TopbarView = class TopbarView {
     document.addEventListener('click', (e) => {
       if (!this.notifPanel.contains(e.target) && !this.notifBtn.contains(e.target)) {
         this.notifPanel.classList.add('hidden');
+        this.notifBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Esc closes whichever topbar popover is open and returns focus to its trigger.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (this.userMenu) { this.closeUserMenu(); if (this.avatar) this.avatar.focus(); }
+      if (!this.notifPanel.classList.contains('hidden')) {
+        this.notifPanel.classList.add('hidden');
+        this.notifBtn.setAttribute('aria-expanded', 'false');
+        this.notifBtn.focus();
       }
     });
 
@@ -168,10 +187,12 @@ App.TopbarView = class TopbarView {
     `).join('');
 
     this.notifList.querySelectorAll('.notif-item').forEach(item => {
+      App.utils.makeActivatable(item);
       item.addEventListener('click', () => {
         const notifId = item.dataset.notifId;
         const taskId = item.dataset.taskId;
         this.notifPanel.classList.add('hidden');
+        this.notifBtn.setAttribute('aria-expanded', 'false');
         this.controller.openNotification(notifId, taskId);
       });
     });
@@ -195,9 +216,9 @@ App.TopbarView = class TopbarView {
       </div>
       <div class="user-menu-section">
         <div class="field-label" style="margin-bottom:6px;">Theme</div>
-        <div class="theme-toggle" role="tablist">
-          <button class="theme-opt ${currentTheme === 'dark' ? 'active' : ''}" data-theme-set="dark"><i class="ti ti-moon"></i>Dark</button>
-          <button class="theme-opt ${currentTheme === 'light' ? 'active' : ''}" data-theme-set="light"><i class="ti ti-sun"></i>Light</button>
+        <div class="theme-toggle" role="group" aria-label="Theme">
+          <button class="theme-opt ${currentTheme === 'dark' ? 'active' : ''}" data-theme-set="dark" aria-pressed="${currentTheme === 'dark'}"><i class="ti ti-moon"></i>Dark</button>
+          <button class="theme-opt ${currentTheme === 'light' ? 'active' : ''}" data-theme-set="light" aria-pressed="${currentTheme === 'light'}"><i class="ti ti-sun"></i>Light</button>
         </div>
       </div>
       <div class="user-menu-item" data-action="edit-profile"><i class="ti ti-user-edit"></i>Edit profile</div>
@@ -230,14 +251,32 @@ App.TopbarView = class TopbarView {
         const next = btn.dataset.themeSet;
         document.documentElement.setAttribute('data-theme', next);
         try { localStorage.setItem('questhq:theme', next); } catch (e) {}
-        menu.querySelectorAll('[data-theme-set]').forEach(b => b.classList.toggle('active', b === btn));
+        menu.querySelectorAll('[data-theme-set]').forEach(b => {
+          const on = b === btn;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
       });
     });
+
+    // Keyboard/AT: expose the menu + items and pull focus into it on open.
+    menu.setAttribute('role', 'menu');
+    menu.querySelectorAll('.user-menu-item').forEach(it => {
+      it.setAttribute('role', 'menuitem');
+      it.setAttribute('tabindex', '0');
+      it.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); it.click(); }
+      });
+    });
+    if (this.avatar) this.avatar.setAttribute('aria-expanded', 'true');
+    const firstItem = menu.querySelector('.user-menu-item');
+    if (firstItem) firstItem.focus();
   }
 
   closeUserMenu() {
     if (!this.userMenu) return;
     this.userMenu.remove();
     this.userMenu = null;
+    if (this.avatar) this.avatar.setAttribute('aria-expanded', 'false');
   }
 };
