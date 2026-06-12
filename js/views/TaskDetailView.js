@@ -65,6 +65,13 @@ App.TaskDetailView = class TaskDetailView {
     this.backdrop.addEventListener('click', (e) => {
       if (e.target === this.backdrop) this.controller.closeDetail();
     });
+    // Esc closes the detail in view mode (edit mode handles its own Esc to exit
+    // editing first). Trap Tab focus inside the dialog and remember the trigger.
+    this.backdrop.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !this.editingId) { e.preventDefault(); this.controller.closeDetail(); }
+    });
+    this._releaseTrap = App.utils.trapFocus(this.backdrop);
+    this._justOpened = true;
   }
 
   // Placeholder shown in the detail modal when a task is selected but its data
@@ -97,6 +104,8 @@ App.TaskDetailView = class TaskDetailView {
     if (this.backdrop) {
       // Removing the backdrop detaches #detailPane with it; we keep the JS
       // reference in this.pane and re-attach it on the next _openModal().
+      if (this._releaseTrap) { this._releaseTrap(); this._releaseTrap = null; }
+      this._justOpened = false;
       this.backdrop.remove();
       this.backdrop = null;
     }
@@ -345,6 +354,13 @@ App.TaskDetailView = class TaskDetailView {
     // View mode is read-only — all field editing lives behind the Edit button.
     const deleteBtn = this.pane.querySelector('[data-action="delete-task"]');
     if (deleteBtn) deleteBtn.addEventListener('click', () => this.controller.deleteTask(t.id));
+
+    // On first open, move focus into the dialog (not on background re-renders).
+    if (this._justOpened) {
+      this._justOpened = false;
+      const cb = this.pane.querySelector('[data-action="close"]');
+      if (cb) cb.focus();
+    }
   }
 
   _formatDue(due) {

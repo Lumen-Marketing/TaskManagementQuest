@@ -22,6 +22,29 @@ App.utils = {
     return String(name || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   },
 
+  /* Trap Tab focus inside `container` (so it can't escape into the page behind a
+     modal) and restore focus to whatever was focused before, when released.
+     Returns a release() function to call on close. */
+  trapFocus(container) {
+    const prev = document.activeElement;
+    const sel = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const focusable = () => [...container.querySelectorAll(sel)]
+      .filter(el => el.offsetWidth || el.offsetHeight || el === document.activeElement);
+    const onKey = (e) => {
+      if (e.key !== 'Tab') return;
+      const f = focusable();
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    container.addEventListener('keydown', onKey);
+    return function release() {
+      container.removeEventListener('keydown', onKey);
+      if (prev && typeof prev.focus === 'function') prev.focus();
+    };
+  },
+
   /* Returns a self-contained <span class="avatar-xs ..."> element for
      the given person. Prefers the uploaded avatar_url over the colored
      initials fallback. Pass `extraClass` to merge additional classes

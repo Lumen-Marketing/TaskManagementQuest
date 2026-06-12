@@ -20,8 +20,12 @@ App.NewTaskModalView = class NewTaskModalView {
     this.modal.className = 'modal-backdrop';
     this.modal.id = 'newTaskModal';
     this.modal.innerHTML = this.template();
+    this.modal.setAttribute('role', 'dialog');
+    this.modal.setAttribute('aria-modal', 'true');
+    this.modal.setAttribute('aria-label', 'New task');
     document.body.appendChild(this.modal);
 
+    this._releaseTrap = App.utils.trapFocus(this.modal);
     this.bindEvents();
     setTimeout(() => document.getElementById('nt-title').focus(), 50);
     this.renderWatcherChips();
@@ -31,6 +35,7 @@ App.NewTaskModalView = class NewTaskModalView {
 
   close() {
     if (!this.modal) return;
+    if (this._releaseTrap) { this._releaseTrap(); this._releaseTrap = null; }
     this.modal.remove();
     this.modal = null;
   }
