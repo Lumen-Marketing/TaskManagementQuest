@@ -114,16 +114,22 @@ App.TopbarView = class TopbarView {
     const active = this.timeModel.activeFor(this.currentUser);
     if (active) {
       const task = this.controller.getTask(active.taskId);
+      // Running state shows only the timer — the task title lives on the tooltip
+      // (and in the Up-next card) so the pill keeps a fixed width and the topbar
+      // never reflows when you clock in/out.
       this.clockWidget.classList.add('running');
-      this.clockLabel.textContent = task ? (task.title.slice(0, 18) + (task.title.length > 18 ? '…' : '')) : 'Tracking';
+      this.clockLabel.classList.add('hidden');
       this.clockTimer.classList.remove('hidden');
       this.clockTimer.textContent = App.utils.formatDuration(this._liveShiftMs(active));
       this.clockIcon.className = 'ti ti-player-stop-filled';
+      this.clockWidget.title = task ? `Tracking: ${task.title} — tap to clock out` : 'Tap to clock out';
     } else {
       this.clockWidget.classList.remove('running');
+      this.clockLabel.classList.remove('hidden');
       this.clockLabel.textContent = 'Clock in';
       this.clockTimer.classList.add('hidden');
       this.clockIcon.className = 'ti ti-player-play-filled';
+      this.clockWidget.title = 'Clock in / out';
     }
   }
 

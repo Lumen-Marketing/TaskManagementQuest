@@ -80,8 +80,11 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
 
 /* Clock widget */
 .clock-widget {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 16px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 36px; padding: 0 14px;
+  /* Fixed min-width so the idle "Clock in" label and the running timer occupy
+     the same footprint — the topbar no longer reflows on clock in/out. */
+  min-width: 108px;
   border-radius: var(--radius-pill);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -91,6 +94,7 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
   transition: background var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform var(--dur-fast) var(--ease-out);
   user-select: none;
 }
+.clock-widget .clock-timer { font-variant-numeric: tabular-nums; }
 .clock-widget i { font-size: 13px; color: var(--green); }
 .clock-widget:hover { background: var(--bg-3); color: var(--ink); }
 .clock-widget:active { transform: scale(0.97); }
@@ -1493,11 +1497,19 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
   /* Topbar: tighten, drop the sub-label, let search shrink */
   .topbar { padding: 0 12px; gap: 8px; }
   .topbar-left { gap: 8px; min-width: 0; }
-  .brand-name { font-size: 16px; }
+  .brand-name { font-size: 16px; white-space: nowrap; }
   .brand-sub { display: none; }
-  .topbar-right { gap: 6px; }
-  .search input { width: 150px; }
-  .clock-widget { padding: 6px 9px; }
+  .topbar-right { gap: 6px; min-width: 0; }
+  /* Search is the flexible element: it absorbs the shrink so the fixed-width
+     controls (clock, icon buttons, avatar) always stay on-screen. */
+  .search { flex: 1 1 56px; min-width: 0; max-width: 200px; }
+  .search input { width: 100%; min-width: 0; }
+  .clock-widget { padding: 6px 10px; min-width: 92px; flex: none; }
+  /* The developer "View as" switcher is space-hungry; drop its label and cap
+     its width on phones so it can't shove the clock/icons off the right edge. */
+  .viewas-switcher { gap: 4px; padding: 0 8px; max-width: 150px; }
+  .viewas-switcher .viewas-label { display: none; }
+  .viewas-switcher select { max-width: 110px; text-overflow: ellipsis; }
 
   /* Deck: stack the two control rows; let chip rows swipe horizontally
      instead of pushing the page wider than the screen */
@@ -3069,9 +3081,8 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .search { flex-shrink: 1; min-width: 0; }
   .search input { min-width: 0; }
 }
-@media (max-width: 600px) and (min-width: 461px) {
-  .search input { width: 120px; }
-}
+/* Search width on phones is handled by the flexible .search rule above
+   (flex: 1 1 56px), so no fixed override is needed here. */
 
 /* ---- Resize handle: hide on coarse pointers regardless of width
         (it's pixel-hunting territory) ---- */
