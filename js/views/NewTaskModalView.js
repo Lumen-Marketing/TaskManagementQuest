@@ -89,11 +89,11 @@ App.NewTaskModalView = class NewTaskModalView {
         </div>
         <div class="modal-body">
           <div class="field field-title">
-            <input type="text" id="nt-title" placeholder="Lead Name / Task" autofocus />
+            <input type="text" id="nt-title" placeholder="Lead Name / Task" aria-label="Task title" required autofocus />
           </div>
 
           <div class="field">
-            <textarea id="nt-desc" placeholder="Add details, links, context..." rows="3" style="resize: vertical;"></textarea>
+            <textarea id="nt-desc" placeholder="Add details, links, context..." aria-label="Description" rows="3" style="resize: vertical;"></textarea>
           </div>
 
           <div class="field-row" style="margin-bottom: 14px;">
@@ -617,6 +617,12 @@ App.NewTaskModalView = class NewTaskModalView {
     if (el) {
       el.focus();
       el.style.borderBottom = '1px solid var(--rust)';
+      el.setAttribute('aria-invalid', 'true');
+      // Clear the invalid state once the user starts correcting the field.
+      el.addEventListener('input', () => {
+        el.removeAttribute('aria-invalid');
+        el.style.borderBottom = '';
+      }, { once: true });
     }
     // Surface the validator's message via toast so the user sees WHY the
     // submit was rejected, not just a red underline.

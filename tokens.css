@@ -13,7 +13,9 @@
   --surface:       oklch(18% 0.006 70);
   --ink:           oklch(94% 0.013 85);
   --ink-2:         oklch(76% 0.012 85);
-  --ink-3:         oklch(55% 0.012 82);
+  /* Lifted from 55% -> 64% so muted body-adjacent text clears WCAG AA (~4.5:1)
+     on the warm-charcoal bg instead of ~3.5:1. */
+  --ink-3:         oklch(64% 0.012 82);
   --border:        oklch(28% 0.006 72);
   --border-strong: oklch(35% 0.007 72);
 
@@ -169,6 +171,10 @@
 }
 
 html, body { overflow-x: clip; }
+
+/* Placeholder text — explicit AA-compliant color (browsers default to a faint
+   gray that fails contrast). opacity:1 stops Firefox from dimming it further. */
+::placeholder { color: var(--ink-3); opacity: 1; }
 
 /* Universal focus ring — instant, never animated, ≥3:1 contrast */
 :focus-visible {
