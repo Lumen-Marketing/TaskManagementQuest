@@ -236,14 +236,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       taskModel.markDirty(dirtyTasks.map(t => t.id));
       timeModel.markUnsavedEntries(unsavedEntries.map(e => e.id));
       if (controller.toastView) {
-        // Include the underlying Supabase message in the toast — the wrapper's
-        // friendly text alone hides the diagnosis (RLS, constraint, network).
-        const friendly = (err && err.message) || 'Save failed';
-        const cause = err && err.cause && err.cause.message;
-        controller.toastView.show({
-          title: 'Supabase save failed',
-          sub: cause ? `${friendly} — ${cause}` : friendly,
-        });
+        // Reassure first (the changes are re-flagged above and WILL retry), then
+        // include the underlying Supabase message so the cause (RLS, constraint,
+        // network) isn't hidden behind friendly text.
+        if (!navigator.onLine) {
+          controller.toastView.show({
+            title: "You're offline",
+            sub: 'Your changes are kept and will sync automatically when you reconnect.',
+          });
+        } else {
+          const friendly = (err && err.message) || 'Save failed';
+          const cause = err && err.cause && err.cause.message;
+          controller.toastView.show({
+            title: "Couldn't save — your changes are kept",
+            sub: `Retrying shortly. ${cause ? `${friendly} — ${cause}` : friendly}`,
+          });
+        }
       }
       return false;
     }
@@ -287,7 +295,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // page load doesn't dump a wall of toasts for older unread items.
   if (!App.previewMode && App.can('tasks.view')) {
     const seenNotifIds = new Set(notifModel.all().map(n => n.id));
+    // Surface a *persistent* sync outage once (not every 30s tick) so the user
+    // knows their list may be stale; announce recovery once it clears. A single
+    // transient blip stays silent.
+    let pollFailStreak = 0;
+    let pollWarned = false;
     setInterval(async () => {
+      let ok = true;
       // Tasks have no realtime subscription, so re-pull them here too: a task
       // created/edited by someone else won't appear until the next poll
       // otherwise. Merged non-destructively so unsaved local edits survive.
@@ -296,7 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const freshTasks = await dataStore.loadTasks(taskModel.dirtyIds());
           taskModel.mergeServer(freshTasks);
         }
-      } catch (e) { /* transient poll error — ignore, retry next tick */ }
+      } catch (e) { ok = false; console.warn('[app] task poll failed', e); }
       try {
         const fresh = await dataStore.loadNotifications();
         const arrivals = fresh.filter(n => !seenNotifIds.has(n.id) && !n.read);
@@ -315,7 +329,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             sub: 'Open the bell icon to see them all.',
           });
         }
-      } catch (e) { /* transient poll error — ignore */ }
+      } catch (e) { ok = false; console.warn('[app] notification poll failed', e); }
+
+      if (ok) {
+        if (pollWarned) toastView.show({ title: 'Back in sync', sub: 'Reconnected to the server.' });
+        pollFailStreak = 0;
+        pollWarned = false;
+      } else if (++pollFailStreak >= 3 && !pollWarned) {
+        pollWarned = true;
+        toastView.show({ title: 'Sync paused', sub: "Can't reach the server. Your work is safe; still retrying every 30s." });
+      }
     }, 30000);
   }
 

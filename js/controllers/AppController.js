@@ -624,9 +624,23 @@ App.AppController = class AppController {
     }
     const unique = Array.from(new Set((emails || []).filter(Boolean)));
     if (unique.length && emailContent) {
-      const res = await this.dataStore.sendEmail({ to: unique, subject: emailContent.subject, html: emailContent.html });
-      if (res && res.ok === false && !res.skipped) {
-        console.warn('[notify] email delivery failed:', res.error);
+      // Email is best-effort: a rejected promise here must not bubble to the
+      // global unhandledrejection handler. `skipped` = email isn't configured
+      // (expected, silent); a real failure tells the user the in-app notice
+      // still went through so they know the assignee was reached.
+      try {
+        const res = await this.dataStore.sendEmail({ to: unique, subject: emailContent.subject, html: emailContent.html });
+        if (res && res.ok === false && !res.skipped) {
+          console.warn('[notify] email delivery failed:', res.error);
+          if (this.toastView) {
+            this.toastView.show({
+              title: 'Email not sent',
+              sub: 'The in-app notification was delivered, but the email failed.',
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[notify] email delivery threw', err);
       }
     }
   }
