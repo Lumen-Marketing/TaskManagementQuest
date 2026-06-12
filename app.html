@@ -11,18 +11,7 @@
 <link rel="stylesheet" href="vendor/tabler-icons/tabler-icons.min.css">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="taskmanagement.css">
-<script>
-  // Apply persisted theme before first paint to avoid flash.
-  (function () {
-    try {
-      var t = localStorage.getItem('questhq:theme');
-      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-      else document.documentElement.setAttribute('data-theme', 'light');
-    } catch (e) {
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-  })();
-</script>
+<script src="js/theme-boot.js"></script>
 </head>
 <body>
 <!-- Accessibility: lets keyboard / screen-reader users jump straight past the

@@ -437,10 +437,12 @@ function renderRoleGate() {
       <div style="max-width:520px;background:#131315;border:1px solid #2A2A2E;border-radius:10px;padding:24px;box-shadow:0 24px 48px rgba(0,0,0,.5);">
         <div style="font-family:'Instrument Serif',serif;font-size:30px;margin-bottom:8px;">Access pending</div>
         <div style="color:#B8B2A4;line-height:1.5;">Your account is currently <strong>${App.utils.escapeHtml(roleLabel)}</strong>. An admin or construction supervisor needs to assign your role before you can use Quest HQ.</div>
-        <button onclick="App.signOut()" style="margin-top:18px;padding:10px 14px;border:0;border-radius:6px;background:#E8A03A;color:#1A1208;font-weight:700;cursor:pointer;">Sign out</button>
+        <button id="roleGateSignOut" style="margin-top:18px;padding:10px 14px;border:0;border-radius:6px;background:#E8A03A;color:#1A1208;font-weight:700;cursor:pointer;">Sign out</button>
       </div>
     </div>
   `;
+  const signOutBtn = document.getElementById('roleGateSignOut');
+  if (signOutBtn) signOutBtn.addEventListener('click', () => App.signOut());
 }
 
 function renderFatalDataError(err) {
@@ -450,8 +452,10 @@ function renderFatalDataError(err) {
       <div style="max-width:520px;background:#FFF9EF;border:1px solid #E2D3BC;border-radius:8px;padding:22px;box-shadow:0 16px 40px rgba(46,31,17,.12);">
         <div style="font-weight:800;font-size:18px;margin-bottom:8px;">Supabase data unavailable</div>
         <div style="font-size:14px;line-height:1.5;color:#6E5B45;">${message}</div>
-        <button onclick="window.location.reload()" style="margin-top:16px;padding:10px 14px;border:0;border-radius:6px;background:#8D3F1F;color:white;font-weight:700;cursor:pointer;">Retry</button>
+        <button id="fatalRetry" style="margin-top:16px;padding:10px 14px;border:0;border-radius:6px;background:#8D3F1F;color:white;font-weight:700;cursor:pointer;">Retry</button>
       </div>
     </div>
   `;
+  const retryBtn = document.getElementById('fatalRetry');
+  if (retryBtn) retryBtn.addEventListener('click', () => window.location.reload());
 }
