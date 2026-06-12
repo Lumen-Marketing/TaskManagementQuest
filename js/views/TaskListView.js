@@ -434,7 +434,7 @@ App.TaskListView = class TaskListView {
       </div>
       <div class="kanban-card-title">${App.utils.escapeHtml(t.title)}</div>
       <div class="kanban-card-meta">
-        <span class="pill ${company.pill}">${company.label}</span>
+        <span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>
         <span class="due-cell ${due.cls}">${due.text}${t.dueTime ? ` · ${App.utils.formatClockTz(t.dueTime)}` : ''}</span>
       </div>
       <div class="kanban-card-foot">
@@ -529,7 +529,7 @@ App.TaskListView = class TaskListView {
       </div>
       <div class="label-cell">${label ? `<span class="label-text">${label.label}</span>` : '<span class="label-empty">—</span>'}</div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
-        ${App.utils.avatarHtml(person)}${person.name}
+        ${App.utils.avatarHtml(person)}${App.utils.escapeHtml(person.name)}
       </div>
       <div><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
       <div>${App.can('tasks.write')

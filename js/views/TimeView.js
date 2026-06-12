@@ -76,7 +76,7 @@ App.TimeView = class TimeView {
       return `
         <tr>
           <td>${t ? App.utils.escapeHtml(t.title) : '<em>unknown task</em>'}</td>
-          <td>${company ? `<span class="pill ${company.pill}">${company.label}</span>` : '—'}</td>
+          <td>${company ? `<span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>` : '—'}</td>
           <td class="mono">${App.utils.formatInstant(e.start, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}</td>
           <td class="mono">${App.utils.formatHours(e.durationMs)}</td>
         </tr>
@@ -168,7 +168,7 @@ App.TimeView = class TimeView {
             </span>
           </td>
           <td>${title ? App.utils.escapeHtml(title) : '—'}</td>
-          <td>${company ? `<span class="pill ${company.pill}">${company.label}</span>` : '—'}</td>
+          <td>${company ? `<span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>` : '—'}</td>
           <td class="mono" data-live-timer="${timer.userId}">${App.utils.formatDuration(Date.now() - timer.startedAt)}</td>
           <td><span style="display:inline-flex; align-items:center; gap:4px; color:var(--green-ink); font-size:11px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);"></span>Live</span></td>
         </tr>

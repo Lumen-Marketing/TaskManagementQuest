@@ -23,7 +23,7 @@ App.utils = {
       return `<span class="${cls}" style="background:transparent; padding:0;"><img src="${App.utils.escapeHtml(person.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;" /></span>`;
     }
     const bg = person.color ? App.utils.safeColor(person.color) : 'var(--ink-3)';
-    return `<span class="${cls}" style="background:${bg};">${App.utils.initials(person.full || person.name || '')}</span>`;
+    return `<span class="${cls}" style="background:${bg};">${App.utils.escapeHtml(App.utils.initials(person.full || person.name || ''))}</span>`;
   },
 
   /* A minimal stand-in for someone who has tracked time but isn't in

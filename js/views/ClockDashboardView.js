@@ -54,7 +54,7 @@ App.ClockDashboardView = class ClockDashboardView {
             </span>
           </td>
           <td>${title ? App.utils.escapeHtml(title) : '<em>unknown task</em>'}</td>
-          <td>${company ? `<span class="pill ${company.pill}">${company.label}</span>` : '—'}</td>
+          <td>${company ? `<span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>` : '—'}</td>
           <td class="mono">${App.utils.escapeHtml(startedAtLabel)}</td>
           <td class="mono" data-live-timer="${timer.userId}">${App.utils.formatDuration(Math.min(Date.now() - timer.startedAt, App.MAX_SHIFT_MS))}</td>
         </tr>

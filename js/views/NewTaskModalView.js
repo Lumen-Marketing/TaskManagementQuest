@@ -50,7 +50,7 @@ App.NewTaskModalView = class NewTaskModalView {
      selectable (you can assign to yourself even in a company you only manage). */
   _assigneeOptionsHtml(companyId, selectedId) {
     return App.utils.peopleInCompany(companyId, this.currentUser)
-      .map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${p.name}</option>`)
+      .map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`)
       .join('');
   }
 
@@ -64,7 +64,7 @@ App.NewTaskModalView = class NewTaskModalView {
       const has = id => people.some(p => p.id === id);
       const next = has(sel.value) ? sel.value
         : (has(this.currentUser) ? this.currentUser : (people[0] && people[0].id) || '');
-      sel.innerHTML = people.map(p => `<option value="${p.id}" ${p.id === next ? 'selected' : ''}>${p.name}</option>`).join('');
+      sel.innerHTML = people.map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === next ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('');
       const allowed = new Set(people.map(p => p.id));
       let pruned = false;
       this.watchers.forEach(w => { if (!allowed.has(w)) { this.watchers.delete(w); pruned = true; } });
@@ -95,7 +95,7 @@ App.NewTaskModalView = class NewTaskModalView {
             <div>
               <div class="field-label">Created by <i class="ti ti-lock"></i></div>
               <div class="locked-field">
-                ${App.utils.avatarHtml(me)}You (${me.name})
+                ${App.utils.avatarHtml(me)}You (${App.utils.escapeHtml(me.name)})
               </div>
             </div>
             <div>
@@ -468,7 +468,7 @@ App.NewTaskModalView = class NewTaskModalView {
       const p = App.PEOPLE[id];
       const chip = document.createElement('span');
       chip.className = 'watcher-tag';
-      chip.innerHTML = `${App.utils.avatarHtml(p)}${p.name} <i class="ti ti-x remove"></i>`;
+      chip.innerHTML = `${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)} <i class="ti ti-x remove"></i>`;
       chip.querySelector('.remove').addEventListener('click', (e) => {
         e.stopPropagation();
         this.watchers.delete(id);
@@ -488,7 +488,7 @@ App.NewTaskModalView = class NewTaskModalView {
       App.utils.peopleInCompany(companyId).filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
         const item = document.createElement('div');
         item.className = 'watcher-dropdown-item';
-        item.innerHTML = `${App.utils.avatarHtml(p)}${p.full}`;
+        item.innerHTML = `${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.full)}`;
         item.addEventListener('click', () => {
           this.watchers.add(p.id);
           dropdown.classList.add('hidden');

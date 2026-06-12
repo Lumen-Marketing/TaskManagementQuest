@@ -180,7 +180,7 @@ App.TaskDetailView = class TaskDetailView {
     const entriesHtml = recentEntries.length
       ? recentEntries.map(e =>
           `<div class="activity-item">
-             <span class="who">${App.PEOPLE[e.userId] ? App.PEOPLE[e.userId].name : e.userId}</span> logged
+             <span class="who">${App.utils.escapeHtml(App.PEOPLE[e.userId] ? App.PEOPLE[e.userId].name : e.userId)}</span> logged
              <strong style="color:var(--ink-2);">${App.utils.formatHours(e.durationMs)}</strong>
              · ${App.utils.timeAgo(e.end)}
            </div>`
@@ -190,7 +190,7 @@ App.TaskDetailView = class TaskDetailView {
     this.pane.innerHTML = `
       <div class="detail-head">
         <div class="detail-head-top">
-          <span class="pill ${company.pill}">${company.label}</span>
+          <span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>
           <div class="detail-head-actions">
             ${App.can('tasks.write') ? `<button class="icon-btn" data-action="edit-task" aria-label="Edit task" title="Edit task" type="button"><i class="ti ti-pencil"></i></button>` : ''}
             <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
@@ -202,7 +202,7 @@ App.TaskDetailView = class TaskDetailView {
         ${delegated ? `
           <div class="delegation-banner">
             <i class="ti ti-send"></i>
-            <span><strong>${assignee.name}</strong> assigned by <strong>${creator.name}</strong></span>
+            <span><strong>${App.utils.escapeHtml(assignee.name)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
           </div>
         ` : ''}
 

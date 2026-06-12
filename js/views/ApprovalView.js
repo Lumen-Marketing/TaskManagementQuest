@@ -72,7 +72,7 @@ App.ApprovalView = class ApprovalView {
       roleEntries.unshift([profile.role, { label: `${retiredLabels[profile.role] || profile.role} (retired)` }]);
     }
     const roles = roleEntries.map(([id, role]) =>
-      `<option value="${id}" ${profile.role === id ? 'selected' : ''}>${role.label}</option>`
+      `<option value="${App.utils.escapeHtml(id)}" ${profile.role === id ? 'selected' : ''}>${App.utils.escapeHtml(role.label)}</option>`
     ).join('');
     const supervisorOpts = ['<option value="">— None —</option>']
       .concat(this.supervisorOptions(profile.member_id).map(s =>
