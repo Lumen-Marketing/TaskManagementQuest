@@ -26,7 +26,10 @@ App.TASK_TYPES = {
 };
 
 // Job scope tag shown alongside Type. Combo-box choices in the New task popup.
+// 'none' is the explicit "no job-scope tag" choice — it renders as empty (—)
+// everywhere a label would show, so a task can opt out of a scope tag entirely.
 App.TASK_LABELS = {
+  none:         { id: 'none',         label: 'No label' },
   roof:         { id: 'roof',         label: 'Roof' },
   roof_framing: { id: 'roof_framing', label: 'Roof & Framing' },
   framing:      { id: 'framing',      label: 'Framing' },

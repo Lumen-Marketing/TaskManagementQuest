@@ -822,6 +822,57 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .approval-actions { display: inline-flex; align-items: center; gap: 6px; }
 .approval-actions .btn-danger { padding: 7px 9px; }
 
+/* Approvals table → stacked cards on phones, tablets & small laptops.
+   The 7-column table needs ~920px of content width; with the inline 240px
+   sidebar that means a ~1180px viewport before it fits. Below that the
+   horizontal-scroll wrapper pushed the Status/Save columns off-screen (you had
+   to two-finger scroll to reach them, and phone/tablet landscape was no better
+   since the sidebar still ate width). At ≤1200px each row collapses into a
+   self-contained card with the column name (from the cell's data-label) shown
+   beside each control — no sideways scroll. The full table returns >1200px. */
+@media (max-width: 1200px) {
+  .approval-scroll { overflow-x: visible; }
+  .approval-scroll .approval-table { min-width: 0; }
+  .approval-table,
+  .approval-table tbody,
+  .approval-table tr,
+  .approval-table td { display: block; width: 100%; }
+  .approval-table thead { display: none; }
+  .approval-table tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .approval-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .approval-table td:last-child { border-bottom: none; }
+  .approval-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-3);
+  }
+  .approval-table td.approval-actions-cell::before { content: none; }
+  /* Controls sit on the right and take the remaining width. */
+  .approval-table select { min-width: 0; flex: 1 1 auto; max-width: 62%; }
+  .approval-table .company-multi { flex: 1 1 auto; justify-content: flex-end; }
+  .approval-table .approval-actions { width: 100%; justify-content: flex-end; }
+  /* Long emails break instead of forcing the card wider. */
+  .approval-table .approval-email { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+}
+
 /* Team hierarchy / org chart */
 .org-sub { font-size: 12px; color: var(--ink-3); margin: -4px 0 14px; }
 .org-chart { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }

@@ -440,7 +440,7 @@ App.TaskListView = class TaskListView {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
-    const label = App.TASK_LABELS[t.label];
+    const label = t.label && t.label !== 'none' ? App.TASK_LABELS[t.label] : null;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
@@ -522,7 +522,7 @@ App.TaskListView = class TaskListView {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
-    const label = App.TASK_LABELS[t.label];
+    const label = t.label && t.label !== 'none' ? App.TASK_LABELS[t.label] : null;
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);

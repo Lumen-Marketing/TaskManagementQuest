@@ -80,9 +80,10 @@ App.AppController = class AppController {
       // Anyone who spans more than one company also gets an "All companies"
       // option. For them '*' isn't god mode — it just drops the company filter,
       // so they see every company they can access (still RLS-scoped to those).
-      // Default to their first real company, not All.
+      // Multi-company users default to "All companies" so they land on
+      // everything they can access; single-company users default to that one.
       companies = mine.length > 1 ? ['*'].concat(mine) : mine;
-      fallback = mine[0] || null;
+      fallback = mine.length > 1 ? '*' : (mine[0] || null);
     }
     this.uiState.companies = companies;
 

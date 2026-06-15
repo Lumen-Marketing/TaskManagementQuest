@@ -87,23 +87,23 @@ App.ApprovalView = class ApprovalView {
     `).join('');
     return `
       <tr data-profile-id="${profile.id}" data-member-id="${profile.member_id || ''}" data-person-name="${App.utils.escapeHtml(person.full)}">
-        <td>
+        <td data-label="Person">
           <span style="display:inline-flex;align-items:center;gap:8px;">
             ${App.utils.avatarHtml(person)}
             <span style="font-size:12px;">${App.utils.escapeHtml(person.full)}</span>
           </span>
         </td>
-        <td><select data-field="role">${roles}</select></td>
-        <td><div class="company-multi" data-field="companies">${companyChecks}</div></td>
-        <td><select data-field="supervisor">${supervisorOpts}</select></td>
-        <td>
+        <td data-label="Role"><select data-field="role">${roles}</select></td>
+        <td data-label="Company"><div class="company-multi" data-field="companies">${companyChecks}</div></td>
+        <td data-label="Reports to"><select data-field="supervisor">${supervisorOpts}</select></td>
+        <td data-label="Status">
           <label class="approval-toggle">
             <input type="checkbox" data-field="approved" ${profile.approved ? 'checked' : ''} />
             <span>${profile.approved ? 'Approved' : 'Pending'}</span>
           </label>
         </td>
-        <td>${App.utils.escapeHtml(profile.email || '')}</td>
-        <td>
+        <td data-label="Email"><span class="approval-email">${App.utils.escapeHtml(profile.email || '')}</span></td>
+        <td class="approval-actions-cell">
           <div class="approval-actions">
             <button class="btn btn-sm btn-primary" data-action="save-access">Save</button>
             ${isSelf ? '' : `<button class="btn btn-sm btn-danger" data-action="delete-user" title="Remove this user's access"><i class="ti ti-trash"></i></button>`}

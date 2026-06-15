@@ -240,7 +240,7 @@ App.TaskDetailView = class TaskDetailView {
         </div>
         <div class="detail-row">
           <span class="label">Label</span>
-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_LABELS[t.label] || { label: '—' }).label)}</span>
+          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((t.label && t.label !== 'none' ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' }).label)}</span>
         </div>
         ${t.type === 'bid' ? `
         <div class="detail-row">
