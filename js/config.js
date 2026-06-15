@@ -11,6 +11,11 @@ App.routes = {
   app: `${window.location.origin}${App.basePath}app.html`,
 };
 
+// Capture whether we landed on a password-recovery link BEFORE creating the
+// Supabase client below — with detectSessionInUrl on, the client consumes and
+// strips `#...&type=recovery` from the URL, so a later read would miss it.
+App.isRecoveryLanding = /[#&]type=recovery\b/.test(window.location.hash || '');
+
 // Runtime config: fetch env.json (per-environment, never committed) and
 // construct the Supabase client from it. Anything that needs `App.supabase`
 // must `await App.configReady` first. On failure we set App.supabaseLoadError

@@ -15,6 +15,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   new App.LoginView({ controller });
 
+  // A password-recovery link returns here with `#...&type=recovery`. config.js
+  // captured this synchronously at load (App.isRecoveryLanding) BEFORE the
+  // Supabase client stripped the hash. We show the set-new-password card and,
+  // crucially, suppress the auto-forward below — the recovery session would
+  // otherwise satisfy isAuthenticated()/isApproved() and bounce the user into
+  // the app without ever resetting their password.
+  const isRecovery = !!App.isRecoveryLanding;
+  if (isRecovery) App.EventBus.emit('auth:recovery');
+
   try {
     await authModel.init();
   } catch (err) {
@@ -22,8 +31,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     App.EventBus.emit('auth:error', (err && err.message) || 'Failed to initialize auth.');
   }
 
-  // If the user is already signed in AND approved, send them straight to the app.
-  if (authModel.isAuthenticated() && authModel.isApproved()) {
+  // If the user is already signed in AND approved, send them straight to the app
+  // — unless they're here to reset a password.
+  if (!isRecovery && authModel.isAuthenticated() && authModel.isApproved()) {
     window.location.replace(appUrl);
   }
 
@@ -31,6 +41,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // forwarded automatically the moment an admin approves them — no manual refresh.
   let approvalPoll = null;
   const maybeStartApprovalPoll = () => {
+    // Don't poll/redirect while the user is mid password-reset.
+    if (isRecovery) return;
     const pending = authModel.isAuthenticated() && !authModel.isApproved();
     if (pending && !approvalPoll) {
       approvalPoll = window.setInterval(async () => {

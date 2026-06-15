@@ -11,9 +11,28 @@ App.LoginView = class LoginView {
     this.subEl = document.getElementById('authSub');
 
     // Top-level mode tabs (signin / signup)
+    this.modeTabsEl = document.getElementById('modeTabs');
     this.modeTabs = document.querySelectorAll('#modeTabs .auth-tab');
     this.signInMode = document.getElementById('signInMode');
     this.signUpMode = document.getElementById('signUpMode');
+
+    // Password-reset request ("Forgot password?") + set-new-password (recovery).
+    this.forgotPwLink = document.getElementById('forgotPwLink');
+    this.resetRequestMode = document.getElementById('resetRequestMode');
+    this.resetEmail = document.getElementById('resetEmail');
+    this.backToSignIn = document.getElementById('backToSignIn');
+    this.resetCard = document.getElementById('resetCard');
+    this.resetPasswordForm = document.getElementById('resetPasswordForm');
+    this.newPassword = document.getElementById('newPassword');
+    this.newPasswordConfirm = document.getElementById('newPasswordConfirm');
+    this.resetBackToSignIn = document.getElementById('resetBackToSignIn');
+    this.resetErrorEl = document.getElementById('resetError');
+    this.resetInfoEl = document.getElementById('resetInfo');
+
+    // True between arriving on a recovery link and finishing (or leaving) the
+    // password reset. While set, render() always shows the reset card and
+    // messages route to the reset card's own error/info bar.
+    this.recovery = false;
 
     // Sub-tabs inside sign-in (password / magic)
     this.subTabs = document.querySelectorAll('.auth-subtabs .auth-tab');
@@ -54,6 +73,8 @@ App.LoginView = class LoginView {
     App.EventBus.on('auth:changed', (state) => this.render(state));
     App.EventBus.on('auth:error', (msg) => this.showError(msg));
     App.EventBus.on('auth:info', (msg) => this.showInfo(msg));
+    App.EventBus.on('auth:recovery', () => this._enterRecovery());
+    App.EventBus.on('auth:recovery-done', () => this._exitRecovery());
   }
 
   /* Render the invisible Turnstile widget once on page load, in 'execute'
@@ -191,6 +212,45 @@ App.LoginView = class LoginView {
       this.controller.signUp(email, pw, name, captchaToken);
     });
 
+    // Forgot password → swap the sign-in area for the reset-request panel.
+    this.forgotPwLink.addEventListener('click', () => this._showResetRequest());
+    this.backToSignIn.addEventListener('click', () => this._exitResetRequest());
+
+    // Reset request: email a recovery link.
+    this.resetRequestMode.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      this._clearMessages();
+      const email = this.resetEmail.value.trim();
+      if (!email) return this.showError('Enter your email.');
+      let captchaToken;
+      try { captchaToken = await this._getCaptchaToken(); }
+      catch (err) { return this.showError(err.message || 'Captcha failed.'); }
+      this.controller.sendPasswordReset(email, captchaToken);
+    });
+
+    // Set new password (recovery landing). No captcha — the recovery session
+    // already proves possession of the emailed link.
+    this.resetPasswordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      this._clearMessages();
+      const pw = this.newPassword.value;
+      const confirm = this.newPasswordConfirm.value;
+      if (!pw) return this.showError('Enter a new password.');
+      try {
+        App.validate.strongPassword(pw);
+      } catch (err) {
+        return this.showError((err && err.message) || 'Password does not meet the requirements.');
+      }
+      if (pw !== confirm) return this.showError('Passwords do not match.');
+      this.controller.resetPassword(pw);
+    });
+
+    // Escape hatch from the reset card (e.g. an expired link) back to sign-in.
+    this.resetBackToSignIn.addEventListener('click', () => {
+      this._exitRecovery();
+      this.render({});
+    });
+
     this.signOutBtn.addEventListener('click', () => this.controller.signOut());
     this.pendingSignOutBtn.addEventListener('click', () => this.controller.signOut());
     this.refreshBtn.addEventListener('click', () => window.location.reload());
@@ -221,8 +281,60 @@ App.LoginView = class LoginView {
     this.magicForm.classList.toggle('hidden', name !== 'magic');
   }
 
+  /* Show the "enter your email for a reset link" panel, hiding the sign-in /
+     sign-up modes and the top-level tabs while it's up. */
+  _showResetRequest() {
+    this._clearMessages();
+    this.modeTabs.forEach(t => t.classList.remove('active'));
+    this.signInMode.classList.add('hidden');
+    this.signUpMode.classList.add('hidden');
+    if (this.modeTabsEl) this.modeTabsEl.classList.add('hidden');
+    this.resetRequestMode.classList.remove('hidden');
+    if (this.resetEmail) this.resetEmail.value = this.pwEmail ? this.pwEmail.value.trim() : '';
+    if (this.titleEl) this.titleEl.textContent = 'Reset your password';
+    if (this.subEl) this.subEl.textContent = 'Enter your email and we’ll send a reset link.';
+  }
+
+  /* Return from the reset-request panel to the normal sign-in view. */
+  _exitResetRequest() {
+    this.resetRequestMode.classList.add('hidden');
+    if (this.modeTabsEl) this.modeTabsEl.classList.remove('hidden');
+    this._switchMode('signin');
+  }
+
+  /* Arrived on a recovery link: lock the page to the set-new-password card
+     until the reset completes (or the user navigates away). */
+  _enterRecovery() {
+    this.recovery = true;
+    this.render({});
+  }
+
+  /* Reset finished: drop the recovery lock and strip the token from the URL so
+     a refresh doesn't re-enter recovery. The subsequent sign-out's auth:changed
+     re-renders the clean sign-in card. */
+  _exitRecovery() {
+    this.recovery = false;
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } else {
+      window.location.hash = '';
+    }
+  }
+
   render({ user, profile } = {}) {
     this._clearMessages();
+
+    // Recovery overrides everything: the emailed link signs the user in with a
+    // temporary session, so without this they'd be routed to the app/pending
+    // card instead of being asked to set a new password.
+    if (this.recovery) {
+      this.signedOutCard.classList.add('hidden');
+      this.pendingCard.classList.add('hidden');
+      this.signedInCard.classList.add('hidden');
+      this.resetCard.classList.remove('hidden');
+      return;
+    }
+    this.resetCard.classList.add('hidden');
 
     if (!user) {
       this.signedOutCard.classList.remove('hidden');
@@ -279,20 +391,32 @@ App.LoginView = class LoginView {
     }
   }
 
+  /* The set-new-password card has its own message bar; route there while it's
+     the visible card so errors aren't stranded on the hidden sign-in card. */
+  _msgEls() {
+    return this.recovery
+      ? { errorEl: this.resetErrorEl, infoEl: this.resetInfoEl }
+      : { errorEl: this.errorEl, infoEl: this.infoEl };
+  }
+
   showError(msg) {
-    this.infoEl.classList.add('hidden');
-    this.errorEl.textContent = msg;
-    this.errorEl.classList.remove('hidden');
+    const { errorEl, infoEl } = this._msgEls();
+    infoEl.classList.add('hidden');
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
   }
 
   showInfo(msg) {
-    this.errorEl.classList.add('hidden');
-    this.infoEl.textContent = msg;
-    this.infoEl.classList.remove('hidden');
+    const { errorEl, infoEl } = this._msgEls();
+    errorEl.classList.add('hidden');
+    infoEl.textContent = msg;
+    infoEl.classList.remove('hidden');
   }
 
   _clearMessages() {
     this.errorEl.classList.add('hidden');
     this.infoEl.classList.add('hidden');
+    if (this.resetErrorEl) this.resetErrorEl.classList.add('hidden');
+    if (this.resetInfoEl) this.resetInfoEl.classList.add('hidden');
   }
 };

@@ -44,6 +44,34 @@ App.AuthController = class AuthController {
     }
   }
 
+  async sendPasswordReset(email, captchaToken) {
+    try {
+      const cleanEmail = App.validate.email(email);
+      await this.authModel.sendPasswordReset(cleanEmail, this.emailRedirect, captchaToken);
+      // Neutral wording on purpose: Supabase doesn't reveal whether the address
+      // has an account, and neither should we.
+      App.EventBus.emit('auth:info', `If an account exists for ${cleanEmail}, a reset link is on its way. Check your inbox.`);
+    } catch (err) {
+      App.EventBus.emit('auth:error', this._friendly(err));
+    }
+  }
+
+  /* Land a new password from the recovery screen, then deliberately sign the
+     recovery session out and return to a clean sign-in (per the design). The
+     recovery flag is cleared BEFORE signOut so the resulting auth:changed
+     re-renders the sign-in card, not the reset card. */
+  async resetPassword(newPassword) {
+    try {
+      const cleanPw = App.validate.strongPassword(newPassword);
+      await this.authModel.updatePassword(cleanPw);
+      App.EventBus.emit('auth:recovery-done');
+      await this.authModel.signOut();
+      App.EventBus.emit('auth:info', 'Password updated. Sign in with your new password.');
+    } catch (err) {
+      App.EventBus.emit('auth:error', this._friendly(err));
+    }
+  }
+
   async signOut() {
     try {
       await this.authModel.signOut();
@@ -73,6 +101,8 @@ App.AuthController = class AuthController {
       if (err instanceof errors.PermissionError) return err.message;
     }
     const msg = (err && err.message) || 'Something went wrong';
+    if (/different from the old password/i.test(msg)) return 'Your new password must be different from your current one.';
+    if (/(auth session missing|invalid.*token|token.*expired|expired)/i.test(msg)) return 'This reset link has expired or already been used. Request a new one.';
     if (/invalid login credentials/i.test(msg)) return 'Wrong email or password.';
     if (/user already registered/i.test(msg)) return 'That email is already registered - try signing in.';
     if (/email signups are disabled|email provider disabled/i.test(msg)) return 'Supabase Email provider is disabled. Enable Auth > Providers > Email, then turn Confirm email off for demo signups.';

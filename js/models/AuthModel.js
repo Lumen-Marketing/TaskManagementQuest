@@ -105,6 +105,28 @@ App.AuthModel = class AuthModel {
     if (error) throw error;
   }
 
+  /* Email a password-reset link. `redirectTo` is the login page; the link comes
+     back with `#type=recovery` in the hash, which the bootstrap detects to show
+     the set-new-password screen. Supabase intentionally returns success even for
+     an unknown address (no account enumeration), so the caller must phrase the
+     confirmation neutrally. */
+  async sendPasswordReset(email, redirectTo, captchaToken) {
+    this._requireClient();
+    const options = redirectTo ? { redirectTo } : {};
+    if (captchaToken) options.captchaToken = captchaToken;
+    const { error } = await this._sb.auth.resetPasswordForEmail(email, options);
+    if (error) throw error;
+  }
+
+  /* Set a new password on the CURRENT session. During recovery that session is
+     the short-lived one Supabase established from the email link, so this is how
+     the reset actually lands. */
+  async updatePassword(newPassword) {
+    this._requireClient();
+    const { error } = await this._sb.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  }
+
   async signOut() {
     this._requireClient();
     const { error } = await this._sb.auth.signOut();
