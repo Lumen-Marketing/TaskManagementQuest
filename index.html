@@ -90,6 +90,7 @@
         <button type="submit" id="pwSignInBtn" class="btn-primary-wide">
           <i class="ti ti-login-2"></i> Sign in
         </button>
+        <button type="button" id="forgotPwLink" class="auth-linkbtn">Forgot password?</button>
       </form>
 
       <!-- Magic link panel -->
@@ -103,6 +104,19 @@
         <p class="auth-hint">We'll send a one-click link. No password needed.</p>
       </form>
     </div>
+
+    <!-- ===== RESET REQUEST MODE ===== -->
+    <!-- Shown after "Forgot password?". Hides the mode tabs while active. -->
+    <form id="resetRequestMode" class="auth-panel hidden" autocomplete="on">
+      <label class="auth-label" for="resetEmail">Email</label>
+      <input id="resetEmail" type="email" autocomplete="email" required placeholder="you@example.com" />
+
+      <button type="submit" class="btn-primary-wide">
+        <i class="ti ti-mail"></i> Send reset link
+      </button>
+      <p class="auth-hint">We'll email you a link to set a new password.</p>
+      <button type="button" id="backToSignIn" class="auth-linkbtn">Back to sign in</button>
+    </form>
 
     <!-- ===== CREATE ACCOUNT MODE ===== -->
     <form id="signUpMode" class="auth-panel hidden" autocomplete="on">
@@ -129,6 +143,29 @@
     <div class="auth-info hidden" id="authInfo"></div>
 
     <div class="login-foot">Access is limited to what your role permits.</div>
+  </div>
+
+  <!-- Set-new-password card (shown only when arriving from a recovery link) -->
+  <div class="login-card hidden" id="resetCard">
+    <h1 class="login-title">Set a new password</h1>
+    <p class="login-sub">Choose a new password for your account.</p>
+
+    <form id="resetPasswordForm" class="auth-panel" autocomplete="on">
+      <label class="auth-label" for="newPassword">New password</label>
+      <input id="newPassword" type="password" autocomplete="new-password" required placeholder="At least 8 characters" />
+      <p class="auth-hint">At least 8 characters, with upper- and lowercase letters, a number, and a special character.</p>
+
+      <label class="auth-label" for="newPasswordConfirm">Confirm new password</label>
+      <input id="newPasswordConfirm" type="password" autocomplete="new-password" required placeholder="Re-enter password" />
+
+      <button type="submit" class="btn-primary-wide">
+        <i class="ti ti-lock-check"></i> Update password
+      </button>
+      <button type="button" id="resetBackToSignIn" class="auth-linkbtn">Back to sign in</button>
+    </form>
+
+    <div class="auth-error hidden" id="resetError"></div>
+    <div class="auth-info hidden" id="resetInfo"></div>
   </div>
 
   <!-- Pending-approval card -->
