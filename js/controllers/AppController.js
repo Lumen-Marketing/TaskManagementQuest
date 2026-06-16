@@ -711,6 +711,7 @@ App.AppController = class AppController {
     const creatorName = this.getUserName(this.currentUser);
     const assigneeName = App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].name : payload.assignee;
     const assigneeEmail = App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].email : '';
+    const creatorEmail = App.PEOPLE[this.currentUser] ? App.PEOPLE[this.currentUser].email : '';
     const titleEsc = App.utils.escapeHtml(task.title);
 
     const inapp = [];
@@ -724,19 +725,24 @@ App.AppController = class AppController {
         html: `<strong>${App.utils.escapeHtml(creatorName)}</strong> assigned <em>${titleEsc}</em> to you`,
       });
     }
-    if (delegated && payload.notify.email && assigneeEmail) emails.push(assigneeEmail);
+    // Email delivery is automatic: the assignee, the creator, and every watcher
+    // are emailed whenever they have an address on file — independent of the
+    // notify checkboxes, which now only gate the in-app notifications. _deliver
+    // de-dupes, so anyone filling more than one role still gets a single email.
+    if (delegated && assigneeEmail) emails.push(assigneeEmail);
+    if (creatorEmail) emails.push(creatorEmail);
 
-    if (payload.notify.watchers) {
-      (payload.watchers || []).forEach(w => {
+    (payload.watchers || []).forEach(w => {
+      if (payload.notify.watchers) {
         inapp.push({
           memberId: w,
           taskId: task.id,
           meta: 'Watching · just now',
           html: `You're now watching <em>${titleEsc}</em> (assigned to ${App.utils.escapeHtml(assigneeName)})`,
         });
-        if (App.PEOPLE[w] && App.PEOPLE[w].email) emails.push(App.PEOPLE[w].email);
-      });
-    }
+      }
+      if (App.PEOPLE[w] && App.PEOPLE[w].email) emails.push(App.PEOPLE[w].email);
+    });
 
     // Persist the new task to Supabase BEFORE delivering its in-app notifications.
     // Each notification row carries task_id (a FK to tasks.id), and — crucially for
@@ -760,7 +766,7 @@ App.AppController = class AppController {
       if (delegated) {
         this.toastView.show({
           title: `Task assigned to ${assigneeName}`,
-          sub: payload.notify.email && assigneeEmail ? `Notifying ${assigneeEmail}` : 'In-app notification sent',
+          sub: assigneeEmail ? `Notifying ${assigneeEmail}` : 'In-app notification sent',
         });
       } else {
         const watcherCount = (payload.watchers || []).length;
