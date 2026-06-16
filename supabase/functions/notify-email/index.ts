@@ -102,14 +102,18 @@ Deno.serve(async (req: Request) => {
     const callerJwt = authHeader.replace(/^Bearer\s+/i, "").trim();
     if (!callerJwt) return json(req, { error: "Missing authorization." }, 401);
 
-    const callerClient = createClient(supabaseUrl, callerJwt, {
-      global: { headers: { Authorization: `Bearer ${callerJwt}` } },
-    });
-    const { data: callerUser, error: callerErr } = await callerClient.auth.getUser();
+    // Validate the caller's JWT with the SERVICE-ROLE client by passing the token
+    // to getUser(jwt). This verifies the token server-side regardless of the
+    // project's JWT signing scheme. The previous approach — createClient keyed by
+    // the user JWT, then getUser() — fails on projects using the new asymmetric
+    // signing keys, because the gateway rejects a request whose apikey is a user
+    // JWT rather than the anon/service key. That surfaced as a spurious 401
+    // "Not signed in." even for valid, signed-in callers.
+    const adminProbe = createClient(supabaseUrl, serviceKey);
+    const { data: callerUser, error: callerErr } = await adminProbe.auth.getUser(callerJwt);
     if (callerErr || !callerUser?.user) {
       return json(req, { error: "Not signed in." }, 401);
     }
-    const adminProbe = createClient(supabaseUrl, serviceKey);
     const { data: callerProfile, error: profileErr } = await adminProbe
       .from("profiles")
       .select("approved, role")
