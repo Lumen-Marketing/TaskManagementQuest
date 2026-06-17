@@ -2718,12 +2718,9 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* Keep the primary "New task" action visible at the start rather than
      scrolled off the right edge (matches the phone toolbar). */
   .work-toolbar > .btn-primary { order: -1; }
-  /* Let topbar controls wrap rather than clip — the developer "view as role"
-     switcher is wide enough to push the icon buttons off the right edge in this
-     band. The topbar row grows to contain the second line (see grid rows). */
-  .topbar { align-items: stretch; }
-  .topbar-left { align-self: stretch; }
-  .topbar-right { flex-wrap: wrap; align-content: center; justify-content: flex-end; row-gap: 4px; padding-top: 6px; padding-bottom: 6px; }
+  /* Tablet has room for one row once topbar-right stops shrinking to its
+     min-content width; keep it on a single line (no wrap). */
+  .topbar-right { flex-wrap: nowrap; justify-content: flex-end; }
   /* Side column gets narrower so list has more room */
   .app { grid-template-columns: 200px minmax(0, 1fr); }
   .topbar-left { width: 200px; }
@@ -3196,12 +3193,12 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
    Search input gets a final clamp between 460-600px so it
    doesn't dominate the 36px icon buttons. */
 @media (max-width: 720px) {
-  /* Let the controls wrap onto a second line rather than overflow the topbar
-     and get clipped off the right edge. The role switcher + clock + icon
-     buttons can't all fit one row on a narrow phone, so wrapping keeps every
-     control reachable (a clipped bell/avatar reads as "broken"). */
-  .topbar-right { flex-shrink: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
-  .search { flex-shrink: 1; min-width: 0; }
+  /* Keep every control on ONE row. The progressive icon-collapse above
+     (search/brand/role/clock → icons by ≤640) shrinks the content enough to
+     fit, so nowrap won't clip — and the avatar never drops to a second line. */
+  .topbar-right { flex-shrink: 1; min-width: 0; flex-wrap: nowrap; justify-content: flex-end; }
+  .topbar-right > * { flex-shrink: 0; }   /* icons keep their size … */
+  .search { flex-shrink: 1; min-width: 0; }   /* … only the search pill flexes */
   .search input { min-width: 0; }
 }
 /* Search width on phones is handled by the flexible .search rule above
@@ -3209,18 +3206,23 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 
 /* ============================================================
    PROGRESSIVE TOPBAR — collapse controls to icons as the bar narrows
-   so the black topbar stays clean and never crowds/clips on small
-   screens. Labels drop in stages (search → brand → role/clock); the
-   actions stay reachable as icons.
-     ≤640px  search  → magnifier icon (expands on focus)
-     ≤540px  "Quest HQ" wordmark → hidden (⚡ logo + ☰ menu remain)
-     ≤460px  role switcher → eye icon · clock → play icon (idle)
-   ============================================================ */
+   so the black topbar stays clean and ALWAYS stays a single row (no
+   wrapping the avatar onto a second line). Labels drop in stages
+   (search → brand → role/clock); the actions stay reachable as icons.
+     ≤720px  search → magnifier icon (expands on focus); bar forced
+             to one row (see the nowrap rules in the ≤720 / 721-900
+             blocks elsewhere).
+     ≤640px  "Quest HQ" wordmark → hidden (⚡ logo + ☰ menu remain);
+             role switcher → eye icon · clock → play icon (idle).
+     ≤460px  "display size" button → hidden (least-used; frees a slot
+             so the icon row fits the smallest phones).
+   Collapsing happens BEFORE the row would overflow, so everything fits
+   on one line instead of wrapping. --- */
 
-/* --- ≤640: search becomes an icon pill that expands when focused. The
+/* --- ≤720: search becomes an icon pill that expands when focused. The
    .search <i> is pointer-events:none, so a tap lands on the (full-width,
    transparent) input underneath and triggers :focus-within to expand. --- */
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .topbar .search {
     display: flex;                 /* override the ≤460 `display:none` below */
     flex: 0 0 40px;
@@ -3246,17 +3248,16 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .topbar .search:focus-within input { opacity: 1; }
 }
 
-/* --- ≤540: drop the wordmark, keep the logo + hamburger. Match the
-   sidebar-minimized selector's specificity so it can't re-show it. --- */
-@media (max-width: 540px) {
+/* --- ≤640: drop the wordmark (keep logo + hamburger), and collapse the
+   role switcher → eye icon (transparent native select overlaid so it still
+   opens) and the clock → icon-only when idle (the .running state keeps the
+   live timer visible — see TopbarView.renderClockWidget). Doing both here,
+   well before the row would overflow, keeps the topbar on a single line. --- */
+@media (max-width: 640px) {
+  /* Match the sidebar-minimized selector's specificity so it can't re-show. */
   .topbar-left .brand-name,
   body.sidebar-minimized .topbar-left .brand-name { display: none; }
-}
 
-/* --- ≤460: role switcher → eye icon (transparent native select overlaid so
-   it still opens), clock → icon-only when idle (the .running state keeps the
-   live timer visible — see TopbarView.renderClockWidget). --- */
-@media (max-width: 460px) {
   .viewas-switcher {
     position: relative;
     width: 44px; min-width: 44px; padding: 0; gap: 0;
@@ -3268,8 +3269,17 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     width: 100%; height: 100%;
     opacity: 0; padding: 0; cursor: pointer;
   }
+  /* Idle clock → icon only (hide the "Clock in" label). The running state keeps
+     the live timer (#clockTimer) — only the text label is hidden here. */
+  .clock-widget span:not(.clock-timer) { display: none; }
   .clock-widget { min-width: 44px; padding: 8px; justify-content: center; }
   .clock-widget.running { min-width: auto; padding: 8px 12px; }
+}
+
+/* --- ≤460: hide the "display size" button (least-used on touch; pinch-zoom
+   covers it) to free a slot so the icon row still fits the smallest phones. */
+@media (max-width: 460px) {
+  #scaleBtn { display: none; }
 }
 
 /* ---- Resize handle: hide on coarse pointers regardless of width
