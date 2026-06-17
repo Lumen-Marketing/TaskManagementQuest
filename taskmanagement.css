@@ -1644,7 +1644,6 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
   /* Hide the lower-signal columns on a phone */
   .list-row > div:nth-child(5),  /* company */
   .list-row > div:nth-child(7),  /* priority */
-  .list-row .timer-btn,
   .list-row .more-btn { display: none; }
   /* .meta-cell carries an inline display:flex, so override needs !important */
   .list-row .meta-cell { display: none !important; }
@@ -2975,8 +2974,23 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* Hide noisy/duplicated columns on phones */
   .list-row > div:nth-child(5),   /* assignee (often = current user) */
   .list-row .desc-cell,
-  .list-row .timer-btn,
   .list-row .more-btn { display: none !important; }
+
+  /* Keep the per-task timer (play) button — tap it to clock in on a task
+     straight from the list, like desktop. Pin it just left of the finish
+     button (both top-right); reserve the extra width only when it's actually
+     shown (it's .hidden for users without clock permission). */
+  .list-row .timer-btn {
+    position: absolute;
+    top: 8px;
+    right: 56px;
+    width: 44px; height: 44px;
+    flex: 0 0 auto;
+    z-index: 3;
+    touch-action: manipulation;
+  }
+  .list-row .timer-btn i { font-size: 18px; }
+  .list-row:has(.timer-btn:not(.hidden)) { padding-right: 106px; }
   /* Bigger touch chips */
   .list-row .pill,
   .list-row .pill-status,
