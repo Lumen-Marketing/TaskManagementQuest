@@ -2820,6 +2820,25 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .list-row .task-title-cell,
   .list-row .tt-text { overflow-wrap: anywhere; min-width: 0; }
 
+  /* iOS Safari auto-zooms the page whenever a focused field's font is under
+     16px — jarring on every tap into search / a form. 16px stops it. (The new
+     task modal sets its own !important sizes; handled there separately.) */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea { font-size: 16px; }
+
+  /* Fingertip-friendly row controls. */
+  .list-row input[type="checkbox"] { width: 22px; height: 22px; }
+  .finish-btn { width: 44px; height: 44px; }
+  .priority-block { padding: 6px 12px; }
+
+  /* New-task modal fields carry their own !important sizing; lift the small
+     ones to 16px on mobile too (the larger title input stays — it's more
+     specific). The modal isn't drag-resizable on touch, so this is safe. */
+  #newTaskModal input,
+  #newTaskModal select,
+  #newTaskModal textarea { font-size: 16px !important; }
+
   /* Toolbar buttons — wrap onto multiple rows so every control stays visible
      and reachable. (Was a hidden-scrollbar horizontal scroll, which silently
      clipped Sort/Group off the right edge and read as broken.) */
