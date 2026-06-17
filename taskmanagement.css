@@ -975,6 +975,19 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   flex: 1 1 auto;
   min-height: 0;
 }
+/* The detail is ALWAYS rendered inside this .modal shell now (TaskDetailView
+   relocates #detailPane into a .modal-backdrop). It must stay a normal child of
+   the modal — not the legacy `position: fixed; inset: 0` full-screen overlay
+   from the old side-panel era. On phones those mobile `.detail:not(.hidden)`
+   rules pulled it out of the white modal, and combined with the transparent
+   background above it rendered see-through over the list and covered the topbar.
+   Higher specificity (+ :not(.hidden)) so it beats every mobile breakpoint. */
+.modal-detail .detail:not(.hidden) {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  animation: none;
+}
 
 /* New task modal: a comfortable default that scales up on widescreen, plus a
    drag handle (bottom-right) so it can be resized by hand. Uses `width` (not
