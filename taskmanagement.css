@@ -817,6 +817,10 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .approval-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); }
 .approval-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .approval-head .time-section-title { margin-bottom: 0; }
+.approval-head-actions { display: flex; gap: 8px; align-items: center; }
+.ap-result { margin-top: 12px; font-size: 12px; }
+.ap-result.error { color: var(--danger, #c0392b); }
+.ap-result.hidden { display: none; }
 .approval-scroll { overflow-x: auto; }
 .approval-scroll .time-table { min-width: 920px; }
 .approval-actions { display: inline-flex; align-items: center; gap: 6px; }

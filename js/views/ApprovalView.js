@@ -37,7 +37,10 @@ App.ApprovalView = class ApprovalView {
         <div class="time-section">
           <div class="approval-head">
             <div class="time-section-title">User approvals</div>
-            <button class="btn btn-sm" data-action="refresh-profiles"><i class="ti ti-refresh"></i>Refresh</button>
+            <div class="approval-head-actions">
+              <button class="btn btn-sm btn-primary" data-action="add-person"><i class="ti ti-user-plus"></i>Add person</button>
+              <button class="btn btn-sm" data-action="refresh-profiles"><i class="ti ti-refresh"></i>Refresh</button>
+            </div>
           </div>
           <div class="approval-scroll">
             <table class="time-table approval-table">
@@ -114,6 +117,9 @@ App.ApprovalView = class ApprovalView {
   }
 
   bind() {
+    const addBtn = this.wrap.querySelector('[data-action="add-person"]');
+    if (addBtn) addBtn.addEventListener('click', () => this.openAddPerson());
+
     const refreshBtn = this.wrap.querySelector('[data-action="refresh-profiles"]');
     if (refreshBtn) refreshBtn.addEventListener('click', () => this.reloadAndRender(refreshBtn));
 
@@ -175,6 +181,85 @@ App.ApprovalView = class ApprovalView {
         }
       });
     });
+  }
+
+  openAddPerson() {
+    if (this._addModal) return;
+    const roles = Object.entries(App.ROLES)
+      .map(([id, r]) => `<option value="${App.utils.escapeHtml(id)}" ${id === 'worker' ? 'selected' : ''}>${App.utils.escapeHtml(r.label)}</option>`)
+      .join('');
+    const companies = Object.values(App.COMPANIES).map(c => `
+      <label class="company-chk">
+        <input type="checkbox" value="${App.utils.escapeHtml(c.id)}" />
+        <span>${App.utils.escapeHtml(c.label)}</span>
+      </label>`).join('');
+    const supervisors = ['<option value="">— None —</option>']
+      .concat(this.supervisorOptions(null).map(s => `<option value="${App.utils.escapeHtml(s.id)}">${App.utils.escapeHtml(s.name)}</option>`))
+      .join('');
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+    modal.id = 'addPersonModal';
+    modal.innerHTML = `
+      <div class="modal" data-stop>
+        <div class="modal-head">
+          <div class="modal-title">Add person</div>
+          <button class="icon-btn" data-action="close" aria-label="Close"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="field"><label class="field-label" for="ap-name">Full name</label>
+            <input type="text" id="ap-name" placeholder="First Last" maxlength="80" /></div>
+          <div class="field" style="margin-top:12px;"><label class="field-label" for="ap-email">Email</label>
+            <input type="email" id="ap-email" placeholder="name@company.com" maxlength="254" /></div>
+          <div class="field" style="margin-top:12px;"><label class="field-label" for="ap-role">Role</label>
+            <select id="ap-role">${roles}</select></div>
+          <div class="field" style="margin-top:12px;"><label class="field-label">Company</label>
+            <div class="company-multi" id="ap-companies">${companies}</div></div>
+          <div class="field" style="margin-top:12px;"><label class="field-label" for="ap-supervisor">Reports to</label>
+            <select id="ap-supervisor">${supervisors}</select></div>
+          <div class="ap-result hidden" id="ap-result"></div>
+          <div class="modal-actions">
+            <button class="btn" data-action="close">Cancel</button>
+            <button class="btn btn-primary" data-action="submit">Create account</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    this._addModal = modal;
+
+    const close = () => { modal.remove(); this._addModal = null; };
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    modal.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', close));
+    modal.querySelector('[data-action="submit"]').addEventListener('click', () => this.submitAddPerson(modal, close));
+    setTimeout(() => { const n = modal.querySelector('#ap-name'); if (n) n.focus(); }, 50);
+  }
+
+  async submitAddPerson(modal, close) {
+    const name = modal.querySelector('#ap-name').value.trim();
+    const email = modal.querySelector('#ap-email').value.trim();
+    const role = modal.querySelector('#ap-role').value;
+    const supervisorId = modal.querySelector('#ap-supervisor').value || null;
+    const companyIds = Array.from(modal.querySelectorAll('#ap-companies input[type="checkbox"]:checked')).map(el => el.value);
+    const result = modal.querySelector('#ap-result');
+
+    if (!name) { result.className = 'ap-result error'; result.textContent = 'Enter a full name.'; return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { result.className = 'ap-result error'; result.textContent = 'Enter a valid email.'; return; }
+
+    const btn = modal.querySelector('[data-action="submit"]');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      const res = await this.dataStore.createUser({ fullName: name, email, role, companyIds, supervisorId });
+      this.controller.toastView.show({
+        title: 'Person added',
+        sub: res.emailSent ? 'Account created and emailed.' : 'Account created — email could not be sent.',
+      });
+      close();
+      await this.reloadAndRender();
+    } catch (err) {
+      result.className = 'ap-result error';
+      result.textContent = (err && err.message) || 'Could not add the person.';
+      btn.disabled = false; btn.textContent = 'Create account';
+    }
   }
 
   async reloadAndRender(btn) {
