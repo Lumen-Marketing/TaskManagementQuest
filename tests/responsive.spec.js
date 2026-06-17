@@ -4,7 +4,10 @@
 
    Hard assertions (the bugs fixed in the responsive pass):
      1. No horizontal scrolling at any breakpoint.
-     2. The New-task modal footer (Cancel/Create) stays inside the viewport —
+     2. The header widgets don't clip at any UI-zoom level (1/1.25/1.5×) —
+        i.e. the progress card's metrics still fit when the topbar scale slider
+        (--ui-scale) is turned up, instead of being chopped by overflow:hidden.
+     3. The New-task modal footer (Cancel/Create) stays inside the viewport —
         i.e. the `vh`→`dvh` modal sizing fix actually keeps the buttons reachable.
 
    Soft checks (reported as annotations, not failures):
@@ -42,6 +45,30 @@ test.describe('responsive · mobile sweep', () => {
         overflow.scrollWidth,
         `Horizontal scroll at ${bp.width}px (page ${overflow.scrollWidth} > viewport ${overflow.innerWidth})`,
       ).toBeLessThanOrEqual(overflow.innerWidth + 1);
+
+      // --- 1b. Header widgets must not clip under increased UI zoom ---
+      // The topbar scale slider sets `.app { zoom: var(--ui-scale) }`. With the
+      // metrics block locked at flex-shrink:0 the progress card overflowed its
+      // track at >1x zoom and was chopped by `.main { overflow: hidden }`.
+      for (const scale of ['1', '1.25', '1.5']) {
+        await page.evaluate((s) => {
+          (document.querySelector('.app') || document.documentElement)
+            .style.setProperty('--ui-scale', s);
+        }, scale);
+        const clip = await page.evaluate(() => {
+          const w = document.querySelector('.page-head-widgets');
+          return w ? w.scrollWidth - w.clientWidth : 0;
+        });
+        expect(
+          clip,
+          `Header widgets clip by ${clip}px at ${bp.width}px / zoom ${scale}× (progress card overflowing its track)`,
+        ).toBeLessThanOrEqual(1);
+      }
+      // Reset zoom so it doesn't leak into the modal checks below.
+      await page.evaluate(() => {
+        (document.querySelector('.app') || document.documentElement)
+          .style.removeProperty('--ui-scale');
+      });
 
       // --- 2. New-task modal footer stays on screen (the dvh fix) ---
       await page.click('#newTaskBtn');
