@@ -2358,6 +2358,13 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
   gap: 12px;
   padding: 12px 16px;
   border-radius: var(--radius-md);
+  /* Let the card shrink inside its flex track and clip any residual spill at
+     its own rounded edge — otherwise, when the UI zoom slider (--ui-scale) is
+     turned up, the non-shrinking metrics below overflowed the track and were
+     chopped off by `.main { overflow: hidden }`, so the right side of the card
+     (the "Pending" metric) just vanished on screen. */
+  min-width: 0;
+  overflow: hidden;
 }
 .progress-card-text { display: flex; flex-direction: column; min-width: 0; flex: 0 1 auto; }
 .progress-card-head { margin: 0; }
@@ -2373,7 +2380,8 @@ body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
   gap: 4px;
   padding-left: 10px;
   border-left: 1px solid rgba(255,255,255,0.10);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
 }
 .progress-metric {
   flex-direction: column;
