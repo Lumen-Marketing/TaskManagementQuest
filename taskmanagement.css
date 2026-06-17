@@ -27,8 +27,20 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
 /* ============ APP LAYOUT ============ */
 .app {
   display: grid;
-  grid-template-rows: 64px 1fr;
-  grid-template-columns: 240px 1fr;
+  /* minmax(64px, auto) so the bar can grow to a wrapped second row of controls
+     (worst case: the developer "view as role" switcher in the tablet band)
+     instead of clipping/overlapping. Desktop has room and never wraps, so this
+     stays 64px there. */
+  grid-template-rows: minmax(64px, auto) 1fr;
+  /* minmax(0, 1fr) — NOT a bare `1fr`. A bare `1fr` is `minmax(auto, 1fr)`,
+     whose `auto` floor refuses to shrink below the column's min-content. The
+     topbar (which spans this column) packs fixed-width controls — role
+     switcher, clock, icon buttons — that sum to ~570px, so the column was
+     forced to ~570px even on a 390px phone. The overflow was then silently
+     clipped (no scrollbar), hiding the toolbar's Group/New-task buttons and
+     the topbar's bell/avatar. minmax(0, …) lets the column track the viewport
+     so the toolbar wraps and nothing is cut off. */
+  grid-template-columns: 240px minmax(0, 1fr);
   height: 100vh;
   background: var(--bg);
   /* User-controlled zoom via topbar slider — scales the whole interface
@@ -1438,7 +1450,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 }
 
 /* ============ MINIMIZED SIDEBAR (icons-only) ============ */
-body.sidebar-minimized .app { grid-template-columns: 68px 1fr; }
+body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 .deck.minimized { padding: 14px 8px; }
 .deck.minimized .sidebar { gap: 0; }
 .deck.minimized .side-minimize-btn { align-self: center; margin-bottom: 10px; }
@@ -2706,8 +2718,14 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* Keep the primary "New task" action visible at the start rather than
      scrolled off the right edge (matches the phone toolbar). */
   .work-toolbar > .btn-primary { order: -1; }
+  /* Let topbar controls wrap rather than clip — the developer "view as role"
+     switcher is wide enough to push the icon buttons off the right edge in this
+     band. The topbar row grows to contain the second line (see grid rows). */
+  .topbar { align-items: stretch; }
+  .topbar-left { align-self: stretch; }
+  .topbar-right { flex-wrap: wrap; align-content: center; justify-content: flex-end; row-gap: 4px; padding-top: 6px; padding-bottom: 6px; }
   /* Side column gets narrower so list has more room */
-  .app { grid-template-columns: 200px 1fr; }
+  .app { grid-template-columns: 200px minmax(0, 1fr); }
   .topbar-left { width: 200px; }
   body.sidebar-minimized .topbar-left { width: 60px; }
   /* Trim widget heights to fit two-line header */
@@ -2786,8 +2804,14 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
      at line 1026 — which has higher specificity than a bare `.app` —
      can't keep a phantom sidebar column on phones. */
   body .app {
-    grid-template-columns: 1fr;
-    grid-template-rows: 56px 1fr;
+    /* minmax(0, …) so the single column tracks the phone viewport instead of
+       expanding to the topbar's fixed-width-control min-content (~570px) and
+       clipping the right side off-screen. See the base `.app` rule for detail. */
+    grid-template-columns: minmax(0, 1fr);
+    /* minmax(56px, auto) so the topbar can grow to a second row when its
+       controls wrap on a narrow phone, instead of the wrapped icons spilling
+       down over the task list. */
+    grid-template-rows: minmax(56px, auto) 1fr;
     height: 100vh;
     /* Use dynamic viewport height where supported so the address bar
        collapsing doesn't make the layout overflow. */
@@ -2795,8 +2819,10 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   .app > .deck { display: none; }
   .app > .main { grid-column: 1; }
-  .topbar { height: 56px; }
-  .topbar-left { width: auto; padding: 0 12px; background: oklch(17% 0.012 70); height: 56px; }
+  .topbar { min-height: 56px; height: auto; align-items: stretch; }
+  /* align-self: stretch so the dark brand column fills the full topbar height
+     even when the right-side controls wrap and grow the bar. */
+  .topbar-left { width: auto; padding: 0 12px; background: oklch(17% 0.012 70); min-height: 56px; align-self: stretch; }
   body.sidebar-minimized .topbar-left { width: auto; padding: 0 12px; justify-content: flex-start; }
   body.sidebar-minimized .topbar-left .brand-name { display: block; color: oklch(94% 0.013 85); font-size: 15px; }
   body.sidebar-minimized .topbar-left > div:not(.logo) { display: block; }
@@ -3170,7 +3196,11 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
    Search input gets a final clamp between 460-600px so it
    doesn't dominate the 36px icon buttons. */
 @media (max-width: 720px) {
-  .topbar-right { flex-shrink: 1; min-width: 0; flex-wrap: nowrap; }
+  /* Let the controls wrap onto a second line rather than overflow the topbar
+     and get clipped off the right edge. The role switcher + clock + icon
+     buttons can't all fit one row on a narrow phone, so wrapping keeps every
+     control reachable (a clipped bell/avatar reads as "broken"). */
+  .topbar-right { flex-shrink: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
   .search { flex-shrink: 1; min-width: 0; }
   .search input { min-width: 0; }
 }
