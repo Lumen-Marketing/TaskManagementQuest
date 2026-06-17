@@ -2800,8 +2800,22 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   /* Hide the noisy/secondary cells; keep Assignee (there's room on a tablet). */
   .list-row .desc-cell,
-  .list-row .timer-btn,
   .list-row .more-btn { display: none !important; }
+
+  /* Keep the per-task timer (play) button, pinned just left of the finish
+     button — same as the phone layout. Reserve the extra width only when it's
+     actually shown (.hidden for users without clock permission). */
+  .list-row .timer-btn {
+    position: absolute;
+    top: 12px;
+    right: 56px;
+    width: 40px; height: 40px;
+    flex: 0 0 auto;
+    z-index: 3;
+    touch-action: manipulation;
+  }
+  .list-row .timer-btn i { font-size: 17px; }
+  .list-row:has(.timer-btn:not(.hidden)) { padding-right: 104px; }
 }
 
 /* ---- Phones (≤720px) — biggest mobile rule block ---- */
