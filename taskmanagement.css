@@ -2805,9 +2805,20 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* Touch-target minimums (WCAG 2.5.5 AAA = 44×44) */
   .icon-btn { width: 44px; height: 44px; }
   .icon-btn i { font-size: 18px; }
-  .avatar { width: 40px; height: 40px; font-size: 12px; }
-  .clock-widget { padding: 10px 14px; min-height: 40px; font-size: 13px; }
+  .avatar { width: 44px; height: 44px; font-size: 12px; }
+  .clock-widget { padding: 10px 14px; min-height: 44px; font-size: 13px; }
   .clock-widget i { font-size: 15px; }
+
+  /* Remaining tap targets → comfortable touch size. The subtask chevron was an
+     18px hit area (effectively un-tappable); toolbar + play buttons were ~38px. */
+  .work-toolbar .btn { min-height: 44px; }
+  .subtask-toggle { width: 36px; height: 36px; flex-shrink: 0; }
+  .up-next-start { width: 44px; height: 44px; }
+
+  /* Long, unbreakable task titles (pasted URLs / IDs) wrap instead of
+     overflowing the card and being clipped at the screen edge. */
+  .list-row .task-title-cell,
+  .list-row .tt-text { overflow-wrap: anywhere; min-width: 0; }
 
   /* Toolbar buttons — wrap onto multiple rows so every control stays visible
      and reachable. (Was a hidden-scrollbar horizontal scroll, which silently
