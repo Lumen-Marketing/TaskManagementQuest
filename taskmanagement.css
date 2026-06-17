@@ -1138,7 +1138,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 
 /* User menu (avatar dropdown) */
 .user-menu {
-  width: 280px; background: var(--surface);
+  width: min(280px, calc(100vw - 20px)); background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg); z-index: 200; overflow: hidden;
 }
@@ -1164,7 +1164,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .theme-opt.active { background: var(--surface); color: var(--amber); border-color: var(--amber); }
 
 /* Notif inbox */
-.notif-panel { position: absolute; top: 44px; right: 0; width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); z-index: 30; overflow: hidden; }
+.notif-panel { position: absolute; top: 44px; right: 0; width: min(360px, calc(100vw - 20px)); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); z-index: 30; overflow: hidden; }
 .notif-head { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .notif-head-title { font-family: var(--font-display); font-size: 18px; }
 .notif-list { max-height: 400px; overflow-y: auto; }
@@ -3482,3 +3482,53 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
    Icons use an icon font, so font-weight doesn't affect them.
    ============================================================ */
 body, body * { font-weight: 700 !important; }
+
+/* ============================================================
+   MOBILE MODALS (≤720px) — fix content clipping on phones.
+
+   Two bugs made the New-task / Task-detail popups cut off and
+   "go invisible" on small screens:
+
+   1. `vh` sizing. The backdrop offsets the modal by 8vh and the
+      modal is capped at 84vh (→ 92vh total). On phones, `vh`
+      measures the area BEHIND the browser URL bar + bottom
+      toolbar, so the modal's footer (Save / Close) and lower
+      content slid underneath the bottom bar and became
+      unreachable. Dynamic viewport units (`dvh`) measure only
+      the visible area, so nothing is clipped.
+
+   2. `#newTaskModal .modal { min-width: 380px }` is wider than
+      96vw on any phone under ~400px, forcing horizontal overflow
+      that clipped the right edge. Reset to 0 on small screens.
+
+   The backdrop also becomes scrollable as a final safety net so a
+   modal taller than the screen can never trap content off-screen.
+   `100vh` is kept as a fallback for the rare engine without `dvh`.
+   ============================================================ */
+@media (max-width: 720px) {
+  .modal-backdrop {
+    align-items: flex-start;
+    padding: 12px 10px;
+    padding-top: max(12px, env(safe-area-inset-top, 12px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;            /* fallback */
+    max-height: calc(100dvh - 24px);
+  }
+  /* These two carry their own width/min-width/max-height from the
+     desktop rules above, so they must be reset explicitly. */
+  #taskDetailModal .modal,
+  #newTaskModal .modal {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 0;
+    max-height: 90vh;            /* fallback */
+    max-height: calc(100dvh - 24px);
+  }
+}
