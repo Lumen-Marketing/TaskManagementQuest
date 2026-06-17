@@ -3207,6 +3207,71 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 /* Search width on phones is handled by the flexible .search rule above
    (flex: 1 1 56px), so no fixed override is needed here. */
 
+/* ============================================================
+   PROGRESSIVE TOPBAR — collapse controls to icons as the bar narrows
+   so the black topbar stays clean and never crowds/clips on small
+   screens. Labels drop in stages (search → brand → role/clock); the
+   actions stay reachable as icons.
+     ≤640px  search  → magnifier icon (expands on focus)
+     ≤540px  "Quest HQ" wordmark → hidden (⚡ logo + ☰ menu remain)
+     ≤460px  role switcher → eye icon · clock → play icon (idle)
+   ============================================================ */
+
+/* --- ≤640: search becomes an icon pill that expands when focused. The
+   .search <i> is pointer-events:none, so a tap lands on the (full-width,
+   transparent) input underneath and triggers :focus-within to expand. --- */
+@media (max-width: 640px) {
+  .topbar .search {
+    display: flex;                 /* override the ≤460 `display:none` below */
+    flex: 0 0 40px;
+    width: 40px; min-width: 40px; max-width: 40px;
+    height: 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    transition: max-width var(--dur-short) var(--ease-out), width var(--dur-short) var(--ease-out);
+  }
+  .topbar .search i { left: 13px; pointer-events: none; }
+  .topbar .search input {
+    width: 100%; min-width: 0; height: 100%;
+    border: none; background: transparent;
+    padding-left: 36px;
+    opacity: 0;                    /* hide placeholder/text until expanded */
+  }
+  .topbar .search:focus-within {
+    flex-basis: 200px;
+    width: 200px; max-width: min(200px, 62vw);
+  }
+  .topbar .search:focus-within input { opacity: 1; }
+}
+
+/* --- ≤540: drop the wordmark, keep the logo + hamburger. Match the
+   sidebar-minimized selector's specificity so it can't re-show it. --- */
+@media (max-width: 540px) {
+  .topbar-left .brand-name,
+  body.sidebar-minimized .topbar-left .brand-name { display: none; }
+}
+
+/* --- ≤460: role switcher → eye icon (transparent native select overlaid so
+   it still opens), clock → icon-only when idle (the .running state keeps the
+   live timer visible — see TopbarView.renderClockWidget). --- */
+@media (max-width: 460px) {
+  .viewas-switcher {
+    position: relative;
+    width: 44px; min-width: 44px; padding: 0; gap: 0;
+    justify-content: center;
+  }
+  .viewas-switcher i { font-size: 16px; }
+  .viewas-switcher select {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0; padding: 0; cursor: pointer;
+  }
+  .clock-widget { min-width: 44px; padding: 8px; justify-content: center; }
+  .clock-widget.running { min-width: auto; padding: 8px 12px; }
+}
+
 /* ---- Resize handle: hide on coarse pointers regardless of width
         (it's pixel-hunting territory) ---- */
 @media (pointer: coarse) {
