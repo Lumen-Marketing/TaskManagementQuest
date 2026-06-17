@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           App.PROFILES = (App.PROFILES || []).filter(pr => pr.id !== id);
           return { emailFreed: true };
         },
+        createUser: async () => {
+          throw new Error('Adding people is not available in preview/offline mode.');
+        },
       }
     : new App.SupabaseDataStore({
         supabase: App.supabase,

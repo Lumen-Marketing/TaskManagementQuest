@@ -396,6 +396,35 @@ App.SupabaseDataStore = class SupabaseDataStore {
     }
   }
 
+  /* Create a brand-new user (admin-created account). Invokes the create-user
+     Edge Function, which makes the Auth login (the browser can't), approves the
+     profile with the chosen role/company/supervisor, and emails the person their
+     default password. Returns { ok, profileId, memberId, emailSent }. Throws an
+     Error carrying the function's message on failure (e.g. duplicate email). */
+  async createUser({ fullName, email, role, companyIds, supervisorId }) {
+    const { data, error } = await this.supabase.functions.invoke('create-user', {
+      body: {
+        fullName,
+        email,
+        role,
+        companyIds: Array.isArray(companyIds) ? companyIds : [],
+        supervisorId: supervisorId || null,
+      },
+    });
+    if (error) {
+      // Supabase wraps a non-2xx as `error`; the JSON body (with our message)
+      // is on error.context. Surface the function's message when we can read it.
+      let message = error.message || 'Could not add the person.';
+      try {
+        const body = await error.context?.json?.();
+        if (body && body.error) message = body.error;
+      } catch { /* fall back to error.message */ }
+      throw new Error(message);
+    }
+    if (!data || !data.ok) throw new Error((data && data.error) || 'Could not add the person.');
+    return data;
+  }
+
   _mapTaskRow(row) {
     return {
       id: row.id,
