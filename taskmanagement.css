@@ -88,7 +88,12 @@ input[type="checkbox"] { accent-color: var(--amber); cursor: pointer; }
   display: inline-flex; align-items: center; justify-content: center;
   box-sizing: border-box;
 }
-.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.avatar { width: 36px; height: 36px; padding: 0; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; flex: 0 0 auto; }
+/* A profile photo is injected as a child <img> (auth-guard.js). Since .avatar is
+   a flex box, the img would be squished to its intrinsic ratio (e.g. 32×42 → an
+   oval). Force it to fill the square and crop with object-fit so it stays a
+   perfect circle. */
+.avatar > img { flex: 0 0 100%; align-self: stretch; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 
 /* Clock widget */
 .clock-widget {
@@ -3249,7 +3254,14 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     overflow: hidden;
     transition: max-width var(--dur-short) var(--ease-out), width var(--dur-short) var(--ease-out);
   }
-  .topbar .search i { left: 15px; font-size: 18px; pointer-events: none; }
+  /* Collapsed: center the magnifier in the 44px circle. On focus the pill
+     expands, so the icon slides to a leading position inside the field. */
+  .topbar .search i {
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+    font-size: 18px; pointer-events: none;
+    transition: left var(--dur-short) var(--ease-out);
+  }
+  .topbar .search:focus-within i { left: 16px; transform: translate(0, -50%); }
   .topbar .search input {
     width: 100%; min-width: 0; height: 100%;
     border: none; background: transparent;
