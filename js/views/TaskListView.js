@@ -65,7 +65,6 @@ App.TaskListView = class TaskListView {
       'today':     { eyebrow: 'Today',              title: 'Due today' },
       'overdue':   { eyebrow: 'Past due',           title: 'Overdue' },
       'watching':  { eyebrow: 'Tasks you\'re watching', title: 'Watching' },
-      'focus':     { eyebrow: 'Set the order to tackle them', title: 'Focus' },
       'time:mine':      { eyebrow: 'Time tracking', title: 'My time' },
       'time:resource':  { eyebrow: 'Time tracking', title: 'Team workload' },
       'approvals':      { eyebrow: 'Admin', title: 'Approvals' },
@@ -135,11 +134,16 @@ App.TaskListView = class TaskListView {
     document.body.classList.toggle('is-bulk', !!this.controller.uiState.bulkMode);
     // The Watching view stacks two panels: the tasks you're watching, and
     // (for managers) a team dashboard of your direct reports.
+    // Tear down any Focus-list drag listeners from the previous render — the
+    // #listBody element is reused, so they'd otherwise stack and double-fire.
+    if (this._focusCleanup) { this._focusCleanup(); this._focusCleanup = null; }
     if (this.controller.uiState.view === 'watching') return this.renderWatching();
-    if (this.controller.uiState.view === 'focus') return this.renderFocusList();
     const layout = this.controller.uiState.layout;
     if (layout === 'kanban') return this.renderKanban();
     if (layout === 'calendar') return this.renderCalendar();
+    // "Execution order" sort folds the Focus list into the normal table: a
+    // sequenced, drag-rankable view of the current owner's Focus tasks.
+    if (this.controller.uiState.sortBy === 'focus') return this.renderFocusList();
     return this.renderTable();
   }
 
@@ -469,6 +473,12 @@ App.TaskListView = class TaskListView {
     const tasks = this.getFilteredTasks();
     this.body.className = '';
     this.body.innerHTML = '';
+
+    // Restore the column header that the Focus-list (Execution-order sort) and
+    // worker/watching views hide — a sort change re-renders the list without a
+    // full render(), so syncLayoutSwitcher doesn't run to bring it back.
+    const listHeader = document.querySelector('#taskViewWrap .list-header');
+    if (listHeader) listHeader.classList.remove('hidden');
 
     if (tasks.length === 0) {
       this._renderEmpty(this._emptyConfig());

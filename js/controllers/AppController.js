@@ -64,7 +64,6 @@ App.AppController = class AppController {
     if (view === 'time:mine') return App.can('time.own') || App.can('clock.use');
     if (view === 'time:analytics') return false; // Reports view retired
     if (view === 'time:resource') return App.can('time.team');
-    if (view === 'focus') return App.can('tasks.view');
     return App.can('tasks.view');
   }
 

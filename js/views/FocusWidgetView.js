@@ -20,13 +20,15 @@ App.FocusWidgetView = class FocusWidgetView {
   subscribe() {
     App.EventBus.on('tasks:changed', () => this.render());
     App.EventBus.on('view:changed',  () => this.render());
+    App.EventBus.on('sort:changed',  () => this.render());
   }
 
   render() {
     if (!this.mount) return;
     if (this._cleanup) { this._cleanup(); this._cleanup = null; }
-    // The Focus view itself already shows the full list — don't double up.
-    if (this.controller.uiState.view === 'focus') { this.mount.innerHTML = ''; return; }
+    // When the list is already sorted by Execution order it shows the full
+    // sequenced Focus list — don't double up with the widget.
+    if (this.controller.uiState.sortBy === 'focus') { this.mount.innerHTML = ''; return; }
 
     const ownerId = this.controller.focusOwnerId();
     const all = this.taskModel.focusList(ownerId);
@@ -63,7 +65,12 @@ App.FocusWidgetView = class FocusWidgetView {
       rowsEl.appendChild(row);
     });
 
-    this.mount.querySelector('[data-action="open-focus"]').addEventListener('click', () => this.controller.setView('focus'));
+    // "Open" folds the full list into the main table via the Execution-order
+    // sort (ensure we're on the table layout so the sequenced list shows).
+    this.mount.querySelector('[data-action="open-focus"]').addEventListener('click', () => {
+      this.controller.setLayout('table');
+      this.controller.setSortBy('focus');
+    });
 
     if (canEdit && App.makeReorderable) {
       this._cleanup = App.makeReorderable(rowsEl, {

@@ -8,9 +8,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('add tasks to Focus, reorder by drag, removal updates ranks', async ({ page }) => {
-  // Seed three of abraham's tasks into Focus, then open the view.
+  // Seed three of abraham's tasks into Focus, then fold the list into the
+  // main table via the Execution-order sort (no separate Focus view).
   await page.evaluate(() => window.App.controller.addToFocus(['t6', 't7', 't3']));
-  await page.evaluate(() => window.App.controller.setView('focus'));
+  await page.evaluate(() => { window.App.controller.setLayout('table'); window.App.controller.setSortBy('focus'); });
 
   const rows = page.locator('.focus-row');
   await expect(rows).toHaveCount(3);
