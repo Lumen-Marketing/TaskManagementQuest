@@ -35,6 +35,7 @@ App.TaskListView = class TaskListView {
     App.EventBus.on('selection:changed', () => { if (this.visible()) this._syncSelectionHighlight(); });
     App.EventBus.on('search:changed', () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('layout:changed', () => { if (this.visible()) this.render(); });
+    App.EventBus.on('calendar:changed', () => { if (this.visible() && this.controller.uiState.layout === 'calendar') this.renderList(); });
     App.EventBus.on('view:changed', (view) => {
       this.applyHeader(view);
       if (this.visible()) this.render();
@@ -106,28 +107,11 @@ App.TaskListView = class TaskListView {
     set('stat-done', tasks.filter(t => t.status === 'done').length);
   }
 
+  // The filtered task set, shared with the calendar + CSV export so all three
+  // always agree on what's visible. (Supervisor scoping etc. lives in the
+  // controller method.)
   getFilteredTasks() {
-    const role = App.effectiveRole();
-    const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
-    // Supervisors are scoped to their direct reports (profiles whose
-    // supervisor_id points at this supervisor's member_id). When a DEVELOPER
-    // previews "as supervisor", they have no real reports, so we leave this
-    // null — the supervisor preview then shows the whole selected company's
-    // team (company-level supervisor view).
-    const reportMemberIds = (role === 'supervisor' && App.realRole() !== 'developer')
-      ? new Set((App.PROFILES || [])
-          .filter(p => p.supervisor_id === me)
-          .map(p => p.member_id))
-      : null;
-    return this.taskModel.getFiltered({
-      view: this.controller.uiState.view,
-      searchQuery: this.controller.uiState.searchQuery,
-      currentUser: this.currentUser,
-      activeFilters: this.controller.uiState.filters,
-      currentCompany: this.controller.uiState.currentCompany,
-      role,
-      reportMemberIds,
-    });
+    return this.controller.getVisibleTasks();
   }
 
   renderList() {
@@ -147,7 +131,7 @@ App.TaskListView = class TaskListView {
     if (this.controller.uiState.view === 'watching') return this.renderWatchingTeam();
     const layout = this.controller.uiState.layout;
     if (layout === 'kanban') return this.renderKanban();
-    if (layout === 'timeline') return this.renderTimeline();
+    if (layout === 'calendar') return this.renderCalendar();
     return this.renderTable();
   }
 
@@ -472,50 +456,161 @@ App.TaskListView = class TaskListView {
     return card;
   }
 
-  renderTimeline() {
+  /* ===== Calendar view (month / week) — tasks placed on their due date ===== */
+  renderCalendar() {
     const tasks = this.getFilteredTasks();
-    this.body.className = 'timeline-board';
+    this.body.className = 'calendar-view';
     this.body.innerHTML = '';
 
-    if (tasks.length === 0) {
-      this._renderEmpty(this._emptyConfig());
-      return;
+    const ui = this.controller.uiState;
+    const mode = ui.calendarMode === 'week' ? 'week' : 'month';
+    const today = App.utils.todayISO(0);
+    const anchor = new Date((ui.calendarAnchor || today) + 'T00:00:00');
+
+    // Bucket the filtered tasks by their due date; count the date-less ones.
+    const byDate = new Map();
+    let noDue = 0;
+    tasks.forEach(t => {
+      if (!t.due) { noDue++; return; }
+      if (!byDate.has(t.due)) byDate.set(t.due, []);
+      byDate.get(t.due).push(t);
+    });
+
+    // --- Toolbar: nav + Today + period label + Month/Week toggle ---
+    const label = mode === 'week'
+      ? this._calWeekLabel(anchor)
+      : anchor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const toolbar = document.createElement('div');
+    toolbar.className = 'cal-toolbar';
+    toolbar.innerHTML = `
+      <div class="cal-nav">
+        <button class="cal-nav-btn" data-cal="prev" aria-label="Previous"><i class="ti ti-chevron-left"></i></button>
+        <button class="cal-nav-btn" data-cal="next" aria-label="Next"><i class="ti ti-chevron-right"></i></button>
+        <button class="cal-today" data-cal="today">Today</button>
+        <span class="cal-label">${App.utils.escapeHtml(label)}</span>
+      </div>
+      <div class="cal-mode" role="group" aria-label="Calendar range">
+        <button class="cal-mode-btn ${mode === 'month' ? 'active' : ''}" data-cal-mode="month" aria-pressed="${mode === 'month'}">Month</button>
+        <button class="cal-mode-btn ${mode === 'week' ? 'active' : ''}" data-cal-mode="week" aria-pressed="${mode === 'week'}">Week</button>
+      </div>`;
+    this.body.appendChild(toolbar);
+
+    // --- Day cells ---
+    const days = [];
+    if (mode === 'week') {
+      const start = new Date(anchor); start.setDate(anchor.getDate() - anchor.getDay());
+      for (let i = 0; i < 7; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(d); }
+    } else {
+      const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+      const start = new Date(first); start.setDate(first.getDate() - first.getDay());
+      const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+      const cells = Math.ceil((last.getDate() + first.getDay()) / 7) * 7; // 35 or 42
+      for (let i = 0; i < cells; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(d); }
     }
 
-    const sorted = tasks.slice().sort((a, b) => (a.due || '').localeCompare(b.due || ''));
-    const byDate = new Map();
-    sorted.forEach(t => {
-      const key = t.due || 'no-date';
-      if (!byDate.has(key)) byDate.set(key, []);
-      byDate.get(key).push(t);
-    });
+    const grid = document.createElement('div');
+    grid.className = `cal-grid cal-${mode}`;
+    grid.innerHTML = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      .map(d => `<div class="cal-dow">${d}</div>`).join('');
 
-    const today = App.utils.todayISO(0);
-    [...byDate.entries()].forEach(([date, list]) => {
-      const lane = document.createElement('div');
-      lane.className = 'timeline-lane';
-      const label = this.formatTimelineDate(date, today);
-      lane.innerHTML = `
-        <div class="timeline-lane-head">
-          <span class="timeline-dot ${date < today ? 'past' : (date === today ? 'today' : 'future')}"></span>
-          <span class="timeline-lane-date">${label}</span>
-          <span class="timeline-lane-count">${list.length} task${list.length === 1 ? '' : 's'}</span>
-        </div>
-        <div class="timeline-lane-body"></div>
-      `;
-      const body = lane.querySelector('.timeline-lane-body');
-      list.forEach(t => body.appendChild(this.renderKanbanCard(t)));
-      this.body.appendChild(lane);
+    const curMonth = anchor.getMonth();
+    const maxChips = mode === 'week' ? 10 : 3;
+    days.forEach(d => {
+      const iso = App.utils.toISODate(d);
+      const dayTasks = byDate.get(iso) || [];
+      const outside = mode === 'month' && d.getMonth() !== curMonth;
+      const cls = [
+        'cal-cell',
+        outside ? 'outside' : '',
+        iso === today ? 'today' : '',
+        ui.calendarSelectedDay === iso ? 'selected' : '',
+        dayTasks.length ? 'has-tasks' : '',
+      ].filter(Boolean).join(' ');
+      const chips = dayTasks.slice(0, maxChips).map(t => this._calChip(t)).join('');
+      const more = dayTasks.length > maxChips
+        ? `<div class="cal-more">+${dayTasks.length - maxChips} more</div>` : '';
+      const cell = document.createElement('div');
+      cell.className = cls;
+      cell.dataset.day = iso;
+      cell.innerHTML = `
+        <div class="cal-daynum">${d.getDate()}</div>
+        <div class="cal-count" aria-hidden="true">${dayTasks.length || ''}</div>
+        <div class="cal-chips">${chips}${more}</div>`;
+      grid.appendChild(cell);
     });
+    this.body.appendChild(grid);
+
+    // --- Selected-day task list (the phone tap-through; harmless on desktop) ---
+    if (ui.calendarSelectedDay) {
+      const list = byDate.get(ui.calendarSelectedDay) || [];
+      const dLabel = new Date(ui.calendarSelectedDay + 'T00:00:00')
+        .toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      const panel = document.createElement('div');
+      panel.className = 'cal-day-panel';
+      panel.innerHTML = `<div class="cal-day-panel-head">${App.utils.escapeHtml(dLabel)} · ${list.length} task${list.length === 1 ? '' : 's'}</div>`;
+      const pbody = document.createElement('div');
+      pbody.className = 'cal-day-panel-body';
+      if (list.length) list.forEach(t => pbody.appendChild(this.renderKanbanCard(t)));
+      else pbody.innerHTML = `<div class="cal-day-empty">No tasks due this day.</div>`;
+      panel.appendChild(pbody);
+      this.body.appendChild(panel);
+    }
+
+    // --- No-due-date note so those tasks aren't silently hidden ---
+    if (noDue) {
+      const note = document.createElement('div');
+      note.className = 'cal-nodue-note';
+      note.innerHTML = `<i class="ti ti-calendar-off"></i> ${noDue} task${noDue === 1 ? '' : 's'} with no due date (not shown here).`;
+      this.body.appendChild(note);
+    }
+
+    this._bindCalendar();
   }
 
-  formatTimelineDate(date, today) {
-    if (date === 'no-date') return 'No due date';
-    if (date === today) return 'Today';
-    const d = new Date(date + 'T00:00:00');
-    if (Number.isNaN(d.getTime())) return date;
-    const opts = { weekday: 'short', month: 'short', day: 'numeric' };
-    return d.toLocaleDateString('en-US', opts);
+  _calWeekLabel(anchor) {
+    const start = new Date(anchor); start.setDate(anchor.getDate() - anchor.getDay());
+    const end = new Date(start); end.setDate(start.getDate() + 6);
+    const sMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const eMonth = end.toLocaleDateString('en-US', { month: 'short' });
+    const year = end.getFullYear();
+    if (start.getMonth() === end.getMonth()) {
+      return `${sMonth} ${start.getDate()} – ${end.getDate()}, ${year}`;
+    }
+    return `${sMonth} ${start.getDate()} – ${eMonth} ${end.getDate()}, ${year}`;
+  }
+
+  _calChip(t) {
+    const done = t.status === 'done';
+    const prio = t.priority || 'medium';
+    return `<button type="button" class="cal-chip${done ? ' done' : ''}" data-cal-task="${App.utils.escapeHtml(t.id)}" title="${App.utils.escapeHtml(t.title)}">`
+      + `<span class="cal-chip-dot" style="background:var(--u-${App.utils.escapeHtml(prio)});"></span>`
+      + `<span class="cal-chip-title">${App.utils.escapeHtml(t.title)}</span></button>`;
+  }
+
+  _bindCalendar() {
+    const c = this.controller;
+    this.body.querySelectorAll('[data-cal]').forEach(b => b.addEventListener('click', () => {
+      const a = b.dataset.cal;
+      if (a === 'prev') c.shiftCalendar(-1);
+      else if (a === 'next') c.shiftCalendar(1);
+      else if (a === 'today') c.resetCalendarToToday();
+    }));
+    this.body.querySelectorAll('[data-cal-mode]').forEach(b =>
+      b.addEventListener('click', () => c.setCalendarMode(b.dataset.calMode)));
+    this.body.querySelectorAll('[data-cal-task]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      c.selectTask(b.dataset.calTask);
+    }));
+    this.body.querySelectorAll('.cal-cell').forEach(cell => cell.addEventListener('click', (e) => {
+      if (e.target.closest('[data-cal-task]')) return; // chip click handled above
+      const iso = cell.dataset.day;
+      const isPhone = window.matchMedia('(max-width: 720px)').matches;
+      // Phone + a day that has tasks → reveal that day's list. Otherwise, jump
+      // straight to creating a task on that day (when allowed).
+      if (isPhone && cell.classList.contains('has-tasks')) { c.selectCalendarDay(iso); return; }
+      if (App.can('tasks.write')) c.openNewTaskModal({ due: iso });
+      else c.selectCalendarDay(iso);
+    }));
   }
 
   renderRow(t) {

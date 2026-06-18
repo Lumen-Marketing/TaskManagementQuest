@@ -17,6 +17,11 @@ App.AppController = class AppController {
       searchQuery: '',
       selectedTaskId: null,
       layout: 'table',
+      // Calendar view state: 'month' | 'week', and the focused anchor date
+      // (ISO; null → today at render time).
+      calendarMode: 'month',
+      calendarAnchor: null,
+      calendarSelectedDay: null,
       filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' },
       filtersOpen: false,
       sortBy: 'priority',
@@ -173,6 +178,7 @@ App.AppController = class AppController {
         v: 1,
         view: this.uiState.view,
         layout: this.uiState.layout,
+        calendarMode: this.uiState.calendarMode,
       }));
     } catch (e) { /* localStorage unavailable / quota — last-state is best-effort */ }
   }
@@ -185,7 +191,10 @@ App.AppController = class AppController {
     try { saved = JSON.parse(localStorage.getItem(this._uiStateKey()) || 'null'); }
     catch (e) { saved = null; }
     if (!saved || saved.v !== 1) return;
-    if (['table', 'timeline', 'kanban'].includes(saved.layout)) this.setLayout(saved.layout);
+    // 'timeline' was replaced by 'calendar' — migrate any stored value.
+    const savedLayout = saved.layout === 'timeline' ? 'calendar' : saved.layout;
+    if (['table', 'calendar', 'kanban'].includes(savedLayout)) this.setLayout(savedLayout);
+    if (saved.calendarMode === 'month' || saved.calendarMode === 'week') this.uiState.calendarMode = saved.calendarMode;
     if (typeof saved.view === 'string' && this.canView(saved.view)) this.setView(saved.view);
   }
 
@@ -195,11 +204,122 @@ App.AppController = class AppController {
   }
 
   setLayout(layout) {
-    if (!['table', 'timeline', 'kanban'].includes(layout)) return;
+    if (!['table', 'calendar', 'kanban'].includes(layout)) return;
     if (this.uiState.layout === layout) return;
     this.uiState.layout = layout;
     this._persistUiState();
     App.EventBus.emit('layout:changed', layout);
+  }
+
+  /* ----- Calendar view controls ----- */
+  setCalendarMode(mode) {
+    if (mode !== 'month' && mode !== 'week') return;
+    if (this.uiState.calendarMode === mode) return;
+    this.uiState.calendarMode = mode;
+    this.uiState.calendarSelectedDay = null;
+    this._persistUiState();
+    App.EventBus.emit('calendar:changed');
+  }
+
+  // Move the calendar by ±1 month (month mode) or ±1 week (week mode). delta is
+  // -1 / +1. `unit` overrides the step when needed.
+  shiftCalendar(delta) {
+    const base = this.uiState.calendarAnchor
+      ? new Date(this.uiState.calendarAnchor + 'T00:00:00')
+      : new Date();
+    if (this.uiState.calendarMode === 'week') {
+      base.setDate(base.getDate() + delta * 7);
+    } else {
+      base.setMonth(base.getMonth() + delta);
+    }
+    this.uiState.calendarAnchor = App.utils.toISODate(base);
+    this.uiState.calendarSelectedDay = null;
+    App.EventBus.emit('calendar:changed');
+  }
+
+  resetCalendarToToday() {
+    this.uiState.calendarAnchor = null;
+    this.uiState.calendarSelectedDay = null;
+    App.EventBus.emit('calendar:changed');
+  }
+
+  selectCalendarDay(iso) {
+    this.uiState.calendarSelectedDay =
+      this.uiState.calendarSelectedDay === iso ? null : iso;
+    App.EventBus.emit('calendar:changed');
+  }
+
+  /* ----- The filtered task set the list/calendar/export all share ----- */
+  getVisibleTasks() {
+    const role = App.effectiveRole();
+    const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
+    const reportMemberIds = (role === 'supervisor' && App.realRole() !== 'developer')
+      ? new Set((App.PROFILES || []).filter(p => p.supervisor_id === me).map(p => p.member_id))
+      : null;
+    return this.taskModel.getFiltered({
+      view: this.uiState.view,
+      searchQuery: this.uiState.searchQuery,
+      currentUser: this.currentUser,
+      activeFilters: this.uiState.filters,
+      currentCompany: this.uiState.currentCompany,
+      role,
+      reportMemberIds,
+    });
+  }
+
+  _personName(id) {
+    const p = App.PEOPLE && App.PEOPLE[id];
+    return (p && (p.full || p.name)) || id || '';
+  }
+
+  /* ----- CSV export (respects current view + filters) ----- */
+  exportTasksCsv() {
+    const tasks = this.getVisibleTasks();
+    const rows = [['Title', 'Type', 'Label', 'Company', 'Assignee', 'Priority', 'Status', 'Due', 'Created by', 'Subtasks', 'Description']];
+    tasks.forEach(t => {
+      const label = (t.label && t.label !== 'none' && App.TASK_LABELS[t.label]) ? App.TASK_LABELS[t.label].label : '';
+      const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+      const subDone = subs.filter(s => s.d).length;
+      rows.push([
+        t.title || '',
+        (App.TASK_TYPES[t.type] || {}).label || t.type || '',
+        label,
+        (App.COMPANIES[t.company] || {}).label || t.company || '',
+        this._personName(t.assignee),
+        (App.PRIORITIES[t.priority] || {}).label || t.priority || '',
+        (App.STATUSES[t.status] || {}).label || t.status || '',
+        t.due || '',
+        this._personName(t.creator),
+        subs.length ? `${subDone}/${subs.length}` : '',
+        t.description || '',
+      ]);
+    });
+    App.utils.downloadFile(`quest-hq-tasks-${App.utils.todayISO(0)}.csv`, App.utils.toCsv(rows));
+    if (this.toastView) this.toastView.show({ title: 'Exported', sub: `${tasks.length} task${tasks.length === 1 ? '' : 's'} → CSV` });
+  }
+
+  exportTimeCsv() {
+    const tasks = this.getVisibleTasks();
+    const byId = new Map(tasks.map(t => [t.id, t]));
+    const ids = new Set(tasks.map(t => t.id));
+    const entries = (this.timeModel.entries || [])
+      .filter(e => ids.has(e.taskId))
+      .slice()
+      .sort((a, b) => (a.start || 0) - (b.start || 0));
+    const rows = [['Date', 'Person', 'Task', 'Company', 'Hours', 'Note']];
+    entries.forEach(e => {
+      const t = byId.get(e.taskId) || {};
+      rows.push([
+        e.start ? App.utils.toISODate(new Date(e.start)) : '',
+        this._personName(e.userId),
+        t.title || e.taskTitle || e.taskId || '',
+        (App.COMPANIES[t.company] || {}).label || '',
+        ((e.durationMs || 0) / 3600000).toFixed(2),
+        e.note || '',
+      ]);
+    });
+    App.utils.downloadFile(`quest-hq-time-${App.utils.todayISO(0)}.csv`, App.utils.toCsv(rows));
+    if (this.toastView) this.toastView.show({ title: 'Exported', sub: `${entries.length} time ${entries.length === 1 ? 'entry' : 'entries'} → CSV` });
   }
 
   selectTask(id) {
@@ -663,12 +783,12 @@ App.AppController = class AppController {
     `;
   }
 
-  openNewTaskModal() {
+  openNewTaskModal(prefill) {
     if (!App.can('tasks.write')) {
       this.toastView.show({ title: 'No access', sub: 'Your role cannot create tasks.' });
       return;
     }
-    this.newTaskModal.open();
+    this.newTaskModal.open(prefill);
   }
 
   async createTask(payload) {

@@ -12,7 +12,7 @@ App.NewTaskModalView = class NewTaskModalView {
     this.SIZE_KEY = 'questhq:newtask-size';
   }
 
-  open() {
+  open(prefill = {}) {
     if (this.modal) return; // already open
     this.watchers = new Set();
     this.subtasks = [];
@@ -24,6 +24,12 @@ App.NewTaskModalView = class NewTaskModalView {
     this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', 'New task');
     document.body.appendChild(this.modal);
+
+    // Optional prefill (e.g. clicking a day in the calendar sets the due date).
+    if (prefill && prefill.due) {
+      const dueEl = document.getElementById('nt-due');
+      if (dueEl) dueEl.value = prefill.due;
+    }
 
     this._releaseTrap = App.utils.trapFocus(this.modal);
     this.bindEvents();

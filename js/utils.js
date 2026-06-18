@@ -200,6 +200,12 @@ App.utils = {
   todayISO(offset = 0) {
     const d = new Date();
     d.setDate(d.getDate() + offset);
+    return App.utils.toISODate(d);
+  },
+
+  // Format a Date object as a local YYYY-MM-DD string (NOT UTC — matches
+  // todayISO so calendar day math lines up with how due dates are stored).
+  toISODate(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -357,5 +363,35 @@ App.utils = {
 
   uid(prefix = '') {
     return prefix + Date.now() + Math.random().toString(36).slice(2, 6);
+  },
+
+  /* ---------- CSV export helpers ---------- */
+  // One CSV field. Quotes when the value contains a comma/quote/newline, and is
+  // injection-safe: a value starting with = + - @ (or a control char) gets a
+  // leading apostrophe so Excel/Sheets treat it as text, not a formula.
+  csvCell(val) {
+    let s = (val === null || val === undefined) ? '' : String(val);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  },
+
+  // rows: array of arrays → CSV string (CRLF line breaks for Excel).
+  toCsv(rows) {
+    return rows.map(r => r.map(c => App.utils.csvCell(c)).join(',')).join('\r\n');
+  },
+
+  // Trigger a client-side file download. Prepends a UTF-8 BOM so Excel reads
+  // accented characters correctly.
+  downloadFile(filename, content, mime = 'text/csv;charset=utf-8') {
+    const blob = new Blob(['﻿' + content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
 };

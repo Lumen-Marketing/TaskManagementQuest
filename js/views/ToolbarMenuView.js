@@ -12,10 +12,12 @@ App.ToolbarMenuView = class ToolbarMenuView {
     const sortBtn  = document.getElementById('sortBtn');
     const groupBtn = document.getElementById('groupBtn');
     const viewBtn  = document.getElementById('viewBtn');
+    const exportBtn = document.getElementById('exportBtn');
     if (sortBtn)  sortBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('sort',  sortBtn); });
     if (groupBtn) groupBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('group', groupBtn); });
     if (viewBtn)  viewBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('view',  viewBtn); });
-    [sortBtn, groupBtn, viewBtn].forEach(btn => {
+    if (exportBtn) exportBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('export', exportBtn); });
+    [sortBtn, groupBtn, viewBtn, exportBtn].forEach(btn => {
       if (btn) { btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false'); }
     });
     document.addEventListener('click', (e) => {
@@ -125,7 +127,7 @@ App.ToolbarMenuView = class ToolbarMenuView {
     } else if (this.menuFor === 'view') {
       const layouts = [
         { key: 'table',    label: 'Table',    icon: 'ti-table' },
-        { key: 'timeline', label: 'Timeline', icon: 'ti-timeline' },
+        { key: 'calendar', label: 'Calendar', icon: 'ti-calendar' },
         { key: 'kanban',   label: 'Kanban',   icon: 'ti-layout-kanban' },
       ];
       this.menu.innerHTML = `
@@ -139,6 +141,27 @@ App.ToolbarMenuView = class ToolbarMenuView {
       `;
       this.menu.querySelectorAll('[data-layout]').forEach(el => {
         el.addEventListener('click', () => { this.controller.setLayout(el.dataset.layout); this.close(); });
+      });
+    } else if (this.menuFor === 'export') {
+      const items = [
+        { key: 'tasks', label: 'Tasks → CSV',       icon: 'ti-list-check' },
+        { key: 'time',  label: 'Time report → CSV', icon: 'ti-clock' },
+      ];
+      this.menu.innerHTML = `
+        <div class="toolbar-menu-title">Export (current filters)</div>
+        ${items.map(i => `
+          <div class="toolbar-menu-item" data-export="${i.key}">
+            <i class="ti ${i.icon}"></i>
+            <span>${i.label}</span>
+          </div>
+        `).join('')}
+      `;
+      this.menu.querySelectorAll('[data-export]').forEach(el => {
+        el.addEventListener('click', () => {
+          if (el.dataset.export === 'tasks') this.controller.exportTasksCsv();
+          else this.controller.exportTimeCsv();
+          this.close();
+        });
       });
     }
 
@@ -170,8 +193,8 @@ App.ToolbarMenuView = class ToolbarMenuView {
       groupBtn.innerHTML = `<i class="ti ti-layout-rows"></i>Group: ${lbl}`;
     }
     if (viewBtn) {
-      const layoutIcons = { table: 'ti-table', timeline: 'ti-timeline', kanban: 'ti-layout-kanban' };
-      const layoutLabels = { table: 'Table', timeline: 'Timeline', kanban: 'Kanban' };
+      const layoutIcons = { table: 'ti-table', calendar: 'ti-calendar', kanban: 'ti-layout-kanban' };
+      const layoutLabels = { table: 'Table', calendar: 'Calendar', kanban: 'Kanban' };
       const layout = ui.layout || 'table';
       viewBtn.innerHTML = `<i class="ti ${layoutIcons[layout]}"></i>View: ${layoutLabels[layout]}`;
     }
