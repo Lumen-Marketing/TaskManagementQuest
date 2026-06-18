@@ -2564,12 +2564,18 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 #taskViewWrap .list-header > span:nth-child(8) {
   text-align: center;
 }
-.list-row > :nth-child(3),
+/* Center the middle columns only. The row has TWO hidden leading elements —
+   the bulk-select button AND the checkbox — so the title is nth-child(3) and
+   the middle columns (Type…Due) are 4–9. Centering the title cell is what made
+   long titles size-to-content and spill over the next column instead of
+   truncating, so it MUST stay out of this list (Task + Description are prose,
+   left-aligned). */
 .list-row > :nth-child(4),
 .list-row > :nth-child(5),
 .list-row > :nth-child(6),
 .list-row > :nth-child(7),
-.list-row > :nth-child(8) {
+.list-row > :nth-child(8),
+.list-row > :nth-child(9) {
   justify-self: center;
   text-align: center;
 }
@@ -2775,19 +2781,14 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .list-row,
   #taskViewWrap .list-header {
     /* Title track min is 0 so a long name shrinks-and-ellipsises instead of
-       forcing the grid wider than the pane (which clipped the title and made it
-       collide with the next column). Drop Type here too — see below. */
-    grid-template-columns: minmax(0, 1fr) 84px 80px 146px 74px 28px 34px;
+       forcing the grid wider than the pane. */
+    grid-template-columns: minmax(0, 1fr) 92px 84px 80px 146px 74px 28px 34px;
     gap: 6px;
   }
-  /* Cramped width: drop the lowest-value columns (Type, Label, Description) so
-     the task title keeps real room and long names read cleanly. */
-  #taskViewWrap .list-header > span:nth-child(3),   /* Type label */
   #taskViewWrap .list-header > span:nth-child(4),   /* Label label */
   #taskViewWrap .list-header > span:nth-child(9) {  /* Description label */
     display: none;
   }
-  .list-row .type-cell,
   .list-row .label-cell,
   .list-row .desc-cell { display: none; }
 }
