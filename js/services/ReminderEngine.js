@@ -71,8 +71,9 @@ App.ReminderEngine = class ReminderEngine {
     return t.assignee === this.currentUser || (t.watchers || []).includes(this.currentUser);
   }
 
-  /* Treat a task without dueTime as due at end-of-day (23:59 local) so
-     "morning-of" + "4h before" stay well-defined. */
+  /* Treat a task without dueTime as due at end-of-day (23:59 HQ) so
+     "morning-of" + "4h before" stay well-defined. Interpreted in the HQ zone
+     so the window is the same instant for everyone. */
   _taskDueTimestamp(t) {
     if (!t.due) return null;
     const [y, m, d] = t.due.split('-').map(Number);
@@ -83,16 +84,16 @@ App.ReminderEngine = class ReminderEngine {
       hh = Number(parts[0]); mm = Number(parts[1] || 0);
       if (Number.isNaN(hh)) { hh = 23; mm = 59; }
     }
-    return new Date(y, m - 1, d, hh, mm).getTime();
+    return App.utils.hqWallClockToMs(y, m, d, hh, mm);
   }
 
-  /* Parse a `datetime-local` string ("YYYY-MM-DDTHH:MM") as LOCAL wall-clock —
-     mirroring how due dates are handled, so a reminder fires at the intended
-     local time regardless of timezone. */
+  /* Parse a `datetime-local` string ("YYYY-MM-DDTHH:MM") as HQ wall-clock, so a
+     reminder fires at the intended HQ (Phoenix) time for every viewer regardless
+     of their device timezone. */
   _parseLocal(s) {
     const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(s || ''));
     if (!m) return null;
-    const ts = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime();
+    const ts = App.utils.hqWallClockToMs(+m[1], +m[2], +m[3], +m[4], +m[5]);
     return Number.isNaN(ts) ? null : ts;
   }
 
@@ -133,10 +134,22 @@ App.ReminderEngine = class ReminderEngine {
     return out;
   }
 
+  /* 08:00 HQ on the due date — the due date as seen in the HQ zone, at the
+     morning hour in HQ wall-clock, so "morning-of" lands at 8am Phoenix for
+     everyone. */
   _morningOf(dueTs) {
-    const d = new Date(dueTs);
-    d.setHours(this.MORNING_HOUR, 0, 0, 0);
-    return d.getTime();
+    let y, m, d;
+    try {
+      const p = {};
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: App.HQ_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(new Date(dueTs)).forEach(part => { p[part.type] = part.value; });
+      y = Number(p.year); m = Number(p.month); d = Number(p.day);
+    } catch (e) {
+      const dt = new Date(dueTs);
+      y = dt.getFullYear(); m = dt.getMonth() + 1; d = dt.getDate();
+    }
+    return App.utils.hqWallClockToMs(y, m, d, this.MORNING_HOUR, 0);
   }
 
   _fire(task, window) {

@@ -197,10 +197,57 @@ App.utils = {
     return list.length ? list : base;
   },
 
+  /* Offset (ms) of a timezone from UTC at a given instant — recomputed per
+     instant so daylight-saving is handled. Returns (zone-wall-clock-as-UTC −
+     actual-UTC). */
+  zoneOffsetMs(ms, tz) {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const p = {};
+    dtf.formatToParts(new Date(ms)).forEach(part => { p[part.type] = part.value; });
+    const hour = p.hour === '24' ? 0 : Number(p.hour);
+    const asUTC = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), hour, Number(p.minute), Number(p.second));
+    return asUTC - ms;
+  },
+
+  /* Convert an HQ wall-clock (App.HQ_TIMEZONE) Y/M/D H:M into a real epoch ms,
+     so a due/reminder time means the same instant for every viewer regardless of
+     their device zone. One pass is exact for a fixed-offset zone (Arizona, −7);
+     correct for DST zones except within the ~1h that straddles a switch. Falls
+     back to local wall-clock if the zone id is somehow invalid. */
+  hqWallClockToMs(y, m, d, hh = 0, mm = 0) {
+    const guess = Date.UTC(y, m - 1, d, hh, mm);
+    try {
+      return guess - App.utils.zoneOffsetMs(guess, App.HQ_TIMEZONE);
+    } catch (e) {
+      return new Date(y, m - 1, d, hh, mm).getTime();
+    }
+  },
+
+  /* The CURRENT calendar date in the HQ zone (App.HQ_TIMEZONE), so Today /
+     Tomorrow / Overdue / due-today are judged on HQ (Phoenix) time for EVERY
+     user — not the device's local date. ±offset days are applied with UTC math
+     so the shift can't drift across a local-zone boundary. Falls back to the
+     device-local date if Intl rejects the zone id. */
   todayISO(offset = 0) {
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    return App.utils.toISODate(d);
+    let y, m, d;
+    try {
+      const p = {};
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: App.HQ_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(new Date()).forEach(part => { p[part.type] = part.value; });
+      y = Number(p.year); m = Number(p.month); d = Number(p.day);
+    } catch (e) {
+      const local = new Date();
+      y = local.getFullYear(); m = local.getMonth() + 1; d = local.getDate();
+    }
+    const shifted = new Date(Date.UTC(y, m - 1, d + offset));
+    const mm = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(shifted.getUTCDate()).padStart(2, '0');
+    return `${shifted.getUTCFullYear()}-${mm}-${dd}`;
   },
 
   // Format a Date object as a local YYYY-MM-DD string (NOT UTC — matches
