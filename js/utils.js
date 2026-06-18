@@ -248,6 +248,20 @@ App.utils = {
     return `${days}d ago`;
   },
 
+  /* Build the meta line for an inbox notification: the category label plus a
+     live relative time computed from the row's created_at. Older notifications
+     baked the time directly into `meta` (e.g. "Task update · just now"), which
+     froze every row at "just now" forever — strip that legacy suffix so the
+     real timeAgo value wins. Non-time suffixes (e.g. "Reminder · High") are
+     kept. Falls back to "just now" when no timestamp is available. */
+  notifMeta(meta, createdAt) {
+    const base = String(meta == null ? '' : meta)
+      .replace(/\s*·\s*just now\s*$/i, '')
+      .trim();
+    const rel = this.timeAgo(createdAt) || 'just now';
+    return base ? `${base} · ${rel}` : rel;
+  },
+
   /* Format a true point-in-time (a real instant: clock-in moment, time-entry
      timestamp — anything stored as timestamptz) in the shared display timezone
      from App.timezone(), so every viewer sees the SAME wall-clock reading for the

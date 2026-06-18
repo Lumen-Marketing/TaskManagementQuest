@@ -181,7 +181,7 @@ App.TopbarView = class TopbarView {
     }
     this.notifList.innerHTML = all.map(n => `
       <div class="notif-item ${n.read ? '' : 'unread'}" data-notif-id="${App.utils.escapeHtml(n.id)}" data-task-id="${App.utils.escapeHtml(n.taskId || '')}">
-        <div class="notif-meta">${App.utils.escapeHtml(n.meta)}</div>
+        <div class="notif-meta">${App.utils.escapeHtml(App.utils.notifMeta(n.meta, n.createdAt))}</div>
         <div class="notif-text">${App.utils.sanitizeNotificationHtml(n.html)}</div>
       </div>
     `).join('');

@@ -18,6 +18,7 @@ App.NotificationModel = class NotificationModel {
       id: App.utils.uid('n'),
       taskId, meta, html,
       read: false,
+      createdAt: new Date().toISOString(),
     });
     this.notifications = this.notifications.slice(0, 50);
     App.EventBus.emit('notifs:changed');
