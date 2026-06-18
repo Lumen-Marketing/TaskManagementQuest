@@ -206,6 +206,9 @@ App.TaskListView = class TaskListView {
     const me = this.currentUser;
     const profiles = App.PROFILES || [];
     const reports = profiles.filter(p => p.supervisor_id === me && p.approved !== false);
+    // No direct reports (e.g. a worker, or a manager with none) → skip the team
+    // panel entirely rather than showing an empty box.
+    if (reports.length === 0) return;
 
     const sec = document.createElement('div');
     sec.className = 'watch-section';
@@ -214,11 +217,6 @@ App.TaskListView = class TaskListView {
     grid.className = 'team-grid';
     sec.appendChild(grid);
     container.appendChild(sec);
-
-    if (reports.length === 0) {
-      grid.innerHTML = `<div class="watch-empty"><i class="ti ti-users"></i> No direct reports. When team members report to you in the org chart, they'll appear here.</div>`;
-      return;
-    }
 
     const today = App.utils.todayISO(0);
     const threeDaysAgo = App.utils.todayISO(-3);

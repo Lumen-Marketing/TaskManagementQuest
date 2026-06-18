@@ -50,14 +50,12 @@ App.SidebarView = class SidebarView {
   }
 
   applyStaticVisibility() {
-    // Roles scoped to their own work (no team supervision) don't need the
-    // Watching view, since it shows direct reports.
-    const isSelfOnlyRole = ['worker', 'member', 'sales', 'developer'].includes(App.effectiveRole());
+    // Watching now shows "Tasks you're watching" (relevant to every role), with
+    // the direct-reports dashboard only added when you actually have reports —
+    // so it's visible for workers/sales too, gated purely by canView.
     document.querySelectorAll('.side-item[data-view]').forEach(el => {
       const view = el.dataset.view;
-      let hidden = !this.controller.canView(view);
-      if (!hidden && isSelfOnlyRole && view === 'watching') hidden = true;
-      el.classList.toggle('hidden', hidden);
+      el.classList.toggle('hidden', !this.controller.canView(view));
     });
   }
 
