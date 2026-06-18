@@ -93,6 +93,15 @@ App.TaskModel = class TaskModel {
   byCompany(companyId) { return this.tasks.filter(t => t.company === companyId); }
   byAssignee(userId) { return this.tasks.filter(t => t.assignee === userId); }
 
+  /* The assignee's curated Focus list: active (not done, not soft-cleared)
+     tasks with a focus position, ordered by that position. The #N badge a user
+     sees is the index in THIS array, not the stored focusSeq. */
+  focusList(userId) {
+    return this.tasks
+      .filter(t => t.assignee === userId && t.focusSeq != null && t.status !== 'done' && !t.clearedAt)
+      .sort((a, b) => a.focusSeq - b.focusSeq);
+  }
+
   getFiltered({ view, searchQuery, currentUser, activeFilters, currentCompany, role, reportMemberIds }) {
     // Soft-cleared rows (Clear-done-group action) stay in memory so the
     // optimistic-lock save still works, but they never appear in any
@@ -262,6 +271,12 @@ App.TaskModel = class TaskModel {
       else if (sortBy === 'assignee') c = assigneeName(a).localeCompare(assigneeName(b));
       else if (sortBy === 'status')   c = statusOrd(a) - statusOrd(b);
       else if (sortBy === 'created')  c = (a.id || '').localeCompare(b.id || '');
+      else if (sortBy === 'focus') {
+        // Nulls (not in Focus) sort last; otherwise ascending by focusSeq.
+        const av = a.focusSeq == null ? Infinity : a.focusSeq;
+        const bv = b.focusSeq == null ? Infinity : b.focusSeq;
+        c = av - bv;
+      }
       // Stable tiebreaker by due
       if (c === 0) c = dueKey(a).localeCompare(dueKey(b));
       return c * dir;
@@ -372,6 +387,36 @@ App.TaskModel = class TaskModel {
     if (!t) return;
     t[field] = value;
     this.pushActivity(t, userName, `changed ${field}`);
+    this._markDirty(id);
+    App.EventBus.emit('tasks:changed');
+  }
+
+  /* ---------- Focus list (execution order) ---------- */
+  // Add a task to its assignee's Focus list at the bottom. focusSeq is a float
+  // sort-key; appending = one past the current max so existing order is kept.
+  addToFocus(id) {
+    const t = this.find(id);
+    if (!t) return;
+    const peers = this.tasks.filter(x => x.assignee === t.assignee && x.focusSeq != null && x.id !== id);
+    const max = peers.reduce((m, x) => Math.max(m, x.focusSeq), -Infinity);
+    t.focusSeq = (max === -Infinity) ? 0 : max + 1;
+    this._markDirty(id);
+    App.EventBus.emit('tasks:changed');
+  }
+
+  removeFromFocus(id) {
+    const t = this.find(id);
+    if (!t || t.focusSeq == null) return;
+    t.focusSeq = null;
+    this._markDirty(id);
+    App.EventBus.emit('tasks:changed');
+  }
+
+  // Set an explicit float position (drag-to-reorder computes a midpoint).
+  setFocusOrder(id, newSeq) {
+    const t = this.find(id);
+    if (!t) return;
+    t.focusSeq = newSeq;
     this._markDirty(id);
     App.EventBus.emit('tasks:changed');
   }

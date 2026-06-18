@@ -195,6 +195,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       subtasks: task.subtasks || [],
       activity: task.activity || [],
       cleared_at: task.clearedAt || null,
+      focus_seq: (task.focusSeq === null || task.focusSeq === undefined) ? null : task.focusSeq,
     };
   }
 
@@ -452,6 +453,8 @@ App.SupabaseDataStore = class SupabaseDataStore {
       subtasks: Array.isArray(row.subtasks) ? row.subtasks : [],
       activity: Array.isArray(row.activity) ? row.activity : [],
       clearedAt: row.cleared_at || null,
+      // Focus list (execution order) sort-key. null = not in the assignee's Focus.
+      focusSeq: (row.focus_seq === null || row.focus_seq === undefined) ? null : Number(row.focus_seq),
     };
   }
 
@@ -462,6 +465,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       meta: row.meta,
       html: row.html,
       read: !!row.read,
+      createdAt: row.created_at || null,
     };
   }
 

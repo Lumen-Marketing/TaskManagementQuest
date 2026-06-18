@@ -65,6 +65,7 @@ App.TaskListView = class TaskListView {
       'today':     { eyebrow: 'Today',              title: 'Due today' },
       'overdue':   { eyebrow: 'Past due',           title: 'Overdue' },
       'watching':  { eyebrow: 'Tasks you\'re watching', title: 'Watching' },
+      'focus':     { eyebrow: 'Set the order to tackle them', title: 'Focus' },
       'time:mine':      { eyebrow: 'Time tracking', title: 'My time' },
       'time:resource':  { eyebrow: 'Time tracking', title: 'Team workload' },
       'approvals':      { eyebrow: 'Admin', title: 'Approvals' },
@@ -135,6 +136,7 @@ App.TaskListView = class TaskListView {
     // The Watching view stacks two panels: the tasks you're watching, and
     // (for managers) a team dashboard of your direct reports.
     if (this.controller.uiState.view === 'watching') return this.renderWatching();
+    if (this.controller.uiState.view === 'focus') return this.renderFocusList();
     const layout = this.controller.uiState.layout;
     if (layout === 'kanban') return this.renderKanban();
     if (layout === 'calendar') return this.renderCalendar();
@@ -299,6 +301,97 @@ App.TaskListView = class TaskListView {
 
       grid.appendChild(card);
     });
+  }
+
+  /* The Focus view: the target person's curated execution-order list. Rows are
+     drag-reorderable (mouse + touch); the #N badge is the position. The target
+     person is the viewer, or the person: view's subject when a manager browses. */
+  renderFocusList() {
+    // #listBody is reused across renders, so tear down the previous drag
+    // listeners before re-binding or they'd stack and fire onDrop repeatedly.
+    if (this._focusCleanup) { this._focusCleanup(); this._focusCleanup = null; }
+    const ownerId = this.controller.focusOwnerId();
+    const tasks = this.taskModel.focusList(ownerId);
+    const canEdit = tasks.length
+      ? this.controller.canSetFocusFor(tasks[0])
+      : (ownerId === this.currentUser || App.effectiveRole() !== 'worker');
+
+    this.body.className = 'focus-list';
+    this.body.innerHTML = '';
+
+    const header = document.querySelector('#taskViewWrap .list-header');
+    if (header) header.classList.add('hidden');
+
+    if (tasks.length === 0) {
+      this._renderEmpty({
+        icon: 'ti-list-numbers',
+        title: 'No focus tasks yet',
+        sub: 'Pick tasks with Select → "Add to Focus", then drag them into the order to tackle them.',
+      });
+      return;
+    }
+
+    tasks.forEach((t, i) => this.body.appendChild(this.renderFocusRow(t, i, canEdit)));
+
+    if (canEdit && App.makeReorderable) {
+      // On drop, translate the row's new index into a midpoint focusSeq between
+      // its new neighbors so only the moved task is written.
+      this._focusCleanup = App.makeReorderable(this.body, {
+        handleSelector: '.focus-drag',
+        onDrop: (movedId, newIndex) => {
+          const ordered = this.taskModel.focusList(ownerId).filter(t => t.id !== movedId);
+          const before = ordered[newIndex - 1];   // neighbor above the drop slot
+          const after = ordered[newIndex];         // neighbor below the drop slot
+          let seq;
+          if (!before && !after) seq = 0;
+          else if (!before) seq = after.focusSeq - 1;
+          else if (!after) seq = before.focusSeq + 1;
+          else seq = (before.focusSeq + after.focusSeq) / 2;
+          this.controller.setFocusOrder(movedId, seq);
+        },
+      });
+    }
+  }
+
+  renderFocusRow(t, index, canEdit) {
+    const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
+    const due = App.utils.formatDue(t.due);
+    const myActive = this.timeModel.activeFor(this.currentUser);
+    const myTimerOnThis = myActive && myActive.taskId === t.id;
+    const selected = this.controller.uiState.selectedTaskId === t.id;
+
+    const row = document.createElement('div');
+    row.className = 'focus-row' + (selected ? ' selected' : '');
+    row.dataset.id = t.id;
+    row.innerHTML = `
+      ${canEdit ? `<button type="button" class="focus-drag" aria-label="Drag to reorder" title="Drag to reorder"><i class="ti ti-grip-vertical"></i></button>` : ''}
+      <span class="focus-rank">${index + 1}</span>
+      <div class="focus-main">
+        <div class="focus-title">${App.utils.escapeHtml(t.title)}</div>
+        <div class="focus-meta">
+          <span class="priority-block ${priority.cls}">${priority.label}</span>
+          <span class="due-cell ${due.cls}">${due.text}</span>
+        </div>
+      </div>
+      <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}">
+        <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i>
+      </button>
+      ${canEdit ? `<button type="button" class="focus-remove" data-action="remove-focus" aria-label="Remove from Focus" title="Remove from Focus"><i class="ti ti-x"></i></button>` : ''}
+    `;
+
+    row.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-action]');
+      if (target) {
+        e.stopPropagation();
+        if (target.dataset.action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
+        else if (target.dataset.action === 'remove-focus') this.controller.removeFromFocus(t.id);
+        return;
+      }
+      // A click that isn't part of a drag opens the detail.
+      if (row.classList.contains('dragging')) return;
+      this.controller.selectTask(t.id);
+    });
+    return row;
   }
 
   renderWorkerList() {
