@@ -12,7 +12,7 @@ App.FocusWidgetView = class FocusWidgetView {
     this.currentUser = currentUser;
     this.mount = document.getElementById('focusWidget');
     if (!this.mount) return;
-    this.MAX = 5; // keep the head widget compact; full list lives in the Focus view
+    this.MAX = 2; // fits the 88px card next to Up next / Progress; rest = "+N more"
     this.subscribe();
     this.render();
   }
