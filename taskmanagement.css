@@ -3798,3 +3798,137 @@ body, body * { font-weight: 700 !important; }
     max-height: calc(100dvh - 24px);
   }
 }
+
+/* ============================================================================
+   User-friendliness additions: mobile FAB, swipe-to-act, bulk select + bar,
+   and the keyboard-shortcuts help overlay.
+   ========================================================================== */
+
+/* ---- Floating quick-add button (phones only) ---- */
+.fab { display: none; }
+.fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--amber);
+  color: var(--color-accent-ink);
+  border: none;
+  box-shadow: var(--shadow-lg);
+  align-items: center;
+  justify-content: center;
+  z-index: 180;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.fab i { font-size: 26px; }
+.fab:active { transform: scale(0.92); }
+@media (max-width: 720px) {
+  .fab:not(.hidden) { display: inline-flex; }
+  /* Lift the FAB above the bulk bar when both could show (defensive). */
+  body.has-bulk-bar .fab { opacity: 0; pointer-events: none; }
+}
+
+/* ---- Swipe-to-act affordance (touch list rows) ---- */
+.list-row.swiping,
+.worker-row.swiping { transition: none; will-change: transform; z-index: 1; }
+.list-row.swipe-right,
+.worker-row.swipe-right { box-shadow: inset 5px 0 0 var(--green); }
+.list-row.swipe-left,
+.worker-row.swipe-left  { box-shadow: inset -5px 0 0 var(--rust); }
+
+/* ---- Bulk select: per-row checkbox + selected state ---- */
+.bulk-check { display: none; }
+body.is-bulk .bulk-check {
+  display: inline-flex;
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px; height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: transparent;
+  z-index: 4;
+  cursor: pointer;
+}
+body.is-bulk .bulk-check i { font-size: 15px; }
+body.is-bulk .list-row,
+body.is-bulk .worker-row { position: relative; padding-left: 48px; }
+.list-row.bulk-selected,
+.worker-row.bulk-selected { background: var(--amber-bg); }
+.list-row.bulk-selected .bulk-check,
+.worker-row.bulk-selected .bulk-check {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--color-accent-ink);
+}
+
+/* ---- Bulk action bar (fixed, bottom-centered) ---- */
+.bulk-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px 10px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lg);
+  max-width: calc(100vw - 24px);
+}
+.bulk-bar-count { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); white-space: nowrap; }
+.bulk-bar-close {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-2); border: 1px solid var(--border); color: var(--ink-2); cursor: pointer;
+}
+.bulk-bar-close:hover { background: var(--bg-3); }
+.bulk-bar-actions { display: flex; align-items: center; gap: 8px; }
+.bulk-bar-actions .btn[disabled] { opacity: 0.45; pointer-events: none; }
+.bulk-bar .bulk-danger { color: var(--rust); border-color: color-mix(in oklab, var(--rust) 40%, var(--border)); }
+.bulk-bar .bulk-danger:hover { background: color-mix(in oklab, var(--rust) 12%, var(--surface)); }
+@media (max-width: 720px) {
+  .bulk-bar { left: 12px; right: 12px; transform: none; justify-content: space-between; }
+  .bulk-bar-actions .btn { min-height: 40px; }
+}
+
+/* ---- Keyboard shortcuts help overlay ---- */
+.shortcuts-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  display: grid; place-items: center;
+  background: rgba(0,0,0,0.45);
+  padding: 24px;
+}
+.shortcuts-card {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: min(440px, 100%);
+  max-height: 86vh; overflow: auto;
+  padding: 20px 22px;
+}
+.shortcuts-card h2 { font-size: 16px; margin: 0 0 14px; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.shortcuts-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--bg-3); font-size: 13px; color: var(--ink-2); }
+.shortcuts-row:last-child { border-bottom: none; }
+.shortcuts-row kbd {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 2px 7px;
+  color: var(--ink);
+  min-width: 20px; text-align: center;
+}
+/* Touch devices have no physical keyboard — hide the help affordance there. */
+@media (pointer: coarse) { .shortcuts-overlay { display: none; } }

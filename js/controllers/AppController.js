@@ -28,6 +28,10 @@ App.AppController = class AppController {
       sortDir: 'asc',
       groupBy: 'due',
       collapsedGroups: new Set(),
+      // Bulk-select mode: when on, list rows toggle selection instead of
+      // opening the detail pane, and BulkActionsView shows a bottom action bar.
+      bulkMode: false,
+      bulkSelected: new Set(),
       // Company scoping: the companies this user may access, and the one
       // currently in focus. Populated by initCompanyContext().
       currentCompany: null,
@@ -327,6 +331,26 @@ App.AppController = class AppController {
     App.EventBus.emit('selection:changed');
   }
 
+  // Keyboard j/k navigation: move the selection to the next/prev task in the
+  // currently-visible (filtered + sorted) order, opening its detail. Wraps at
+  // the ends. No-op when there are no visible tasks.
+  selectAdjacentTask(delta) {
+    const tasks = this.getVisibleTasks();
+    if (!tasks.length) return;
+    const ids = tasks.map(t => t.id);
+    const cur = ids.indexOf(this.uiState.selectedTaskId);
+    let next;
+    if (cur === -1) next = delta > 0 ? 0 : ids.length - 1;
+    else next = (cur + delta + ids.length) % ids.length;
+    const id = ids[next];
+    this.uiState.selectedTaskId = id;
+    App.EventBus.emit('selection:changed');
+    // Bring the row into view if it scrolled off.
+    const safe = (window.CSS && CSS.escape) ? CSS.escape(String(id)) : String(id);
+    const el = document.querySelector(`#listBody [data-id="${safe}"]`);
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  }
+
   closeDetail() {
     this.uiState.selectedTaskId = null;
     App.EventBus.emit('selection:changed');
@@ -585,6 +609,122 @@ App.AppController = class AppController {
         },
       });
     }
+  }
+
+  /* ---------- bulk select ---------- */
+  // Multi-select lets the user act on several tasks at once. Selection state
+  // lives in uiState (a Set of ids); the list view paints checkboxes and the
+  // BulkActionsView paints the bottom bar. 'bulk:changed' drives both.
+  isBulkSelected(id) { return this.uiState.bulkSelected.has(id); }
+
+  enterBulkMode(seedId) {
+    if (!App.can('tasks.view')) return;
+    this.uiState.bulkMode = true;
+    this.uiState.bulkSelected.clear();
+    if (seedId != null) this.uiState.bulkSelected.add(seedId);
+    // Selecting tasks and reading the detail pane at once is confusing — close it.
+    if (this.uiState.selectedTaskId) this.closeDetail();
+    App.EventBus.emit('bulk:changed');
+    App.EventBus.emit('tasks:changed'); // repaint rows with checkboxes
+  }
+
+  exitBulkMode() {
+    this.uiState.bulkMode = false;
+    this.uiState.bulkSelected.clear();
+    App.EventBus.emit('bulk:changed');
+    App.EventBus.emit('tasks:changed');
+  }
+
+  toggleBulkMode() {
+    if (this.uiState.bulkMode) this.exitBulkMode();
+    else this.enterBulkMode();
+  }
+
+  toggleBulkSelect(id) {
+    const sel = this.uiState.bulkSelected;
+    if (sel.has(id)) sel.delete(id);
+    else sel.add(id);
+    App.EventBus.emit('bulk:changed');
+    App.EventBus.emit('selection:changed'); // cheap row-highlight refresh
+  }
+
+  bulkSelectAllVisible() {
+    const ids = this.getVisibleTasks().map(t => t.id);
+    const sel = this.uiState.bulkSelected;
+    // If everything's already selected, treat the button as "clear".
+    if (ids.length && ids.every(id => sel.has(id))) sel.clear();
+    else ids.forEach(id => sel.add(id));
+    App.EventBus.emit('bulk:changed');
+    App.EventBus.emit('tasks:changed');
+  }
+
+  _bulkIds() {
+    // Only act on selected tasks still visible (and real).
+    return [...this.uiState.bulkSelected].filter(id => this.taskModel.find(id));
+  }
+
+  bulkComplete() {
+    if (!App.can('tasks.write')) return;
+    const ids = this._bulkIds().filter(id => {
+      const t = this.taskModel.find(id);
+      return t && t.status !== 'done';
+    });
+    if (!ids.length) { this.exitBulkMode(); return; }
+    ids.forEach(id => {
+      this.taskModel.toggleDone(id, this.getUserName(this.currentUser));
+      this._revertToGeneralShiftIfOnTask(id);
+    });
+    if (this.toastView) {
+      this.toastView.show({
+        title: `Completed ${ids.length} task${ids.length > 1 ? 's' : ''}`,
+        sub: 'Marked done.',
+        action: {
+          label: 'Undo',
+          onClick: () => ids.forEach(id => this.taskModel.toggleDone(id, this.getUserName(this.currentUser))),
+        },
+      });
+    }
+    this.exitBulkMode();
+  }
+
+  bulkDelete() {
+    const deletable = this._bulkIds().filter(id => this.canDeleteTask(this.taskModel.find(id)));
+    const blocked = this._bulkIds().length - deletable.length;
+    if (!deletable.length) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'None of the selected tasks can be deleted by you.' });
+      return;
+    }
+    // Snapshot for one shared Undo, then defer the irreversible DB delete past
+    // the undo window — mirrors single-task deleteTask().
+    const snapshots = deletable.map(id => JSON.parse(JSON.stringify(this.taskModel.find(id))));
+    deletable.forEach(id => { this._stopTimerIfOnTask(id); this.taskModel.remove(id); });
+
+    const UNDO_MS = 6000;
+    let undone = false;
+    const timer = setTimeout(() => {
+      if (undone) return;
+      if (this.dataStore && typeof this.dataStore.deleteTask === 'function') {
+        deletable.forEach(id => this.dataStore.deleteTask(id).catch(err => console.error('[task] bulk delete failed', err)));
+      }
+    }, UNDO_MS);
+
+    if (this.toastView) {
+      this.toastView.show({
+        title: `Deleted ${deletable.length} task${deletable.length > 1 ? 's' : ''}`,
+        sub: blocked ? `${blocked} skipped (no access).` : 'Removed.',
+        duration: UNDO_MS,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            if (undone) return;
+            undone = true;
+            clearTimeout(timer);
+            snapshots.forEach(s => this.taskModel.add(s));
+          },
+        },
+      });
+    }
+    this.exitBulkMode();
   }
 
   /* Soft-clear every done task, after a confirm prompt. Rows stay in
@@ -1118,7 +1258,9 @@ App.AppController = class AppController {
 
   /* ---------- misc ---------- */
   handleEscape() {
-    if (this.uiState.selectedTaskId) {
+    if (this.uiState.bulkMode) {
+      this.exitBulkMode();
+    } else if (this.uiState.selectedTaskId) {
       this.closeDetail();
     }
   }

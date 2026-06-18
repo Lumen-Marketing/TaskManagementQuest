@@ -163,6 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.TaskListView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   new App.TaskDetailView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   new App.FilterBarView({ controller });
+  new App.BulkActionsView({ controller });
   new App.ResizeHandleView({ controller });
   new App.ToolbarMenuView({ controller });
   new App.UiScaleView();
@@ -385,8 +386,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, 600);
 
   document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-    if (e.key === 'n' || e.key === 'N') {
+    // '?' opens the shortcuts cheat-sheet from anywhere (even out of a field is
+    // handled below); Escape always closes any open overlay/menu/detail.
+    if (e.key === 'Escape') {
+      if (App.closeShortcutsHelp && App.closeShortcutsHelp()) { e.preventDefault(); return; }
+      controller.handleEscape();
+      return;
+    }
+    const typing = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' ||
+                   e.target.tagName === 'SELECT' || e.target.isContentEditable;
+    // '/' focuses search — the one shortcut we want even while not typing.
+    if (e.key === '/' && !typing) {
+      const search = document.getElementById('searchInput');
+      if (search) { e.preventDefault(); search.focus(); search.select(); }
+      return;
+    }
+    if (typing) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (e.key === '?') {
+      e.preventDefault();
+      if (App.toggleShortcutsHelp) App.toggleShortcutsHelp();
+    } else if (e.key === 'n' || e.key === 'N') {
       if (document.getElementById('newTaskModal')) return;
       if (!App.can('tasks.write')) return;
       e.preventDefault();
@@ -394,10 +415,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (e.key === 't' || e.key === 'T') {
       e.preventDefault();
       controller.toggleGlobalClock();
-    } else if (e.key === 'Escape') {
-      controller.handleEscape();
+    } else if (e.key === 'j') {
+      e.preventDefault();
+      controller.selectAdjacentTask(1);
+    } else if (e.key === 'k') {
+      e.preventDefault();
+      controller.selectAdjacentTask(-1);
+    } else if (e.key === 'c' || e.key === 'C') {
+      if (controller.uiState.selectedTaskId && App.can('tasks.write')) {
+        e.preventDefault();
+        controller.completeTask(controller.uiState.selectedTaskId);
+      }
+    } else if (e.key === 'x' || e.key === 'X') {
+      // Toggle the focused task into/out of a bulk selection.
+      const id = controller.uiState.selectedTaskId;
+      if (id == null) return;
+      e.preventDefault();
+      if (!controller.uiState.bulkMode) controller.enterBulkMode(id);
+      else controller.toggleBulkSelect(id);
     }
   });
+
+  // ---- Floating quick-add button (mobile) ----
+  const fab = document.getElementById('fab');
+  if (fab) {
+    fab.addEventListener('click', () => controller.openNewTaskModal());
+    App.syncFab = () => fab.classList.toggle('hidden', !App.can('tasks.write'));
+    App.syncFab();
+  }
+
+  // ---- Keyboard shortcuts help overlay (desktop) ----
+  App.toggleShortcutsHelp = () => {
+    if (document.getElementById('shortcutsOverlay')) { App.closeShortcutsHelp(); return; }
+    const rows = [
+      ['New task', 'N'], ['Focus search', '/'], ['Next task', 'J'], ['Previous task', 'K'],
+      ['Complete selected', 'C'], ['Select (bulk)', 'X'], ['Clock in / out', 'T'],
+      ['Close / cancel', 'Esc'], ['This help', '?'],
+    ];
+    const overlay = document.createElement('div');
+    overlay.id = 'shortcutsOverlay';
+    overlay.className = 'shortcuts-overlay';
+    overlay.innerHTML = `
+      <div class="shortcuts-card" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+        <h2><i class="ti ti-keyboard"></i> Keyboard shortcuts</h2>
+        ${rows.map(([label, key]) => `<div class="shortcuts-row"><span>${label}</span><kbd>${key}</kbd></div>`).join('')}
+      </div>`;
+    overlay.addEventListener('click', (ev) => { if (ev.target === overlay) App.closeShortcutsHelp(); });
+    document.body.appendChild(overlay);
+  };
+  App.closeShortcutsHelp = () => {
+    const o = document.getElementById('shortcutsOverlay');
+    if (o) { o.remove(); return true; }
+    return false;
+  };
 
   setInterval(() => App.EventBus.emit('clock:tick'), 1000);
 
@@ -447,6 +517,7 @@ function applyRoleChrome(controller) {
   if (newTaskBtn) newTaskBtn.classList.toggle('hidden', !App.can('tasks.write'));
   if (filterBtn) filterBtn.classList.toggle('hidden', !App.can('tasks.view'));
   if (quickAdd) quickAdd.classList.toggle('hidden', !App.can('tasks.write'));
+  if (App.syncFab) App.syncFab();
   // Workers use a fixed Time | Task layout, so the table/timeline/kanban switcher is hidden.
   if (layoutSwitcher) layoutSwitcher.classList.toggle('hidden', isWorker || !App.can('tasks.view'));
 

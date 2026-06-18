@@ -24,6 +24,11 @@ App.TaskListView = class TaskListView {
   bindStaticButtons() {
     document.getElementById('newTaskBtn').addEventListener('click', () => this.controller.openNewTaskModal());
     document.getElementById('filterBtn').addEventListener('click', () => this.controller.toggleFilters());
+    const selectBtn = document.getElementById('selectBtn');
+    if (selectBtn) {
+      selectBtn.addEventListener('click', () => this.controller.toggleBulkMode());
+      App.EventBus.on('bulk:changed', () => selectBtn.classList.toggle('active', !!this.controller.uiState.bulkMode));
+    }
     document.querySelectorAll('#layoutSwitcher [data-layout]').forEach(btn => {
       btn.addEventListener('click', () => this.controller.setLayout(btn.dataset.layout));
     });
@@ -125,6 +130,8 @@ App.TaskListView = class TaskListView {
   }
 
   _renderListInner() {
+    // Reflect bulk-select mode on <body> so CSS can reveal the row checkboxes.
+    document.body.classList.toggle('is-bulk', !!this.controller.uiState.bulkMode);
     // The Watching view becomes a team-supervision dashboard rather than a
     // task table: it lists direct reports with their overdue/stale flags and
     // a Ping action.
@@ -142,10 +149,20 @@ App.TaskListView = class TaskListView {
   _syncSelectionHighlight() {
     const id = this.controller.uiState.selectedTaskId;
     this.body.querySelectorAll('[data-id].selected').forEach(el => el.classList.remove('selected'));
-    if (id == null) return;
-    const safe = (window.CSS && CSS.escape) ? CSS.escape(String(id)) : String(id);
-    const el = this.body.querySelector(`[data-id="${safe}"]`);
-    if (el) el.classList.add('selected');
+    if (id != null) {
+      const safe = (window.CSS && CSS.escape) ? CSS.escape(String(id)) : String(id);
+      const el = this.body.querySelector(`[data-id="${safe}"]`);
+      if (el) el.classList.add('selected');
+    }
+    // Repaint bulk-selection state in place (toggleBulkSelect emits
+    // selection:changed rather than re-rendering the whole list).
+    const sel = this.controller.uiState.bulkSelected;
+    this.body.querySelectorAll('[data-id]').forEach(el => {
+      const on = sel.has(el.dataset.id);
+      el.classList.toggle('bulk-selected', on);
+      const cb = el.querySelector('.bulk-check');
+      if (cb) cb.setAttribute('aria-pressed', String(on));
+    });
   }
 
   renderWatchingTeam() {
@@ -315,10 +332,64 @@ App.TaskListView = class TaskListView {
         if (target.dataset.action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
         return;
       }
+      if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
       this.controller.selectTask(t.id);
     });
     App.utils.makeActivatable(row, null, `Open task: ${t.title}`);
+    this._attachSwipe(row, t);
     return row;
+  }
+
+  // Touch swipe gestures on a task row (phones/tablets only). Swipe right past
+  // the threshold completes the task; swipe left deletes it (when permitted).
+  // Both already have an Undo toast, so the gesture is non-destructive in
+  // practice. Pointer events with an axis lock so vertical scrolling still wins.
+  _attachSwipe(row, t) {
+    if (!window.matchMedia || !window.matchMedia('(pointer: coarse)').matches) return;
+    if (!App.can('tasks.write')) return;
+    const THRESH = 80;          // px of travel before the action fires
+    const MAX = 120;            // clamp the visual drag
+    let x0 = 0, y0 = 0, dx = 0, dragging = false, locked = null, id = 0;
+
+    const reset = (animate) => {
+      row.style.transition = animate ? 'transform var(--dur-fast,140ms) ease-out' : '';
+      row.style.transform = '';
+      row.classList.remove('swiping', 'swipe-right', 'swipe-left');
+      dx = 0; dragging = false; locked = null;
+    };
+
+    row.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return;          // gesture is touch-only
+      if (this.controller.uiState.bulkMode) return;   // selection owns taps here
+      if (e.target.closest('[data-action], input, button, a')) return;
+      x0 = e.clientX; y0 = e.clientY; id = e.pointerId; dragging = true; locked = null;
+      row.style.transition = '';
+    });
+    row.addEventListener('pointermove', (e) => {
+      if (!dragging || e.pointerId !== id) return;
+      const mx = e.clientX - x0, my = e.clientY - y0;
+      if (locked === null) {
+        if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+        locked = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+        if (locked === 'y') { dragging = false; return; } // let the list scroll
+        row.classList.add('swiping');
+      }
+      dx = Math.max(-MAX, Math.min(MAX, mx));
+      row.style.transform = `translateX(${dx}px)`;
+      const canDelete = this.controller.canDeleteTask(t);
+      row.classList.toggle('swipe-right', dx > 12);
+      row.classList.toggle('swipe-left', dx < -12 && canDelete);
+    });
+    const end = (e) => {
+      if (!dragging && locked !== 'x') { reset(false); return; }
+      if (e && e.pointerId !== id) return;
+      const fired = dx;
+      reset(true);
+      if (fired >= THRESH) this.controller.completeTask(t.id);
+      else if (fired <= -THRESH && this.controller.canDeleteTask(t)) this.controller.deleteTask(t.id);
+    };
+    row.addEventListener('pointerup', end);
+    row.addEventListener('pointercancel', () => reset(true));
   }
 
   renderTable() {
@@ -633,10 +704,12 @@ App.TaskListView = class TaskListView {
     const subDone = subs.filter(s => s.d).length;
     const expanded = this.expandedRows.has(t.id);
 
+    const bulkSel = this.controller.isBulkSelected(t.id);
     const row = document.createElement('div');
-    row.className = 'list-row' + (selected ? ' selected' : '');
+    row.className = 'list-row' + (selected ? ' selected' : '') + (bulkSel ? ' bulk-selected' : '');
     row.dataset.id = t.id;
     row.innerHTML = `
+      <button type="button" class="bulk-check" data-action="bulk-toggle" aria-label="Select task" aria-pressed="${bulkSel}"><i class="ti ti-check"></i></button>
       <input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${App.can('tasks.write') ? '' : 'disabled'} />
       <div class="task-title-cell ${isDone ? 'done' : ''}">
         ${subCount ? `<button class="subtask-toggle${expanded ? ' expanded' : ''}" data-action="toggle-subtasks" aria-label="Toggle subtasks" title="${subDone}/${subCount} subtasks done"><i class="ti ti-chevron-right"></i></button>` : ''}
@@ -673,7 +746,8 @@ App.TaskListView = class TaskListView {
       if (target) {
         e.stopPropagation();
         const action = target.dataset.action;
-        if (action === 'toggle-done') this.controller.toggleTaskDone(t.id);
+        if (action === 'bulk-toggle') this.controller.toggleBulkSelect(t.id);
+        else if (action === 'toggle-done') this.controller.toggleTaskDone(t.id);
         else if (action === 'cycle-priority') this.controller.cycleTaskPriority(t.id);
         else if (action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
         else if (action === 'finish-task') this.controller.completeTask(t.id);
@@ -681,8 +755,11 @@ App.TaskListView = class TaskListView {
         else if (action === 'open-status') this._openStatusMenu(t.id, target);
         return;
       }
+      // In bulk mode the whole row toggles selection instead of opening detail.
+      if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
       this.controller.selectTask(t.id);
     });
+    this._attachSwipe(row, t);
 
     // Priority pill is a click-to-cycle control — make it keyboard-operable.
     const prioBtn = row.querySelector('[data-action="cycle-priority"]');

@@ -121,6 +121,7 @@
         <button class="btn" id="filterBtn"><i class="ti ti-filter"></i>Filter</button>
         <button class="btn" id="sortBtn"><i class="ti ti-arrows-sort"></i>Sort</button>
         <button class="btn" id="groupBtn"><i class="ti ti-layout-rows"></i>Group by</button>
+        <button class="btn" id="selectBtn"><i class="ti ti-checkbox"></i>Select</button>
         <button class="btn" id="exportBtn"><i class="ti ti-download"></i>Export</button>
         <button class="btn btn-primary" id="newTaskBtn"><i class="ti ti-plus"></i>New task</button>
       </div>
@@ -179,6 +180,17 @@
   </main>
 </div>
 
+<!-- Floating quick-add button — phone-only (CSS-hidden on desktop, which has the
+     toolbar "New task" button). Wired in app.js; hidden for users who can't
+     create tasks and while bulk-select mode is active. -->
+<button type="button" id="fab" class="fab hidden" aria-label="New task" title="New task">
+  <i class="ti ti-plus"></i>
+</button>
+
+<!-- Bulk-select action bar (BulkActionsView mounts here). Fixed to the bottom,
+     shown only while bulk-select mode is on. -->
+<div id="bulkBar" class="bulk-bar hidden" role="toolbar" aria-label="Bulk actions"></div>
+
 <!-- aria-live so screen readers announce toasts (saves, errors, offline) as
      they appear without the user having to find them. -->
 <div class="toast-container" id="toastContainer" role="status" aria-live="polite" aria-atomic="false"></div>
@@ -210,6 +222,7 @@
 <!-- Views -->
 <script src="js/views/ToastView.js"></script>
 <script src="js/views/ConnectionView.js"></script>
+<script src="js/views/BulkActionsView.js"></script>
 <script src="js/views/TopbarView.js"></script>
 <script src="js/views/SidebarView.js"></script>
 <script src="js/views/TaskListView.js"></script>
