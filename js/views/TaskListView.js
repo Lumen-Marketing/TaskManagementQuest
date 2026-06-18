@@ -132,10 +132,9 @@ App.TaskListView = class TaskListView {
   _renderListInner() {
     // Reflect bulk-select mode on <body> so CSS can reveal the row checkboxes.
     document.body.classList.toggle('is-bulk', !!this.controller.uiState.bulkMode);
-    // The Watching view becomes a team-supervision dashboard rather than a
-    // task table: it lists direct reports with their overdue/stale flags and
-    // a Ping action.
-    if (this.controller.uiState.view === 'watching') return this.renderWatchingTeam();
+    // The Watching view stacks two panels: the tasks you're watching, and
+    // (for managers) a team dashboard of your direct reports.
+    if (this.controller.uiState.view === 'watching') return this.renderWatching();
     const layout = this.controller.uiState.layout;
     if (layout === 'kanban') return this.renderKanban();
     if (layout === 'calendar') return this.renderCalendar();
@@ -165,23 +164,59 @@ App.TaskListView = class TaskListView {
     });
   }
 
-  renderWatchingTeam() {
-    this.body.className = 'team-grid';
+  // The Watching view: two stacked panels in one section — the tasks the user
+  // is watching, then (for managers) a direct-reports dashboard.
+  renderWatching() {
+    this.body.className = 'watching-view';
     this.body.innerHTML = '';
-
     const header = document.querySelector('#taskViewWrap .list-header');
     if (header) header.classList.add('hidden');
+    this._renderWatchedTasksInto(this.body);
+    this._renderWatchingTeamInto(this.body);
+  }
 
+  // Panel 1 — tasks the current user is watching. Company-scoped to the active
+  // company but NOT role-scoped: being a watcher is itself the reason to see
+  // it, so a watched task assigned to someone else still appears (the client
+  // only holds tasks RLS already let it read). Mirrors the sidebar badge count.
+  _renderWatchedTasksInto(container) {
+    const me = this.currentUser;
+    const cur = this.controller.uiState.currentCompany;
+    let watched = this.taskModel.all().filter(t =>
+      !t.clearedAt && t.status !== 'done' && (t.watchers || []).includes(me));
+    if (cur && cur !== '*') watched = watched.filter(t => t.company === cur);
+
+    const sec = document.createElement('div');
+    sec.className = 'watch-section';
+    sec.innerHTML = `<div class="watch-section-head"><i class="ti ti-eye"></i><span>Tasks you're watching</span><span class="group-count">${watched.length}</span></div>`;
+    const body = document.createElement('div');
+    body.className = 'watch-cards';
+    if (watched.length) {
+      watched.forEach(t => body.appendChild(this.renderKanbanCard(t)));
+    } else {
+      body.innerHTML = `<div class="watch-empty"><i class="ti ti-eye-off"></i> You're not watching any tasks. Add yourself as a watcher on a task and it'll show up here.</div>`;
+    }
+    sec.appendChild(body);
+    container.appendChild(sec);
+  }
+
+  // Panel 2 — the manager's direct-reports dashboard. Appends a titled section
+  // into `container` instead of owning the whole body.
+  _renderWatchingTeamInto(container) {
     const me = this.currentUser;
     const profiles = App.PROFILES || [];
     const reports = profiles.filter(p => p.supervisor_id === me && p.approved !== false);
 
+    const sec = document.createElement('div');
+    sec.className = 'watch-section';
+    sec.innerHTML = `<div class="watch-section-head"><i class="ti ti-users"></i><span>Your team</span><span class="group-count">${reports.length}</span></div>`;
+    const grid = document.createElement('div');
+    grid.className = 'team-grid';
+    sec.appendChild(grid);
+    container.appendChild(sec);
+
     if (reports.length === 0) {
-      this.body.innerHTML = `<div class="empty">
-        <i class="ti ti-users"></i>
-        <div class="empty-title">No direct reports</div>
-        <div class="empty-sub">When team members are assigned to you in the org chart, they'll appear here so you can keep an eye on their workload.</div>
-      </div>`;
+      grid.innerHTML = `<div class="watch-empty"><i class="ti ti-users"></i> No direct reports. When team members report to you in the org chart, they'll appear here.</div>`;
       return;
     }
 
@@ -264,7 +299,7 @@ App.TaskListView = class TaskListView {
         }
       });
 
-      this.body.appendChild(card);
+      grid.appendChild(card);
     });
   }
 

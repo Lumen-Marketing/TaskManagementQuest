@@ -1168,6 +1168,26 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .empty-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
 .empty-actions .empty-cta { margin-top: 0; }
 
+/* ---- Watching view: stacked "tasks you're watching" + team panels ---- */
+.watching-view { display: flex; flex-direction: column; gap: 20px; padding: 12px 16px 32px; }
+.watch-section { display: flex; flex-direction: column; gap: 10px; }
+.watch-section-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.watch-section-head i { font-size: 16px; color: var(--ink-3); }
+.watch-section-head .group-count {
+  margin-left: 2px; font-size: 12px; font-weight: 600; color: var(--ink-3);
+  background: var(--bg-2); border-radius: var(--radius-pill); padding: 1px 8px;
+}
+.watch-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.watch-empty { color: var(--ink-3); font-size: 13px; padding: 12px 4px; display: flex; align-items: center; gap: 8px; }
+@media (max-width: 720px) {
+  .watching-view { padding: 10px 12px 28px; }
+  .watch-cards { grid-template-columns: 1fr; }
+}
+
 /* User menu (avatar dropdown) */
 .user-menu {
   width: min(280px, calc(100vw - 20px)); background: var(--surface);
