@@ -2539,7 +2539,7 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 #taskViewWrap .list-header > span:first-child { display: none; }
 .list-row,
 #taskViewWrap .list-header {
-  grid-template-columns: minmax(150px, 1fr) 86px 118px 124px 90px 118px 78px minmax(110px, 1.3fr) 28px 36px;
+  grid-template-columns: minmax(0, 1fr) 86px 118px 124px 90px 118px 78px minmax(110px, 1.3fr) 28px 36px;
   gap: 10px;
   padding-left: 18px;
   padding-right: 18px;
@@ -2774,13 +2774,20 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
      Description returns in the laptop tier below, Label on full desktop. */
   .list-row,
   #taskViewWrap .list-header {
-    grid-template-columns: minmax(80px, 1fr) 92px 84px 80px 146px 74px 28px 34px;
+    /* Title track min is 0 so a long name shrinks-and-ellipsises instead of
+       forcing the grid wider than the pane (which clipped the title and made it
+       collide with the next column). Drop Type here too — see below. */
+    grid-template-columns: minmax(0, 1fr) 84px 80px 146px 74px 28px 34px;
     gap: 6px;
   }
+  /* Cramped width: drop the lowest-value columns (Type, Label, Description) so
+     the task title keeps real room and long names read cleanly. */
+  #taskViewWrap .list-header > span:nth-child(3),   /* Type label */
   #taskViewWrap .list-header > span:nth-child(4),   /* Label label */
   #taskViewWrap .list-header > span:nth-child(9) {  /* Description label */
     display: none;
   }
+  .list-row .type-cell,
   .list-row .label-cell,
   .list-row .desc-cell { display: none; }
 }
@@ -2795,7 +2802,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 @media (min-width: 1201px) and (max-width: 1365px) {
   .list-row,
   #taskViewWrap .list-header {
-    grid-template-columns: minmax(110px, 1fr) 76px 100px 86px 150px 80px minmax(110px, 1.3fr) 28px 34px;
+    grid-template-columns: minmax(0, 1fr) 76px 100px 86px 150px 80px minmax(110px, 1.3fr) 28px 34px;
     gap: 8px;
   }
   #taskViewWrap .list-header > span:nth-child(4) { display: none; } /* Label label */
