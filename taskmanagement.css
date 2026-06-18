@@ -3833,11 +3833,24 @@ body, body * { font-weight: 700 !important; }
 
 /* ---- Swipe-to-act affordance (touch list rows) ---- */
 .list-row.swiping,
-.worker-row.swiping { transition: none; will-change: transform; z-index: 1; }
+.worker-row.swiping { transition: none; will-change: transform; z-index: 1; position: relative; }
+/* Whole-row colour wash — a thin edge sliver was too subtle to read. Green =
+   complete (swipe right), red = delete (swipe left). */
 .list-row.swipe-right,
-.worker-row.swipe-right { box-shadow: inset 5px 0 0 var(--green); }
+.worker-row.swipe-right { background: var(--green-bg) !important; }
 .list-row.swipe-left,
-.worker-row.swipe-left  { box-shadow: inset -5px 0 0 var(--rust); }
+.worker-row.swipe-left  { background: var(--rust-bg) !important; }
+/* A pinned action label at the leading edge so the gesture is unambiguous. */
+.list-row.swipe-right::before,
+.worker-row.swipe-right::before {
+  content: 'Done'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 13px; font-weight: 700; color: var(--green-ink); letter-spacing: .02em; z-index: 2; pointer-events: none;
+}
+.list-row.swipe-left::before,
+.worker-row.swipe-left::before {
+  content: 'Delete'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 13px; font-weight: 700; color: var(--rust-ink); letter-spacing: .02em; z-index: 2; pointer-events: none;
+}
 
 /* ---- Bulk select: per-row checkbox + selected state ---- */
 .bulk-check { display: none; }
