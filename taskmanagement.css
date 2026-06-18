@@ -3831,25 +3831,53 @@ body, body * { font-weight: 700 !important; }
   body.has-bulk-bar .fab { opacity: 0; pointer-events: none; }
 }
 
-/* ---- Swipe-to-act affordance (touch list rows) ---- */
-.list-row.swiping,
-.worker-row.swiping { transition: none; will-change: transform; z-index: 1; position: relative; }
-/* Whole-row colour wash — a thin edge sliver was too subtle to read. Green =
-   complete (swipe right), red = delete (swipe left). */
-.list-row.swipe-right,
-.worker-row.swipe-right { background: var(--green-bg) !important; }
-.list-row.swipe-left,
-.worker-row.swipe-left  { background: var(--rust-bg) !important; }
-/* A pinned action label at the leading edge so the gesture is unambiguous. */
-.list-row.swipe-right::before,
-.worker-row.swipe-right::before {
-  content: 'Done'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-  font-size: 13px; font-weight: 700; color: var(--green-ink); letter-spacing: .02em; z-index: 2; pointer-events: none;
-}
-.list-row.swipe-left::before,
-.worker-row.swipe-left::before {
-  content: 'Delete'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-  font-size: 13px; font-weight: 700; color: var(--rust-ink); letter-spacing: .02em; z-index: 2; pointer-events: none;
+/* ---- Swipe-to-reveal actions (CSS scroll-snap; touch only) ----
+   Each row sits in a horizontal scroll-snap container; swiping LEFT scrolls the
+   Done / Delete buttons into view (native scroll — no JS gesture tracking).
+   On non-touch devices the wrapper is display:contents so the row lays out
+   exactly as before and the action buttons are hidden. */
+.swipe-wrap { display: contents; }
+.swipe-actions { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .swipe-wrap {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .swipe-wrap::-webkit-scrollbar { display: none; }
+  .swipe-wrap > .list-row {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+  }
+  .swipe-actions {
+    display: flex;
+    flex: 0 0 auto;
+    scroll-snap-align: end;
+  }
+  .swipe-act {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 88px;
+    border: none;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .swipe-act i { font-size: 21px; }
+  .swipe-done { background: var(--green); }
+  .swipe-del  { background: var(--rust); }
+  /* In bulk-select mode the row tap selects, so disable the swipe scroller. */
+  body.is-bulk .swipe-wrap { display: contents; }
+  body.is-bulk .swipe-actions { display: none; }
 }
 
 /* ---- Bulk select: per-row checkbox + selected state ---- */

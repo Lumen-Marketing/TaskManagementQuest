@@ -336,70 +336,7 @@ App.TaskListView = class TaskListView {
       this.controller.selectTask(t.id);
     });
     App.utils.makeActivatable(row, null, `Open task: ${t.title}`);
-    this._attachSwipe(row, t);
     return row;
-  }
-
-  // Touch swipe gestures on a task row (phones/tablets only). Swipe right past
-  // the threshold completes the task; swipe left deletes it (when permitted).
-  // Both already have an Undo toast, so the gesture is non-destructive in
-  // practice. Pointer events with an axis lock so vertical scrolling still wins.
-  _attachSwipe(row, t) {
-    if (!window.matchMedia || !window.matchMedia('(pointer: coarse)').matches) return;
-    if (!App.can('tasks.write')) return;
-    // pan-y tells the browser to keep handling VERTICAL scroll natively but hand
-    // HORIZONTAL gestures to us — without this the touch is consumed as a scroll
-    // and our pointermove never fires usefully.
-    row.style.touchAction = 'pan-y';
-    const THRESH = 80;          // px of travel before the action fires
-    const MAX = 120;            // clamp the visual drag
-    let x0 = 0, y0 = 0, dx = 0, dragging = false, locked = null, id = 0, captured = false;
-
-    const reset = (animate) => {
-      row.style.transition = animate ? 'transform var(--dur-fast,140ms) ease-out' : '';
-      row.style.transform = '';
-      row.classList.remove('swiping', 'swipe-right', 'swipe-left');
-      if (captured) { try { row.releasePointerCapture(id); } catch (_) {} captured = false; }
-      dx = 0; dragging = false; locked = null;
-    };
-
-    row.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'mouse') return;          // gesture is touch-only
-      if (this.controller.uiState.bulkMode) return;   // selection owns taps here
-      if (e.target.closest('[data-action], input, button, a')) return;
-      x0 = e.clientX; y0 = e.clientY; id = e.pointerId; dragging = true; locked = null;
-      row.style.transition = '';
-    });
-    row.addEventListener('pointermove', (e) => {
-      if (!dragging || e.pointerId !== id) return;
-      const mx = e.clientX - x0, my = e.clientY - y0;
-      if (locked === null) {
-        if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
-        locked = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
-        if (locked === 'y') { dragging = false; return; } // let the list scroll
-        // Capture the pointer so we keep getting move/up even if the finger
-        // strays off the row mid-swipe.
-        try { row.setPointerCapture(id); captured = true; } catch (_) {}
-        row.classList.add('swiping');
-      }
-      // Once we own a horizontal swipe, stop the page from also reacting.
-      if (e.cancelable) e.preventDefault();
-      dx = Math.max(-MAX, Math.min(MAX, mx));
-      row.style.transform = `translateX(${dx}px)`;
-      const canDelete = this.controller.canDeleteTask(t);
-      row.classList.toggle('swipe-right', dx > 12);
-      row.classList.toggle('swipe-left', dx < -12 && canDelete);
-    });
-    const end = (e) => {
-      if (!dragging && locked !== 'x') { reset(false); return; }
-      if (e && e.pointerId !== id) return;
-      const fired = dx;
-      reset(true);
-      if (fired >= THRESH) this.controller.completeTask(t.id);
-      else if (fired <= -THRESH && this.controller.canDeleteTask(t)) this.controller.deleteTask(t.id);
-    };
-    row.addEventListener('pointerup', end);
-    row.addEventListener('pointercancel', () => reset(true));
   }
 
   renderTable() {
@@ -769,13 +706,18 @@ App.TaskListView = class TaskListView {
       if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
       this.controller.selectTask(t.id);
     });
-    this._attachSwipe(row, t);
 
     // Priority pill is a click-to-cycle control — make it keyboard-operable.
     const prioBtn = row.querySelector('[data-action="cycle-priority"]');
     if (prioBtn) App.utils.makeActivatable(prioBtn, null, `Priority: ${priority.label}. Activate to change.`);
 
-    if (!subCount) return row;
+    // Swipe-to-reveal actions: wrap the row in a horizontal scroll-snap
+    // container with Done/Delete buttons that the user swipes left to expose
+    // (touch only; the wrapper is inert on desktop). Native scrolling — far
+    // more reliable than JS gesture tracking.
+    const node = this._wrapSwipe(row, t);
+
+    if (!subCount) return node;
 
     // Drawer sits as a sibling right after the row inside the group body.
     const drawer = document.createElement('div');
@@ -795,9 +737,45 @@ App.TaskListView = class TaskListView {
     });
 
     const frag = document.createDocumentFragment();
-    frag.appendChild(row);
+    frag.appendChild(node);
     frag.appendChild(drawer);
     return frag;
+  }
+
+  // Wrap a task row in a horizontal scroll-snap container with Done / Delete
+  // action buttons revealed by swiping left. CSS keeps the wrapper inert
+  // (display:contents) on non-touch devices, so desktop is unaffected. Returns
+  // the row unchanged when the user can't act on it (nothing to reveal).
+  _wrapSwipe(row, t) {
+    if (!App.can('tasks.write')) return row;
+    const canDelete = this.controller.canDeleteTask(t);
+    const isDone = t.status === 'done';
+    const wrap = document.createElement('div');
+    wrap.className = 'swipe-wrap';
+    const actions = document.createElement('div');
+    actions.className = 'swipe-actions';
+    actions.innerHTML =
+      `<button type="button" class="swipe-act swipe-done" data-swipe="done" aria-label="${isDone ? 'Reopen task' : 'Mark done'}">
+         <i class="ti ${isDone ? 'ti-rotate' : 'ti-circle-check'}"></i><span>${isDone ? 'Reopen' : 'Done'}</span>
+       </button>` +
+      (canDelete
+        ? `<button type="button" class="swipe-act swipe-del" data-swipe="del" aria-label="Delete task">
+             <i class="ti ti-trash"></i><span>Delete</span>
+           </button>`
+        : '');
+    wrap.appendChild(row);
+    wrap.appendChild(actions);
+    actions.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-swipe]');
+      if (!b) return;
+      e.stopPropagation();
+      // Snap the row closed before acting (the delete re-render removes it
+      // anyway; the complete keeps it, so reset the scroll position).
+      try { wrap.scrollTo({ left: 0, behavior: 'smooth' }); } catch (_) { wrap.scrollLeft = 0; }
+      if (b.dataset.swipe === 'done') this.controller.completeTask(t.id);
+      else if (b.dataset.swipe === 'del') this.controller.deleteTask(t.id);
+    });
+    return wrap;
   }
 
   _toggleSubtaskDrawer(taskId, row, toggleBtn) {
