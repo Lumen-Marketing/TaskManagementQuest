@@ -340,10 +340,12 @@ App.TaskListView = class TaskListView {
         title: 'No tasks to order',
         sub: 'Tasks assigned here will appear so you can drag them into your execution order.',
       });
+      this.body.insertAdjacentElement('afterbegin', this._execBackBar());
       this._execDivider = null;
       return;
     }
 
+    this.body.appendChild(this._execBackBar());
     ordered.forEach((t, i) => this.body.appendChild(this.renderExecRow(t, i, canEdit, true)));
 
     // The divider only makes sense once something is ranked — with zero ordered
@@ -369,6 +371,17 @@ App.TaskListView = class TaskListView {
         onDrop: (movedId) => this._onExecDrop(movedId, ownerId),
       });
     }
+  }
+
+  // A "Back to all tasks" bar pinned above the execution list — the obvious way
+  // out of the Execution-order sort (returns to the default Priority sort). It
+  // has no data-id so the drag helper ignores it and it stays at the top.
+  _execBackBar() {
+    const bar = document.createElement('div');
+    bar.className = 'exec-back';
+    bar.innerHTML = `<button type="button" class="btn btn-sm exec-back-btn"><i class="ti ti-arrow-left"></i> Back to all tasks</button>`;
+    bar.querySelector('button').addEventListener('click', () => this.controller.setSortBy('priority'));
+    return bar;
   }
 
   // Sort the unordered tail: soonest due first, then higher priority.

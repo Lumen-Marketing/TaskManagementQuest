@@ -27,8 +27,9 @@ App.FocusWidgetView = class FocusWidgetView {
     if (!this.mount) return;
     if (this._cleanup) { this._cleanup(); this._cleanup = null; }
     // When the list is already sorted by Execution order it shows the full
-    // sequenced Focus list — don't double up with the widget.
-    if (this.controller.uiState.sortBy === 'focus') { this.mount.innerHTML = ''; return; }
+    // sequenced list — the widget becomes a compact "Close" toggle to exit
+    // (rather than duplicating the rows).
+    if (this.controller.uiState.sortBy === 'focus') { this.renderActive(); return; }
 
     const ownerId = this.controller.focusOwnerId();
     const all = this.taskModel.focusList(ownerId);
@@ -89,6 +90,21 @@ App.FocusWidgetView = class FocusWidgetView {
         },
       });
     }
+  }
+
+  // Active state — shown while the list is in Execution-order sort. A one-click
+  // "Close" returns to the normal list (default Priority sort).
+  renderActive() {
+    this.mount.innerHTML = `
+      <div class="focus-widget focus-widget-empty">
+        <button type="button" class="focus-widget-head" data-action="close-focus">
+          <span class="focus-widget-eyebrow"><i class="ti ti-list-numbers"></i> Focus</span>
+          <span class="focus-widget-open">Close</span>
+        </button>
+        <div class="focus-widget-hint">Showing execution order — drag rows to reorder.</div>
+      </div>
+    `;
+    this.mount.querySelector('[data-action="close-focus"]').addEventListener('click', () => this.controller.setSortBy('priority'));
   }
 
   // Empty-state prompt — keeps the widget visible so the execution-order view

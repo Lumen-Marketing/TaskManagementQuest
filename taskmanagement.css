@@ -4012,6 +4012,9 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
 
 /* ===== Focus list (execution order) ===== */
 .focus-list { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+/* "Back to all tasks" bar above the execution-order list. */
+.exec-back { display: flex; padding: 2px 0 6px; }
+.exec-back-btn { display: inline-flex; align-items: center; gap: 6px; }
 .focus-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; background: var(--surface, #fff);
