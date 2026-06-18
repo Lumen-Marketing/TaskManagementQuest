@@ -32,7 +32,9 @@ App.FocusWidgetView = class FocusWidgetView {
 
     const ownerId = this.controller.focusOwnerId();
     const all = this.taskModel.focusList(ownerId);
-    if (!all.length) { this.mount.innerHTML = ''; return; }
+    // Nothing ordered yet: instead of vanishing (which made the feature
+    // undiscoverable), show a prompt that opens the execution-order view.
+    if (!all.length) { this.renderEmpty(); return; }
 
     const shown = all.slice(0, this.MAX);
     const canEdit = this.controller.canSetFocusFor(shown[0]);
@@ -87,5 +89,23 @@ App.FocusWidgetView = class FocusWidgetView {
         },
       });
     }
+  }
+
+  // Empty-state prompt — keeps the widget visible so the execution-order view
+  // is discoverable even before anything is ranked.
+  renderEmpty() {
+    this.mount.innerHTML = `
+      <div class="focus-widget focus-widget-empty">
+        <button type="button" class="focus-widget-head" data-action="open-focus">
+          <span class="focus-widget-eyebrow"><i class="ti ti-list-numbers"></i> Focus</span>
+          <span class="focus-widget-open">Set order</span>
+        </button>
+        <div class="focus-widget-hint">Drag tasks to set your execution order.</div>
+      </div>
+    `;
+    this.mount.querySelector('[data-action="open-focus"]').addEventListener('click', () => {
+      this.controller.setLayout('table');
+      this.controller.setSortBy('focus');
+    });
   }
 };

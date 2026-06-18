@@ -511,6 +511,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .subtask-toggle:hover { background: var(--bg-3); color: var(--ink-2); }
 .subtask-toggle i { font-size: 16px; transition: transform var(--dur-fast) var(--ease-out); }
 .subtask-toggle.expanded i { transform: rotate(90deg); }
+/* Reserve the chevron's footprint on rows without subtasks so every task title
+   lines up at the same left edge. */
+.subtask-spacer { flex: none; width: 18px; }
 .subtask-badge {
   flex: none; font-size: 11px; font-weight: 700; color: var(--ink-3);
   background: var(--bg-3); border-radius: 999px; padding: 1px 7px; text-decoration: none;
@@ -2958,6 +2961,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
      18px hit area (effectively un-tappable); toolbar + play buttons were ~38px. */
   .work-toolbar .btn { min-height: 44px; }
   .subtask-toggle { width: 36px; height: 36px; flex-shrink: 0; }
+  .subtask-spacer { width: 36px; }
   .up-next-start { width: 44px; height: 44px; }
 
   /* Long, unbreakable task titles (pasted URLs / IDs) wrap instead of
@@ -4029,6 +4033,21 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
 .focus-remove { background: none; border: 0; color: var(--ink-3); padding: 4px; cursor: pointer; }
 .focus-remove:hover { color: var(--rust); }
 
+/* Execution-order view: the unordered tail below the divider. Rows are dimmed
+   and their rank slot shows a "+" affordance — drag one up to add it. */
+.exec-divider {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 2px 2px; padding-top: 8px;
+  border-top: 1px dashed var(--line, #e2d3bc);
+  font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .03em;
+}
+.focus-row.exec-unordered { background: var(--surface-2, #faf6ef); border-style: dashed; opacity: .92; }
+.focus-row.exec-unordered .focus-rank {
+  background: transparent; color: var(--ink-3);
+  border: 1px dashed var(--line, #e2d3bc); font-size: 14px;
+}
+.focus-row.exec-unordered:hover { opacity: 1; }
+
 /* Focus widget in the page head */
 .focus-widget-mount { min-width: 0; }
 .focus-widget {
@@ -4045,6 +4064,8 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
 .focus-widget-rank { flex: 0 0 auto; min-width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--blue, #185FA5); color: #fff; }
 .focus-widget-title { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
 .focus-widget-more { font-size: 11px; color: var(--ink-3); padding-top: 4px; }
+.focus-widget-hint { font-size: 12px; color: var(--ink-3); line-height: 1.35; }
+.focus-widget-empty .focus-widget-head { padding-bottom: 4px; }
 
 @media (max-width: 720px) {
   /* The full Focus view is the primary surface on phones; keep the head widget

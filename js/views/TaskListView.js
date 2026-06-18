@@ -141,9 +141,9 @@ App.TaskListView = class TaskListView {
     const layout = this.controller.uiState.layout;
     if (layout === 'kanban') return this.renderKanban();
     if (layout === 'calendar') return this.renderCalendar();
-    // "Execution order" sort folds the Focus list into the normal table: a
-    // sequenced, drag-rankable view of the current owner's Focus tasks.
-    if (this.controller.uiState.sortBy === 'focus') return this.renderFocusList();
+    // "Execution order" sort shows the owner's tasks as a single drag-rankable
+    // list: ranked tasks on top, the rest below to drag up into the order.
+    if (this.controller.uiState.sortBy === 'focus') return this.renderExecutionList();
     return this.renderTable();
   }
 
@@ -307,18 +307,26 @@ App.TaskListView = class TaskListView {
     });
   }
 
-  /* The Focus view: the target person's curated execution-order list. Rows are
-     drag-reorderable (mouse + touch); the #N badge is the position. The target
-     person is the viewer, or the person: view's subject when a manager browses. */
-  renderFocusList() {
+  /* The Execution-order view: the target person's tasks as one drag-rankable
+     list. Ranked tasks (focusSeq set) sit on top with #N badges; the rest sit
+     below a divider and can be dragged up to join the order (drag = add). The
+     target person is the viewer, or the person: view's subject for a manager. */
+  renderExecutionList() {
     // #listBody is reused across renders, so tear down the previous drag
     // listeners before re-binding or they'd stack and fire onDrop repeatedly.
     if (this._focusCleanup) { this._focusCleanup(); this._focusCleanup = null; }
     const ownerId = this.controller.focusOwnerId();
-    const tasks = this.taskModel.focusList(ownerId);
-    const canEdit = tasks.length
-      ? this.controller.canSetFocusFor(tasks[0])
-      : (ownerId === this.currentUser || App.effectiveRole() !== 'worker');
+    const ordered = this.taskModel.focusList(ownerId);
+    // The unordered tail: this owner's open, uncleared tasks without a position,
+    // sorted by due date then priority so the most pressing sit nearest the order.
+    const unordered = this.taskModel.all()
+      .filter(t => t.assignee === ownerId && t.focusSeq == null && t.status !== 'done' && !t.clearedAt)
+      .sort((a, b) => this._execTailCompare(a, b));
+    const canEdit = ordered.length
+      ? this.controller.canSetFocusFor(ordered[0])
+      : (unordered.length
+          ? this.controller.canSetFocusFor(unordered[0])
+          : (ownerId === this.currentUser || App.effectiveRole() !== 'worker'));
 
     this.body.className = 'focus-list';
     this.body.innerHTML = '';
@@ -326,61 +334,123 @@ App.TaskListView = class TaskListView {
     const header = document.querySelector('#taskViewWrap .list-header');
     if (header) header.classList.add('hidden');
 
-    if (tasks.length === 0) {
+    if (ordered.length === 0 && unordered.length === 0) {
       this._renderEmpty({
         icon: 'ti-list-numbers',
-        title: 'No focus tasks yet',
-        sub: 'Pick tasks with Select → "Add to Focus", then drag them into the order to tackle them.',
+        title: 'No tasks to order',
+        sub: 'Tasks assigned here will appear so you can drag them into your execution order.',
       });
+      this._execDivider = null;
       return;
     }
 
-    tasks.forEach((t, i) => this.body.appendChild(this.renderFocusRow(t, i, canEdit)));
+    ordered.forEach((t, i) => this.body.appendChild(this.renderExecRow(t, i, canEdit, true)));
+
+    // The divider only makes sense once something is ranked — with zero ordered
+    // tasks it would be the first element, and the drag helper (which only moves
+    // rows among each other) could never lift a row above it to add the first one.
+    this._execDivider = null;
+    if (unordered.length) {
+      if (ordered.length) {
+        const divider = document.createElement('div');
+        divider.className = 'exec-divider';
+        divider.innerHTML = canEdit
+          ? `<span><i class="ti ti-arrow-bar-up"></i> Drag up to add to your order</span>`
+          : `<span>Not in the execution order</span>`;
+        this.body.appendChild(divider);
+        this._execDivider = divider;
+      }
+      unordered.forEach(t => this.body.appendChild(this.renderExecRow(t, null, canEdit, false)));
+    }
 
     if (canEdit && App.makeReorderable) {
-      // On drop, translate the row's new index into a midpoint focusSeq between
-      // its new neighbors so only the moved task is written.
       this._focusCleanup = App.makeReorderable(this.body, {
         handleSelector: '.focus-drag',
-        onDrop: (movedId, newIndex) => {
-          const ordered = this.taskModel.focusList(ownerId).filter(t => t.id !== movedId);
-          const before = ordered[newIndex - 1];   // neighbor above the drop slot
-          const after = ordered[newIndex];         // neighbor below the drop slot
-          let seq;
-          if (!before && !after) seq = 0;
-          else if (!before) seq = after.focusSeq - 1;
-          else if (!after) seq = before.focusSeq + 1;
-          else seq = (before.focusSeq + after.focusSeq) / 2;
-          this.controller.setFocusOrder(movedId, seq);
-        },
+        onDrop: (movedId) => this._onExecDrop(movedId, ownerId),
       });
     }
   }
 
-  renderFocusRow(t, index, canEdit) {
+  // Sort the unordered tail: soonest due first, then higher priority.
+  _execTailCompare(a, b) {
+    const ad = a.due || '9999-12-31';
+    const bd = b.due || '9999-12-31';
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    const rank = { critical: 0, high: 1, medium: 2, low: 3 };
+    return (rank[a.priority] ?? 2) - (rank[b.priority] ?? 2);
+  }
+
+  // Translate a drop into a focusSeq write. Dropping into the unordered zone
+  // (after the divider) removes an ordered task from the order; dropping into
+  // the ordered zone assigns a midpoint seq between the nearest ordered rows,
+  // which also adds a previously-unordered task (drag = add).
+  _onExecDrop(movedId, ownerId) {
+    const safe = (window.CSS && CSS.escape) ? CSS.escape(String(movedId)) : String(movedId);
+    const movedEl = this.body.querySelector(`[data-id="${safe}"]`);
+    if (!movedEl) return;
+    const moved = this.taskModel.find(movedId);
+    const divider = this._execDivider;
+    const inUnorderedZone = divider &&
+      (divider.compareDocumentPosition(movedEl) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    if (inUnorderedZone) {
+      // Left in (or dragged back to) the unordered tail.
+      if (moved && moved.focusSeq != null) this.controller.removeFromFocus(movedId);
+      else App.EventBus.emit('tasks:changed'); // snap the row back to its sorted slot
+      return;
+    }
+
+    const before = this._nearestOrderedSeq(movedEl, movedId, 'up');
+    const after = this._nearestOrderedSeq(movedEl, movedId, 'down');
+    let seq;
+    if (before == null && after == null) seq = 0;
+    else if (before == null) seq = after - 1;
+    else if (after == null) seq = before + 1;
+    else seq = (before + after) / 2;
+    this.controller.setFocusOrder(movedId, seq);
+  }
+
+  // Walk siblings from the moved row in a direction (stopping at the divider)
+  // and return the focusSeq of the nearest currently-ordered task, or null.
+  _nearestOrderedSeq(movedEl, movedId, dir) {
+    let el = dir === 'up' ? movedEl.previousElementSibling : movedEl.nextElementSibling;
+    while (el && el !== this._execDivider) {
+      const id = el.dataset && el.dataset.id;
+      if (id && id !== movedId) {
+        const t = this.taskModel.find(id);
+        if (t && t.focusSeq != null) return t.focusSeq;
+      }
+      el = dir === 'up' ? el.previousElementSibling : el.nextElementSibling;
+    }
+    return null;
+  }
+
+  renderExecRow(t, index, canEdit, ordered) {
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
+    const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const due = App.utils.formatDue(t.due);
     const myActive = this.timeModel.activeFor(this.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
     const selected = this.controller.uiState.selectedTaskId === t.id;
 
     const row = document.createElement('div');
-    row.className = 'focus-row' + (selected ? ' selected' : '');
+    row.className = 'focus-row' + (ordered ? '' : ' exec-unordered') + (selected ? ' selected' : '');
     row.dataset.id = t.id;
     row.innerHTML = `
-      ${canEdit ? `<button type="button" class="focus-drag" aria-label="Drag to reorder" title="Drag to reorder"><i class="ti ti-grip-vertical"></i></button>` : ''}
-      <span class="focus-rank">${index + 1}</span>
+      ${canEdit ? `<button type="button" class="focus-drag" aria-label="Drag to set execution order" title="Drag to set execution order"><i class="ti ti-grip-vertical"></i></button>` : ''}
+      <span class="focus-rank">${ordered ? (index + 1) : '<i class="ti ti-plus"></i>'}</span>
       <div class="focus-main">
         <div class="focus-title">${App.utils.escapeHtml(t.title)}</div>
         <div class="focus-meta">
           <span class="priority-block ${priority.cls}">${priority.label}</span>
+          <span class="pill-status ${status.cls}">${App.utils.escapeHtml(status.label)}</span>
           <span class="due-cell ${due.cls}">${due.text}</span>
         </div>
       </div>
       <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}">
         <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i>
       </button>
-      ${canEdit ? `<button type="button" class="focus-remove" data-action="remove-focus" aria-label="Remove from Focus" title="Remove from Focus"><i class="ti ti-x"></i></button>` : ''}
+      ${ordered && canEdit ? `<button type="button" class="focus-remove" data-action="remove-focus" aria-label="Remove from order" title="Remove from order"><i class="ti ti-x"></i></button>` : ''}
     `;
 
     row.addEventListener('click', (e) => {
@@ -795,7 +865,7 @@ App.TaskListView = class TaskListView {
       <button type="button" class="bulk-check" data-action="bulk-toggle" aria-label="Select task" aria-pressed="${bulkSel}"><i class="ti ti-check"></i></button>
       <input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${App.can('tasks.write') ? '' : 'disabled'} />
       <div class="task-title-cell ${isDone ? 'done' : ''}">
-        ${subCount ? `<button class="subtask-toggle${expanded ? ' expanded' : ''}" data-action="toggle-subtasks" aria-label="Toggle subtasks" title="${subDone}/${subCount} subtasks done"><i class="ti ti-chevron-right"></i></button>` : ''}
+        ${subCount ? `<button class="subtask-toggle${expanded ? ' expanded' : ''}" data-action="toggle-subtasks" aria-label="Toggle subtasks" title="${subDone}/${subCount} subtasks done"><i class="ti ti-chevron-right"></i></button>` : '<span class="subtask-spacer" aria-hidden="true"></span>'}
         <span class="tt-text">${App.utils.escapeHtml(t.title)}</span>
         ${subCount ? `<span class="subtask-badge">${subDone}/${subCount}</span>` : ''}
       </div>

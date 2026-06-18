@@ -159,6 +159,18 @@ App.AppController = class AppController {
     if (this.uiState.view === view) return;
     this.uiState.view = view;
     this.uiState.selectedTaskId = null;
+    // A single person's list defaults to Execution order (drag-to-rank); any
+    // multi-person view drops back to priority so it isn't stranded on one
+    // person's sequence. Users can still switch sort manually within a view.
+    const prevSort = this.uiState.sortBy;
+    if (this._isSinglePersonView(view)) {
+      this.uiState.sortBy = 'focus';
+    } else if (this.uiState.sortBy === 'focus') {
+      this.uiState.sortBy = 'priority';
+    }
+    // Refresh the Sort button label / widget if we changed the sort under them
+    // (syncButtonLabels listens to sort:changed, not view:changed).
+    if (this.uiState.sortBy !== prevSort) App.EventBus.emit('sort:changed');
     this._togglePanes();
     this._persistUiState();
     App.EventBus.emit('view:changed', view);
@@ -733,6 +745,14 @@ App.AppController = class AppController {
   }
 
   /* ---------- Focus list (execution order) ---------- */
+  // A view that shows exactly one person's tasks: the viewer's own list
+  // ("mine") or a manager browsing one report ("person:<id>"). These default
+  // to the Execution-order sort so the list is drag-rankable.
+  _isSinglePersonView(view) {
+    const v = view || this.uiState.view;
+    return v === 'mine' || (typeof v === 'string' && v.startsWith('person:'));
+  }
+
   // Which person's Focus list the current surface targets: an explicit
   // person:<id> view shows that person's; everything else shows the viewer's.
   focusOwnerId() {
