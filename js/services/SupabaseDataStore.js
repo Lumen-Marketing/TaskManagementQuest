@@ -175,7 +175,11 @@ App.SupabaseDataStore = class SupabaseDataStore {
       title: task.title,
       description: task.description || '',
       type: task.type || 'admin',
-      label: task.label || null,
+      // The app uses the 'none' sentinel for "No label", but the DB
+      // tasks_label_check constraint only allows NULL or a real label
+      // ('roof'/'roof_framing'/'framing'). Map 'none' → NULL so picking
+      // "No label" doesn't trip the constraint and silently fail the save.
+      label: (task.label && task.label !== 'none') ? task.label : null,
       bid_status: task.type === 'bid' ? (task.bidStatus || 'queue') : null,
       company_id: task.company,
       creator_id: task.creator,
@@ -431,7 +435,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
       title: row.title,
       description: row.description || '',
       type: row.type || 'admin',
-      label: row.label || null,
+      // DB stores NULL for "no label"; the app uses the 'none' sentinel
+      // everywhere (display + the picker), so normalise on the way in.
+      label: row.label || 'none',
       bidStatus: row.bid_status || null,
       company: row.company_id,
       creator: row.creator_id,
