@@ -918,10 +918,12 @@ App.TaskListView = class TaskListView {
     const willExpand = !this.expandedRows.has(taskId);
     if (willExpand) this.expandedRows.add(taskId);
     else this.expandedRows.delete(taskId);
-    const drawer = row.nextElementSibling;
-    if (drawer && drawer.classList.contains('subtask-drawer')) {
-      drawer.classList.toggle('hidden', !willExpand);
-    }
+    // The drawer is a sibling of the row's .swipe-wrap, so row.nextElementSibling
+    // points at .swipe-actions (inside the wrap), not the drawer. Find the drawer
+    // by its data-for id so it toggles immediately, wrapped or not.
+    const safe = (window.CSS && CSS.escape) ? CSS.escape(String(taskId)) : String(taskId);
+    const drawer = this.body.querySelector(`.subtask-drawer[data-for="${safe}"]`);
+    if (drawer) drawer.classList.toggle('hidden', !willExpand);
     if (toggleBtn) toggleBtn.classList.toggle('expanded', willExpand);
   }
 
