@@ -169,6 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.UiScaleView();
   new App.ProgressWidgetView({ taskModel, currentUser: App.CURRENT_USER });
   new App.UpNextWidgetView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
+  new App.FocusWidgetView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
 
   // Reminder engine — scans tasks every minute, synthesizes in-app
   // notifications when a due-date threshold is crossed (keyed by priority).

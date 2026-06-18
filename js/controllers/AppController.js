@@ -64,6 +64,7 @@ App.AppController = class AppController {
     if (view === 'time:mine') return App.can('time.own') || App.can('clock.use');
     if (view === 'time:analytics') return false; // Reports view retired
     if (view === 'time:resource') return App.can('time.team');
+    if (view === 'focus') return App.can('tasks.view');
     return App.can('tasks.view');
   }
 
@@ -464,7 +465,7 @@ App.AppController = class AppController {
     const inapp = Array.from(ids).map(memberId => ({
       memberId,
       taskId: task.id,
-      meta: 'Task update · just now',
+      meta: 'Task update',
       html: `<strong>${whoEsc}</strong> ${summaryEsc} on <em>${titleEsc}</em>`,
     }));
     this._deliver(inapp, [], null);
@@ -732,6 +733,55 @@ App.AppController = class AppController {
     this.exitBulkMode();
   }
 
+  /* ---------- Focus list (execution order) ---------- */
+  // Which person's Focus list the current surface targets: an explicit
+  // person:<id> view shows that person's; everything else shows the viewer's.
+  focusOwnerId() {
+    const v = this.uiState.view;
+    if (v.startsWith('person:')) return v.split(':')[1];
+    return this.currentUser;
+  }
+
+  // A task's focus order may be changed by its assignee, or by a manager who can
+  // write tasks and isn't a plain worker reaching onto someone else's task.
+  canSetFocusFor(task) {
+    if (!task || !App.can('tasks.write')) return false;
+    if (task.assignee === this.currentUser) return true;
+    return App.effectiveRole() !== 'worker';
+  }
+
+  addToFocus(ids) {
+    if (!App.can('tasks.write')) return;
+    const list = (Array.isArray(ids) ? ids : [ids]);
+    const added = list.filter(id => {
+      const t = this.taskModel.find(id);
+      if (!t || !this.canSetFocusFor(t) || t.focusSeq != null) return false;
+      this.taskModel.addToFocus(id);
+      return true;
+    });
+    if (this.toastView && added.length) {
+      this.toastView.show({ title: `Added ${added.length} to Focus`, sub: 'Open Focus to set the order.' });
+    }
+    if (this.uiState.bulkMode) this.exitBulkMode();
+  }
+
+  bulkAddToFocus() {
+    if (!App.can('tasks.write')) return;
+    this.addToFocus(this._bulkIds());
+  }
+
+  removeFromFocus(id) {
+    const t = this.taskModel.find(id);
+    if (!t || !this.canSetFocusFor(t)) return;
+    this.taskModel.removeFromFocus(id);
+  }
+
+  setFocusOrder(id, newSeq) {
+    const t = this.taskModel.find(id);
+    if (!t || !this.canSetFocusFor(t)) return;
+    this.taskModel.setFocusOrder(id, newSeq);
+  }
+
   /* Soft-clear every done task, after a confirm prompt. Rows stay in
      Supabase for a 30-day grace window (boot-time purge does the real
      delete), so a fat-finger is recoverable by SQL update. */
@@ -848,6 +898,10 @@ App.AppController = class AppController {
     if (!App.can('tasks.write')) return;
     const result = this.taskModel.reassign(id, newAssignee, this.getUserName(this.currentUser));
     if (!result) return;
+    // Reassigned tasks leave the previous person's Focus list (their queue
+    // position is meaningless for the new assignee). They can re-add it.
+    const reassigned = this.taskModel.find(id);
+    if (reassigned && reassigned.focusSeq != null) this.taskModel.removeFromFocus(id);
     if (newAssignee !== this.currentUser) {
       const task = this.taskModel.find(id);
       const creatorName = this.getUserName(this.currentUser);
@@ -857,7 +911,7 @@ App.AppController = class AppController {
         [{
           memberId: newAssignee,
           taskId: id,
-          meta: 'Reassigned · just now',
+          meta: 'Reassigned',
           html: `<strong>${App.utils.escapeHtml(creatorName)}</strong> reassigned <em>${titleEsc}</em> to you`,
         }],
         person.email ? [person.email] : [],
@@ -986,7 +1040,7 @@ App.AppController = class AppController {
       inapp.push({
         memberId: payload.assignee,
         taskId: task.id,
-        meta: 'Task assigned · just now',
+        meta: 'Task assigned',
         html: `<strong>${App.utils.escapeHtml(creatorName)}</strong> assigned <em>${titleEsc}</em> to you`,
       });
     }
@@ -1002,7 +1056,7 @@ App.AppController = class AppController {
         inapp.push({
           memberId: w,
           taskId: task.id,
-          meta: 'Watching · just now',
+          meta: 'Watching',
           html: `You're now watching <em>${titleEsc}</em> (assigned to ${App.utils.escapeHtml(assigneeName)})`,
         });
       }

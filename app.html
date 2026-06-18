@@ -95,6 +95,7 @@
         <div class="side-item" data-view="today" title="Today"><i class="ti ti-flame" style="color: var(--rust);"></i><span class="side-item-label">Today</span><span class="side-count danger-text" id="cnt-today">0</span></div>
         <div class="side-item" data-view="overdue" title="Overdue"><i class="ti ti-alert-triangle"></i><span class="side-item-label">Overdue</span><span class="side-count" id="cnt-overdue">0</span></div>
         <div class="side-item" data-view="watching" title="Watching"><i class="ti ti-eye"></i><span class="side-item-label">Watching</span><span class="side-count" id="cnt-watching">0</span></div>
+        <div class="side-item" data-view="focus" title="Focus — set execution order"><i class="ti ti-list-numbers" style="color: var(--blue);"></i><span class="side-item-label">Focus</span><span class="side-count" id="cnt-focus">0</span></div>
       </div>
 
       <div id="sideExtraGroups">
@@ -133,6 +134,7 @@
         </div>
         <div class="page-head-widgets">
           <div class="up-next-mount" id="upNextWidget"></div>
+          <div class="focus-widget-mount" id="focusWidget"></div>
           <div class="progress-widget-mount" id="progressWidget"></div>
         </div>
       </div>
@@ -223,6 +225,7 @@
 <script src="js/views/ToastView.js"></script>
 <script src="js/views/ConnectionView.js"></script>
 <script src="js/views/BulkActionsView.js"></script>
+<script src="js/views/dragOrder.js"></script>
 <script src="js/views/TopbarView.js"></script>
 <script src="js/views/SidebarView.js"></script>
 <script src="js/views/TaskListView.js"></script>
@@ -240,6 +243,7 @@
 <script src="js/views/UiScaleView.js"></script>
 <script src="js/views/ProgressWidgetView.js"></script>
 <script src="js/views/UpNextWidgetView.js"></script>
+<script src="js/views/FocusWidgetView.js"></script>
 
 <!-- Controllers -->
 <script src="js/controllers/AppController.js"></script>

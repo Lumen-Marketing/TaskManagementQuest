@@ -344,6 +344,7 @@ App.SidebarView = class SidebarView {
     set('cnt-today', all.filter(t => t.due === today).length);
     set('cnt-overdue', all.filter(t => t.due < today).length);
     set('cnt-watching', all.filter(t => (t.watchers || []).includes(this.currentUser)).length);
+    set('cnt-focus', this.taskModel.focusList(this.currentUser).length);
     set('cnt-clock-live', this.timeModel.allActive().length);
   }
 };
