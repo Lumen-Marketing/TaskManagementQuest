@@ -803,22 +803,29 @@ App.TaskListView = class TaskListView {
       overdue: { icon: 'ti-circle-check',   title: 'Nothing overdue',       sub: 'Everything is on schedule.' },
     };
     if (byView[view]) return byView[view];
-    if (view.startsWith('person:'))  return { icon: 'ti-user',     title: 'No tasks assigned', sub: 'This person has no tasks in the current scope.', cta: true };
-    if (view.startsWith('company:')) return { icon: 'ti-building', title: 'No tasks here',     sub: 'No tasks for this company yet.',                cta: true };
+    // Narrow filters get a "Show all tasks" escape hatch so an empty filtered
+    // view never strands the user thinking their tasks disappeared.
+    if (view.startsWith('person:'))  return { icon: 'ti-user',     title: 'No tasks assigned', sub: 'This person has no tasks in the current scope.', cta: true, backToAll: true };
+    if (view.startsWith('company:')) return { icon: 'ti-building', title: 'No tasks here',     sub: 'No tasks for this company yet.',                cta: true, backToAll: true };
     return { icon: 'ti-checks', title: 'Nothing here', sub: 'No tasks match this view.' };
   }
 
-  _renderEmpty({ icon, title, sub, cta }) {
+  _renderEmpty({ icon, title, sub, cta, backToAll }) {
     const showCta = cta && App.can('tasks.write');
     this.body.className = '';
     this.body.innerHTML = `<div class="empty">
       <i class="ti ${icon}"></i>
       <div class="empty-title">${App.utils.escapeHtml(title)}</div>
       <div class="empty-sub">${App.utils.escapeHtml(sub)}</div>
-      ${showCta ? `<button class="btn btn-primary empty-cta" type="button" data-action="empty-new-task"><i class="ti ti-plus"></i>New task</button>` : ''}
+      <div class="empty-actions">
+        ${backToAll ? `<button class="btn empty-back" type="button" data-action="empty-show-all"><i class="ti ti-list-check"></i>Show all tasks</button>` : ''}
+        ${showCta ? `<button class="btn btn-primary empty-cta" type="button" data-action="empty-new-task"><i class="ti ti-plus"></i>New task</button>` : ''}
+      </div>
     </div>`;
-    const btn = this.body.querySelector('[data-action="empty-new-task"]');
-    if (btn) btn.addEventListener('click', () => this.controller.openNewTaskModal());
+    const newBtn = this.body.querySelector('[data-action="empty-new-task"]');
+    if (newBtn) newBtn.addEventListener('click', () => this.controller.openNewTaskModal());
+    const allBtn = this.body.querySelector('[data-action="empty-show-all"]');
+    if (allBtn) allBtn.addEventListener('click', () => this.controller.setView('all'));
   }
 
   // ---- Inline status menu --------------------------------------------------

@@ -199,7 +199,12 @@ App.AppController = class AppController {
     const savedLayout = saved.layout === 'timeline' ? 'calendar' : saved.layout;
     if (['table', 'calendar', 'kanban'].includes(savedLayout)) this.setLayout(savedLayout);
     if (saved.calendarMode === 'month' || saved.calendarMode === 'week') this.uiState.calendarMode = saved.calendarMode;
-    if (typeof saved.view === 'string' && this.canView(saved.view)) this.setView(saved.view);
+    // Don't restore transient person:/company: filters. Re-opening onto a narrow
+    // filtered view that happens to be empty reads as "my tasks vanished" (a real
+    // support issue). Only stable workspace views are remembered; narrow filters
+    // reset to the default All list on reload.
+    const isNarrowFilter = saved.view && (saved.view.startsWith('person:') || saved.view.startsWith('company:'));
+    if (typeof saved.view === 'string' && !isNarrowFilter && this.canView(saved.view)) this.setView(saved.view);
   }
 
   setSearchQuery(q) {
