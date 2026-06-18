@@ -347,14 +347,19 @@ App.TaskListView = class TaskListView {
   _attachSwipe(row, t) {
     if (!window.matchMedia || !window.matchMedia('(pointer: coarse)').matches) return;
     if (!App.can('tasks.write')) return;
+    // pan-y tells the browser to keep handling VERTICAL scroll natively but hand
+    // HORIZONTAL gestures to us — without this the touch is consumed as a scroll
+    // and our pointermove never fires usefully.
+    row.style.touchAction = 'pan-y';
     const THRESH = 80;          // px of travel before the action fires
     const MAX = 120;            // clamp the visual drag
-    let x0 = 0, y0 = 0, dx = 0, dragging = false, locked = null, id = 0;
+    let x0 = 0, y0 = 0, dx = 0, dragging = false, locked = null, id = 0, captured = false;
 
     const reset = (animate) => {
       row.style.transition = animate ? 'transform var(--dur-fast,140ms) ease-out' : '';
       row.style.transform = '';
       row.classList.remove('swiping', 'swipe-right', 'swipe-left');
+      if (captured) { try { row.releasePointerCapture(id); } catch (_) {} captured = false; }
       dx = 0; dragging = false; locked = null;
     };
 
@@ -372,8 +377,13 @@ App.TaskListView = class TaskListView {
         if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
         locked = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
         if (locked === 'y') { dragging = false; return; } // let the list scroll
+        // Capture the pointer so we keep getting move/up even if the finger
+        // strays off the row mid-swipe.
+        try { row.setPointerCapture(id); captured = true; } catch (_) {}
         row.classList.add('swiping');
       }
+      // Once we own a horizontal swipe, stop the page from also reacting.
+      if (e.cancelable) e.preventDefault();
       dx = Math.max(-MAX, Math.min(MAX, mx));
       row.style.transform = `translateX(${dx}px)`;
       const canDelete = this.controller.canDeleteTask(t);

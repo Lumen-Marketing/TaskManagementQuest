@@ -3804,7 +3804,7 @@ body, body * { font-weight: 700 !important; }
    and the keyboard-shortcuts help overlay.
    ========================================================================== */
 
-/* ---- Floating quick-add button (phones only) ---- */
+/* ---- Floating quick-add button (touch devices: phones + tablets) ---- */
 .fab { display: none; }
 .fab {
   position: fixed;
@@ -3823,7 +3823,9 @@ body, body * { font-weight: 700 !important; }
 }
 .fab i { font-size: 26px; }
 .fab:active { transform: scale(0.92); }
-@media (max-width: 720px) {
+/* Show on touch-primary devices (phones AND tablets), not by width — a tablet
+   is wider than 720px but still wants the thumb-reach quick-add. */
+@media (hover: none) and (pointer: coarse) {
   .fab:not(.hidden) { display: inline-flex; }
   /* Lift the FAB above the bulk bar when both could show (defensive). */
   body.has-bulk-bar .fab { opacity: 0; pointer-events: none; }
