@@ -38,16 +38,16 @@ App.FocusWidgetView = class FocusWidgetView {
 
     const shown = all.slice(0, this.MAX);
     const canEdit = App.can('tasks.write');
-    const extra = all.length - shown.length;
 
+    // Total count lives in the header (like the sidebar badges) so the body is
+    // just the top rows — keeps the card the same 88px height as its neighbours.
     this.mount.innerHTML = `
       <div class="focus-widget">
         <button type="button" class="focus-widget-head" data-action="open-focus">
-          <span class="focus-widget-eyebrow"><i class="ti ti-list-numbers"></i> Focus</span>
+          <span class="focus-widget-eyebrow"><i class="ti ti-list-numbers"></i> Focus<span class="focus-widget-count">${all.length}</span></span>
           <span class="focus-widget-open">Open</span>
         </button>
         <div class="focus-widget-rows"></div>
-        ${extra > 0 ? `<div class="focus-widget-more">+${extra} more</div>` : ''}
       </div>
     `;
 
