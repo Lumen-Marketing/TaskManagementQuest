@@ -31,14 +31,13 @@ App.FocusWidgetView = class FocusWidgetView {
     // (rather than duplicating the rows).
     if (this.controller.uiState.sortBy === 'focus') { this.renderActive(); return; }
 
-    const ownerId = this.controller.focusOwnerId();
-    const all = this.taskModel.focusList(ownerId);
+    const all = this.taskModel.focusList();
     // Nothing ordered yet: instead of vanishing (which made the feature
     // undiscoverable), show a prompt that opens the execution-order view.
     if (!all.length) { this.renderEmpty(); return; }
 
     const shown = all.slice(0, this.MAX);
-    const canEdit = this.controller.canSetFocusFor(shown[0]);
+    const canEdit = App.can('tasks.write');
     const extra = all.length - shown.length;
 
     this.mount.innerHTML = `
@@ -78,7 +77,7 @@ App.FocusWidgetView = class FocusWidgetView {
     if (canEdit && App.makeReorderable) {
       this._cleanup = App.makeReorderable(rowsEl, {
         onDrop: (movedId, newIndex) => {
-          const ordered = this.taskModel.focusList(ownerId).filter(t => t.id !== movedId);
+          const ordered = this.taskModel.focusList().filter(t => t.id !== movedId);
           const before = ordered[newIndex - 1];
           const after = ordered[newIndex];
           let seq;

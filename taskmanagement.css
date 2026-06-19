@@ -4032,7 +4032,8 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
 }
 .focus-main { flex: 1 1 auto; min-width: 0; }
 .focus-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.focus-meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 12px; }
+.focus-meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 12px; flex-wrap: wrap; }
+.focus-assignee { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-2); font-weight: 600; }
 .focus-remove { background: none; border: 0; color: var(--ink-3); padding: 4px; cursor: pointer; }
 .focus-remove:hover { color: var(--rust); }
 

@@ -159,15 +159,11 @@ App.AppController = class AppController {
     if (this.uiState.view === view) return;
     this.uiState.view = view;
     this.uiState.selectedTaskId = null;
-    // A single person's list defaults to Execution order (drag-to-rank); any
-    // multi-person view drops back to priority so it isn't stranded on one
-    // person's sequence. Users can still switch sort manually within a view.
+    // Focus is a shared cross-person list reached via the widget / Sort menu,
+    // not tied to any view — so switching views exits Execution-order back to a
+    // normal sort rather than showing the shared list under a view's header.
     const prevSort = this.uiState.sortBy;
-    if (this._isSinglePersonView(view)) {
-      this.uiState.sortBy = 'focus';
-    } else if (this.uiState.sortBy === 'focus') {
-      this.uiState.sortBy = 'priority';
-    }
+    if (this.uiState.sortBy === 'focus') this.uiState.sortBy = 'priority';
     // Refresh the Sort button label / widget if we changed the sort under them
     // (syncButtonLabels listens to sort:changed, not view:changed).
     if (this.uiState.sortBy !== prevSort) App.EventBus.emit('sort:changed');
@@ -745,28 +741,10 @@ App.AppController = class AppController {
   }
 
   /* ---------- Focus list (execution order) ---------- */
-  // A view that shows exactly one person's tasks: the viewer's own list
-  // ("mine") or a manager browsing one report ("person:<id>"). These default
-  // to the Execution-order sort so the list is drag-rankable.
-  _isSinglePersonView(view) {
-    const v = view || this.uiState.view;
-    return v === 'mine' || (typeof v === 'string' && v.startsWith('person:'));
-  }
-
-  // Which person's Focus list the current surface targets: an explicit
-  // person:<id> view shows that person's; everything else shows the viewer's.
-  focusOwnerId() {
-    const v = this.uiState.view;
-    if (v.startsWith('person:')) return v.split(':')[1];
-    return this.currentUser;
-  }
-
-  // A task's focus order may be changed by its assignee, or by a manager who can
-  // write tasks and isn't a plain worker reaching onto someone else's task.
+  // Focus is a shared, cross-person execution order, so anyone who can edit
+  // tasks can add/reorder it.
   canSetFocusFor(task) {
-    if (!task || !App.can('tasks.write')) return false;
-    if (task.assignee === this.currentUser) return true;
-    return App.effectiveRole() !== 'worker';
+    return !!task && App.can('tasks.write');
   }
 
   addToFocus(ids) {
@@ -917,10 +895,7 @@ App.AppController = class AppController {
     if (!App.can('tasks.write')) return;
     const result = this.taskModel.reassign(id, newAssignee, this.getUserName(this.currentUser));
     if (!result) return;
-    // Reassigned tasks leave the previous person's Focus list (their queue
-    // position is meaningless for the new assignee). They can re-add it.
-    const reassigned = this.taskModel.find(id);
-    if (reassigned && reassigned.focusSeq != null) this.taskModel.removeFromFocus(id);
+    // Focus is a shared cross-person order, so a reassigned task keeps its place.
     if (newAssignee !== this.currentUser) {
       const task = this.taskModel.find(id);
       const creatorName = this.getUserName(this.currentUser);

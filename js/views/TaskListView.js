@@ -315,18 +315,14 @@ App.TaskListView = class TaskListView {
     // #listBody is reused across renders, so tear down the previous drag
     // listeners before re-binding or they'd stack and fire onDrop repeatedly.
     if (this._focusCleanup) { this._focusCleanup(); this._focusCleanup = null; }
-    const ownerId = this.controller.focusOwnerId();
-    const ordered = this.taskModel.focusList(ownerId);
-    // The unordered tail: this owner's open, uncleared tasks without a position,
-    // sorted by due date then priority so the most pressing sit nearest the order.
-    const unordered = this.taskModel.all()
-      .filter(t => t.assignee === ownerId && t.focusSeq == null && t.status !== 'done' && !t.clearedAt)
+    // Shared, cross-person order: every ranked task (any assignee) on top, then
+    // the rest of the CURRENT view's open tasks as a tail you can drag up to add.
+    const ordered = this.taskModel.focusList();
+    const orderedIds = new Set(ordered.map(t => t.id));
+    const unordered = this.controller.getVisibleTasks()
+      .filter(t => !orderedIds.has(t.id) && t.status !== 'done' && !t.clearedAt)
       .sort((a, b) => this._execTailCompare(a, b));
-    const canEdit = ordered.length
-      ? this.controller.canSetFocusFor(ordered[0])
-      : (unordered.length
-          ? this.controller.canSetFocusFor(unordered[0])
-          : (ownerId === this.currentUser || App.effectiveRole() !== 'worker'));
+    const canEdit = App.can('tasks.write');
 
     this.body.className = 'focus-list';
     this.body.innerHTML = '';
@@ -368,7 +364,7 @@ App.TaskListView = class TaskListView {
     if (canEdit && App.makeReorderable) {
       this._focusCleanup = App.makeReorderable(this.body, {
         handleSelector: '.focus-drag',
-        onDrop: (movedId) => this._onExecDrop(movedId, ownerId),
+        onDrop: (movedId) => this._onExecDrop(movedId),
       });
     }
   }
@@ -397,7 +393,7 @@ App.TaskListView = class TaskListView {
   // (after the divider) removes an ordered task from the order; dropping into
   // the ordered zone assigns a midpoint seq between the nearest ordered rows,
   // which also adds a previously-unordered task (drag = add).
-  _onExecDrop(movedId, ownerId) {
+  _onExecDrop(movedId) {
     const safe = (window.CSS && CSS.escape) ? CSS.escape(String(movedId)) : String(movedId);
     const movedEl = this.body.querySelector(`[data-id="${safe}"]`);
     if (!movedEl) return;
@@ -442,6 +438,7 @@ App.TaskListView = class TaskListView {
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const due = App.utils.formatDue(t.due);
+    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', color: 'var(--ink-3)' };
     const myActive = this.timeModel.activeFor(this.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
     const selected = this.controller.uiState.selectedTaskId === t.id;
@@ -455,6 +452,7 @@ App.TaskListView = class TaskListView {
       <div class="focus-main">
         <div class="focus-title">${App.utils.escapeHtml(t.title)}</div>
         <div class="focus-meta">
+          <span class="focus-assignee">${App.utils.avatarHtml(person)}${App.utils.escapeHtml(person.name)}</span>
           <span class="priority-block ${priority.cls}">${priority.label}</span>
           <span class="pill-status ${status.cls}">${App.utils.escapeHtml(status.label)}</span>
           <span class="due-cell ${due.cls}">${due.text}</span>
