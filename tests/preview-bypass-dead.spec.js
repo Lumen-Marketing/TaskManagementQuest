@@ -39,6 +39,20 @@ test('local preview exposes the command-center UI shell without backend access',
   await expect(page.locator('.ai-brief')).toContainText(/morning brief|ops brief/i);
   await expect(page.locator('#newTaskBtn')).toBeVisible();
 
+  const palette = await page.evaluate(() => {
+    const styles = getComputedStyle(document.body);
+    return {
+      primary: styles.getPropertyValue('--amber').trim().toLowerCase(),
+      primaryBg: styles.getPropertyValue('--amber-bg').trim().toLowerCase(),
+      primaryInk: styles.getPropertyValue('--amber-ink').trim().toLowerCase(),
+    };
+  });
+  expect(palette).toEqual({
+    primary: '#475569',
+    primaryBg: '#eef2f7',
+    primaryInk: '#334155',
+  });
+
   const overflow = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
     innerWidth: window.innerWidth,

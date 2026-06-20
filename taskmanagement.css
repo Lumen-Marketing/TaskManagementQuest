@@ -4104,27 +4104,32 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
    docs/design-reference/quest-hq-client-ui-reference.html.
    ============================================================ */
 body.ui-command-center {
-  --bg: #f3f4f6;
-  --bg-2: #f7f8fa;
-  --bg-3: #e9ecf1;
+  --bg: #f4f5f7;
+  --bg-2: #f8fafc;
+  --bg-3: #e7ebf0;
   --surface: #ffffff;
-  --ink: #171a1f;
-  --ink-2: #515a66;
-  --ink-3: #8a94a3;
-  --border: #e1e5ea;
-  --border-strong: #cfd6de;
-  --amber: #f04405;
-  --amber-bg: #fff0ea;
-  --amber-ink: #b13208;
-  --rust: #ef3e32;
-  --rust-bg: #ffe9e7;
-  --rust-ink: #b3261e;
+  --ink: #161a20;
+  --ink-2: #4b5563;
+  --ink-3: #7b8491;
+  --border: #dce2ea;
+  --border-strong: #c7d0dc;
+  --amber: #475569;
+  --amber-bg: #eef2f7;
+  --amber-ink: #334155;
+  --rust: #b42318;
+  --rust-bg: #fef3f2;
+  --rust-ink: #912018;
   --blue: #3978f2;
   --blue-bg: #eaf2ff;
   --blue-ink: #2459c5;
   --green: #2e9e6b;
   --green-bg: #e8f6ef;
   --green-ink: #19724b;
+  --u-critical: #b42318;
+  --u-urgent: #b45309;
+  --u-high: #b08900;
+  --u-medium: #94a3b8;
+  --u-low: #cbd5e1;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
   --shadow-md: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 24px rgba(16, 24, 40, 0.04);
   --shadow-lg: 0 24px 54px rgba(16, 24, 40, 0.16);
@@ -4212,12 +4217,12 @@ body.ui-command-center #newTaskBtn {
   color: #fff;
   border-color: var(--amber);
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(240, 68, 5, 0.24);
+  box-shadow: 0 1px 2px rgba(71, 85, 105, 0.24);
 }
 body.ui-command-center .btn-primary:hover,
 body.ui-command-center #newTaskBtn:hover {
-  background: #d93d04;
-  border-color: #d93d04;
+  background: #334155;
+  border-color: #334155;
 }
 
 body.ui-command-center .deck {
@@ -4248,6 +4253,7 @@ body.ui-command-center .deck .side-item {
   font-size: 13px;
   font-weight: 600;
 }
+body.ui-command-center .deck .side-item i { color: var(--ink-3) !important; }
 body.ui-command-center .deck .side-item:hover {
   background: #f6f7f9;
   color: var(--ink);
@@ -4344,7 +4350,7 @@ body.ui-command-center .ai-brief {
   padding: 16px 18px;
   background:
     linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(90deg, var(--amber), #8067dc) border-box;
+    linear-gradient(90deg, #94a3b8, #64748b) border-box;
   border: 1px solid transparent;
   border-radius: 14px;
   box-shadow: var(--shadow-sm);
@@ -4367,9 +4373,9 @@ body.ui-command-center .ai-brief-title { font-weight: 800; color: var(--ink); }
 body.ui-command-center .ai-brief-badge {
   padding: 2px 7px;
   border-radius: 5px;
-  background: #fff4d7;
-  color: #8b5a09;
-  border: 1px solid #f5d48b;
+  background: var(--amber-bg);
+  color: var(--amber-ink);
+  border: 1px solid var(--border-strong);
   font-size: 11px;
   font-weight: 800;
 }
@@ -4433,7 +4439,7 @@ body.ui-command-center .task-group {
 }
 body.ui-command-center .task-group > .group-head {
   padding: 10px 16px;
-  background: #fffdf8;
+  background: #fbfcfe;
   border-bottom: 1px solid var(--border);
 }
 body.ui-command-center .group-title {
@@ -4442,8 +4448,8 @@ body.ui-command-center .group-title {
   font-weight: 800;
 }
 body.ui-command-center .group-count {
-  background: #fff7e8;
-  color: #7f4d08;
+  background: var(--amber-bg);
+  color: var(--amber);
 }
 body.ui-command-center .group-body { background: var(--surface); }
 body.ui-command-center .task-group .list-row {
@@ -4479,6 +4485,15 @@ body.ui-command-center .label-text,
 body.ui-command-center .meta-cell,
 body.ui-command-center .due-cell,
 body.ui-command-center .desc-cell { font-size: 12px; }
+body.ui-command-center .due-cell,
+body.ui-command-center .due-today {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+body.ui-command-center .due-overdue {
+  color: var(--rust);
+  font-weight: 800;
+}
 body.ui-command-center .priority-block,
 body.ui-command-center .pill-status,
 body.ui-command-center .pill,
