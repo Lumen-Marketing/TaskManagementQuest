@@ -27,3 +27,21 @@ test('local dev server allows preview mode (sanity check the gate works on local
   // If preview mode was rejected we'd be on the login page.
   expect(page.url()).toMatch(/app\.html/);
 });
+
+test('local preview exposes the command-center UI shell without backend access', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/app.html?preview=1');
+  await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
+
+  await expect(page.locator('body')).toHaveClass(/ui-command-center/);
+  await expect(page.locator('.deck')).toBeVisible();
+  await expect(page.locator('.ai-brief')).toBeVisible();
+  await expect(page.locator('.ai-brief')).toContainText(/morning brief|ops brief/i);
+  await expect(page.locator('#newTaskBtn')).toBeVisible();
+
+  const overflow = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    innerWidth: window.innerWidth,
+  }));
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.innerWidth + 1);
+});

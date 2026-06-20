@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="taskmanagement.css">
 <script src="js/theme-boot.js"></script>
 </head>
-<body>
+<body class="ui-command-center">
 <!-- Accessibility: lets keyboard / screen-reader users jump straight past the
      top bar and sidebar into the task list. Visually hidden until focused. -->
 <a href="#mainPane" class="skip-link">Skip to main content</a>
@@ -40,7 +40,7 @@
       <div class="logo"><i class="ti ti-bolt"></i></div>
       <div>
         <div class="brand-name">Quest HQ</div>
-        <div class="brand-sub">Roofing · Drafting · Lumen</div>
+        <div class="brand-sub">Operations workspace</div>
       </div>
     </div>
     <div class="topbar-right">
@@ -137,6 +137,23 @@
           <div class="progress-widget-mount" id="progressWidget"></div>
         </div>
       </div>
+
+      <section class="ai-brief" aria-label="Quest AI operations brief">
+        <div class="ai-brief-head">
+          <span class="ai-brief-icon"><i class="ti ti-sparkles" aria-hidden="true"></i></span>
+          <span class="ai-brief-title">Your ops brief</span>
+          <span class="ai-brief-badge">QUEST AI</span>
+          <span class="ai-brief-time">live workspace context</span>
+        </div>
+        <p class="ai-brief-copy">
+          Prioritize overdue and high-impact work first. Use the side filters to review company queues, team workload, and blocked tasks without changing the underlying task data.
+        </p>
+        <div class="ai-brief-actions" aria-label="Suggested review paths">
+          <button type="button" class="ai-chip" data-brief-view="overdue"><span></span>Overdue</button>
+          <button type="button" class="ai-chip" data-brief-view="hot"><span></span>Critical + urgent</button>
+          <button type="button" class="ai-chip" data-brief-view="watching"><span></span>Watching</button>
+        </div>
+      </section>
 
       <div id="filterBar" class="filter-bar hidden"></div>
 

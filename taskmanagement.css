@@ -4097,3 +4097,449 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
   .focus-row { padding: 12px; }       /* roomier touch targets */
   .focus-drag { font-size: 22px; padding: 6px; }
 }
+
+/* ============================================================
+   Command-center UI shift
+   Frontend-only visual layer based on the client reference in
+   docs/design-reference/quest-hq-client-ui-reference.html.
+   ============================================================ */
+body.ui-command-center {
+  --bg: #f3f4f6;
+  --bg-2: #f7f8fa;
+  --bg-3: #e9ecf1;
+  --surface: #ffffff;
+  --ink: #171a1f;
+  --ink-2: #515a66;
+  --ink-3: #8a94a3;
+  --border: #e1e5ea;
+  --border-strong: #cfd6de;
+  --amber: #f04405;
+  --amber-bg: #fff0ea;
+  --amber-ink: #b13208;
+  --rust: #ef3e32;
+  --rust-bg: #ffe9e7;
+  --rust-ink: #b3261e;
+  --blue: #3978f2;
+  --blue-bg: #eaf2ff;
+  --blue-ink: #2459c5;
+  --green: #2e9e6b;
+  --green-bg: #e8f6ef;
+  --green-ink: #19724b;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 24px rgba(16, 24, 40, 0.04);
+  --shadow-lg: 0 24px 54px rgba(16, 24, 40, 0.16);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body.ui-command-center .app {
+  grid-template-rows: 54px 1fr;
+  grid-template-columns: 248px minmax(0, 1fr);
+  background: var(--bg);
+}
+
+body.ui-command-center .topbar {
+  padding: 0 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+body.ui-command-center .topbar-left {
+  width: 248px;
+  height: 54px;
+  padding: 0 12px;
+  gap: 10px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  align-self: stretch;
+}
+body.ui-command-center .topbar-left:hover { background: var(--surface); }
+body.ui-command-center .topbar-left .brand-name { color: var(--ink); }
+body.ui-command-center .topbar-left .brand-sub { color: var(--ink-3); }
+body.ui-command-center.sidebar-minimized .topbar-left,
+body.sidebar-minimized.ui-command-center .topbar-left {
+  width: 68px;
+  padding: 0;
+  justify-content: center;
+}
+
+body.ui-command-center .logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--amber);
+  color: #fff;
+}
+body.ui-command-center .logo i { display: none; }
+body.ui-command-center .logo::after {
+  content: "Q";
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+body.ui-command-center .brand-name {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+body.ui-command-center .brand-sub { font-size: 11px; color: var(--ink-3); }
+
+body.ui-command-center .search input,
+body.ui-command-center .clock-widget,
+body.ui-command-center .icon-btn,
+body.ui-command-center .company-switcher,
+body.ui-command-center .viewas-switcher {
+  height: 32px;
+  border-radius: 8px;
+  background: #fff;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+body.ui-command-center .search input {
+  width: 250px;
+  font-size: 13px;
+}
+body.ui-command-center .clock-widget {
+  min-width: 98px;
+  font-size: 12px;
+}
+
+body.ui-command-center .btn-primary,
+body.ui-command-center #newTaskBtn {
+  background: var(--amber);
+  color: #fff;
+  border-color: var(--amber);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(240, 68, 5, 0.24);
+}
+body.ui-command-center .btn-primary:hover,
+body.ui-command-center #newTaskBtn:hover {
+  background: #d93d04;
+  border-color: #d93d04;
+}
+
+body.ui-command-center .deck {
+  background: var(--surface);
+  color: var(--ink-2);
+  border-right: 1px solid var(--border);
+  padding: 12px 8px;
+}
+body.ui-command-center .deck .sidebar {
+  gap: 16px;
+  background: transparent;
+  color: inherit;
+}
+body.ui-command-center .side-minimize-btn,
+body.ui-command-center .deck .side-group-head { color: var(--ink-3); }
+body.ui-command-center .deck .side-label,
+body.ui-command-center .deck .side-group-title {
+  color: #aeb7c3;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  font-weight: 800;
+}
+body.ui-command-center .deck .side-item {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 7px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+body.ui-command-center .deck .side-item:hover {
+  background: #f6f7f9;
+  color: var(--ink);
+}
+body.ui-command-center .deck .side-item.active {
+  background: var(--amber-bg);
+  color: var(--amber);
+  font-weight: 800;
+}
+body.ui-command-center .deck .side-item.active i,
+body.ui-command-center .deck .side-item.active .side-count { color: var(--amber); }
+body.ui-command-center .deck .side-count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+body.ui-command-center .main,
+body.ui-command-center .list-pane { background: var(--bg); }
+
+body.ui-command-center .work-toolbar {
+  padding: 12px 18px 0;
+  gap: 8px;
+}
+body.ui-command-center .btn {
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+body.ui-command-center .btn:hover {
+  background: #f8fafc;
+  border-color: var(--border-strong);
+  color: var(--ink);
+}
+
+body.ui-command-center .page-head {
+  padding: 24px 24px 12px;
+  align-items: flex-start;
+  gap: 16px;
+}
+body.ui-command-center .page-eyebrow {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-3);
+}
+body.ui-command-center .page-title {
+  margin-top: 4px;
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: 0;
+  font-family: var(--font-body);
+  font-weight: 800;
+}
+body.ui-command-center .page-head-widgets { gap: 10px; }
+body.ui-command-center .page-head-widgets > .up-next-mount,
+body.ui-command-center .page-head-widgets > .focus-widget-mount,
+body.ui-command-center .page-head-widgets > .progress-widget-mount {
+  width: 300px;
+  max-width: 30vw;
+}
+body.ui-command-center .up-next-card,
+body.ui-command-center .focus-widget,
+body.ui-command-center .progress-card {
+  min-height: 76px;
+  height: 76px;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+body.ui-command-center .up-next-card *,
+body.ui-command-center .focus-widget *,
+body.ui-command-center .progress-card * {
+  color: inherit;
+}
+
+body.ui-command-center .ai-brief {
+  margin: 0 24px 16px;
+  padding: 16px 18px;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(90deg, var(--amber), #8067dc) border-box;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+body.ui-command-center .ai-brief-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+body.ui-command-center .ai-brief-icon {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--amber);
+  color: #fff;
+}
+body.ui-command-center .ai-brief-title { font-weight: 800; color: var(--ink); }
+body.ui-command-center .ai-brief-badge {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #fff4d7;
+  color: #8b5a09;
+  border: 1px solid #f5d48b;
+  font-size: 11px;
+  font-weight: 800;
+}
+body.ui-command-center .ai-brief-time {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+body.ui-command-center .ai-brief-copy {
+  margin: 12px 0 0;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+body.ui-command-center .ai-brief-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+body.ui-command-center .ai-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 800;
+}
+body.ui-command-center .ai-chip:hover {
+  color: var(--amber);
+  border-color: color-mix(in srgb, var(--amber) 45%, var(--border));
+}
+body.ui-command-center .ai-chip span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+body.ui-command-center #taskViewWrap { padding: 0 24px 24px; }
+body.ui-command-center .list-header {
+  padding: 0 16px 8px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+body.ui-command-center .task-group {
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+body.ui-command-center .task-group > .group-head {
+  padding: 10px 16px;
+  background: #fffdf8;
+  border-bottom: 1px solid var(--border);
+}
+body.ui-command-center .group-title {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 800;
+}
+body.ui-command-center .group-count {
+  background: #fff7e8;
+  color: #7f4d08;
+}
+body.ui-command-center .group-body { background: var(--surface); }
+body.ui-command-center .task-group .list-row {
+  min-height: 70px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: relative;
+}
+body.ui-command-center .task-group .list-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--u-medium);
+}
+body.ui-command-center .list-row:has(.prio-critical)::before { background: var(--u-critical); }
+body.ui-command-center .list-row:has(.prio-urgent)::before { background: var(--u-urgent); }
+body.ui-command-center .list-row:has(.prio-high)::before { background: var(--u-high); }
+body.ui-command-center .list-row:has(.prio-low)::before { background: var(--u-low); }
+body.ui-command-center .list-row:hover,
+body.ui-command-center .list-row.selected { background: #fbfcfe; }
+body.ui-command-center .task-title-cell {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+body.ui-command-center .type-text,
+body.ui-command-center .label-text,
+body.ui-command-center .meta-cell,
+body.ui-command-center .due-cell,
+body.ui-command-center .desc-cell { font-size: 12px; }
+body.ui-command-center .priority-block,
+body.ui-command-center .pill-status,
+body.ui-command-center .pill,
+body.ui-command-center .pill-bid-status {
+  min-height: 24px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+body.ui-command-center .timer-btn,
+body.ui-command-center .finish-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink-2);
+}
+body.ui-command-center .timer-btn:hover,
+body.ui-command-center .finish-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+body.ui-command-center .modal,
+body.ui-command-center .detail,
+body.ui-command-center .notif-panel,
+body.ui-command-center .user-menu {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+body.ui-command-center .detail-head { border-bottom: 1px solid var(--border); }
+body.ui-command-center .detail-title {
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+@media (max-width: 900px) {
+  body.ui-command-center .app { grid-template-columns: minmax(0, 1fr); }
+  body.ui-command-center .app > .topbar,
+  body.ui-command-center .app > .main { grid-column: 1; }
+  body.ui-command-center .deck { width: min(300px, 88vw); }
+  body.ui-command-center .page-head,
+  body.ui-command-center .work-toolbar,
+  body.ui-command-center #taskViewWrap,
+  body.ui-command-center .ai-brief {
+    margin-left: 12px;
+    margin-right: 12px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  body.ui-command-center .page-title { font-size: 24px; }
+  body.ui-command-center .ai-brief-time { display: none; }
+  body.ui-command-center .page-head-widgets > .up-next-mount,
+  body.ui-command-center .page-head-widgets > .focus-widget-mount,
+  body.ui-command-center .page-head-widgets > .progress-widget-mount {
+    width: 100%;
+    max-width: none;
+  }
+}

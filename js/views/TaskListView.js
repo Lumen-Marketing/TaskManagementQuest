@@ -32,6 +32,9 @@ App.TaskListView = class TaskListView {
     document.querySelectorAll('#layoutSwitcher [data-layout]').forEach(btn => {
       btn.addEventListener('click', () => this.controller.setLayout(btn.dataset.layout));
     });
+    document.querySelectorAll('[data-brief-view]').forEach(btn => {
+      btn.addEventListener('click', () => this.controller.setView(btn.dataset.briefView));
+    });
   }
 
   subscribe() {
