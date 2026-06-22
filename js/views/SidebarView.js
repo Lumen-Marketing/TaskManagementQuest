@@ -204,6 +204,24 @@ App.SidebarView = class SidebarView {
   _buildSections() {
     const sections = [];
 
+    // "Team" groups personal time + the supervisory/admin tools under one header
+    // to match the redesigned sidebar (Personal / Team / Workspaces). Each item
+    // keeps its own permission gate, so the section collapses to whatever the
+    // role can actually see (workers get just "My time").
+    const teamItems = [];
+    if (App.can('time.own') || App.can('clock.use')) {
+      teamItems.push({ view: 'time:mine', label: 'My time', icon: 'ti-clock', count: App.utils.formatHours(this.timeModel.totalForUser(this.currentUser)) });
+    }
+    if (App.can('time.team')) {
+      teamItems.push({ view: 'time:resource', label: 'Team workload', icon: 'ti-users', count: this.timeModel.allActive().length });
+    }
+    if (App.can('team.view')) {
+      teamItems.push({ view: 'team:hierarchy', label: 'Team chart', icon: 'ti-sitemap' });
+    }
+    if (App.can('roles.manage')) teamItems.push({ view: 'approvals',   label: 'Approvals',       icon: 'ti-user-check' });
+    if (App.can('clock.admin'))  teamItems.push({ view: 'admin:clock', label: 'Clock dashboard', icon: 'ti-clock-play', count: this.timeModel.allActive().length });
+    if (teamItems.length) sections.push({ key: 'team', label: 'Team', items: teamItems });
+
     // Company context lives in the sidebar: a single-select list of the
     // companies this user can access (plus "All companies" for developers).
     // Picking one re-scopes the whole app via controller.setCompany. Shown
@@ -215,7 +233,7 @@ App.SidebarView = class SidebarView {
       const cur = this.controller.uiState.currentCompany;
       const dotMap = { roofing: 'dot-roof', drafting: 'dot-draft', lumen: 'dot-lumen' };
       sections.push({
-        key: 'company', label: 'Company',
+        key: 'company', label: 'Workspaces',
         items: companies.map(id => ({
           company: id,
           label: id === '*' ? 'All companies' : (App.COMPANIES[id] || { label: id }).label,
@@ -225,26 +243,6 @@ App.SidebarView = class SidebarView {
         })),
       });
     }
-
-    const timeItems = [];
-    if (App.can('time.own') || App.can('clock.use')) {
-      timeItems.push({ view: 'time:mine', label: 'My time', icon: 'ti-clock', count: App.utils.formatHours(this.timeModel.totalForUser(this.currentUser)) });
-    }
-    if (App.can('time.team')) {
-      timeItems.push({ view: 'time:resource',  label: 'Team workload', icon: 'ti-users', count: this.timeModel.allActive().length });
-    }
-    if (timeItems.length) sections.push({ key: 'time', label: 'Time', items: timeItems });
-
-    if (App.can('team.view')) {
-      sections.push({
-        key: 'org', label: 'Org',
-        items: [{ view: 'team:hierarchy', label: 'Team chart', icon: 'ti-sitemap' }],
-      });
-    }
-    const adminItems = [];
-    if (App.can('roles.manage')) adminItems.push({ view: 'approvals',   label: 'Approvals',       icon: 'ti-user-check' });
-    if (App.can('clock.admin'))  adminItems.push({ view: 'admin:clock', label: 'Clock dashboard', icon: 'ti-clock-play', count: this.timeModel.allActive().length });
-    if (adminItems.length) sections.push({ key: 'admin', label: 'Admin', items: adminItems });
 
     return sections;
   }
