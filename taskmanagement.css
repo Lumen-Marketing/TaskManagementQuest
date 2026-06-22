@@ -4143,11 +4143,15 @@ body.ui-command-center {
   color: var(--ink);
 }
 
+/* Full-height left sidebar with the topbar only over the main pane (mockup). */
 body.ui-command-center .app {
   grid-template-rows: 54px 1fr;
   grid-template-columns: 248px minmax(0, 1fr);
   background: var(--bg);
 }
+body.ui-command-center .app > .deck   { grid-column: 1; grid-row: 1 / -1; }
+body.ui-command-center .app > .topbar { grid-column: 2; grid-row: 1; }
+body.ui-command-center .app > .main   { grid-column: 2; grid-row: 2; }
 
 body.ui-command-center .topbar {
   padding: 0 18px;
@@ -4155,24 +4159,31 @@ body.ui-command-center .topbar {
   border-bottom: 1px solid var(--border);
 }
 
+/* The brand moved into the sidebar; the topbar-left now holds the title + scope
+   segment (Task 5), so it's a plain left-aligned flex container. */
 body.ui-command-center .topbar-left {
-  width: 248px;
-  height: 54px;
-  padding: 0 12px;
-  gap: 10px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  align-self: stretch;
-}
-body.ui-command-center .topbar-left:hover { background: var(--surface); }
-body.ui-command-center .topbar-left .brand-name { color: var(--ink); }
-body.ui-command-center .topbar-left .brand-sub { color: var(--ink-3); }
-body.ui-command-center.sidebar-minimized .topbar-left,
-body.sidebar-minimized.ui-command-center .topbar-left {
-  width: 68px;
+  width: auto;
+  height: auto;
   padding: 0;
-  justify-content: center;
+  gap: 10px;
+  background: transparent;
+  border-right: none;
+  align-self: center;
 }
+
+/* Brand header at the top of the sidebar. */
+body.ui-command-center .side-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px 12px;
+}
+body.ui-command-center .side-brand-text { min-width: 0; }
+body.ui-command-center .side-brand .brand-name { color: var(--ink); font-size: 14px; font-weight: 800; line-height: 1.1; }
+body.ui-command-center .side-brand .brand-sub { color: var(--ink-3); font-size: 11px; margin-top: 1px; }
+body.ui-command-center .side-brand .side-minimize-btn { margin-left: auto; color: var(--ink-4); }
+body.ui-command-center.sidebar-minimized .side-brand { padding: 14px 0 12px; justify-content: center; }
+body.ui-command-center.sidebar-minimized .side-brand-text { display: none; }
 
 body.ui-command-center .logo {
   width: 32px;
