@@ -4974,3 +4974,97 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
     display: none;
   }
 }
+
+/* ============================================================
+   Dark theme for the command-center skin.
+   The base `body.ui-command-center` block (top of this section)
+   hard-codes a LIGHT palette directly on the body. That selector
+   out-specifies the generic `[data-theme="dark"]` tokens in
+   tokens.css, so toggling Dark set the attribute but changed
+   nothing visually. Re-assert a true dark palette at skin
+   specificity, then patch the handful of hard-coded light hex
+   fills the tokens can't reach (segment wells, white card/menu
+   fills, range tracks). Brand terracotta (--amber) and the accent
+   dots are kept on purpose — they read well on the dark canvas.
+   ============================================================ */
+[data-theme="dark"] body.ui-command-center {
+  --bg: #14171B;          /* warm-charcoal canvas */
+  --bg-2: #1A1E23;        /* hovers / section fills */
+  --bg-3: #20252B;
+  --surface: #1B1F25;     /* cards, topbar, menus (raised over --bg) */
+  --ink: #F2F4F6;
+  --ink-2: #B7BEC7;
+  --ink-3: #838C96;
+  --ink-4: #5D656F;
+  --border: #2A2F37;
+  --border-strong: #363C46;
+  --amber: #E0552B;       /* brand accent — unchanged */
+  --amber-bg: #3A2017;
+  --amber-ink: #F0A582;
+  --rust: #E0484D;
+  --rust-bg: #391B1D;
+  --rust-ink: #F09599;
+  --blue: #5B8DF5;
+  --blue-bg: #1B2740;
+  --blue-ink: #A3C2FB;
+  --green: #3DB37D;
+  --green-bg: #15311F;
+  --green-ink: #86DAB0;
+  --u-critical: #E0484D;
+  --u-urgent: #E0484D;
+  --u-high: #E08A0B;
+  --u-medium: #5B8DF5;
+  --u-low: #838C96;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40), 0 1px 1px rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 10px 28px -10px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 28px 64px -18px rgba(0, 0, 0, 0.65), 0 10px 24px -10px rgba(0, 0, 0, 0.50);
+}
+
+/* Segment wells + their raised "on" chip (were #EDEFF2 / #fff). */
+[data-theme="dark"] body.ui-command-center .seg { background: #0F1216; }
+[data-theme="dark"] body.ui-command-center .seg button.on { background: #2A3038; color: var(--ink); }
+
+/* Controls that hard-coded a white fill. */
+[data-theme="dark"] body.ui-command-center .search input,
+[data-theme="dark"] body.ui-command-center .clock-widget,
+[data-theme="dark"] body.ui-command-center .icon-btn,
+[data-theme="dark"] body.ui-command-center .company-switcher,
+[data-theme="dark"] body.ui-command-center .viewas-switcher,
+[data-theme="dark"] body.ui-command-center .ai-chip,
+[data-theme="dark"] body.ui-command-center .timer-btn,
+[data-theme="dark"] body.ui-command-center .finish-btn { background: var(--surface); }
+
+/* Sidebar group labels (were a fixed light slate #aeb7c3). */
+[data-theme="dark"] body.ui-command-center .deck .side-label,
+[data-theme="dark"] body.ui-command-center .deck .side-group-title { color: var(--ink-3); }
+
+/* Hover fills (were #f6f7f9 / #f8fafc). */
+[data-theme="dark"] body.ui-command-center .deck .side-item:hover,
+[data-theme="dark"] body.ui-command-center .btn:hover { background: var(--bg-3); }
+
+/* Group head + selected row (were #fbfcfe). */
+[data-theme="dark"] body.ui-command-center .task-group > .group-head,
+[data-theme="dark"] body.ui-command-center .list-row.selected { background: var(--bg-2); }
+
+/* Floating surfaces that hard-coded white. */
+[data-theme="dark"] body.ui-command-center .modal,
+[data-theme="dark"] body.ui-command-center .detail,
+[data-theme="dark"] body.ui-command-center .notif-panel,
+[data-theme="dark"] body.ui-command-center .user-menu { background: var(--surface); }
+
+/* AI brief gradient-border card (had a white padding-box fill). */
+[data-theme="dark"] body.ui-command-center .ai-brief {
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(90deg, #3A4250, #2A313C) border-box;
+}
+
+/* ----- Home / Reports (.qhq-*) hard-coded light fills ----- */
+[data-theme="dark"] .qhq-brief { background: linear-gradient(180deg, #20242A, var(--surface)); }
+[data-theme="dark"] .qhq-chip.hold,
+[data-theme="dark"] .qhq-ar-ic.hold { color: #E3B36F; background: #352A12; }
+[data-theme="dark"] .qhq-brief-h .b { color: #E3B36F; background: #352A12; border-color: #4A3A1A; }
+[data-theme="dark"] .qhq-range { background: #0F1216; }
+[data-theme="dark"] .qhq-range button.on { background: #2A3038; color: var(--ink); }
+[data-theme="dark"] .qhq-bh-track,
+[data-theme="dark"] .qhq-mixbar { background: #262B32; }
