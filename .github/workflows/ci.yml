@@ -45,11 +45,19 @@ jobs:
           echo "OK: env.example.json is valid JSON."
 
       - name: Scan history for secrets (gitleaks)
-        # Pinned to a specific tag so a compromised upstream can't suddenly
-        # run arbitrary code on our runner.
-        uses: gitleaks/gitleaks-action@v2.3.7
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The gitleaks GitHub Action requires a paid GITLEAKS_LICENSE for
+        # org-owned repos. The gitleaks CLI itself is free (MIT licensed), so
+        # we download a pinned release binary and run the same scan directly —
+        # no license needed. Version pinned so a compromised upstream can't
+        # silently change what runs on our runner.
+        run: |
+          set -euo pipefail
+          VERSION=8.21.2
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" -o gitleaks.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          # detect scans full git history (fetch-depth: 0 above); --redact keeps
+          # any matched secret out of the public logs; non-zero exit fails CI.
+          ./gitleaks detect --source . --redact --verbose --exit-code 1
 
   syntax:
     name: js syntax check
