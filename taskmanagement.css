@@ -4901,3 +4901,17 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
   .qhq-statstrip { grid-template-columns: 1fr 1fr; }
   .qhq-actions { width: 100%; }
 }
+
+/* ============================================================
+   Home/sidebar polish — the minimized rail was force-showing the
+   bodies of COLLAPSED groups (TEAM / WORKSPACES), so it had far
+   more icons than the expanded sidebar. Make the collapsed rail
+   mirror the expanded one: a collapsed section drops out entirely.
+   Users control rail density by collapsing/expanding groups while
+   the sidebar is expanded. Desktop only.
+   ============================================================ */
+@media (min-width: 721px) {
+  body.ui-command-center .deck.minimized .side-group-collapsible.collapsed {
+    display: none;
+  }
+}
