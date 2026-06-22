@@ -4629,11 +4629,17 @@ body.ui-command-center .detail-title {
   letter-spacing: 0;
 }
 
-@media (max-width: 900px) {
+/* Collapse to a single column + off-canvas drawer only when the sidebar actually
+   becomes a drawer (≤720px, matching SidebarView._isMobile). Between 721–900px the
+   full-height sidebar stays in the grid beside the content, like the desktop. */
+@media (max-width: 720px) {
   body.ui-command-center .app { grid-template-columns: minmax(0, 1fr); }
   body.ui-command-center .app > .topbar,
   body.ui-command-center .app > .main { grid-column: 1; }
   body.ui-command-center .deck { width: min(300px, 88vw); }
+}
+
+@media (max-width: 900px) {
   body.ui-command-center .page-head,
   body.ui-command-center .work-toolbar,
   body.ui-command-center #taskViewWrap,
