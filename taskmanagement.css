@@ -5086,3 +5086,91 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 [data-theme="dark"] .qhq-range button.on { background: #2A3038; color: var(--ink); }
 [data-theme="dark"] .qhq-bh-track,
 [data-theme="dark"] .qhq-mixbar { background: #262B32; }
+
+/* ============================================================
+   Spotlight cards — Reports KPI + chart cards. A cursor-tracked
+   terracotta glow sits BEHIND the card content (so text is never
+   tinted) plus a border/shadow lift on hover. Framework-free:
+   ReportsView sets --mx/--my (px, card-relative) on pointermove;
+   the CSS draws the radial gradient at that point. Hover effects
+   are gated to hover-capable pointers so taps don't stick.
+   ============================================================ */
+.qhq-rpt .qhq-kpi,
+.qhq-rpt .qhq-chart-card {
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--dur-short, .18s) var(--ease-out, ease),
+              box-shadow var(--dur-short, .18s) var(--ease-out, ease),
+              transform var(--dur-short, .18s) var(--ease-out, ease);
+}
+.qhq-rpt .qhq-kpi::before,
+.qhq-rpt .qhq-chart-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, -30%),
+              color-mix(in srgb, var(--amber) 22%, transparent), transparent 62%);
+  opacity: 0;
+  transition: opacity var(--dur-med, .25s) var(--ease-out, ease);
+  pointer-events: none;
+  z-index: 0;
+}
+/* Card content rides above the glow. */
+.qhq-rpt .qhq-kpi > *,
+.qhq-rpt .qhq-chart-card > * { position: relative; z-index: 1; }
+
+@media (hover: hover) {
+  .qhq-rpt .qhq-kpi:hover::before,
+  .qhq-rpt .qhq-chart-card:hover::before { opacity: 1; }
+  .qhq-rpt .qhq-kpi:hover,
+  .qhq-rpt .qhq-chart-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--amber) 45%, var(--border));
+    box-shadow: 0 12px 28px -14px color-mix(in srgb, var(--amber) 38%, transparent), var(--shadow-md);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qhq-rpt .qhq-kpi,
+  .qhq-rpt .qhq-chart-card { transition: none; }
+  .qhq-rpt .qhq-kpi:hover,
+  .qhq-rpt .qhq-chart-card:hover { transform: none; }
+}
+
+/* ============================================================
+   EXPERIMENTAL — frosted-glass sidebar (command-center skin).
+   The deck becomes a translucent frosted panel; a soft brand-tinted
+   gradient is painted BEHIND it (on .app) so the blur has color to
+   refract and reads as glass rather than flat milk. Revert = delete
+   this whole block.
+   ============================================================ */
+body.ui-command-center .app {
+  background:
+    radial-gradient(130% 70% at -12% 0%, rgba(224, 85, 43, 0.18), transparent 55%),
+    radial-gradient(120% 62% at -12% 100%, rgba(62, 123, 242, 0.16), transparent 55%),
+    var(--bg);
+}
+body.ui-command-center .deck {
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  border-right: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.5),
+              1px 0 24px -14px rgba(18, 22, 28, 0.16);
+}
+/* Hover gains translucency so items sit ON the glass; active stays a solid
+   terracotta chip to keep its label readable over the frosted panel. */
+body.ui-command-center .deck .side-item:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+/* Graceful fallback where backdrop-filter is unsupported. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  body.ui-command-center .deck { background: var(--surface); }
+}
+
+/* Saved-views menu rows: delete button pushed to the right. */
+.toolbar-menu-item.sv-row .sv-del {
+  margin-left: auto; background: transparent; border: 0; color: var(--ink-4);
+  cursor: pointer; padding: 2px; border-radius: 4px; display: inline-flex; align-items: center;
+}
+.toolbar-menu-item.sv-row .sv-del:hover { color: var(--rust); background: var(--rust-bg); }

@@ -12,12 +12,14 @@ App.ToolbarMenuView = class ToolbarMenuView {
     const sortBtn  = document.getElementById('sortBtn');
     const groupBtn = document.getElementById('groupBtn');
     const viewBtn  = document.getElementById('viewBtn');
+    const viewsBtn = document.getElementById('viewsBtn');
     const exportBtn = document.getElementById('exportBtn');
     if (sortBtn)  sortBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('sort',  sortBtn); });
     if (groupBtn) groupBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('group', groupBtn); });
     if (viewBtn)  viewBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('view',  viewBtn); });
+    if (viewsBtn) viewsBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('views', viewsBtn); });
     if (exportBtn) exportBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('export', exportBtn); });
-    [sortBtn, groupBtn, viewBtn, exportBtn].forEach(btn => {
+    [sortBtn, groupBtn, viewBtn, viewsBtn, exportBtn].forEach(btn => {
       if (btn) { btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false'); }
     });
     document.addEventListener('click', (e) => {
@@ -28,6 +30,7 @@ App.ToolbarMenuView = class ToolbarMenuView {
     App.EventBus.on('sort:changed',   () => { if (this.menuFor === 'sort')  this.render(); });
     App.EventBus.on('group:changed',  () => { if (this.menuFor === 'group') this.render(); });
     App.EventBus.on('layout:changed', () => { if (this.menuFor === 'view')  this.render(); });
+    App.EventBus.on('savedviews:changed', () => { if (this.menuFor === 'views') this.render(); });
     this.syncButtonLabels();
     App.EventBus.on('sort:changed',   () => this.syncButtonLabels());
     App.EventBus.on('group:changed',  () => this.syncButtonLabels());
@@ -141,6 +144,42 @@ App.ToolbarMenuView = class ToolbarMenuView {
       `;
       this.menu.querySelectorAll('[data-layout]').forEach(el => {
         el.addEventListener('click', () => { this.controller.setLayout(el.dataset.layout); this.close(); });
+      });
+    } else if (this.menuFor === 'views') {
+      const esc = App.utils.escapeHtml;
+      const views = this.controller.getSavedViews();
+      const list = views.length ? views.map(v => `
+        <div class="toolbar-menu-item sv-row" data-apply="${esc(v.id)}">
+          <i class="ti ti-bookmark"></i>
+          <span>${esc(v.name)}</span>
+          <button class="sv-del" data-del="${esc(v.id)}" title="Delete view" aria-label="Delete view ${esc(v.name)}"><i class="ti ti-x"></i></button>
+        </div>`).join('')
+        : `<div class="toolbar-menu-hint">No saved views yet.</div>`;
+      this.menu.innerHTML = `
+        <div class="toolbar-menu-title">Saved views</div>
+        ${list}
+        <div class="toolbar-menu-item sv-save" data-save="1">
+          <i class="ti ti-plus"></i><span>Save current view…</span>
+        </div>
+      `;
+      this.menu.querySelectorAll('[data-apply]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('[data-del]')) return; // delete handled separately
+          this.controller.applySavedView(el.dataset.apply);
+          this.close();
+        });
+      });
+      this.menu.querySelectorAll('[data-del]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.controller.deleteSavedView(el.dataset.del);
+        });
+      });
+      const saveEl = this.menu.querySelector('[data-save]');
+      if (saveEl) saveEl.addEventListener('click', () => {
+        const name = window.prompt('Name this view:');
+        if (name && name.trim()) this.controller.saveCurrentView(name);
+        this.close();
       });
     } else if (this.menuFor === 'export') {
       const items = [

@@ -216,6 +216,10 @@ App.AppController = class AppController {
         view: this.uiState.view,
         layout: this.uiState.layout,
         calendarMode: this.uiState.calendarMode,
+        sortBy: this.uiState.sortBy,
+        sortDir: this.uiState.sortDir,
+        groupBy: this.uiState.groupBy,
+        filters: this.uiState.filters,
       }));
     } catch (e) { /* localStorage unavailable / quota — last-state is best-effort */ }
   }
@@ -232,6 +236,20 @@ App.AppController = class AppController {
     const savedLayout = saved.layout === 'timeline' ? 'calendar' : saved.layout;
     if (['table', 'calendar', 'kanban'].includes(savedLayout)) this.setLayout(savedLayout);
     if (saved.calendarMode === 'month' || saved.calendarMode === 'week') this.uiState.calendarMode = saved.calendarMode;
+    // Restore sort / group / filters so the user's working set survives a reload
+    // (the "filters reset every session" complaint). Validated + merged with
+    // defaults so a malformed/old entry can't corrupt uiState.
+    if (saved.sortBy && App.SORT_OPTIONS[saved.sortBy]) this.uiState.sortBy = saved.sortBy;
+    if (saved.sortDir === 'asc' || saved.sortDir === 'desc') this.uiState.sortDir = saved.sortDir;
+    if (saved.groupBy && App.GROUP_OPTIONS[saved.groupBy]) this.uiState.groupBy = saved.groupBy;
+    if (saved.filters && typeof saved.filters === 'object') {
+      const d = { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' };
+      for (const k of ['assignees', 'companies', 'statuses', 'priorities', 'types']) {
+        if (Array.isArray(saved.filters[k])) d[k] = saved.filters[k];
+      }
+      if (typeof saved.filters.dueRange === 'string') d.dueRange = saved.filters.dueRange;
+      this.uiState.filters = d;
+    }
     // Don't restore transient person:/company: filters. Re-opening onto a narrow
     // filtered view that happens to be empty reads as "my tasks vanished" (a real
     // support issue). Only stable workspace views are remembered; narrow filters
@@ -1296,16 +1314,19 @@ App.AppController = class AppController {
     const i = arr.indexOf(value);
     if (i === -1) arr.push(value); else arr.splice(i, 1);
     App.EventBus.emit('filters:changed');
+    this._persistUiState();
   }
 
   setFilterDueRange(range) {
     this.uiState.filters.dueRange = range || 'all';
     App.EventBus.emit('filters:changed');
+    this._persistUiState();
   }
 
   clearFilters() {
     this.uiState.filters = { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' };
     App.EventBus.emit('filters:changed');
+    this._persistUiState();
   }
 
   activeFilterCount() {
@@ -1318,6 +1339,62 @@ App.AppController = class AppController {
       + ((f.dueRange && f.dueRange !== 'all') ? 1 : 0);
   }
 
+  /* ---------- saved views (named filter+sort+group+layout presets) ---------- */
+  _savedViewsKey() {
+    const uid = (App.currentProfile && App.currentProfile.member_id) || this.currentUser || 'anon';
+    return `questhq:saved-views:${uid}`;
+  }
+
+  getSavedViews() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(this._savedViewsKey()) || '[]');
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  _writeSavedViews(arr) {
+    try { localStorage.setItem(this._savedViewsKey(), JSON.stringify(arr)); } catch (e) { /* quota */ }
+    App.EventBus.emit('savedviews:changed');
+  }
+
+  // Snapshot the current filters + sort + group + layout under a name.
+  saveCurrentView(name) {
+    const clean = String(name || '').trim();
+    if (!clean) return;
+    const views = this.getSavedViews();
+    views.push({
+      id: App.utils.uid('sv'),
+      name: clean.slice(0, 40),
+      filters: JSON.parse(JSON.stringify(this.uiState.filters)),
+      sortBy: this.uiState.sortBy,
+      sortDir: this.uiState.sortDir,
+      groupBy: this.uiState.groupBy,
+      layout: this.uiState.layout,
+    });
+    this._writeSavedViews(views);
+  }
+
+  // Apply a saved view: restore its state and re-render every dependent surface.
+  applySavedView(id) {
+    const v = this.getSavedViews().find(x => x.id === id);
+    if (!v) return;
+    if (v.filters && typeof v.filters === 'object') this.uiState.filters = JSON.parse(JSON.stringify(v.filters));
+    if (v.sortBy && App.SORT_OPTIONS[v.sortBy]) this.uiState.sortBy = v.sortBy;
+    if (v.sortDir === 'asc' || v.sortDir === 'desc') this.uiState.sortDir = v.sortDir;
+    if (v.groupBy && App.GROUP_OPTIONS[v.groupBy]) this.uiState.groupBy = v.groupBy;
+    if (['table', 'calendar', 'kanban'].includes(v.layout)) this.uiState.layout = v.layout;
+    this.uiState.collapsedGroups = new Set();
+    this._persistUiState();
+    App.EventBus.emit('filters:changed');
+    App.EventBus.emit('sort:changed');
+    App.EventBus.emit('group:changed');
+    App.EventBus.emit('layout:changed', this.uiState.layout);
+  }
+
+  deleteSavedView(id) {
+    this._writeSavedViews(this.getSavedViews().filter(x => x.id !== id));
+  }
+
   /* ---------- sort + group ---------- */
   setSortBy(key) {
     if (!App.SORT_OPTIONS[key]) return;
@@ -1328,6 +1405,7 @@ App.AppController = class AppController {
       this.uiState.sortDir = 'asc';
     }
     App.EventBus.emit('sort:changed');
+    this._persistUiState();
   }
 
   setGroupBy(key) {
@@ -1336,6 +1414,7 @@ App.AppController = class AppController {
     this.uiState.groupBy = key;
     this.uiState.collapsedGroups = new Set();
     App.EventBus.emit('group:changed');
+    this._persistUiState();
   }
 
   toggleGroupCollapsed(key) {
