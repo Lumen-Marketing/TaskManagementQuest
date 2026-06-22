@@ -2163,6 +2163,7 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 }
 /* Force both cards to identical width and height, regardless of inner content. */
 .page-head-widgets > .up-next-mount,
+.page-head-widgets > .focus-widget-mount,
 .page-head-widgets > .progress-widget-mount { width: 360px; flex-shrink: 0; }
 .page-head-widgets > * > .up-next-card,
 .page-head-widgets > * > .progress-card {
@@ -2447,6 +2448,7 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
     gap: 8px;
   }
   .page-head-widgets > .up-next-mount,
+  .page-head-widgets > .focus-widget-mount,
   .page-head-widgets > .progress-widget-mount {
     flex: 0 0 auto;
     width: 100%;
@@ -2768,6 +2770,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 @media (max-width: 1200px) and (min-width: 901px) {
   /* Don't fully hide the progress card on tablets; shrink it instead */
   .page-head-widgets > .up-next-mount,
+  .page-head-widgets > .focus-widget-mount,
   .page-head-widgets > .progress-widget-mount { width: 220px; }
   .up-next-card { width: 100%; }
   .page-title { font-size: 40px; }
@@ -2839,6 +2842,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   /* Trim widget heights to fit two-line header */
   .page-head-widgets { width: 100%; }
   .page-head-widgets > .up-next-mount,
+  .page-head-widgets > .focus-widget-mount,
   .page-head-widgets > .progress-widget-mount { flex: 1; width: auto; min-width: 0; }
 }
 
@@ -4619,8 +4623,10 @@ body.ui-command-center .list-row:has(.prio-critical)::before { background: var(-
 body.ui-command-center .list-row:has(.prio-urgent)::before { background: var(--u-urgent); }
 body.ui-command-center .list-row:has(.prio-high)::before { background: var(--u-high); }
 body.ui-command-center .list-row:has(.prio-low)::before { background: var(--u-low); }
-/* Rows are dense, so their hover stays SUBTLE: a faint warm wash, not a glow. */
-body.ui-command-center .list-row:hover { background: rgba(237, 78, 13, 0.045); }
+/* Rows are dense, so hover stays SUBTLE. The left bar renders blue
+   (var(--u-medium)) on every row, so the hover wash is a faint tint of that
+   SAME blue — hovering never introduces a different color than the bar shows. */
+body.ui-command-center .list-row:hover { background: color-mix(in srgb, var(--u-medium) 8%, var(--surface)); }
 body.ui-command-center .list-row.selected { background: #fbfcfe; }
 body.ui-command-center .task-title-cell {
   font-size: 14px;
