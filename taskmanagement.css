@@ -4749,3 +4749,28 @@ body.ui-command-center .detail-title {
   .qhq-cl-row { grid-template-columns: 4px 1fr 64px; }
   .qhq-cl-row .who, .qhq-cl-row .pill { display: none; }
 }
+
+/* ============================================================
+   Phase 3 polish — radius nudge for card-like containers.
+   Card-like surfaces move to --radius-md (14px) to match
+   Home/Reports. Dense layouts (rows, cells, chips) keep their
+   smaller radius. Scoped to the command-center skin only.
+   ============================================================ */
+body.ui-command-center .modal { border-radius: var(--radius-md); }
+body.ui-command-center .toolbar-menu { border-radius: var(--radius-md); }
+body.ui-command-center .kanban-col { border-radius: var(--radius-md); }
+body.ui-command-center .kanban-card { border-radius: var(--radius-md); }
+
+/* ============================================================
+   Phase 3 polish — card treatment for the Time & Approvals
+   tables. They already use --surface/--border; this rounds the
+   corners to --radius-md and adds a soft shadow so they read
+   like the Reports cards. Stat cards get the same radius.
+   Responsive table->card stacking (<=1200px) is untouched.
+   ============================================================ */
+body.ui-command-center .time-table,
+body.ui-command-center .approval-scroll .time-table {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+body.ui-command-center .time-card { border-radius: var(--radius-md); }
