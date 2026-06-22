@@ -4774,3 +4774,32 @@ body.ui-command-center .approval-scroll .time-table {
   box-shadow: var(--shadow-sm);
 }
 body.ui-command-center .time-card { border-radius: var(--radius-md); }
+
+/* ============================================================
+   Phase 3 polish — fix the MINIMIZED sidebar under the
+   command-center skin. The skin's base `.app` grid (248px) and
+   `.side-count` (inline-flex) out-specify the generic
+   `.deck.minimized` / `body.sidebar-minimized` rules, so the rail
+   never actually collapsed and the count badges stayed visible
+   (cramped). Re-assert the collapse at command-center specificity.
+   Desktop only: at <=720px the sidebar is an off-canvas drawer and
+   the minimize state is reset by SidebarView.
+   ============================================================ */
+@media (min-width: 721px) {
+  body.ui-command-center.sidebar-minimized .app {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  body.ui-command-center .deck.minimized { padding: 12px 6px; }
+  body.ui-command-center .deck.minimized .side-count { display: none; }
+  body.ui-command-center .deck.minimized .side-item {
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+  }
+  body.ui-command-center.sidebar-minimized .userchip { justify-content: center; }
+  body.ui-command-center.sidebar-minimized .userchip .uc-meta,
+  body.ui-command-center.sidebar-minimized .userchip .uc-gear { display: none; }
+  body.ui-command-center.sidebar-minimized .side-foot .clock-widget {
+    justify-content: center; padding-left: 0; padding-right: 0;
+  }
+}
