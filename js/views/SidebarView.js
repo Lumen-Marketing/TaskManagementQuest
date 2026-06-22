@@ -17,6 +17,7 @@ App.SidebarView = class SidebarView {
 
     this.applyRoleVisibility();
     this.bindStaticItems();
+    this.bindAskQuest();
     this.bindMinimize();
     this.applyStoredMinimize();
     this.subscribe();
@@ -46,6 +47,17 @@ App.SidebarView = class SidebarView {
         e.preventDefault();
         handler();
       }
+    });
+  }
+
+  // The sidebar "Ask Quest" bar is a styled entry point to the existing search —
+  // clicking it focuses the topbar search input (no new AI surface).
+  bindAskQuest() {
+    const ask = document.getElementById('askQuestBtn');
+    if (!ask) return;
+    ask.addEventListener('click', () => {
+      const search = document.getElementById('searchInput');
+      if (search) { search.focus(); search.select(); }
     });
   }
 

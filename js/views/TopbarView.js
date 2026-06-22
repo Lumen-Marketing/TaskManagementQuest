@@ -227,10 +227,13 @@ App.TopbarView = class TopbarView {
     `;
     document.body.appendChild(menu);
 
+    // The avatar lives in the sidebar footer (bottom-left), so anchor the menu
+    // above it and aligned to its left edge instead of dropping down-right.
     const rect = this.avatar.getBoundingClientRect();
     menu.style.position = 'fixed';
-    menu.style.top = (rect.bottom + 6) + 'px';
-    menu.style.right = (window.innerWidth - rect.right) + 'px';
+    menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.style.right = 'auto';
 
     this.userMenu = menu;
 

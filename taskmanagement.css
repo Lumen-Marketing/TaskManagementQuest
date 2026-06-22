@@ -4296,6 +4296,50 @@ body.ui-command-center .deck .side-count {
   font-size: 12px;
 }
 
+/* Pin the brand + Ask Quest at the top and the footer at the bottom by letting
+   only the nav groups scroll. */
+body.ui-command-center .deck { overflow: hidden; }
+body.ui-command-center .side-scroll {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  margin: 0 -4px; padding: 0 4px;
+}
+
+/* Ask Quest command bar — focuses the existing search. */
+body.ui-command-center .kbar {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  height: 32px; margin: 0 0 2px; padding: 0 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--ink-3); font-size: 12.5px;
+  box-shadow: var(--shadow-sm); text-align: left;
+}
+body.ui-command-center .kbar i { color: var(--amber); font-size: 14px; }
+body.ui-command-center .kbar .kbd {
+  margin-left: auto; font-size: 10.5px; color: var(--ink-3);
+  border: 1px solid var(--border-strong); border-radius: 5px;
+  padding: 1px 5px; background: var(--bg-2);
+}
+body.ui-command-center.sidebar-minimized .kbar { justify-content: center; padding: 0; }
+body.ui-command-center.sidebar-minimized .kbar span { display: none; }
+
+/* Sidebar footer: clock-in + user chip pinned to the bottom. */
+body.ui-command-center .side-foot {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding: 9px 4px 4px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+body.ui-command-center .side-foot .clock-widget { width: 100%; justify-content: flex-start; }
+body.ui-command-center .userchip { display: flex; align-items: center; gap: 9px; padding: 4px; }
+body.ui-command-center .userchip .uc-meta { min-width: 0; line-height: 1.15; }
+body.ui-command-center .userchip .uc-name { font-size: 12.5px; font-weight: 600; }
+body.ui-command-center .userchip .uc-role { font-size: 10.5px; color: var(--ink-3); }
+body.ui-command-center .userchip .uc-gear { margin-left: auto; color: var(--ink-4); }
+body.ui-command-center.sidebar-minimized .side-foot { padding: 9px 0 4px; }
+body.ui-command-center.sidebar-minimized .userchip .uc-meta,
+body.ui-command-center.sidebar-minimized .userchip .uc-gear,
+body.ui-command-center.sidebar-minimized .clock-widget span { display: none; }
+
 body.ui-command-center .main,
 body.ui-command-center .list-pane { background: var(--bg); }
 

@@ -46,13 +46,6 @@
       <!-- Developer-only "view as role" switcher -->
       <div id="viewAsSwitcher" class="viewas-switcher hidden"></div>
 
-      <!-- Clock-in / Clock-out widget -->
-      <button type="button" id="clockWidget" class="clock-widget" aria-label="Clock in / out">
-        <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-        <span id="clockLabel">Clock in</span>
-        <span id="clockTimer" class="clock-timer hidden">00:00:00</span>
-      </button>
-
       <button class="icon-btn" id="scaleBtn" aria-label="Display size" title="Display size">
         <i class="ti ti-zoom-scan"></i>
       </button>
@@ -70,7 +63,6 @@
           <div class="notif-list" id="notifList"></div>
         </div>
       </div>
-      <button type="button" class="avatar" id="userAvatar" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" style="background: var(--amber); color: var(--color-accent-ink);">AM</button>
     </div>
   </div>
 
@@ -88,6 +80,11 @@
         </button>
       </div>
 
+      <button type="button" class="kbar" id="askQuestBtn">
+        <i class="ti ti-sparkles" aria-hidden="true"></i><span>Ask Quest…</span><span class="kbd">⌘K</span>
+      </button>
+
+      <div class="side-scroll">
       <div class="side-group grp-views">
         <div class="side-label">Workspace</div>
         <div class="side-item active" data-view="all" title="All"><i class="ti ti-list-check"></i><span class="side-item-label">All</span><span class="side-count" id="cnt-all">0</span></div>
@@ -107,6 +104,23 @@
           <span class="sk sk-side-item"></span>
           <span class="sk sk-side-label"></span>
           <span class="sk sk-side-item"></span>
+        </div>
+      </div>
+      </div>
+
+      <div class="side-foot">
+        <button type="button" id="clockWidget" class="clock-widget" aria-label="Clock in / out">
+          <i class="ti ti-player-play-filled" aria-hidden="true"></i>
+          <span id="clockLabel">Clock in</span>
+          <span id="clockTimer" class="clock-timer hidden">00:00:00</span>
+        </button>
+        <div class="userchip">
+          <button type="button" class="avatar" id="userAvatar" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" style="background: var(--amber); color: var(--color-accent-ink);">AM</button>
+          <div class="uc-meta">
+            <div class="uc-name">Abraham M.</div>
+            <div class="uc-role">Owner · Admin</div>
+          </div>
+          <i class="ti ti-settings uc-gear" aria-hidden="true"></i>
         </div>
       </div>
     </div>
