@@ -4460,15 +4460,15 @@ body.ui-command-center .progress-card {
 body.ui-command-center .up-next-card:hover,
 body.ui-command-center .focus-widget:hover {
   transform: translateY(-2px);
-  border-color: rgba(224, 85, 43, 0.42);
-  box-shadow: 0 10px 26px -10px rgba(224, 85, 43, 0.38),
+  border-color: rgba(237, 78, 13, 0.42);
+  box-shadow: 0 10px 26px -10px rgba(237, 78, 13, 0.38),
               0 2px 6px rgba(18, 22, 28, 0.05);
 }
 /* The progress card is informational, not clickable — warm the shadow but don't
    lift it, so it never implies a tap it doesn't have. */
 body.ui-command-center .progress-card:hover {
-  border-color: rgba(224, 85, 43, 0.30);
-  box-shadow: 0 8px 22px -12px rgba(224, 85, 43, 0.28),
+  border-color: rgba(237, 78, 13, 0.30);
+  box-shadow: 0 8px 22px -12px rgba(237, 78, 13, 0.28),
               0 2px 6px rgba(18, 22, 28, 0.05);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -4608,7 +4608,7 @@ body.ui-command-center .list-row:has(.prio-urgent)::before { background: var(--u
 body.ui-command-center .list-row:has(.prio-high)::before { background: var(--u-high); }
 body.ui-command-center .list-row:has(.prio-low)::before { background: var(--u-low); }
 /* Rows are dense, so their hover stays SUBTLE: a faint warm wash, not a glow. */
-body.ui-command-center .list-row:hover { background: rgba(224, 85, 43, 0.045); }
+body.ui-command-center .list-row:hover { background: rgba(237, 78, 13, 0.045); }
 body.ui-command-center .list-row.selected { background: #fbfcfe; }
 body.ui-command-center .task-title-cell {
   font-size: 14px;
@@ -4811,8 +4811,8 @@ body.ui-command-center .kanban-card {
 body.ui-command-center .kanban-card:hover {
   transform: translateY(-3px);
   background: var(--surface);
-  border-color: rgba(224, 85, 43, 0.50);
-  box-shadow: 0 12px 28px -8px rgba(224, 85, 43, 0.45),
+  border-color: rgba(237, 78, 13, 0.50);
+  box-shadow: 0 12px 28px -8px rgba(237, 78, 13, 0.45),
               0 3px 8px rgba(18, 22, 28, 0.06);
 }
 @media (prefers-reduced-motion: reduce) {
