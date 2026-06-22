@@ -1,0 +1,8 @@
+# gitleaks: ignore specific known-safe findings by fingerprint.
+#
+# Supabase PUBLISHABLE / anon key, hardcoded in js/config.js in an old commit
+# (later moved to runtime env.json). This key is public by design — it ships to
+# every browser and is safe to expose; Row Level Security is the security
+# boundary, not this key. Not a real leak, so we allowlist the exact finding
+# rather than rewriting git history.
+c085065945c5894707a51c650734dff43ca5c405:js/config.js:generic-api-key:4
