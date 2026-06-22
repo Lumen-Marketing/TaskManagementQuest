@@ -25,7 +25,7 @@ App.ProgressWidgetView = class ProgressWidgetView {
     const me = this.currentUser;
     const mine = this.taskModel.all().filter(t => t.assignee === me);
     const dueToday   = mine.filter(t => t.due === today);
-    const doneToday  = mine.filter(t => t._completedAt === today);
+    const doneToday  = mine.filter(t => App.utils.hqDateOf(t.completedAt) === today);
     // "In play today" = due today OR finished today (so finishing an older
     // task still nudges the ring forward instead of leaving it at 0%).
     const inPlay = new Set([...dueToday, ...doneToday].map(t => t.id));

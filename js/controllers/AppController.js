@@ -493,7 +493,7 @@ App.AppController = class AppController {
     // Count "done today" by anyone — gives the toast a motivational counter.
     const today = App.utils.todayISO(0);
     const me = this.currentUser;
-    const myDoneToday = this.taskModel.all().filter(t => t.assignee === me && t._completedAt === today).length;
+    const myDoneToday = this.taskModel.all().filter(t => t.assignee === me && App.utils.hqDateOf(t.completedAt) === today).length;
     const tail = myDoneToday > 1 ? `${myDoneToday} finished today` : 'First win of the day';
     this.toastView.show({ title, sub: `${App.utils.escapeHtml(task.title)} · ${tail}`, variant: 'celebrate' });
   }

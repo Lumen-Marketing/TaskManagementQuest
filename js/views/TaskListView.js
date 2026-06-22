@@ -238,7 +238,7 @@ App.TaskListView = class TaskListView {
       const open = tasks.filter(t => t.status !== 'done');
       const overdue = open.filter(t => t.due && t.due < today);
       const dueToday = open.filter(t => t.due === today);
-      const completedRecent = tasks.filter(t => t._completedAt && t._completedAt >= threeDaysAgo);
+      const completedRecent = tasks.filter(t => t.completedAt && App.utils.hqDateOf(t.completedAt) >= threeDaysAgo);
 
       const flagOverdue = overdue.length > 0;
       const flagStale = open.length > 0 && completedRecent.length === 0;
