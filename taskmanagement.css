@@ -4169,6 +4169,38 @@ body.ui-command-center .topbar-left {
   background: transparent;
   border-right: none;
   align-self: center;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+body.ui-command-center .tb-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.012em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+body.ui-command-center .seg {
+  display: inline-flex;
+  background: #EDEFF2;
+  border-radius: 8px;
+  padding: 3px;
+}
+body.ui-command-center .seg button {
+  height: 26px;
+  padding: 0 13px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+body.ui-command-center .seg button.on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Brand header at the top of the sidebar. */

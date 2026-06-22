@@ -90,13 +90,17 @@ App.SidebarView = class SidebarView {
     if (this.minimizeBtn) {
       this.minimizeBtn.addEventListener('click', () => this.toggleMinimize());
     }
+    // The brand now lives in the sidebar (with its own minimize button), so the
+    // topbar-left holds the title + scope segment. Tapping it only opens the
+    // mobile drawer; on desktop it does nothing (clicking the title/segment must
+    // not collapse the sidebar).
     const topLeft = document.querySelector('.topbar-left');
     if (topLeft) {
-      topLeft.style.cursor = 'pointer';
-      topLeft.setAttribute('title', 'Toggle sidebar');
-      topLeft.addEventListener('click', () => {
-        if (this._isMobile()) this._toggleMobileDrawer();
-        else this.toggleMinimize();
+      topLeft.addEventListener('click', (e) => {
+        if (!this._isMobile()) return;
+        // Don't hijack taps on the interactive segment buttons.
+        if (e.target.closest('.seg')) return;
+        this._toggleMobileDrawer();
       });
       this._injectMobileMenuHint(topLeft);
     }
