@@ -4108,9 +4108,9 @@ body.ui-command-center {
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-display: var(--font-body);
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --bg: #F5F6F8;
-  --bg-2: #FAFBFC;
-  --bg-3: #FBFBFD;
+  --bg: #F7F5F1;       /* warm off-white canvas (was cool grey #F5F6F8) */
+  --bg-2: #FBFAF7;     /* warm near-white for hovers/section fills */
+  --bg-3: #FCFBF8;
   --surface: #FFFFFF;
   --ink: #16191D;
   --ink-2: #5A626B;
@@ -4439,6 +4439,46 @@ body.ui-command-center .progress-card * {
   color: inherit;
 }
 
+/* Page-head widget cards — resting brand accent + a tasteful terracotta hover
+   glow. The Up-next glyph gets a soft warm chip (it was white-on-white here),
+   so each card reads intentional rather than flat. */
+body.ui-command-center .up-next-icon {
+  background: var(--amber-bg);
+}
+body.ui-command-center .up-next-icon,
+body.ui-command-center .up-next-icon i {
+  color: var(--amber);
+}
+body.ui-command-center .up-next-card,
+body.ui-command-center .focus-widget,
+body.ui-command-center .progress-card {
+  transition: transform var(--dur-short) var(--ease-out),
+              box-shadow var(--dur-short) var(--ease-out),
+              border-color var(--dur-short) var(--ease-out);
+}
+/* Interactive cards lift on a warm shadow. */
+body.ui-command-center .up-next-card:hover,
+body.ui-command-center .focus-widget:hover {
+  transform: translateY(-2px);
+  border-color: rgba(224, 85, 43, 0.42);
+  box-shadow: 0 10px 26px -10px rgba(224, 85, 43, 0.38),
+              0 2px 6px rgba(18, 22, 28, 0.05);
+}
+/* The progress card is informational, not clickable — warm the shadow but don't
+   lift it, so it never implies a tap it doesn't have. */
+body.ui-command-center .progress-card:hover {
+  border-color: rgba(224, 85, 43, 0.30);
+  box-shadow: 0 8px 22px -12px rgba(224, 85, 43, 0.28),
+              0 2px 6px rgba(18, 22, 28, 0.05);
+}
+@media (prefers-reduced-motion: reduce) {
+  body.ui-command-center .up-next-card,
+  body.ui-command-center .focus-widget,
+  body.ui-command-center .progress-card { transition: none; }
+  body.ui-command-center .up-next-card:hover,
+  body.ui-command-center .focus-widget:hover { transform: none; }
+}
+
 body.ui-command-center .ai-brief {
   margin: 0 24px 16px;
   padding: 16px 18px;
@@ -4567,7 +4607,8 @@ body.ui-command-center .list-row:has(.prio-critical)::before { background: var(-
 body.ui-command-center .list-row:has(.prio-urgent)::before { background: var(--u-urgent); }
 body.ui-command-center .list-row:has(.prio-high)::before { background: var(--u-high); }
 body.ui-command-center .list-row:has(.prio-low)::before { background: var(--u-low); }
-body.ui-command-center .list-row:hover,
+/* Rows are dense, so their hover stays SUBTLE: a faint warm wash, not a glow. */
+body.ui-command-center .list-row:hover { background: rgba(224, 85, 43, 0.045); }
 body.ui-command-center .list-row.selected { background: #fbfcfe; }
 body.ui-command-center .task-title-cell {
   font-size: 14px;
@@ -4760,6 +4801,24 @@ body.ui-command-center .modal { border-radius: var(--radius-md); }
 body.ui-command-center .toolbar-menu { border-radius: var(--radius-md); }
 body.ui-command-center .kanban-col { border-radius: var(--radius-md); }
 body.ui-command-center .kanban-card { border-radius: var(--radius-md); }
+/* Kanban cards are discrete and draggable, so they get the BOLDER treatment:
+   a clear lift on a stronger terracotta glow. */
+body.ui-command-center .kanban-card {
+  transition: transform var(--dur-short) var(--ease-out),
+              box-shadow var(--dur-short) var(--ease-out),
+              border-color var(--dur-short) var(--ease-out);
+}
+body.ui-command-center .kanban-card:hover {
+  transform: translateY(-3px);
+  background: var(--surface);
+  border-color: rgba(224, 85, 43, 0.50);
+  box-shadow: 0 12px 28px -8px rgba(224, 85, 43, 0.45),
+              0 3px 8px rgba(18, 22, 28, 0.06);
+}
+@media (prefers-reduced-motion: reduce) {
+  body.ui-command-center .kanban-card { transition: none; }
+  body.ui-command-center .kanban-card:hover { transform: none; }
+}
 
 /* ============================================================
    Phase 3 polish — card treatment for the Time & Approvals
