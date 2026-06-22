@@ -4104,44 +4104,54 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
    docs/design-reference/quest-hq-client-ui-reference.html.
    ============================================================ */
 body.ui-command-center {
-  --bg: #f4f5f7;
-  --bg-2: #f8fafc;
-  --bg-3: #e7ebf0;
-  --surface: #ffffff;
-  --ink: #161a20;
-  --ink-2: #4b5563;
-  --ink-3: #7b8491;
-  --border: #dce2ea;
-  --border-strong: #c7d0dc;
-  --amber: #475569;
-  --amber-bg: #eef2f7;
-  --amber-ink: #334155;
-  --rust: #b42318;
-  --rust-bg: #fef3f2;
-  --rust-ink: #912018;
-  --blue: #3978f2;
-  --blue-bg: #eaf2ff;
-  --blue-ink: #2459c5;
-  --green: #2e9e6b;
-  --green-bg: #e8f6ef;
-  --green-ink: #19724b;
-  --u-critical: #b42318;
-  --u-urgent: #b45309;
-  --u-high: #b08900;
-  --u-medium: #94a3b8;
-  --u-low: #cbd5e1;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --shadow-md: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 24px rgba(16, 24, 40, 0.04);
-  --shadow-lg: 0 24px 54px rgba(16, 24, 40, 0.16);
+  /* Phase-1 redesign: match the quest-hq mockup — Inter + orange accent. */
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bg: #F5F6F8;
+  --bg-2: #FAFBFC;
+  --bg-3: #FBFBFD;
+  --surface: #FFFFFF;
+  --ink: #16191D;
+  --ink-2: #5A626B;
+  --ink-3: #929AA3;
+  --ink-4: #B6BCC4;
+  --border: #EAECF0;
+  --border-strong: #E2E5EA;
+  --amber: #ED4E0D;
+  --amber-bg: #FDEDE6;
+  --amber-ink: #CE430A;
+  --rust: #E0484D;
+  --rust-bg: #FCEDED;
+  --rust-ink: #C53B40;
+  --blue: #3E7BF2;
+  --blue-bg: #EAF1FE;
+  --blue-ink: #2459C5;
+  --green: #2E9E6B;
+  --green-bg: #E8F5EE;
+  --green-ink: #258257;
+  --u-critical: #E0484D;
+  --u-urgent: #E0484D;
+  --u-high: #E08A0B;
+  --u-medium: #3E7BF2;
+  --u-low: #929AA3;
+  --shadow-sm: 0 1px 2px rgba(18, 22, 28, 0.05), 0 1px 1px rgba(18, 22, 28, 0.03);
+  --shadow-md: 0 10px 28px -10px rgba(18, 22, 28, 0.16), 0 2px 6px rgba(18, 22, 28, 0.05);
+  --shadow-lg: 0 28px 64px -18px rgba(18, 22, 28, 0.30), 0 10px 24px -10px rgba(18, 22, 28, 0.14);
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--ink);
 }
 
+/* Full-height left sidebar with the topbar only over the main pane (mockup). */
 body.ui-command-center .app {
   grid-template-rows: 54px 1fr;
   grid-template-columns: 248px minmax(0, 1fr);
   background: var(--bg);
 }
+body.ui-command-center .app > .deck   { grid-column: 1; grid-row: 1 / -1; }
+body.ui-command-center .app > .topbar { grid-column: 2; grid-row: 1; }
+body.ui-command-center .app > .main   { grid-column: 2; grid-row: 2; }
 
 body.ui-command-center .topbar {
   padding: 0 18px;
@@ -4149,31 +4159,71 @@ body.ui-command-center .topbar {
   border-bottom: 1px solid var(--border);
 }
 
+/* The brand moved into the sidebar; the topbar-left now holds the title + scope
+   segment (Task 5), so it's a plain left-aligned flex container. */
 body.ui-command-center .topbar-left {
-  width: 248px;
-  height: 54px;
-  padding: 0 12px;
-  gap: 10px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  align-self: stretch;
-}
-body.ui-command-center .topbar-left:hover { background: var(--surface); }
-body.ui-command-center .topbar-left .brand-name { color: var(--ink); }
-body.ui-command-center .topbar-left .brand-sub { color: var(--ink-3); }
-body.ui-command-center.sidebar-minimized .topbar-left,
-body.sidebar-minimized.ui-command-center .topbar-left {
-  width: 68px;
+  width: auto;
+  height: auto;
   padding: 0;
-  justify-content: center;
+  gap: 10px;
+  background: transparent;
+  border-right: none;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
+body.ui-command-center .tb-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.012em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+body.ui-command-center .seg {
+  display: inline-flex;
+  background: #EDEFF2;
+  border-radius: 8px;
+  padding: 3px;
+}
+body.ui-command-center .seg button {
+  height: 26px;
+  padding: 0 13px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+body.ui-command-center .seg button.on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Brand header at the top of the sidebar. */
+body.ui-command-center .side-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px 12px;
+}
+body.ui-command-center .side-brand-text { min-width: 0; }
+body.ui-command-center .side-brand .brand-name { color: var(--ink); font-size: 14px; font-weight: 800; line-height: 1.1; }
+body.ui-command-center .side-brand .brand-sub { color: var(--ink-3); font-size: 11px; margin-top: 1px; }
+body.ui-command-center .side-brand .side-minimize-btn { margin-left: auto; color: var(--ink-4); }
+body.ui-command-center.sidebar-minimized .side-brand { padding: 14px 0 12px; justify-content: center; }
+body.ui-command-center.sidebar-minimized .side-brand-text { display: none; }
 
 body.ui-command-center .logo {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--amber);
+  background: linear-gradient(150deg, #F2581A, #D8410A);
   color: #fff;
+  box-shadow: 0 1px 2px rgba(216, 65, 10, .4), inset 0 1px 0 rgba(255, 255, 255, .25);
 }
 body.ui-command-center .logo i { display: none; }
 body.ui-command-center .logo::after {
@@ -4221,8 +4271,8 @@ body.ui-command-center #newTaskBtn {
 }
 body.ui-command-center .btn-primary:hover,
 body.ui-command-center #newTaskBtn:hover {
-  background: #334155;
-  border-color: #334155;
+  background: var(--amber-ink);
+  border-color: var(--amber-ink);
 }
 
 body.ui-command-center .deck {
@@ -4277,6 +4327,50 @@ body.ui-command-center .deck .side-count {
   color: var(--ink-3);
   font-size: 12px;
 }
+
+/* Pin the brand + Ask Quest at the top and the footer at the bottom by letting
+   only the nav groups scroll. */
+body.ui-command-center .deck { overflow: hidden; }
+body.ui-command-center .side-scroll {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  margin: 0 -4px; padding: 0 4px;
+}
+
+/* Ask Quest command bar — focuses the existing search. */
+body.ui-command-center .kbar {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  height: 32px; margin: 0 0 2px; padding: 0 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--ink-3); font-size: 12.5px;
+  box-shadow: var(--shadow-sm); text-align: left;
+}
+body.ui-command-center .kbar i { color: var(--amber); font-size: 14px; }
+body.ui-command-center .kbar .kbd {
+  margin-left: auto; font-size: 10.5px; color: var(--ink-3);
+  border: 1px solid var(--border-strong); border-radius: 5px;
+  padding: 1px 5px; background: var(--bg-2);
+}
+body.ui-command-center.sidebar-minimized .kbar { justify-content: center; padding: 0; }
+body.ui-command-center.sidebar-minimized .kbar span { display: none; }
+
+/* Sidebar footer: clock-in + user chip pinned to the bottom. */
+body.ui-command-center .side-foot {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding: 9px 4px 4px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+body.ui-command-center .side-foot .clock-widget { width: 100%; justify-content: flex-start; }
+body.ui-command-center .userchip { display: flex; align-items: center; gap: 9px; padding: 4px; }
+body.ui-command-center .userchip .uc-meta { min-width: 0; line-height: 1.15; }
+body.ui-command-center .userchip .uc-name { font-size: 12.5px; font-weight: 600; }
+body.ui-command-center .userchip .uc-role { font-size: 10.5px; color: var(--ink-3); }
+body.ui-command-center .userchip .uc-gear { margin-left: auto; color: var(--ink-4); }
+body.ui-command-center.sidebar-minimized .side-foot { padding: 9px 0 4px; }
+body.ui-command-center.sidebar-minimized .userchip .uc-meta,
+body.ui-command-center.sidebar-minimized .userchip .uc-gear,
+body.ui-command-center.sidebar-minimized .clock-widget span { display: none; }
 
 body.ui-command-center .main,
 body.ui-command-center .list-pane { background: var(--bg); }
@@ -4535,11 +4629,17 @@ body.ui-command-center .detail-title {
   letter-spacing: 0;
 }
 
-@media (max-width: 900px) {
+/* Collapse to a single column + off-canvas drawer only when the sidebar actually
+   becomes a drawer (≤720px, matching SidebarView._isMobile). Between 721–900px the
+   full-height sidebar stays in the grid beside the content, like the desktop. */
+@media (max-width: 720px) {
   body.ui-command-center .app { grid-template-columns: minmax(0, 1fr); }
   body.ui-command-center .app > .topbar,
   body.ui-command-center .app > .main { grid-column: 1; }
   body.ui-command-center .deck { width: min(300px, 88vw); }
+}
+
+@media (max-width: 900px) {
   body.ui-command-center .page-head,
   body.ui-command-center .work-toolbar,
   body.ui-command-center #taskViewWrap,
@@ -4558,3 +4658,119 @@ body.ui-command-center .detail-title {
     max-width: none;
   }
 }
+
+/* ============================================================================
+   Phase 2 — Home & Reports surfaces (scoped to .qhq-page; reuse Phase-1 tokens)
+   ============================================================================ */
+.qhq-page { overflow-y: auto; }
+.qhq-empty { font-size: 12.5px; color: var(--ink-3); padding: 14px 0; }
+.qhq-chip { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px; white-space: nowrap; }
+.qhq-chip.risk { color: var(--rust); background: var(--rust-bg); }
+.qhq-chip.hold { color: #9A5E08; background: #FCEFD7; }
+
+/* ----- Home ----- */
+.qhq-home { padding: 22px 26px 48px; max-width: 1240px; font-family: var(--font-body); }
+.qhq-greet { font-size: 23px; font-weight: 800; letter-spacing: -.024em; color: var(--ink); }
+.qhq-greet .em { color: var(--amber); }
+.qhq-dateline { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
+.qhq-brief { border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(180deg,#FFFCFA,var(--surface)); padding: 16px 18px; margin: 16px 0; box-shadow: var(--shadow-sm); }
+.qhq-brief-h { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+.qhq-spark { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg,#ED4E0D,#F2902E); display: grid; place-items: center; color: #fff; }
+.qhq-brief-h .t { font-size: 13.5px; font-weight: 800; }
+.qhq-brief-h .b { font-size: 10.5px; font-weight: 800; color: #8A5A00; background: #FCEFD7; border: 1px solid #F2DEB0; border-radius: 6px; padding: 1px 7px; }
+.qhq-brief-tx { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
+.qhq-home-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 14px; }
+.qhq-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); }
+.qhq-card-h { display: flex; align-items: center; gap: 9px; padding: 14px 16px 11px; }
+.qhq-card-h .ct { font-size: 13px; font-weight: 800; }
+.qhq-card-h .meta { font-size: 11px; color: var(--ink-3); }
+.qhq-arlist, .qhq-hdlist { padding: 2px 16px 12px; }
+.qhq-ar-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+.qhq-ar-row:first-child { border-top: none; }
+.qhq-ar-ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
+.qhq-ar-ic.hold { background: #FCEFD7; color: #9A5E08; }
+.qhq-ar-b { flex: 1; min-width: 0; }
+.qhq-ar-t { font-size: 12.8px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qhq-ar-s { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+
+/* ----- Reports ----- */
+.qhq-rpt { padding: 20px 24px 48px; max-width: 1280px; font-family: var(--font-body); }
+.qhq-rpt-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.qhq-rpt-top .h { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.qhq-rpt-top .sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.qhq-range { margin-left: auto; display: inline-flex; background: #EDEFF2; border-radius: 8px; padding: 3px; }
+.qhq-range button { height: 26px; padding: 0 11px; border-radius: 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-2); }
+.qhq-range button.on { background: #fff; color: var(--ink); box-shadow: var(--shadow-sm); }
+.qhq-kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 14px; }
+.qhq-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 15px; box-shadow: var(--shadow-sm); }
+.qhq-kpi .kl { font-size: 11.5px; color: var(--ink-2); font-weight: 550; }
+.qhq-kpi .kv { font-size: 26px; font-weight: 800; letter-spacing: -.03em; margin-top: 9px; line-height: 1; }
+.qhq-kpi .kd { font-size: 11px; margin-top: 7px; color: var(--ink-3); }
+.qhq-charts { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-bottom: 14px; }
+.qhq-chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-sm); padding: 0 0 14px; }
+.qhq-chart-card .cc-h { display: flex; align-items: center; gap: 9px; padding: 14px 16px 4px; }
+.qhq-chart-card .cc-h .ct { font-size: 13px; font-weight: 800; }
+.qhq-chart-card .cc-h .meta { font-size: 11px; color: var(--ink-3); }
+.qhq-spark-svg { width: 100%; height: 150px; padding: 8px 8px 0; }
+.qhq-bars { padding: 8px 16px 2px; }
+.qhq-bh-row { display: grid; grid-template-columns: 90px 1fr 34px; align-items: center; gap: 10px; padding: 7px 0; }
+.qhq-bh-row .nm { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qhq-bh-track { height: 9px; border-radius: 5px; background: #EEF0F3; overflow: hidden; }
+.qhq-bh-track i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg,#F2902E,#ED4E0D); }
+.qhq-bh-row .v { font-size: 12px; font-weight: 700; text-align: right; color: var(--ink-2); }
+.qhq-statmix { padding: 12px 16px 2px; }
+.qhq-mixbar { height: 13px; border-radius: 7px; overflow: hidden; display: flex; gap: 2px; background: #EEF0F3; }
+.qhq-mixbar i { height: 100%; }
+.qhq-mixlegend { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 16px; margin-top: 13px; }
+.qhq-mixlegend div { font-size: 11.5px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.qhq-mixlegend b { margin-left: auto; color: var(--ink); }
+.qhq-mixlegend .d { width: 8px; height: 8px; border-radius: 3px; }
+.qhq-cllist { padding: 4px 8px 0; }
+.qhq-cl-row { display: grid; grid-template-columns: 4px minmax(0, 1fr) 96px 96px 64px; align-items: center; gap: 10px; padding: 8px; border-top: 1px solid var(--border); }
+.qhq-cl-row:first-child { border-top: none; }
+.qhq-cl-row .pf { width: 3px; height: 15px; border-radius: 2px; }
+.qhq-cl-row .pf.critical { background: var(--rust); }
+.qhq-cl-row .pf.high { background: #E08A0B; }
+.qhq-cl-row .ti { font-size: 12.5px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qhq-cl-row .who { font-size: 11px; color: var(--ink-3); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qhq-cl-row .pill { font-size: 11px; font-weight: 600; border-radius: 6px; padding: 2px 8px; text-align: center; background: var(--bg-3); color: var(--ink-2); }
+.qhq-cl-row .due { font-size: 11.5px; color: var(--ink-2); text-align: right; }
+.qhq-cl-row .due.over { color: var(--rust); font-weight: 700; }
+
+@media (max-width: 900px) {
+  .qhq-kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .qhq-charts { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 720px) {
+  .qhq-home { padding: 16px 12px 40px; }
+  .qhq-home-grid { grid-template-columns: 1fr; }
+  .qhq-rpt { padding: 16px 12px 40px; }
+  .qhq-kpi-row { grid-template-columns: 1fr 1fr; }
+  .qhq-cl-row { grid-template-columns: 4px 1fr 64px; }
+  .qhq-cl-row .who, .qhq-cl-row .pill { display: none; }
+}
+
+/* ============================================================
+   Phase 3 polish — radius nudge for card-like containers.
+   Card-like surfaces move to --radius-md (14px) to match
+   Home/Reports. Dense layouts (rows, cells, chips) keep their
+   smaller radius. Scoped to the command-center skin only.
+   ============================================================ */
+body.ui-command-center .modal { border-radius: var(--radius-md); }
+body.ui-command-center .toolbar-menu { border-radius: var(--radius-md); }
+body.ui-command-center .kanban-col { border-radius: var(--radius-md); }
+body.ui-command-center .kanban-card { border-radius: var(--radius-md); }
+
+/* ============================================================
+   Phase 3 polish — card treatment for the Time & Approvals
+   tables. They already use --surface/--border; this rounds the
+   corners to --radius-md and adds a soft shadow so they read
+   like the Reports cards. Stat cards get the same radius.
+   Responsive table->card stacking (<=1200px) is untouched.
+   ============================================================ */
+body.ui-command-center .time-table,
+body.ui-command-center .approval-scroll .time-table {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+body.ui-command-center .time-card { border-radius: var(--radius-md); }

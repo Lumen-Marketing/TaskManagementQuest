@@ -259,6 +259,25 @@ App.utils = {
     return `${y}-${m}-${day}`;
   },
 
+  // Format a real instant (ISO timestamp string or Date) as the HQ-timezone
+  // YYYY-MM-DD, matching todayISO so "completed today" / cycle-time day math
+  // lines up with how due dates are stored. completed_at is a timestamptz, so we
+  // must reduce it to a calendar day in the shared HQ zone, not the viewer's.
+  hqDateOf(instant) {
+    if (!instant) return '';
+    const d = instant instanceof Date ? instant : new Date(instant);
+    if (isNaN(d.getTime())) return '';
+    try {
+      const p = {};
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: App.HQ_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(d).forEach(part => { p[part.type] = part.value; });
+      return `${p.year}-${p.month}-${p.day}`;
+    } catch (e) {
+      return App.utils.toISODate(d);
+    }
+  },
+
   formatDuration(ms) {
     if (!ms || ms < 0) ms = 0;
     const totalSec = Math.floor(ms / 1000);

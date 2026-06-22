@@ -91,12 +91,14 @@ App.ROLES = {
 };
 
 App.ROLE_PERMISSIONS = {
-  worker: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write'],
+  // 'home.view' is granted to every role (the Home landing screen is universal);
+  // 'reports.view' is limited to supervisors/admins (company analytics).
+  worker: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write', 'home.view'],
   // Identical to worker — keep these two arrays in sync.
-  sales: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write'],
-  supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view'],
-  admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view'],
-  developer: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'debug.access'],
+  sales: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write', 'home.view'],
+  supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view', 'home.view', 'reports.view'],
+  admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view'],
+  developer: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view', 'debug.access'],
 };
 
 App.DEFAULT_CLOCK_TASK_ID = 'general-shift';

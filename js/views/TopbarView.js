@@ -1,5 +1,14 @@
 window.App = window.App || {};
 
+// Section titles shown in the redesigned topbar, keyed by controller view.
+const TITLES = {
+  all: 'All tasks', mine: 'My tasks', hot: 'Urgent', today: 'Today',
+  overdue: 'Overdue', watching: 'Watching',
+  'time:mine': 'My time', 'time:resource': 'Team workload',
+  'team:hierarchy': 'Team chart', approvals: 'Approvals', 'admin:clock': 'Clock dashboard',
+  home: 'Home', reports: 'Reports',
+};
+
 App.TopbarView = class TopbarView {
   constructor({ timeModel, notifModel, controller, currentUser }) {
     this.timeModel = timeModel;
@@ -22,6 +31,9 @@ App.TopbarView = class TopbarView {
     this.viewAsSwitcher = document.getElementById('viewAsSwitcher');
     this.avatar = document.getElementById('userAvatar');
     this.userMenu = null;
+
+    this.tbTitle = document.getElementById('tbTitle');
+    this.scopeSeg = document.getElementById('scopeSeg');
 
     this.bindEvents();
     this.subscribe();
@@ -79,6 +91,28 @@ App.TopbarView = class TopbarView {
     this.searchInput.addEventListener('input', (e) => {
       this.controller.setSearchQuery(e.target.value);
     });
+
+    // Scope segment: "My work" / "Company" map to the existing Mine / All views.
+    if (this.scopeSeg) {
+      this.scopeSeg.querySelectorAll('button[data-scope]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.controller.setView(btn.dataset.scope);
+        });
+      });
+    }
+  }
+
+  // The redesigned topbar shows the active section's title and a Mine/Company
+  // scope segment. Both reflect the current view (no new routing concepts).
+  renderTopbarTitleAndScope() {
+    const view = this.controller.uiState.view;
+    if (this.tbTitle) this.tbTitle.textContent = TITLES[view] || 'Quest HQ';
+    if (this.scopeSeg) {
+      this.scopeSeg.querySelectorAll('button[data-scope]').forEach(btn => {
+        btn.classList.toggle('on', btn.dataset.scope === view);
+      });
+    }
   }
 
   subscribe() {
@@ -88,12 +122,14 @@ App.TopbarView = class TopbarView {
     App.EventBus.on('notifs:refreshed', () => this.renderNotifs());
     App.EventBus.on('clock:tick', () => this.tickLive());
     App.EventBus.on('role:changed', () => this.renderViewAsSwitcher());
+    App.EventBus.on('view:changed', () => this.renderTopbarTitleAndScope());
   }
 
   render() {
     this.renderClockWidget();
     this.renderNotifs();
     this.renderViewAsSwitcher();
+    this.renderTopbarTitleAndScope();
   }
 
   // Developer-only: preview the app as another role. Shown only to real
@@ -227,10 +263,13 @@ App.TopbarView = class TopbarView {
     `;
     document.body.appendChild(menu);
 
+    // The avatar lives in the sidebar footer (bottom-left), so anchor the menu
+    // above it and aligned to its left edge instead of dropping down-right.
     const rect = this.avatar.getBoundingClientRect();
     menu.style.position = 'fixed';
-    menu.style.top = (rect.bottom + 6) + 'px';
-    menu.style.right = (window.innerWidth - rect.right) + 'px';
+    menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.style.right = 'auto';
 
     this.userMenu = menu;
 

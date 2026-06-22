@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="Quest HQ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="vendor/tabler-icons/tabler-icons.min.css">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="taskmanagement.css">
@@ -37,10 +37,10 @@
   <!-- TOP BAR -->
   <div class="topbar">
     <div class="topbar-left">
-      <div class="logo"><i class="ti ti-bolt"></i></div>
-      <div>
-        <div class="brand-name">Quest HQ</div>
-        <div class="brand-sub">Operations workspace</div>
+      <span class="tb-title" id="tbTitle">All tasks</span>
+      <div class="seg" id="scopeSeg" role="tablist" aria-label="Scope">
+        <button type="button" data-scope="mine" role="tab">My work</button>
+        <button type="button" data-scope="all" role="tab">Company</button>
       </div>
     </div>
     <div class="topbar-right">
@@ -51,13 +51,6 @@
 
       <!-- Developer-only "view as role" switcher -->
       <div id="viewAsSwitcher" class="viewas-switcher hidden"></div>
-
-      <!-- Clock-in / Clock-out widget -->
-      <button type="button" id="clockWidget" class="clock-widget" aria-label="Clock in / out">
-        <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-        <span id="clockLabel">Clock in</span>
-        <span id="clockTimer" class="clock-timer hidden">00:00:00</span>
-      </button>
 
       <button class="icon-btn" id="scaleBtn" aria-label="Display size" title="Display size">
         <i class="ti ti-zoom-scan"></i>
@@ -76,19 +69,31 @@
           <div class="notif-list" id="notifList"></div>
         </div>
       </div>
-      <button type="button" class="avatar" id="userAvatar" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" style="background: var(--amber); color: var(--color-accent-ink);">AM</button>
     </div>
   </div>
 
   <!-- LEFT SIDEBAR -->
   <nav class="deck" aria-label="Primary">
     <div class="sidebar">
-      <button class="side-minimize-btn" id="sideMinimizeBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
-        <i class="ti ti-layout-sidebar-left-collapse"></i>
+      <div class="side-brand">
+        <div class="logo"><i class="ti ti-bolt"></i></div>
+        <div class="side-brand-text">
+          <div class="brand-name">Quest HQ</div>
+          <div class="brand-sub">Operations workspace</div>
+        </div>
+        <button class="side-minimize-btn" id="sideMinimizeBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
+          <i class="ti ti-layout-sidebar-left-collapse"></i>
+        </button>
+      </div>
+
+      <button type="button" class="kbar" id="askQuestBtn">
+        <i class="ti ti-sparkles" aria-hidden="true"></i><span>Ask Quest…</span><span class="kbd">⌘K</span>
       </button>
 
+      <div class="side-scroll">
       <div class="side-group grp-views">
-        <div class="side-label">Workspace</div>
+        <div class="side-label">Personal</div>
+        <div class="side-item" data-view="home" title="Home"><i class="ti ti-home"></i><span class="side-item-label">Home</span></div>
         <div class="side-item active" data-view="all" title="All"><i class="ti ti-list-check"></i><span class="side-item-label">All</span><span class="side-count" id="cnt-all">0</span></div>
         <div class="side-item" data-view="mine" title="Mine"><i class="ti ti-user"></i><span class="side-item-label">Mine</span><span class="side-count" id="cnt-mine">0</span></div>
         <div class="side-item" data-view="hot" title="Urgent"><i class="ti ti-bolt" style="color: var(--u-urgent);"></i><span class="side-item-label">Urgent</span><span class="side-count" id="cnt-hot" style="color: var(--u-urgent);">0</span></div>
@@ -106,6 +111,23 @@
           <span class="sk sk-side-item"></span>
           <span class="sk sk-side-label"></span>
           <span class="sk sk-side-item"></span>
+        </div>
+      </div>
+      </div>
+
+      <div class="side-foot">
+        <button type="button" id="clockWidget" class="clock-widget" aria-label="Clock in / out">
+          <i class="ti ti-player-play-filled" aria-hidden="true"></i>
+          <span id="clockLabel">Clock in</span>
+          <span id="clockTimer" class="clock-timer hidden">00:00:00</span>
+        </button>
+        <div class="userchip">
+          <button type="button" class="avatar" id="userAvatar" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" style="background: var(--amber); color: var(--color-accent-ink);">AM</button>
+          <div class="uc-meta">
+            <div class="uc-name">Abraham M.</div>
+            <div class="uc-role">Owner · Admin</div>
+          </div>
+          <i class="ti ti-settings uc-gear" aria-hidden="true"></i>
         </div>
       </div>
     </div>
@@ -137,23 +159,6 @@
           <div class="progress-widget-mount" id="progressWidget"></div>
         </div>
       </div>
-
-      <section class="ai-brief" aria-label="Quest AI operations brief">
-        <div class="ai-brief-head">
-          <span class="ai-brief-icon"><i class="ti ti-sparkles" aria-hidden="true"></i></span>
-          <span class="ai-brief-title">Your ops brief</span>
-          <span class="ai-brief-badge">QUEST AI</span>
-          <span class="ai-brief-time">live workspace context</span>
-        </div>
-        <p class="ai-brief-copy">
-          Prioritize overdue and high-impact work first. Use the side filters to review company queues, team workload, and blocked tasks without changing the underlying task data.
-        </p>
-        <div class="ai-brief-actions" aria-label="Suggested review paths">
-          <button type="button" class="ai-chip" data-brief-view="overdue"><span></span>Overdue</button>
-          <button type="button" class="ai-chip" data-brief-view="hot"><span></span>Critical + urgent</button>
-          <button type="button" class="ai-chip" data-brief-view="watching"><span></span>Watching</button>
-        </div>
-      </section>
 
       <div id="filterBar" class="filter-bar hidden"></div>
 
@@ -189,6 +194,10 @@
       <!-- Time-tracking views render into this container -->
       <div id="timeViewWrap" class="hidden"></div>
     </div>
+
+    <!-- Full-page redesigned surfaces (HomeView / ReportsView render into these) -->
+    <section id="homeWrap" class="qhq-page hidden" aria-label="Home"></section>
+    <section id="reportsWrap" class="qhq-page hidden" aria-label="Reports"></section>
 
     <!-- Drag-resize handle (only visible when the detail pane is open) -->
     <div class="resize-handle hidden" id="resizeHandle" aria-hidden="true"></div>
@@ -260,6 +269,8 @@
 <script src="js/views/ProgressWidgetView.js"></script>
 <script src="js/views/UpNextWidgetView.js"></script>
 <script src="js/views/FocusWidgetView.js"></script>
+<script src="js/views/HomeView.js"></script>
+<script src="js/views/ReportsView.js"></script>
 
 <!-- Controllers -->
 <script src="js/controllers/AppController.js"></script>

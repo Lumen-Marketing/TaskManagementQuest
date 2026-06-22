@@ -337,8 +337,9 @@ App.TaskModel = class TaskModel {
     if (!t) return;
     const becomingDone = t.status !== 'done';
     t.status = becomingDone ? 'done' : 'todo';
-    if (becomingDone) t._completedAt = App.utils.todayISO(0);
-    else delete t._completedAt;
+    // Persisted completion timestamp (column completed_at) powers Reports history.
+    if (becomingDone) t.completedAt = new Date().toISOString();
+    else delete t.completedAt;
     this.pushActivity(t, userName, becomingDone ? 'marked this complete' : 'reopened this task');
     this._markDirty(id);
     App.EventBus.emit('tasks:changed');

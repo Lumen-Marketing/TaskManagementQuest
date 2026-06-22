@@ -57,7 +57,32 @@ App.AppController = class AppController {
   getTask(id) { return this.taskModel.find(id); }
   getUserName(userId) { return App.PEOPLE[userId] ? App.PEOPLE[userId].name : userId; }
   can(permission) { return App.can(permission); }
+
+  // The tasks this user may see right now (active company + role row-scope),
+  // mirroring the SidebarView counts so Home/Reports match the rest of the app.
+  // includeDone=false drops completed tasks; the clock-shift task is excluded.
+  visibleTasks({ includeDone = true } = {}) {
+    const role = App.effectiveRole();
+    const cur = this.uiState.currentCompany;
+    const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
+    const clockId = App.DEFAULT_CLOCK_TASK_ID;
+    let base = this.taskModel.all().filter(t => !t.clearedAt && t.id !== clockId);
+    if (!includeDone) base = base.filter(t => t.status !== 'done');
+    if (cur && cur !== '*') base = base.filter(t => t.company === cur);
+    if (role === 'worker') {
+      base = base.filter(t => t.assignee === this.currentUser || t.creator === this.currentUser);
+    } else if (role === 'supervisor' && App.realRole() !== 'developer') {
+      const reports = new Set((App.PROFILES || [])
+        .filter(p => p.supervisor_id === me).map(p => p.member_id));
+      base = base.filter(t =>
+        t.assignee === this.currentUser || t.creator === this.currentUser || reports.has(t.assignee));
+    }
+    return base;
+  }
+
   canView(view) {
+    if (view === 'home') return App.can('home.view');
+    if (view === 'reports') return App.can('reports.view');
     if (view === 'approvals') return App.can('roles.manage');
     if (view === 'admin:clock') return App.can('clock.admin');
     if (view === 'team:hierarchy') return App.can('team.view');
@@ -371,8 +396,18 @@ App.AppController = class AppController {
 
   _togglePanes() {
     const v = this.uiState.view;
+    // Home / Reports are full-page surfaces in their own containers — hide the
+    // entire list pane (table + toolbar + page head + ops brief) for them.
+    const isPageView = v === 'home' || v === 'reports';
     const isTimeView = v.startsWith('time:') || v === 'approvals' || v === 'team:hierarchy' || v.startsWith('admin:');
-    document.getElementById('taskViewWrap').classList.toggle('hidden', isTimeView);
+    const listPane = document.getElementById('listPane');
+    if (listPane) listPane.classList.toggle('hidden', isPageView);
+    const homeWrap = document.getElementById('homeWrap');
+    const reportsWrap = document.getElementById('reportsWrap');
+    if (homeWrap) homeWrap.classList.toggle('hidden', v !== 'home');
+    if (reportsWrap) reportsWrap.classList.toggle('hidden', v !== 'reports');
+
+    document.getElementById('taskViewWrap').classList.toggle('hidden', isTimeView || isPageView);
     document.getElementById('timeViewWrap').classList.toggle('hidden', !isTimeView);
     // Hide the task-table chrome (toolbar buttons + Up next / progress cards)
     // for any non-task surface: Time, Approvals, Hierarchy, Admin, AND the
@@ -493,7 +528,7 @@ App.AppController = class AppController {
     // Count "done today" by anyone — gives the toast a motivational counter.
     const today = App.utils.todayISO(0);
     const me = this.currentUser;
-    const myDoneToday = this.taskModel.all().filter(t => t.assignee === me && t._completedAt === today).length;
+    const myDoneToday = this.taskModel.all().filter(t => t.assignee === me && App.utils.hqDateOf(t.completedAt) === today).length;
     const tail = myDoneToday > 1 ? `${myDoneToday} finished today` : 'First win of the day';
     this.toastView.show({ title, sub: `${App.utils.escapeHtml(task.title)} · ${tail}`, variant: 'celebrate' });
   }
