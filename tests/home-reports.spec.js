@@ -39,3 +39,14 @@ test('admin sees Reports and can open Home + Reports', async ({ page }) => {
   await expect(page.locator('#listPane')).toBeVisible();
   await expect(page.locator('#reportsWrap')).toBeHidden();
 });
+
+test('the AI ops-brief banner is gone from the task list', async ({ page }) => {
+  await boot(page, 'admin');
+  await page.evaluate(() => { App.controller.setView('all'); App.controller.setLayout('table'); });
+  await page.waitForTimeout(300);
+  // The static `.ai-brief` banner must not exist on any task surface anymore.
+  expect(await page.locator('.ai-brief').count()).toBe(0);
+  // Home still has its own brief.
+  await page.evaluate(() => App.controller.setView('home'));
+  await expect(page.locator('.qhq-brief')).toBeVisible();
+});
