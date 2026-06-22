@@ -2850,54 +2850,66 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
    (sidebar, topbar, modals) stays in its tablet form — only the list reflows. */
 @media (max-width: 900px) and (min-width: 721px) {
   #taskViewWrap .list-header { display: none; }
+  /* Two-line grid: title on top spanning the full width, then the meta cells
+     drop into FIXED columns so priority / status / due align vertically across
+     every row (the old flex-wrap let them land wherever the leading text
+     ended, which read as ragged). Columns are identical per row, so they line
+     up. Avatar name + due ellipsis-truncate rather than reflow the grid. */
   .task-group .list-row,
   .list-row {
-    display: flex !important;
-    flex-wrap: wrap;
+    display: grid !important;
+    grid-template-columns: 96px minmax(0, 1fr) 78px 118px auto;
     align-items: center;
-    gap: 6px 8px;
-    padding: 14px 56px 14px 18px; /* right pad reserves room for the finish btn */
+    column-gap: 10px;
+    row-gap: 4px;
+    padding: 13px 56px 13px 18px; /* right pad reserves room for the finish btn */
     position: relative;
   }
-  .list-row > input[type="checkbox"] { display: none !important; }
+  /* Cells we drop at this width to keep the five columns predictable. */
+  .list-row > input[type="checkbox"],
+  .list-row > .bulk-check,
+  .list-row .label-cell,
+  .list-row .desc-cell,
+  .list-row .more-btn,
+  .list-row .type-cell .pill-bid-status { display: none !important; }
   .list-row .task-title-cell {
-    flex: 1 1 100%;
+    grid-column: 1 / -1;
     min-width: 0;
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1.3;
-    order: 2;
   }
-  /* Force the meta chips onto a fresh line below the title. */
-  .list-row::after { content: ''; flex-basis: 100%; height: 0; order: 3; }
-  .list-row > :not(input):not(.task-title-cell):not(.finish-btn) {
-    flex: 0 0 auto;
+  .list-row .type-cell {
     font-size: 12px;
-    order: 4;
-    justify-self: start;
-    text-align: left;
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .list-row .meta-cell {
     display: flex !important;
-    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
+    min-width: 0;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
+  .list-row .priority-block,
+  .list-row .pill-status { font-size: 11.5px; }
+  .list-row .due-cell { font-size: 12px; white-space: nowrap; text-align: left; }
   .list-row .finish-btn {
     position: absolute;
     top: 12px;
     right: 12px;
     width: 40px; height: 40px;
-    flex: 0 0 auto;
     z-index: 3;
     touch-action: manipulation;
   }
-  /* Hide the noisy/secondary cells; keep Assignee (there's room on a tablet). */
-  .list-row .desc-cell,
-  .list-row .more-btn { display: none !important; }
 
   /* Keep the per-task timer (play) button, pinned just left of the finish
      button — same as the phone layout. Reserve the extra width only when it's
