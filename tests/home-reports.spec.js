@@ -40,6 +40,37 @@ test('admin sees Reports and can open Home + Reports', async ({ page }) => {
   await expect(page.locator('#reportsWrap')).toBeHidden();
 });
 
+test('Home shows the enrichment widgets (stat strip, Up next, Recents)', async ({ page }) => {
+  await boot(page, 'admin');
+  await page.evaluate(() => App.controller.setView('home'));
+  await expect(page.locator('#homeWrap')).toBeVisible();
+  // 4-chip stat strip + 3 quick actions.
+  await expect(page.locator('.qhq-stat')).toHaveCount(4);
+  await expect(page.locator('.qhq-act')).toHaveCount(3);
+  // Up next renders rows (or its empty state).
+  const up = await page.locator('.qhq-un-row').count();
+  const upEmpty = await page.locator('.qhq-unlist .qhq-empty').count();
+  expect(up + upEmpty).toBeGreaterThan(0);
+  // Recents card present.
+  await expect(page.locator('.qhq-recents')).toBeVisible();
+});
+
+test('Recents is team-wide for managers and own-world for workers', async ({ page }) => {
+  await boot(page, 'admin');
+  await page.evaluate(() => App.controller.setView('home'));
+  await page.waitForTimeout(200);
+  const adminRecents = await page.locator('.qhq-rec-row').count();
+  await expect(page.locator('.qhq-recents .meta')).toContainText('team');
+
+  await boot(page, 'worker');
+  await page.evaluate(() => App.controller.setView('home'));
+  await page.waitForTimeout(200);
+  const workerRecents = await page.locator('.qhq-rec-row').count();
+  await expect(page.locator('.qhq-recents .meta')).toContainText('your');
+  // A manager's feed is a superset of (>=) a worker's own-world feed.
+  expect(adminRecents).toBeGreaterThanOrEqual(workerRecents);
+});
+
 test('the AI ops-brief banner is gone from the task list', async ({ page }) => {
   await boot(page, 'admin');
   await page.evaluate(() => { App.controller.setView('all'); App.controller.setLayout('table'); });

@@ -1,3 +1,35 @@
+# Home Enrichment Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
+
+**Goal:** Turn the sparse Home screen into a real dashboard: quick actions, a 4-chip stat strip, an "Up next" card, and a "Recents" activity feed — all from existing data.
+
+**Architecture:** All in `js/views/HomeView.js` (render rewrite) + scoped `.qhq-*` CSS appended to `taskmanagement.css` under `body.ui-command-center`. No DB migration, no new perms. Reads `task.activity[]` (persisted jsonb), `task.focusSeq`, `task.completedAt`.
+
+**Tech Stack:** vanilla JS (App.* namespace), CSS tokens, Playwright.
+
+## Global Constraints
+
+- No migration, no new perms, no framework. Spec: `docs/superpowers/specs/2026-06-23-home-enrichment-design.md`.
+- Hooks (verified): `controller.visibleTasks({includeDone})`, `controller.getUserName(id)`, `controller.selectTask(id)`, `controller.openNewTaskModal()`, `controller.setView(v)`, `App.utils.timeAgo(iso)`, `App.utils.hqDateOf(iso)`, `App.utils.todayISO(0)`, `App.utils.escapeHtml`, `App.can('reports.view')`.
+- Reuse existing Home classes: `.qhq-home`, `.qhq-greet`, `.qhq-dateline`, `.qhq-brief`, `.qhq-card`, `.qhq-card-h`, `.qhq-empty`, `.qhq-chip`. Existing at-risk card (`.qhq-ar-row`) stays.
+- Mobile: stat strip → 2×2 and the Up-next/At-risk row stacks at ≤720px.
+
+---
+
+## Task 1: HomeView.js — quick actions, stat strip, Up next, Recents
+
+**Files:**
+- Modify: `js/views/HomeView.js` (rewrite `render()`, add `_upNext()`, `_recents()`, `_stats()`)
+- Test: `tests/home-reports.spec.js`
+
+**Interfaces:**
+- Consumes: the controller/util hooks listed in Global Constraints.
+- Produces: DOM `.qhq-stat`, `.qhq-actions`, `.qhq-un-row`, `.qhq-rec-row` consumed by Task 2 CSS and Task 3 tests.
+
+- [ ] **Step 1: Rewrite HomeView.js** (full file below — quick actions in the header, stat strip, brief unchanged, Up next + At risk row, Recents full-width).
+
+```js
 window.App = window.App || {};
 
 /* HomeView — the personal landing screen (every role). Greeting + quick actions,
@@ -34,7 +66,6 @@ App.HomeView = class HomeView {
   }
 
   _longDate(iso) {
-    // iso is YYYY-MM-DD; parse as local midnight so the weekday/day are correct.
     const d = new Date(iso + 'T00:00:00');
     if (isNaN(d.getTime())) return iso;
     return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -47,8 +78,8 @@ App.HomeView = class HomeView {
     const all = this.controller.visibleTasks({ includeDone: true }).filter(t => t.assignee === me);
     const open = all.filter(t => t.status !== 'done');
     // Done in the last 7 days (HQ calendar days).
-    const wkSet = new Set();
-    for (let i = 0; i < 7; i++) wkSet.add(App.utils.todayISO(-i));
+    const wk = []; for (let i = 0; i < 7; i++) wk.push(App.utils.todayISO(-i));
+    const wkSet = new Set(wk);
     const doneWeek = all.filter(t => t.completedAt && wkSet.has(App.utils.hqDateOf(t.completedAt))).length;
     return [
       { label: 'Open', value: open.length },
@@ -88,18 +119,11 @@ App.HomeView = class HomeView {
     const feed = [];
     for (const t of tasks) {
       for (const a of (t.activity || [])) {
-        if (!a || (!a.at && !a.what)) continue;
-        // `at` is a real timestamp on app-written activity; legacy/seed rows only
-        // carry a `when` label. Keep both — timestamped first, labelled after.
-        feed.push({ who: a.who || '', what: a.what || '', at: a.at || null, when: a.when || '', title: t.title, id: t.id });
+        if (!a || !a.at) continue;
+        feed.push({ who: a.who || '', what: a.what || '', at: a.at, title: t.title, id: t.id });
       }
     }
-    feed.sort((x, y) => {
-      if (x.at && y.at) return String(y.at).localeCompare(String(x.at));
-      if (x.at) return -1;
-      if (y.at) return 1;
-      return 0;
-    });
+    feed.sort((x, y) => String(y.at).localeCompare(String(x.at)));
     return feed.slice(0, 12);
   }
 
@@ -137,7 +161,7 @@ App.HomeView = class HomeView {
     const recHtml = recents.length ? recents.map(r => `
       <div class="qhq-rec-row" data-id="${esc(r.id)}" role="button" tabindex="0">
         <span class="qhq-rec-tx"><b>${esc(r.who)}</b> ${esc(r.what)} · <span class="qhq-rec-task">${esc(r.title)}</span></span>
-        <span class="qhq-rec-ago">${esc((r.at && App.utils.timeAgo(r.at)) || r.when || 'recently')}</span>
+        <span class="qhq-rec-ago">${esc(App.utils.timeAgo(r.at) || 'just now')}</span>
       </div>`).join('')
       : `<div class="qhq-empty">No recent activity yet.</div>`;
 
@@ -197,7 +221,7 @@ App.HomeView = class HomeView {
     });
   }
 
-  // Open tasks (scoped) that are at risk, with a reason + chip.
+  // Open tasks (scoped) that are at risk, with a reason + chip. (unchanged)
   _atRisk() {
     const today = App.utils.todayISO(0);
     const tasks = this.controller.visibleTasks({ includeDone: false });
@@ -207,9 +231,7 @@ App.HomeView = class HomeView {
       const parked = t.status === 'hold';
       const hot = (t.priority === 'critical' || t.priority === 'high');
       if (!overdue && !parked) continue;
-      const reason = overdue && hot ? 'Overdue + high priority'
-        : overdue ? 'Past due'
-        : 'On hold';
+      const reason = overdue && hot ? 'Overdue + high priority' : overdue ? 'Past due' : 'On hold';
       const chip = overdue && hot ? { cls: 'risk', label: 'at risk' }
         : overdue ? { cls: 'risk', label: 'late' }
         : { cls: 'hold', label: 'blocked' };
@@ -219,3 +241,33 @@ App.HomeView = class HomeView {
     return out.slice(0, 6);
   }
 };
+```
+
+- [ ] **Step 2: Add CSS (Task 2 below), then verify in the browser** with the dev server up:
+  `node verify_out/_homecheck.mjs` — expects 4 stat chips, Up-next rows, Recents rows for admin, no JS errors.
+
+- [ ] **Step 3: Commit** `git add js/views/HomeView.js taskmanagement.css tests/home-reports.spec.js && git commit`
+
+---
+
+## Task 2: CSS for the new Home widgets
+
+**Files:** Modify `taskmanagement.css` (append at EOF, under `body.ui-command-center` is not required since `.qhq-*` only render inside `#homeWrap`, but keep tokens).
+
+- [ ] **Step 1: Append** the `.qhq-head`, `.qhq-actions`/`.qhq-act`, `.qhq-statstrip`/`.qhq-stat`, `.qhq-un-row`/`.qhq-un-dot`/`.qhq-un-due`, `.qhq-rec-row`/`.qhq-rec-ago`, `.qhq-recents` rules + ≤720px stacking (full block in the build step).
+
+---
+
+## Task 3: Test + deploy
+
+- [ ] **Step 1: Extend `tests/home-reports.spec.js`** — assert Home shows 4 `.qhq-stat`, at least one `.qhq-un-row` or its empty state, and `.qhq-rec-row`/empty for admin.
+- [ ] **Step 2: Verify locally** (chromium script), zero JS errors, screenshots desktop + 390px.
+- [ ] **Step 3: Commit, push, confirm CI green + prod deploy.**
+
+## Self-Review
+- Spec A (Recents) → `_recents()` + Recents card. ✓
+- Spec (stat strip) → `_stats()` + `.qhq-statstrip`. ✓
+- Spec (Up next, Focus-then-due) → `_upNext()`. ✓
+- Spec (quick actions) → `.qhq-actions`. ✓
+- Recents manager scope via `App.can('reports.view')`. ✓
+- No placeholders; full code provided. Selectors match between view and tests/CSS. ✓
