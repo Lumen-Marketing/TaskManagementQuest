@@ -93,6 +93,7 @@
       <div class="side-scroll">
       <div class="side-group grp-views">
         <div class="side-label">Personal</div>
+        <div class="side-item" data-view="home" title="Home"><i class="ti ti-home"></i><span class="side-item-label">Home</span></div>
         <div class="side-item active" data-view="all" title="All"><i class="ti ti-list-check"></i><span class="side-item-label">All</span><span class="side-count" id="cnt-all">0</span></div>
         <div class="side-item" data-view="mine" title="Mine"><i class="ti ti-user"></i><span class="side-item-label">Mine</span><span class="side-count" id="cnt-mine">0</span></div>
         <div class="side-item" data-view="hot" title="Urgent"><i class="ti ti-bolt" style="color: var(--u-urgent);"></i><span class="side-item-label">Urgent</span><span class="side-count" id="cnt-hot" style="color: var(--u-urgent);">0</span></div>
@@ -210,6 +211,10 @@
       <!-- Time-tracking views render into this container -->
       <div id="timeViewWrap" class="hidden"></div>
     </div>
+
+    <!-- Full-page redesigned surfaces (HomeView / ReportsView render into these) -->
+    <section id="homeWrap" class="qhq-page hidden" aria-label="Home"></section>
+    <section id="reportsWrap" class="qhq-page hidden" aria-label="Reports"></section>
 
     <!-- Drag-resize handle (only visible when the detail pane is open) -->
     <div class="resize-handle hidden" id="resizeHandle" aria-hidden="true"></div>
