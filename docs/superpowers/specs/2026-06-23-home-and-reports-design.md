@@ -2,6 +2,9 @@
 
 **Date:** 2026-06-23
 **Status:** Approved (design), pending spec review
+**Phase:** 2 of the UI redesign program (see
+`2026-06-23-ui-redesign-phase1-theme-chrome-design.md`). Built on the Phase-1
+theme/tokens; the new sections reuse the `ui-command-center` skin + orange accent.
 
 ## Goal
 
