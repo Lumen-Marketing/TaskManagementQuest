@@ -4104,35 +4104,41 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
    docs/design-reference/quest-hq-client-ui-reference.html.
    ============================================================ */
 body.ui-command-center {
-  --bg: #f4f5f7;
-  --bg-2: #f8fafc;
-  --bg-3: #e7ebf0;
-  --surface: #ffffff;
-  --ink: #161a20;
-  --ink-2: #4b5563;
-  --ink-3: #7b8491;
-  --border: #dce2ea;
-  --border-strong: #c7d0dc;
-  --amber: #475569;
-  --amber-bg: #eef2f7;
-  --amber-ink: #334155;
-  --rust: #b42318;
-  --rust-bg: #fef3f2;
-  --rust-ink: #912018;
-  --blue: #3978f2;
-  --blue-bg: #eaf2ff;
-  --blue-ink: #2459c5;
-  --green: #2e9e6b;
-  --green-bg: #e8f6ef;
-  --green-ink: #19724b;
-  --u-critical: #b42318;
-  --u-urgent: #b45309;
-  --u-high: #b08900;
-  --u-medium: #94a3b8;
-  --u-low: #cbd5e1;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --shadow-md: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 24px rgba(16, 24, 40, 0.04);
-  --shadow-lg: 0 24px 54px rgba(16, 24, 40, 0.16);
+  /* Phase-1 redesign: match the quest-hq mockup — Inter + orange accent. */
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bg: #F5F6F8;
+  --bg-2: #FAFBFC;
+  --bg-3: #FBFBFD;
+  --surface: #FFFFFF;
+  --ink: #16191D;
+  --ink-2: #5A626B;
+  --ink-3: #929AA3;
+  --ink-4: #B6BCC4;
+  --border: #EAECF0;
+  --border-strong: #E2E5EA;
+  --amber: #ED4E0D;
+  --amber-bg: #FDEDE6;
+  --amber-ink: #CE430A;
+  --rust: #E0484D;
+  --rust-bg: #FCEDED;
+  --rust-ink: #C53B40;
+  --blue: #3E7BF2;
+  --blue-bg: #EAF1FE;
+  --blue-ink: #2459C5;
+  --green: #2E9E6B;
+  --green-bg: #E8F5EE;
+  --green-ink: #258257;
+  --u-critical: #E0484D;
+  --u-urgent: #E0484D;
+  --u-high: #E08A0B;
+  --u-medium: #3E7BF2;
+  --u-low: #929AA3;
+  --shadow-sm: 0 1px 2px rgba(18, 22, 28, 0.05), 0 1px 1px rgba(18, 22, 28, 0.03);
+  --shadow-md: 0 10px 28px -10px rgba(18, 22, 28, 0.16), 0 2px 6px rgba(18, 22, 28, 0.05);
+  --shadow-lg: 0 28px 64px -18px rgba(18, 22, 28, 0.30), 0 10px 24px -10px rgba(18, 22, 28, 0.14);
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--ink);
 }
@@ -4172,8 +4178,9 @@ body.ui-command-center .logo {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--amber);
+  background: linear-gradient(150deg, #F2581A, #D8410A);
   color: #fff;
+  box-shadow: 0 1px 2px rgba(216, 65, 10, .4), inset 0 1px 0 rgba(255, 255, 255, .25);
 }
 body.ui-command-center .logo i { display: none; }
 body.ui-command-center .logo::after {
@@ -4221,8 +4228,8 @@ body.ui-command-center #newTaskBtn {
 }
 body.ui-command-center .btn-primary:hover,
 body.ui-command-center #newTaskBtn:hover {
-  background: #334155;
-  border-color: #334155;
+  background: var(--amber-ink);
+  border-color: var(--amber-ink);
 }
 
 body.ui-command-center .deck {
