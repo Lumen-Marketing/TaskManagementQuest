@@ -4803,3 +4803,40 @@ body.ui-command-center .time-card { border-radius: var(--radius-md); }
     justify-content: center; padding-left: 0; padding-right: 0;
   }
 }
+
+/* ============================================================
+   Phase 3 polish — restore the sidebar collapse/expand toggle.
+   A global `.side-minimize-btn { display:none !important }`
+   (legacy minimized block) accidentally hid the toggle on every
+   desktop width, so a minimized sidebar could never be maximized.
+   Re-show it for the command-center skin on desktop (the mobile
+   drawer still hides it via the <=720px rule). In the collapsed
+   rail, stack the logo + toggle vertically so both fit & the
+   expand control is obvious.
+   ============================================================ */
+@media (min-width: 721px) {
+  body.ui-command-center .side-brand .side-minimize-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  body.ui-command-center.sidebar-minimized .side-brand {
+    flex-direction: column;
+    gap: 6px;
+  }
+  body.ui-command-center.sidebar-minimized .side-brand .side-minimize-btn {
+    margin: 0;
+  }
+}
+
+/* Light-theme styling for the restored collapse/expand toggle (base style is
+   dark-theme; would render as a dark circle on the command-center skin). */
+body.ui-command-center .side-brand .side-minimize-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink-3);
+}
+body.ui-command-center .side-brand .side-minimize-btn:hover {
+  background: var(--bg-2);
+  color: var(--ink);
+}
