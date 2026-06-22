@@ -182,6 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   App.reminderEngine = reminderEngine;
   new App.TimeView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   new App.HomeView({ controller });
+  new App.ReportsView({ controller });
   new App.ApprovalView({ controller, dataStore });
   new App.ClockDashboardView({ taskModel, timeModel, controller });
   new App.HierarchyView({ controller });
