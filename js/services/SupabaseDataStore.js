@@ -31,6 +31,47 @@ App.SupabaseDataStore = class SupabaseDataStore {
     return (res.data || []).map(row => this._mapNotificationRow(row));
   }
 
+  // ----- Task comments (migration 053) -----
+  async loadComments(taskId) {
+    const res = await this.supabase
+      .from('task_comments')
+      .select('*')
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: true });
+    this._throwIfError(res, 'task_comments');
+    return (res.data || []).map(r => ({
+      id: r.id,
+      taskId: r.task_id,
+      authorId: r.author_id,
+      body: r.body || '',
+      mentions: Array.isArray(r.mentions) ? r.mentions : [],
+      createdAt: r.created_at,
+    }));
+  }
+
+  async addComment(taskId, { body, mentions }) {
+    const res = await this.supabase
+      .from('task_comments')
+      .insert({
+        task_id: taskId,
+        author_id: this.currentUser,
+        body: String(body || ''),
+        mentions: Array.isArray(mentions) ? mentions : [],
+      })
+      .select('*')
+      .single();
+    this._throwIfError(res, 'task_comments insert');
+    const r = res.data;
+    return {
+      id: r.id,
+      taskId: r.task_id,
+      authorId: r.author_id,
+      body: r.body || '',
+      mentions: Array.isArray(r.mentions) ? r.mentions : [],
+      createdAt: r.created_at,
+    };
+  }
+
   async load() {
     const [
       peopleRes,

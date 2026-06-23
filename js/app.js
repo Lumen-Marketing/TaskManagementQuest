@@ -24,6 +24,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         save: async () => ({ conflicts: [] }),
         loadProfiles: async () => App.PROFILES || [],
         loadNotifications: async () => [],
+        // Comments live in-memory in preview/offline mode (no Supabase table).
+        loadComments: async (taskId) => (App._previewComments && App._previewComments[taskId]) || [],
+        addComment: async (taskId, { body, mentions }) => {
+          App._previewComments = App._previewComments || {};
+          const list = App._previewComments[taskId] || (App._previewComments[taskId] = []);
+          const c = {
+            id: App.utils.uid('c'), taskId, authorId: App.CURRENT_USER,
+            body: String(body || ''), mentions: Array.isArray(mentions) ? mentions : [],
+            createdAt: new Date().toISOString(),
+          };
+          list.push(c);
+          return c;
+        },
         updateProfileAccess: async (id, updates) => {
           const p = (App.PROFILES || []).find(pr => pr.id === id);
           if (p) {

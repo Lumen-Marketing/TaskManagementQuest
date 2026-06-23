@@ -422,6 +422,65 @@ App.AppController = class AppController {
     App.EventBus.emit('selection:changed');
   }
 
+  /* ---------- comments (migration 053) ---------- */
+  // Lazy-load a task's comments into task.comments, then re-render the detail.
+  async loadTaskComments(taskId) {
+    const t = this.taskModel.find(taskId);
+    if (!t || t._commentsLoaded) return;
+    t._commentsLoaded = true; // set first so concurrent renders don't double-fetch
+    try {
+      t.comments = await this.dataStore.loadComments(taskId);
+    } catch (e) {
+      console.warn('[comments] load failed:', e);
+      t.comments = t.comments || [];
+    }
+    App.EventBus.emit('comments:changed', taskId);
+  }
+
+  async addTaskComment(taskId, body, mentions) {
+    if (!App.can('tasks.write') && !App.can('tasks.comment')) { /* fall through: comment allowed for any viewer of the task */ }
+    const text = String(body || '').trim();
+    if (!text) return;
+    const t = this.taskModel.find(taskId);
+    if (!t) return;
+    let saved;
+    try {
+      saved = await this.dataStore.addComment(taskId, { body: text, mentions: mentions || [] });
+    } catch (e) {
+      console.error('[comments] add failed:', e);
+      if (this.toastView) this.toastView.show({ title: 'Comment not saved', sub: 'Please try again.' });
+      return;
+    }
+    t.comments = t.comments || [];
+    t.comments.push(saved);
+    t._commentsLoaded = true;
+    this._notifyComment(t, text, mentions || []);
+    App.EventBus.emit('comments:changed', taskId);
+  }
+
+  // In-app notify mentioned users + the task's participants (assignee/creator/
+  // watchers), except the comment's author. Mentions get a distinct label.
+  _notifyComment(task, text, mentions) {
+    const me = this.currentUser;
+    const mentionSet = new Set((mentions || []).filter(Boolean));
+    const ids = new Set();
+    mentionSet.forEach(id => { if (id !== me) ids.add(id); });
+    if (task.creator && task.creator !== me) ids.add(task.creator);
+    if (task.assignee && task.assignee !== me) ids.add(task.assignee);
+    (task.watchers || []).forEach(w => { if (w && w !== me) ids.add(w); });
+    if (!ids.size) return;
+    const whoEsc = App.utils.escapeHtml(this.getUserName(me));
+    const titleEsc = App.utils.escapeHtml(task.title);
+    const snippet = App.utils.escapeHtml(text.length > 80 ? text.slice(0, 77) + '…' : text);
+    const inapp = Array.from(ids).map(memberId => ({
+      memberId,
+      taskId: task.id,
+      meta: mentionSet.has(memberId) ? 'Mentioned you' : 'New comment',
+      html: `<strong>${whoEsc}</strong> ${mentionSet.has(memberId) ? 'mentioned you' : 'commented'} on <em>${titleEsc}</em>: “${snippet}”`,
+    }));
+    this._deliver(inapp, [], null);
+  }
+
   _togglePanes() {
     const v = this.uiState.view;
     // Home / Reports are full-page surfaces in their own containers — hide the

@@ -29,6 +29,7 @@ App.TaskDetailView = class TaskDetailView {
     App.EventBus.on('time:changed', () => this.render());
     App.EventBus.on('selection:changed', () => this.render());
     App.EventBus.on('view:changed', () => this.render());
+    App.EventBus.on('comments:changed', () => this.render());
     App.EventBus.on('clock:tick', () => this.tickLive());
   }
 
@@ -308,6 +309,8 @@ App.TaskDetailView = class TaskDetailView {
           ${activityHtml}
         </div>
 
+        ${this._commentsSection(t)}
+
         ${this.controller.canDeleteTask(t) ? `
         <div class="detail-danger-zone">
           <button class="btn-link-danger" data-action="delete-task" type="button">
@@ -355,12 +358,137 @@ App.TaskDetailView = class TaskDetailView {
     const deleteBtn = this.pane.querySelector('[data-action="delete-task"]');
     if (deleteBtn) deleteBtn.addEventListener('click', () => this.controller.deleteTask(t.id));
 
+    // Comments: lazy-load on first render, then wire the composer.
+    if (!t._commentsLoaded) this.controller.loadTaskComments(t.id);
+    this._wireComments(t);
+
     // On first open, move focus into the dialog (not on background re-renders).
     if (this._justOpened) {
       this._justOpened = false;
       const cb = this.pane.querySelector('[data-action="close"]');
       if (cb) cb.focus();
     }
+  }
+
+  /* ---------- comments ---------- */
+  _commentsSection(t) {
+    const esc = App.utils.escapeHtml;
+    const comments = t.comments || [];
+    const rows = comments.length
+      ? comments.map(c => this._commentRow(c)).join('')
+      : (t._commentsLoaded
+          ? `<div class="cm-empty">No comments yet. Start the conversation.</div>`
+          : `<div class="cm-empty">Loading comments…</div>`);
+    const draft = (this._commentDraft && this._commentDraft[t.id]) || '';
+    return `
+      <div class="detail-section cm-section">
+        <div class="detail-section-title">Comments${comments.length ? ` <span class="cm-count">${comments.length}</span>` : ''}</div>
+        <div class="cm-list">${rows}</div>
+        <div class="cm-composer">
+          <textarea id="cmInput" class="cm-input" rows="2" placeholder="Write a comment…  @ to mention">${esc(draft)}</textarea>
+          <div id="cmMentionMenu" class="cm-mention-menu hidden" role="listbox"></div>
+          <div class="cm-actions">
+            <span class="cm-hint">Type <b>@</b> to mention a teammate</span>
+            <button id="cmSend" class="btn btn-primary cm-send" type="button">Comment</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  _commentRow(c) {
+    const esc = App.utils.escapeHtml;
+    const person = App.PEOPLE[c.authorId] || { name: c.authorId || 'Someone', full: c.authorId || 'Someone', color: 'var(--ink-3)' };
+    const ago = (c.createdAt && App.utils.timeAgo(c.createdAt)) || '';
+    // Escape first, then lightly highlight @mention tokens.
+    const body = esc(c.body || '').replace(/@(\w[\w.]*)/g, '<span class="cm-at">@$1</span>');
+    return `
+      <div class="cm-row">
+        <div class="cm-av">${App.utils.avatarHtml(person)}</div>
+        <div class="cm-bubble">
+          <div class="cm-meta"><span class="cm-who">${esc(person.name)}</span>${ago ? `<span class="cm-ago">· ${esc(ago)}</span>` : ''}</div>
+          <div class="cm-text">${body}</div>
+        </div>
+      </div>`;
+  }
+
+  // People who can be @mentioned (id + names), from the known directory.
+  _mentionCandidates() {
+    return Object.keys(App.PEOPLE || {}).map(id => {
+      const p = App.PEOPLE[id] || {};
+      const full = p.full || p.name || id;
+      return { id, full, first: String(full).trim().split(/\s+/)[0] };
+    });
+  }
+
+  _wireComments(t) {
+    const input = this.pane.querySelector('#cmInput');
+    const sendBtn = this.pane.querySelector('#cmSend');
+    const menu = this.pane.querySelector('#cmMentionMenu');
+    if (!input || !sendBtn || !menu) return;
+    this._composerMentions = this._composerMentions || new Set();
+
+    const persistDraft = () => {
+      this._commentDraft = this._commentDraft || {};
+      this._commentDraft[t.id] = input.value;
+    };
+
+    const closeMenu = () => { menu.classList.add('hidden'); menu.innerHTML = ''; };
+
+    const renderMenu = () => {
+      const caret = input.selectionStart;
+      const upto = input.value.slice(0, caret);
+      const m = upto.match(/@(\w*)$/);
+      if (!m) { closeMenu(); return; }
+      const q = m[1].toLowerCase();
+      const matches = this._mentionCandidates()
+        .filter(c => c.full.toLowerCase().includes(q))
+        .slice(0, 6);
+      if (!matches.length) { closeMenu(); return; }
+      menu.innerHTML = matches.map(c =>
+        `<div class="cm-mention-item" role="option" data-id="${App.utils.escapeHtml(c.id)}" data-first="${App.utils.escapeHtml(c.first)}">${App.utils.escapeHtml(c.full)}</div>`).join('');
+      menu.classList.remove('hidden');
+      menu.querySelectorAll('.cm-mention-item').forEach(el => {
+        el.addEventListener('mousedown', (e) => {
+          e.preventDefault(); // keep focus in the textarea
+          const caret2 = input.selectionStart;
+          const before = input.value.slice(0, caret2).replace(/@(\w*)$/, '@' + el.dataset.first + ' ');
+          const after = input.value.slice(caret2);
+          input.value = before + after;
+          const pos = before.length;
+          input.setSelectionRange(pos, pos);
+          this._composerMentions.add(el.dataset.id);
+          persistDraft();
+          closeMenu();
+          input.focus();
+        });
+      });
+    };
+
+    input.addEventListener('input', () => { persistDraft(); renderMenu(); });
+    input.addEventListener('keydown', (e) => {
+      // Cmd/Ctrl+Enter sends; Escape closes the mention menu.
+      if (e.key === 'Escape' && !menu.classList.contains('hidden')) { e.stopPropagation(); closeMenu(); return; }
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+    });
+    input.addEventListener('blur', () => setTimeout(closeMenu, 120));
+
+    const send = () => {
+      const text = input.value.trim();
+      if (!text) return;
+      // Only keep mentions whose @first token still appears in the final text.
+      const lower = text.toLowerCase();
+      const cands = this._mentionCandidates();
+      const mentions = Array.from(this._composerMentions).filter(id => {
+        const c = cands.find(x => x.id === id);
+        return c && lower.includes('@' + c.first.toLowerCase());
+      });
+      this.controller.addTaskComment(t.id, text, mentions);
+      input.value = '';
+      this._composerMentions = new Set();
+      if (this._commentDraft) delete this._commentDraft[t.id];
+      closeMenu();
+    };
+    sendBtn.addEventListener('click', send);
   }
 
   _formatDue(due) {
