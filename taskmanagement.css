@@ -5087,27 +5087,39 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 [data-theme="dark"] .qhq-bh-track,
 [data-theme="dark"] .qhq-mixbar { background: #262B32; }
 
+/* transitions-dev — semantic motion tokens (hover lifts, menus, modals). */
+:root {
+  --resize-dur: 300ms;
+  --resize-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dropdown-open-dur: 250ms;
+  --dropdown-close-dur: 150ms;
+  --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --modal-open-dur: 250ms;
+  --modal-close-dur: 150ms;
+  --modal-scale: 0.96;
+  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* ============================================================
-   LIGHT THEME — "Steep editorial" (command-center skin).
-   White cards as ~22px ceramic tiles on a fog canvas, soft editorial
-   shadow, Fraunces serif on the big headlines only, a warm dawn-glow
-   on Home, terracotta kept as the single primary action. (Replaced
-   the earlier glass experiment.) Scoped to LIGHT — dark stays Linear.
+   LIGHT THEME — "B&W outline" (Panze-inspired, command-center skin).
+   Monochrome white canvas; near-black 1px OUTLINED cards, no shadow;
+   terracotta kept as the single accent. Serif headlines kept. Smooth
+   hover lift via transitions.dev easing. Scoped to LIGHT — dark = Linear.
    ============================================================ */
 :root { --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif; }
 html:not([data-theme="dark"]) body.ui-command-center {
-  --bg: #F7F7F8;          /* fog canvas */
-  --bg-2: #FFFFFF;
-  --bg-3: #F1F1F3;
-  --surface: #FFFFFF;     /* white cards */
-  --ink: #17191C;         /* near-black, warm */
-  --ink-2: #4C4C4C;       /* ash */
-  --ink-3: #777B86;       /* graphite */
-  --ink-4: #A3A6AF;       /* dove */
-  --border: #ECECEF;
-  --border-strong: #DCDCE0;
+  --bg: #FFFFFF;          /* white canvas */
+  --bg-2: #FAFAFA;
+  --bg-3: #F2F2F3;
+  --surface: #FFFFFF;
+  --ink: #18181B;         /* near-black */
+  --ink-2: #46464B;
+  --ink-3: #6E6E76;
+  --ink-4: #A1A1AA;
+  --border: #E4E4E7;      /* hairline for chrome */
+  --border-strong: #18181B;
 }
-/* Editorial serif — only the headlines "raise their voice". */
+/* Editorial serif on the big headlines only. */
 html:not([data-theme="dark"]) body.ui-command-center .page-title,
 html:not([data-theme="dark"]) body.ui-command-center .qhq-greet,
 html:not([data-theme="dark"]) body.ui-command-center .qhq-rpt-top .h {
@@ -5115,7 +5127,7 @@ html:not([data-theme="dark"]) body.ui-command-center .qhq-rpt-top .h {
   font-weight: 500;
   letter-spacing: -0.018em;
 }
-/* Ceramic-tile cards: generous radius + Steep's soft layered shadow. */
+/* Outlined cards: crisp near-black 1px border, flat (no shadow), rounded. */
 html:not([data-theme="dark"]) body.ui-command-center .qhq-kpi,
 html:not([data-theme="dark"]) body.ui-command-center .qhq-chart-card,
 html:not([data-theme="dark"]) body.ui-command-center .qhq-card,
@@ -5125,26 +5137,63 @@ html:not([data-theme="dark"]) body.ui-command-center .up-next-card,
 html:not([data-theme="dark"]) body.ui-command-center .focus-widget,
 html:not([data-theme="dark"]) body.ui-command-center .progress-card,
 html:not([data-theme="dark"]) body.ui-command-center .task-group {
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  box-shadow: rgba(4, 23, 43, 0.05) 0 0 0 1px,
-              rgba(0, 0, 0, 0.06) 0 16px 28px -14px,
-              rgba(0, 0, 0, 0.04) 0 6px 8px -6px;
+  border-radius: 18px;
+  border: 1px solid #1B1B1F;
+  box-shadow: none;
+  transition: transform var(--resize-dur) var(--resize-ease),
+              box-shadow var(--resize-dur) var(--resize-ease);
 }
-/* Preserve the group-colored left bar (Overdue red / Due today orange / ...):
-   keep the group card opaque, ride the rows transparently, hide the per-row
-   priority bars so there's no doubling. */
+/* Subtle hover lift on the interactive cards/widgets. */
+html:not([data-theme="dark"]) body.ui-command-center .qhq-card:hover,
+html:not([data-theme="dark"]) body.ui-command-center .up-next-card:hover,
+html:not([data-theme="dark"]) body.ui-command-center .focus-widget:hover,
+html:not([data-theme="dark"]) body.ui-command-center .progress-card:hover,
+html:not([data-theme="dark"]) body.ui-command-center .qhq-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px -14px rgba(24, 24, 27, 0.35);
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-theme="dark"]) body.ui-command-center .qhq-kpi,
+  html:not([data-theme="dark"]) body.ui-command-center .qhq-chart-card,
+  html:not([data-theme="dark"]) body.ui-command-center .qhq-card,
+  html:not([data-theme="dark"]) body.ui-command-center .qhq-brief,
+  html:not([data-theme="dark"]) body.ui-command-center .qhq-stat,
+  html:not([data-theme="dark"]) body.ui-command-center .up-next-card,
+  html:not([data-theme="dark"]) body.ui-command-center .focus-widget,
+  html:not([data-theme="dark"]) body.ui-command-center .progress-card,
+  html:not([data-theme="dark"]) body.ui-command-center .task-group { transition: none; }
+  html:not([data-theme="dark"]) body.ui-command-center .qhq-card:hover,
+  html:not([data-theme="dark"]) body.ui-command-center .up-next-card:hover,
+  html:not([data-theme="dark"]) body.ui-command-center .focus-widget:hover,
+  html:not([data-theme="dark"]) body.ui-command-center .progress-card:hover,
+  html:not([data-theme="dark"]) body.ui-command-center .qhq-stat:hover { transform: none; box-shadow: none; }
+}
+/* Group-colored left bar preserved; rows ride transparently. */
 html:not([data-theme="dark"]) body.ui-command-center .group-body { background: transparent; }
 html:not([data-theme="dark"]) body.ui-command-center .task-group .list-row { background: transparent; }
 html:not([data-theme="dark"]) body.ui-command-center .task-group .list-row::before { display: none; }
-/* Warm dawn glow behind the Home greeting only (hero context). */
-html:not([data-theme="dark"]) body.ui-command-center .qhq-home {
-  background: radial-gradient(58% 40% at 16% -4%, rgba(251, 225, 209, 0.7), transparent 62%) no-repeat;
-}
-/* Sidebar on fog, flat. */
+/* Sidebar: clean monochrome rail, smooth nav transition (Panze-ish). */
 html:not([data-theme="dark"]) body.ui-command-center .deck {
-  background: var(--bg);
+  background: #FFFFFF;
   border-right: 1px solid var(--border);
+}
+html:not([data-theme="dark"]) body.ui-command-center .deck .side-item {
+  transition: background var(--dropdown-open-dur) var(--resize-ease),
+              color var(--dropdown-open-dur) var(--resize-ease);
+}
+/* Toolbar buttons as outlined pills (Panze) — same outline language as the
+   cards; invert to a dark fill on hover. New task stays terracotta-filled. */
+html:not([data-theme="dark"]) body.ui-command-center .work-toolbar .btn:not(.btn-primary):not(#newTaskBtn) {
+  border-radius: 9999px;
+  border: 1px solid #1B1B1F;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+html:not([data-theme="dark"]) body.ui-command-center .work-toolbar .btn:not(.btn-primary):not(#newTaskBtn):hover {
+  background: #18181B;
+  border-color: #18181B;
+  color: #fff;
 }
 
 /* Saved-views menu rows: delete button pushed to the right. */
