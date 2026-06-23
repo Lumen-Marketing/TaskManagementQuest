@@ -42,22 +42,39 @@ function dueTimestamp(due: string, dueTime: string | null): number | null {
   return hqMs(+m[1], +m[2], +m[3], hh, mm);
 }
 
+// A `datetime-local` string ("YYYY-MM-DDTHH:MM") interpreted as HQ wall-clock.
+function parseLocalHq(s: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(s || ""));
+  return m ? hqMs(+m[1], +m[2], +m[3], +m[4], +m[5]) : null;
+}
+
 function windowsFor(task: any): Array<{ kind: string; at: number }> {
+  const out: Array<{ kind: string; at: number }> = [];
+
+  // Automatic priority windows (need a due date).
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(task.due || "");
   const dueTs = dueTimestamp(task.due, task.due_time);
-  if (!m || dueTs == null) return [];
-  const morning = hqMs(+m[1], +m[2], +m[3], 8, 0);
-  const prio = task.priority || "medium";
-  if (prio === "critical") {
-    return [{ kind: "pre", at: dueTs - PRE_DUE_MS }, { kind: "at", at: dueTs }, { kind: "overdue", at: dueTs + OVERDUE_MS }];
-  } else if (prio === "urgent") {
-    return [{ kind: "pre", at: dueTs - PRE_DUE_MS }, { kind: "at", at: dueTs }];
-  } else if (prio === "high") {
-    return [{ kind: "morning", at: morning }, { kind: "at", at: dueTs }];
-  } else if (prio === "medium") {
-    return [{ kind: "morning", at: morning }];
+  if (m && dueTs != null) {
+    const morning = hqMs(+m[1], +m[2], +m[3], 8, 0);
+    const prio = task.priority || "medium";
+    if (prio === "critical") {
+      out.push({ kind: "pre", at: dueTs - PRE_DUE_MS }, { kind: "at", at: dueTs }, { kind: "overdue", at: dueTs + OVERDUE_MS });
+    } else if (prio === "urgent") {
+      out.push({ kind: "pre", at: dueTs - PRE_DUE_MS }, { kind: "at", at: dueTs });
+    } else if (prio === "high") {
+      out.push({ kind: "morning", at: morning }, { kind: "at", at: dueTs });
+    } else if (prio === "medium") {
+      out.push({ kind: "morning", at: morning });
+    }
   }
-  return [];
+
+  // Custom one-off reminder (independent of due date). Keyed on the value so
+  // changing the reminder time re-arms it.
+  if (task.reminder_at) {
+    const ts = parseLocalHq(task.reminder_at);
+    if (ts != null) out.push({ kind: "custom:" + task.reminder_at, at: ts });
+  }
+  return out;
 }
 
 const LABEL: Record<string, string> = {
@@ -90,9 +107,9 @@ Deno.serve(async (req) => {
   // Open, dated tasks only.
   const taskRes = await db
     .from("tasks")
-    .select("id, title, due, due_time, priority, status, assignee_id, watchers")
+    .select("id, title, due, due_time, reminder_at, priority, status, assignee_id, watchers")
     .neq("status", "done")
-    .not("due", "is", null)
+    .or("due.not.is.null,reminder_at.not.is.null")
     .limit(MAX_TASKS);
   if (taskRes.error) {
     console.error("[due-reminders] task load failed", taskRes.error);
@@ -135,7 +152,7 @@ Deno.serve(async (req) => {
       if (claim.error) { errors.push(`log ${t.id}/${w.kind}: ${claim.error.message}`); continue; }
       if (!claim.data || claim.data.length === 0) continue; // already sent
 
-      const label = LABEL[w.kind] || "Due soon";
+      const label = LABEL[w.kind] || (w.kind.startsWith("custom:") ? "Reminder" : "Due soon");
       const titleEsc = esc(t.title || "Task");
 
       // In-app notification per recipient.

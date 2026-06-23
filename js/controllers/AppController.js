@@ -1124,6 +1124,7 @@ App.AppController = class AppController {
       company: payload.company,
       due: payload.due,
       dueTime: payload.dueTime || null,
+      reminderAt: payload.reminderAt || null,
       priority: payload.priority,
       status: payload.status,
       creator: this.currentUser,

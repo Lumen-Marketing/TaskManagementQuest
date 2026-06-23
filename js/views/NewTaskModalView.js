@@ -181,6 +181,12 @@ App.NewTaskModalView = class NewTaskModalView {
             <div class="user-menu-hint" style="margin-top:5px;">Type digits like <strong>930</strong> then <strong>a</strong> or <strong>p</strong> — the time formats itself. Leave blank if not needed.</div>
           </div>
 
+          <div class="field" style="margin-top:14px;">
+            <div class="field-label">Remind me <span class="field-optional">Optional</span></div>
+            <input type="datetime-local" id="nt-reminderAt" class="picker-input" style="width:100%; padding: 6px 10px; font-size: 12px;" />
+            <div class="user-menu-hint" style="margin-top:5px;">A one-off reminder at this time (Phoenix). Separate from the automatic priority reminders.</div>
+          </div>
+
           <div class="field-row" style="margin-top:14px;">
             <div>
               <div class="field-label">Priority</div>
@@ -599,7 +605,9 @@ App.NewTaskModalView = class NewTaskModalView {
       return;
     }
 
+    const reminderEl = document.getElementById('nt-reminderAt');
     const payload = Object.assign({}, clean, {
+      reminderAt: (reminderEl && reminderEl.value) ? reminderEl.value : null,
       notify: {
         email:    document.getElementById('nt-notify-email').checked,
         inapp:    document.getElementById('nt-notify-inapp').checked,
