@@ -9,7 +9,8 @@ App.SidebarView = class SidebarView {
 
     this.deck = document.querySelector('.deck');
     this.extraMount = document.getElementById('sideExtraGroups');
-    this.minimizeBtn = document.getElementById('sideMinimizeBtn');
+    // The dedicated minimize button was removed; the brand logo is the toggle.
+    this.brandLogo = document.querySelector('.side-brand .logo');
 
     this.SECTION_KEY  = 'questhq:sidebar-collapsed-sections';
     this.MINIMIZE_KEY = 'questhq:sidebar-minimized';
@@ -87,8 +88,15 @@ App.SidebarView = class SidebarView {
   /* ---------- Minimize / expand ---------- */
 
   bindMinimize() {
-    if (this.minimizeBtn) {
-      this.minimizeBtn.addEventListener('click', () => this.toggleMinimize());
+    // Minimize/expand is triggered by clicking the brand logo (the separate
+    // toggle button was removed). Desktop only — on mobile the sidebar is a
+    // slide-in drawer, so the logo opens/closes that instead (handled below).
+    if (this.brandLogo) {
+      this.brandLogo.style.cursor = 'pointer';
+      this._makeActivatable(this.brandLogo, () => {
+        if (this._isMobile()) this._toggleMobileDrawer();
+        else this.toggleMinimize();
+      });
     }
     // The brand now lives in the sidebar (with its own minimize button), so the
     // topbar-left holds the title + scope segment. Tapping it only opens the
@@ -175,12 +183,10 @@ App.SidebarView = class SidebarView {
     if (!this.deck) return;
     this.deck.classList.toggle('minimized', min);
     document.body.classList.toggle('sidebar-minimized', min);
-    if (this.minimizeBtn) {
-      const i = this.minimizeBtn.querySelector('i');
-      if (i) i.className = min
-        ? 'ti ti-layout-sidebar-left-expand'
-        : 'ti ti-layout-sidebar-left-collapse';
-      this.minimizeBtn.title = min ? 'Expand sidebar' : 'Collapse sidebar';
+    if (this.brandLogo) {
+      const label = min ? 'Expand sidebar' : 'Collapse sidebar';
+      this.brandLogo.title = label;
+      this.brandLogo.setAttribute('aria-label', label);
     }
   }
 

@@ -198,6 +198,16 @@ App.AppController = class AppController {
     App.EventBus.emit('selection:changed');
   }
 
+  /* The Panze re-skin (Home + All Tasks only) is gated by a body class so its
+     CSS never leaks into Reports / People / detail panels. Toggled from
+     _togglePanes() so it also runs on the initial boot / role-change paths,
+     not only on user-driven view changes. */
+  _applyPanseSkin() {
+    const v = this.uiState.view;
+    document.body.classList.toggle('panze-home', v === 'home');
+    document.body.classList.toggle('panze-tasks', v === 'all');
+  }
+
   /* ---------- last-state persistence ----------
      Persist the lightweight "where was I" UI state (current view + layout) so
      that force-closing and reopening the app restores the last screen instead
@@ -234,7 +244,7 @@ App.AppController = class AppController {
     if (!saved || saved.v !== 1) return;
     // 'timeline' was replaced by 'calendar' — migrate any stored value.
     const savedLayout = saved.layout === 'timeline' ? 'calendar' : saved.layout;
-    if (['table', 'calendar', 'kanban'].includes(savedLayout)) this.setLayout(savedLayout);
+    if (['table', 'calendar', 'kanban', 'cards'].includes(savedLayout)) this.setLayout(savedLayout);
     if (saved.calendarMode === 'month' || saved.calendarMode === 'week') this.uiState.calendarMode = saved.calendarMode;
     // Restore sort / group / filters so the user's working set survives a reload
     // (the "filters reset every session" complaint). Validated + merged with
@@ -418,6 +428,7 @@ App.AppController = class AppController {
     // entire list pane (table + toolbar + page head + ops brief) for them.
     const isPageView = v === 'home' || v === 'reports';
     const isTimeView = v.startsWith('time:') || v === 'approvals' || v === 'team:hierarchy' || v.startsWith('admin:');
+    this._applyPanseSkin();
     const listPane = document.getElementById('listPane');
     if (listPane) listPane.classList.toggle('hidden', isPageView);
     const homeWrap = document.getElementById('homeWrap');
@@ -1382,7 +1393,7 @@ App.AppController = class AppController {
     if (v.sortBy && App.SORT_OPTIONS[v.sortBy]) this.uiState.sortBy = v.sortBy;
     if (v.sortDir === 'asc' || v.sortDir === 'desc') this.uiState.sortDir = v.sortDir;
     if (v.groupBy && App.GROUP_OPTIONS[v.groupBy]) this.uiState.groupBy = v.groupBy;
-    if (['table', 'calendar', 'kanban'].includes(v.layout)) this.uiState.layout = v.layout;
+    if (['table', 'calendar', 'kanban', 'cards'].includes(v.layout)) this.uiState.layout = v.layout;
     this.uiState.collapsedGroups = new Set();
     this._persistUiState();
     App.EventBus.emit('filters:changed');

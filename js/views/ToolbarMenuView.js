@@ -130,6 +130,7 @@ App.ToolbarMenuView = class ToolbarMenuView {
     } else if (this.menuFor === 'view') {
       const layouts = [
         { key: 'table',    label: 'Table',    icon: 'ti-table' },
+        { key: 'cards',    label: 'Cards',    icon: 'ti-layout-grid' },
         { key: 'calendar', label: 'Calendar', icon: 'ti-calendar' },
         { key: 'kanban',   label: 'Kanban',   icon: 'ti-layout-kanban' },
       ];

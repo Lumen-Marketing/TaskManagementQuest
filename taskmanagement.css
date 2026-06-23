@@ -4626,7 +4626,7 @@ body.ui-command-center .list-row:has(.prio-low)::before { background: var(--u-lo
 /* Rows are dense, so hover stays SUBTLE. The left bar renders blue
    (var(--u-medium)) on every row, so the hover wash is a faint tint of that
    SAME blue — hovering never introduces a different color than the bar shows. */
-body.ui-command-center .list-row:hover { background: color-mix(in srgb, var(--u-medium) 8%, var(--surface)); }
+body.ui-command-center .list-row:hover { background: color-mix(in srgb, var(--group-color, var(--u-medium)) 8%, var(--surface)); }
 body.ui-command-center .list-row.selected { background: #fbfcfe; }
 body.ui-command-center .task-title-cell {
   font-size: 14px;
@@ -5088,84 +5088,63 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 [data-theme="dark"] .qhq-mixbar { background: #262B32; }
 
 /* ============================================================
-   Spotlight cards — Reports KPI + chart cards. A cursor-tracked
-   terracotta glow sits BEHIND the card content (so text is never
-   tinted) plus a border/shadow lift on hover. Framework-free:
-   ReportsView sets --mx/--my (px, card-relative) on pointermove;
-   the CSS draws the radial gradient at that point. Hover effects
-   are gated to hover-capable pointers so taps don't stick.
+   LIGHT THEME — "Steep editorial" (command-center skin).
+   White cards as ~22px ceramic tiles on a fog canvas, soft editorial
+   shadow, Fraunces serif on the big headlines only, a warm dawn-glow
+   on Home, terracotta kept as the single primary action. (Replaced
+   the earlier glass experiment.) Scoped to LIGHT — dark stays Linear.
    ============================================================ */
-.qhq-rpt .qhq-kpi,
-.qhq-rpt .qhq-chart-card {
-  position: relative;
-  overflow: hidden;
-  transition: border-color var(--dur-short, .18s) var(--ease-out, ease),
-              box-shadow var(--dur-short, .18s) var(--ease-out, ease),
-              transform var(--dur-short, .18s) var(--ease-out, ease);
+:root { --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif; }
+html:not([data-theme="dark"]) body.ui-command-center {
+  --bg: #F7F7F8;          /* fog canvas */
+  --bg-2: #FFFFFF;
+  --bg-3: #F1F1F3;
+  --surface: #FFFFFF;     /* white cards */
+  --ink: #17191C;         /* near-black, warm */
+  --ink-2: #4C4C4C;       /* ash */
+  --ink-3: #777B86;       /* graphite */
+  --ink-4: #A3A6AF;       /* dove */
+  --border: #ECECEF;
+  --border-strong: #DCDCE0;
 }
-.qhq-rpt .qhq-kpi::before,
-.qhq-rpt .qhq-chart-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, -30%),
-              color-mix(in srgb, var(--amber) 22%, transparent), transparent 62%);
-  opacity: 0;
-  transition: opacity var(--dur-med, .25s) var(--ease-out, ease);
-  pointer-events: none;
-  z-index: 0;
+/* Editorial serif — only the headlines "raise their voice". */
+html:not([data-theme="dark"]) body.ui-command-center .page-title,
+html:not([data-theme="dark"]) body.ui-command-center .qhq-greet,
+html:not([data-theme="dark"]) body.ui-command-center .qhq-rpt-top .h {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.018em;
 }
-/* Card content rides above the glow. */
-.qhq-rpt .qhq-kpi > *,
-.qhq-rpt .qhq-chart-card > * { position: relative; z-index: 1; }
-
-@media (hover: hover) {
-  .qhq-rpt .qhq-kpi:hover::before,
-  .qhq-rpt .qhq-chart-card:hover::before { opacity: 1; }
-  .qhq-rpt .qhq-kpi:hover,
-  .qhq-rpt .qhq-chart-card:hover {
-    transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--amber) 45%, var(--border));
-    box-shadow: 0 12px 28px -14px color-mix(in srgb, var(--amber) 38%, transparent), var(--shadow-md);
-  }
+/* Ceramic-tile cards: generous radius + Steep's soft layered shadow. */
+html:not([data-theme="dark"]) body.ui-command-center .qhq-kpi,
+html:not([data-theme="dark"]) body.ui-command-center .qhq-chart-card,
+html:not([data-theme="dark"]) body.ui-command-center .qhq-card,
+html:not([data-theme="dark"]) body.ui-command-center .qhq-brief,
+html:not([data-theme="dark"]) body.ui-command-center .qhq-stat,
+html:not([data-theme="dark"]) body.ui-command-center .up-next-card,
+html:not([data-theme="dark"]) body.ui-command-center .focus-widget,
+html:not([data-theme="dark"]) body.ui-command-center .progress-card,
+html:not([data-theme="dark"]) body.ui-command-center .task-group {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: rgba(4, 23, 43, 0.05) 0 0 0 1px,
+              rgba(0, 0, 0, 0.06) 0 16px 28px -14px,
+              rgba(0, 0, 0, 0.04) 0 6px 8px -6px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .qhq-rpt .qhq-kpi,
-  .qhq-rpt .qhq-chart-card { transition: none; }
-  .qhq-rpt .qhq-kpi:hover,
-  .qhq-rpt .qhq-chart-card:hover { transform: none; }
+/* Preserve the group-colored left bar (Overdue red / Due today orange / ...):
+   keep the group card opaque, ride the rows transparently, hide the per-row
+   priority bars so there's no doubling. */
+html:not([data-theme="dark"]) body.ui-command-center .group-body { background: transparent; }
+html:not([data-theme="dark"]) body.ui-command-center .task-group .list-row { background: transparent; }
+html:not([data-theme="dark"]) body.ui-command-center .task-group .list-row::before { display: none; }
+/* Warm dawn glow behind the Home greeting only (hero context). */
+html:not([data-theme="dark"]) body.ui-command-center .qhq-home {
+  background: radial-gradient(58% 40% at 16% -4%, rgba(251, 225, 209, 0.7), transparent 62%) no-repeat;
 }
-
-/* ============================================================
-   EXPERIMENTAL — frosted-glass sidebar (command-center skin).
-   The deck becomes a translucent frosted panel; a soft brand-tinted
-   gradient is painted BEHIND it (on .app) so the blur has color to
-   refract and reads as glass rather than flat milk. Revert = delete
-   this whole block.
-   ============================================================ */
-body.ui-command-center .app {
-  background:
-    radial-gradient(130% 70% at -12% 0%, rgba(224, 85, 43, 0.18), transparent 55%),
-    radial-gradient(120% 62% at -12% 100%, rgba(62, 123, 242, 0.16), transparent 55%),
-    var(--bg);
-}
-body.ui-command-center .deck {
-  background: rgba(255, 255, 255, 0.55);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  backdrop-filter: blur(16px) saturate(150%);
-  border-right: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.5),
-              1px 0 24px -14px rgba(18, 22, 28, 0.16);
-}
-/* Hover gains translucency so items sit ON the glass; active stays a solid
-   terracotta chip to keep its label readable over the frosted panel. */
-body.ui-command-center .deck .side-item:hover {
-  background: rgba(255, 255, 255, 0.6);
-}
-/* Graceful fallback where backdrop-filter is unsupported. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  body.ui-command-center .deck { background: var(--surface); }
+/* Sidebar on fog, flat. */
+html:not([data-theme="dark"]) body.ui-command-center .deck {
+  background: var(--bg);
+  border-right: 1px solid var(--border);
 }
 
 /* Saved-views menu rows: delete button pushed to the right. */
@@ -5174,3 +5153,177 @@ body.ui-command-center .deck .side-item:hover {
   cursor: pointer; padding: 2px; border-radius: 4px; display: inline-flex; align-items: center;
 }
 .toolbar-menu-item.sv-row .sv-del:hover { color: var(--rust); background: var(--rust-bg); }
+
+/* ============================================================================
+   PANZE SKIN — Home + All Tasks only.
+   Gated by body.panze-home / body.panze-tasks (set by AppController.
+   _applyPanseSkin). A soft, light, rounded "Panze" look: white floating cards
+   on a gentle gradient wash, Plus Jakarta Sans, pastel accents — theme-aware
+   (light default + dark variant). Scoped to the two content panes + the sidebar,
+   so the topbar, modals, detail panel, and every other view keep their skin.
+
+   Strategy: remap the live tokens (--surface/--ink/...) ON THE SCOPED CONTAINERS
+   so the existing .qhq-*, .task-group, .deck rules adopt the Panze palette for
+   free (a container is a closer ancestor than <body>, so it wins var() lookups).
+   Only a couple of direct-property fights with the light "Steep" block above
+   (heading font, Home glow) use a matching-specificity prefix.
+   ============================================================================ */
+
+/* ---- palette knobs (inherited by the scoped containers) ---- */
+body.panze-home, body.panze-tasks {
+  --pz-card: #FFFFFF;
+  --pz-card-2: #F6F8FC;
+  --pz-bg: #F3F6FC;
+  --pz-bg-3: #ECEFF5;
+  --pz-wash: linear-gradient(135deg, #FCEDE4 0%, #F2F4FC 46%, #E7F0FF 100%);
+  --pz-ink: #1A1F2B;
+  --pz-ink-2: #59616F;
+  --pz-ink-3: #959EAD;
+  --pz-ink-4: #BBC2CD;
+  --pz-border: #EBEEF3;
+  --pz-border-2: #E0E4EB;
+  --pz-radius: 18px;
+  --pz-shadow-sm: 0 1px 2px rgba(28,39,64,.05), 0 1px 1px rgba(28,39,64,.03);
+  --pz-shadow: 0 14px 32px -16px rgba(28,39,64,.18), 0 3px 8px rgba(28,39,64,.05);
+  --pz-shadow-lg: 0 30px 60px -20px rgba(28,39,64,.22), 0 10px 24px -12px rgba(28,39,64,.12);
+}
+[data-theme="dark"] body.panze-home, [data-theme="dark"] body.panze-tasks {
+  --pz-card: #1B1F27;
+  --pz-card-2: #20252E;
+  --pz-bg: #14171D;
+  --pz-bg-3: #262B33;
+  --pz-wash: linear-gradient(135deg, #221912 0%, #14171d 46%, #0F131C 100%);
+  --pz-ink: #F2F4F6;
+  --pz-ink-2: #AEB6C2;
+  --pz-ink-3: #7C8696;
+  --pz-ink-4: #5A636F;
+  --pz-border: #2A2F39;
+  --pz-border-2: #353B46;
+  --pz-shadow-sm: 0 1px 2px rgba(0,0,0,.4), 0 1px 1px rgba(0,0,0,.3);
+  --pz-shadow: 0 14px 32px -16px rgba(0,0,0,.55), 0 3px 8px rgba(0,0,0,.4);
+  --pz-shadow-lg: 0 30px 60px -20px rgba(0,0,0,.65), 0 10px 24px -12px rgba(0,0,0,.5);
+}
+
+/* ---- remap tokens + font onto the scoped containers ---- */
+body.panze-home #homeWrap,
+body.panze-tasks .list-pane,
+body.panze-home .deck,
+body.panze-tasks .deck {
+  --surface: var(--pz-card);
+  --bg: var(--pz-bg);
+  --bg-2: var(--pz-card-2);
+  --bg-3: var(--pz-bg-3);
+  --ink: var(--pz-ink);
+  --ink-2: var(--pz-ink-2);
+  --ink-3: var(--pz-ink-3);
+  --ink-4: var(--pz-ink-4);
+  --border: var(--pz-border);
+  --border-strong: var(--pz-border-2);
+  --shadow-sm: var(--pz-shadow-sm);
+  --shadow-md: var(--pz-shadow);
+  --shadow-lg: var(--pz-shadow-lg);
+  /* Remap the font tokens too — several rules (e.g. .qhq-home) set
+     font-family: var(--font-body) directly, so inheriting isn't enough. */
+  --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
+}
+
+/* ---- gradient wash behind the floating cards ---- */
+body.panze-home #homeWrap { background: var(--pz-wash); }
+body.panze-tasks .list-pane { background: var(--pz-wash); }
+/* Neutralise the light "Steep" dawn-glow on .qhq-home so the wash shows
+   (matching-specificity prefix to beat that rule). */
+html:not([data-theme="dark"]) body.ui-command-center.panze-home .qhq-home { background: transparent; }
+
+/* ---- headings in Plus Jakarta (beat Steep's Fraunces serif in light) ---- */
+html:not([data-theme="dark"]) body.ui-command-center.panze-home .qhq-greet,
+html:not([data-theme="dark"]) body.ui-command-center.panze-tasks .page-title {
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* ---- rounder, softer cards across both panes ---- */
+body.panze-home .qhq-card,
+body.panze-home .qhq-stat,
+body.panze-home .qhq-brief,
+body.panze-home .qhq-donut-card,
+body.panze-tasks .task-group,
+body.panze-tasks .up-next-card,
+body.panze-tasks .focus-widget,
+body.panze-tasks .progress-card { border-radius: var(--pz-radius); }
+
+/* Home grid → responsive auto-fit so the donut card fits as a third tile. */
+body.panze-home .qhq-home-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+
+/* ---- Projects-overview donut (Home) ---- */
+body.panze-home .qhq-donut-wrap { display: flex; align-items: center; gap: 18px; padding: 6px 16px 16px; }
+body.panze-home .qhq-donut {
+  position: relative; width: 128px; height: 128px; border-radius: 50%; flex: 0 0 auto;
+}
+body.panze-home .qhq-donut-hole {
+  position: absolute; inset: 19px; border-radius: 50%; background: var(--surface);
+  display: grid; place-items: center; text-align: center; box-shadow: inset 0 0 0 1px var(--border);
+}
+body.panze-home .qhq-donut-num { font-size: 25px; font-weight: 800; color: var(--ink); line-height: 1; }
+body.panze-home .qhq-donut-lbl { font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+body.panze-home .qhq-donut-legend { display: flex; flex-direction: column; gap: 9px; font-size: 12.5px; color: var(--ink-2); flex: 1; min-width: 0; }
+body.panze-home .qhq-donut-legend div { display: flex; align-items: center; gap: 8px; }
+body.panze-home .qhq-donut-legend .d { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+body.panze-home .qhq-donut-legend b { margin-left: auto; color: var(--ink); font-weight: 700; }
+
+/* ---- All Tasks: Cards view ---- */
+body.panze-tasks .cards-view { padding: 4px 0 24px; }
+body.panze-tasks .cards-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; padding: 2px;
+}
+.cards-view .task-card {
+  position: relative; overflow: hidden; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--pz-radius, 18px);
+  box-shadow: var(--shadow-sm); padding: 15px 16px 14px; display: flex; flex-direction: column; gap: 9px;
+  transition: transform .18s var(--ease-out, ease), box-shadow .18s var(--ease-out, ease), border-color .18s var(--ease-out, ease);
+}
+@media (hover: hover) {
+  .cards-view .task-card:hover {
+    transform: translateY(-3px); box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--amber) 38%, var(--border));
+  }
+}
+.cards-view .task-card-edge { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--u-medium); }
+.cards-view .task-card.prio-critical .task-card-edge { background: var(--u-critical); }
+.cards-view .task-card.prio-urgent .task-card-edge { background: var(--u-urgent); }
+.cards-view .task-card.prio-high .task-card-edge { background: var(--u-high); }
+.cards-view .task-card.prio-low .task-card-edge { background: var(--u-low); }
+.cards-view .task-card-top { display: flex; align-items: center; justify-content: space-between; }
+.cards-view .task-card-type { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .03em; }
+.cards-view .task-card-type i { font-size: 14px; }
+.cards-view .task-card-check {
+  width: 27px; height: 27px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--ink-3); display: grid; place-items: center; flex: 0 0 auto;
+}
+.cards-view .task-card-check:hover { border-color: var(--amber); color: var(--amber); }
+.cards-view .task-card-check.is-done { background: var(--green-bg); color: var(--green); border-color: transparent; }
+.cards-view .task-card-title { font-size: 14.5px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+.cards-view .task-card.done .task-card-title { text-decoration: line-through; color: var(--ink-3); }
+.cards-view .task-card-desc {
+  font-size: 12.5px; color: var(--ink-2); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.cards-view .task-card-foot { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.cards-view .task-card-who { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--ink-2); min-width: 0; }
+.cards-view .task-card-who span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cards-view .task-card-subs { font-size: 11px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 3px; }
+.cards-view .task-card-foot .due-cell { margin-left: auto; font-size: 11.5px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .cards-view .task-card { transition: none; }
+  .cards-view .task-card:hover { transform: none; }
+}
+
+/* ---- Panze sidebar rail (scoped to the two views) ---- */
+body.panze-home .deck,
+body.panze-tasks .deck { background: var(--surface); border-right: 1px solid var(--border); }
+body.panze-home .deck .side-item,
+body.panze-tasks .deck .side-item { border-radius: 11px; }
+body.panze-home .deck .side-item.active,
+body.panze-tasks .deck .side-item.active { background: var(--amber-bg); color: var(--amber); }

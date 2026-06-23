@@ -58,6 +58,17 @@ App.HomeView = class HomeView {
     ];
   }
 
+  // Status mix over the current user's tasks, mapped to the donut's three bands:
+  // In progress (pending/review), Completed (done), Not started (todo/hold).
+  _statusMix() {
+    const me = this.controller.currentUser;
+    const all = this.controller.visibleTasks({ includeDone: true }).filter(t => t.assignee === me);
+    const inProg = all.filter(t => t.status === 'pending' || t.status === 'review').length;
+    const done = all.filter(t => t.status === 'done').length;
+    const notStarted = all.length - inProg - done; // todo / hold / unset
+    return { inProg, done, notStarted, total: all.length };
+  }
+
   // My open tasks: Focus order first (focusSeq set), then soonest due. Top 5.
   _upNext() {
     const me = this.controller.currentUser;
@@ -134,6 +145,26 @@ App.HomeView = class HomeView {
       </div>`).join('')
       : `<div class="qhq-empty">Nothing at risk right now. 🎉</div>`;
 
+    // Projects-overview donut from the real status mix (conic-gradient bands).
+    const mix = this._statusMix();
+    const pct = n => (mix.total ? (n / mix.total) * 100 : 0);
+    const a = pct(mix.inProg), b = pct(mix.done);
+    const donutStyle = mix.total
+      ? `background: conic-gradient(var(--blue) 0 ${a}%, var(--amber) ${a}% ${a + b}%, var(--bg-3) ${a + b}% 100%);`
+      : `background: var(--bg-3);`;
+    const donutHtml = `
+      <div class="qhq-card qhq-donut-card">
+        <div class="qhq-card-h"><span class="ct">Projects overview</span><span class="meta">· your tasks</span></div>
+        <div class="qhq-donut-wrap">
+          <div class="qhq-donut" style="${donutStyle}"><div class="qhq-donut-hole"><div class="qhq-donut-num tnum">${mix.total}</div><div class="qhq-donut-lbl">tasks</div></div></div>
+          <div class="qhq-donut-legend">
+            <div><span class="d" style="background:var(--blue)"></span>In progress <b class="tnum">${mix.inProg}</b></div>
+            <div><span class="d" style="background:var(--amber)"></span>Completed <b class="tnum">${mix.done}</b></div>
+            <div><span class="d" style="background:var(--bg-3)"></span>Not started <b class="tnum">${mix.notStarted}</b></div>
+          </div>
+        </div>
+      </div>`;
+
     const recHtml = recents.length ? recents.map(r => `
       <div class="qhq-rec-row" data-id="${esc(r.id)}" role="button" tabindex="0">
         <span class="qhq-rec-tx"><b>${esc(r.who)}</b> ${esc(r.what)} · <span class="qhq-rec-task">${esc(r.title)}</span></span>
@@ -171,6 +202,7 @@ App.HomeView = class HomeView {
             <div class="qhq-card-h"><span class="ct">Up next</span><span class="meta">· your queue</span></div>
             <div class="qhq-unlist">${unHtml}</div>
           </div>
+          ${donutHtml}
           <div class="qhq-card">
             <div class="qhq-card-h"><span class="ct">At risk</span><span class="meta">· needs attention</span></div>
             <div class="qhq-arlist">${riskRows}</div>

@@ -140,6 +140,7 @@ App.TaskListView = class TaskListView {
     if (this.controller.uiState.view === 'watching') return this.renderWatching();
     const layout = this.controller.uiState.layout;
     if (layout === 'kanban') return this.renderKanban();
+    if (layout === 'cards') return this.renderCards();
     if (layout === 'calendar') return this.renderCalendar();
     // "Execution order" sort shows the owner's tasks as a single drag-rankable
     // list: ranked tasks on top, the rest below to drag up into the order.
@@ -687,6 +688,68 @@ App.TaskListView = class TaskListView {
       </div>
     `;
     card.addEventListener('click', () => this.controller.selectTask(t.id));
+    App.utils.makeActivatable(card, null, `Open task: ${t.title}`);
+    return card;
+  }
+
+  /* ===== Cards view — Panze-style task cards (additive; Table is unchanged).
+     A flat responsive grid of the same filtered task set the table uses; each
+     card reuses the task data, click-to-open, finish action, and the bulk /
+     selection plumbing (data-id, .selected, .bulk-check via the row's classes).
+     Grouping is intentionally flattened here (Table keeps group-by). */
+  renderCards() {
+    const tasks = this.getFilteredTasks();
+    this.body.className = 'cards-view';
+    this.body.innerHTML = '';
+    // The table column header is meaningless for cards — hide it like kanban does.
+    const listHeader = document.querySelector('#taskViewWrap .list-header');
+    if (listHeader) listHeader.classList.add('hidden');
+    if (tasks.length === 0) { this._renderEmpty(this._emptyConfig()); return; }
+    const grid = document.createElement('div');
+    grid.className = 'cards-grid';
+    tasks.forEach(t => grid.appendChild(this.renderTaskCard(t)));
+    this.body.appendChild(grid);
+  }
+
+  renderTaskCard(t) {
+    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
+    const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
+    const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
+    const due = App.utils.formatDue(t.due);
+    const selected = this.controller.uiState.selectedTaskId === t.id;
+    const isDone = t.status === 'done';
+    const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+    const subDone = subs.filter(s => s.d).length;
+
+    const card = document.createElement('div');
+    card.className = 'task-card prio-' + (priority.cls || 'medium') + (selected ? ' selected' : '') + (isDone ? ' done' : '');
+    card.dataset.id = t.id;
+    card.innerHTML = `
+      <span class="task-card-edge"></span>
+      <div class="task-card-top">
+        <span class="task-card-type"><i class="ti ${type.icon || 'ti-file-text'}"></i>${App.utils.escapeHtml(type.label)}</span>
+        <button class="task-card-check ${isDone ? 'is-done' : ''} ${App.can('tasks.write') ? '' : 'hidden'}" data-action="finish-task" title="${isDone ? 'Mark as not done' : 'Finish this task'}" aria-label="${isDone ? 'Mark as not done' : 'Finish this task'}">
+          <i class="ti ${isDone ? 'ti-check' : 'ti-circle-check'}"></i>
+        </button>
+      </div>
+      <div class="task-card-title">${App.utils.escapeHtml(t.title)}</div>
+      ${t.description ? `<div class="task-card-desc">${App.utils.escapeHtml(t.description)}</div>` : ''}
+      <div class="task-card-foot">
+        <span class="task-card-who">${App.utils.avatarHtml(person)}<span>${App.utils.escapeHtml(person.name)}</span></span>
+        ${subs.length ? `<span class="task-card-subs" title="${subDone}/${subs.length} subtasks done"><i class="ti ti-checklist"></i>${subDone}/${subs.length}</span>` : ''}
+        <span class="due-cell ${due.cls}">${due.text}</span>
+      </div>
+    `;
+    card.addEventListener('click', (e) => {
+      const action = e.target.closest('[data-action]');
+      if (action) {
+        e.stopPropagation();
+        if (action.dataset.action === 'finish-task') this.controller.completeTask(t.id);
+        return;
+      }
+      if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
+      this.controller.selectTask(t.id);
+    });
     App.utils.makeActivatable(card, null, `Open task: ${t.title}`);
     return card;
   }
