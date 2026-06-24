@@ -225,7 +225,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Delta save: only the tasks/time-entries that actually changed are written,
   // via upserts (never delete-and-reinsert). Conflicts (a newer server version)
   // are reconciled by taking the server's copy.
-  const doSave = async () => {
+  //
+  // doSaveOnce performs exactly ONE network save: it snapshots the dirty sets
+  // (takeDirty/takeUnsavedEntries clear them synchronously) and then awaits the
+  // write. Because the dirty sets are cleared up-front, any edits the user makes
+  // DURING the await are NOT in this snapshot — they re-populate the dirty sets
+  // and must be picked up by a follow-up save. The single-flight wrapper below
+  // (`flush`) guarantees that follow-up runs. doSaveOnce must never be called
+  // directly except via flush.
+  const doSaveOnce = async () => {
     // Coalesce any pending debounce: whether we got here from the timer or from a
     // direct controller.saveNow() call, drop the outstanding timeout so the same
     // dirty set can't be saved twice. Returns whether the write succeeded so
@@ -233,19 +241,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.clearTimeout(persistTimer);
     const dirtyTasks = taskModel.takeDirty();
     const unsavedEntries = timeModel.takeUnsavedEntries();
+    // Notifications: upsert only the rows that actually changed (dirty ids) so a
+    // save doesn't clobber read/meta/html state another device may have updated.
+    const dirtyNotifs = notifModel.takeDirty();
     try {
       const result = await dataStore.save({
         tasks: dirtyTasks,
         timeEntries: unsavedEntries,
         activeTimers: timeModel.activeTimers,
-        notifications: notifModel.all(),
+        notifications: dirtyNotifs,
       });
       if (result && result.conflicts && result.conflicts.length) {
-        result.conflicts.forEach(t => taskModel.applyServer(t));
+        // Conflict reconciliation (fix #4). The datastore returns a FIELD-MERGED
+        // task: server row as base with local edits re-applied. We apply it AND
+        // keep it dirty so the single-flight retry re-saves it — this time the
+        // known version is the server's latest, so the lock passes (it converges,
+        // no infinite conflict loop). applyServer() alone would clear the dirty
+        // flag and drop the local edits, so we use applyServerKeepDirty().
+        result.conflicts.forEach(t => {
+          if (t && t._conflictMerged) {
+            delete t._conflictMerged;
+            taskModel.applyServerKeepDirty(t);
+          } else {
+            taskModel.applyServer(t);
+          }
+        });
         if (controller.toastView) {
           controller.toastView.show({
             title: 'Task updated elsewhere',
-            sub: `Refreshed ${result.conflicts.length} task${result.conflicts.length > 1 ? 's' : ''} to the latest version.`,
+            sub: `Merged ${result.conflicts.length} task${result.conflicts.length > 1 ? 's' : ''} with the latest version.`,
           });
         }
       }
@@ -255,6 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Re-flag the changes so the next save retries them instead of losing them.
       taskModel.markDirty(dirtyTasks.map(t => t.id));
       timeModel.markUnsavedEntries(unsavedEntries.map(e => e.id));
+      notifModel.markDirty(dirtyNotifs.map(n => n.id));
       if (controller.toastView) {
         // Reassure first (the changes are re-flagged above and WILL retry), then
         // include the underlying Supabase message so the cause (RLS, constraint,
@@ -276,6 +301,95 @@ document.addEventListener('DOMContentLoaded', async () => {
       return false;
     }
   };
+
+  // ---- Single-flight save lock (coalescing) ----
+  // doSaveOnce snapshots-and-clears the dirty sets up front, so concurrent
+  // triggers (the 350ms debounce, controller.saveNow, onReconnect, the exit
+  // flushes) would otherwise (a) overlap — interleaving two writes against the
+  // same rows — or (b) lose edits made during an in-flight save (those edits
+  // re-dirty the model but the running save already took its snapshot).
+  //
+  // Invariant: at most ONE doSaveOnce runs at a time. If a save is requested
+  // while one is in flight, we set `pending` and run EXACTLY ONE more save after
+  // the current one settles — that re-run's takeDirty() picks up everything that
+  // accumulated during the await. Multiple requests during one in-flight save
+  // collapse into a single re-run (coalescing), not a queue.
+  //
+  // `flush()` (fire-and-coalesce): used by the debounce / reconnect / exit
+  // triggers, where we just want "a save to happen soon"; it returns the
+  // in-flight promise and does not promise to carry the very latest edit.
+  //
+  // `flushIncludingCurrent()` (await-my-edits): used by controller.saveNow, where
+  // the caller (createTask) has just dirtied a row and must NOT proceed until a
+  // save that INCLUDED that row has completed. If a save is already in flight it
+  // took its snapshot BEFORE this caller's edit, so this caller must wait for the
+  // NEXT run to begin and finish.
+  //
+  // Correctness is tracked with a monotonically-increasing generation counter:
+  //   - `runGen`  = generation of the save currently in flight (or about to run)
+  //   - `doneGen` = highest generation that has fully settled
+  // A flushIncludingCurrent() caller computes the earliest generation that is
+  // guaranteed to have snapshotted its edit (the current run if idle, else the
+  // next run) and resolves once doneGen reaches it. `pending` collapses any
+  // number of requests-during-flight into a single re-run.
+  let saving = null;     // the in-flight doSaveOnce promise, or null when idle
+  let pending = false;   // a re-run is queued because a save was requested mid-flight
+  let runGen = 0;        // generation number of the most recently STARTED save
+  let doneGen = 0;       // generation number of the most recently SETTLED save
+  let doneOk = true;     // success boolean of the most recently settled save
+  const waiters = [];    // { gen, resolve } awaiting a save of >= gen to settle
+
+  const notifyWaiters = () => {
+    for (let i = waiters.length - 1; i >= 0; i--) {
+      if (doneGen >= waiters[i].gen) {
+        const w = waiters.splice(i, 1)[0];
+        // Report the success boolean of the run that satisfied the waiter, so
+        // createTask still skips notification delivery when the save failed.
+        w.resolve(doneOk);
+      }
+    }
+  };
+
+  const startSave = () => {
+    runGen += 1;
+    const myGen = runGen;
+    saving = doSaveOnce().then(
+      (ok) => { doneOk = ok !== false; },
+      ()   => { doneOk = false; }
+    ).finally(() => {
+      doneGen = myGen;
+      saving = null;
+      notifyWaiters();
+      if (pending) { pending = false; startSave(); }
+    });
+    return saving;
+  };
+
+  const flush = () => {
+    if (saving) { pending = true; return saving; }
+    return startSave();
+  };
+
+  // Resolves only after a save whose snapshot included the caller's just-made
+  // edits has settled. If idle, the save we start now (runGen+1) qualifies; if a
+  // save is in flight, only the next run (which we force via `pending`) does.
+  const flushIncludingCurrent = () => {
+    let targetGen;
+    if (!saving) {
+      startSave();        // bumps runGen; its snapshot includes the caller's edit
+      targetGen = runGen;
+    } else {
+      pending = true;     // force a re-run after the current (stale-snapshot) one
+      targetGen = runGen + 1;
+    }
+    if (doneGen >= targetGen) return Promise.resolve(true);
+    return new Promise((resolve) => { waiters.push({ gen: targetGen, resolve }); });
+  };
+
+  // Default coalescing entry point for ALL non-critical save triggers.
+  // doSaveOnce is never called directly elsewhere.
+  const doSave = () => flush();
+
   const persist = () => {
     window.clearTimeout(persistTimer);
     persistTimer = window.setTimeout(doSave, 350);
@@ -287,7 +401,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Let the controller force an immediate, awaitable save. createTask uses this to
   // persist a new task BEFORE it notifies the assignee — a worker's permission to
   // insert that notification (migration 040) requires the task row to already exist.
-  controller.saveNow = doSave;
+  // Uses flushIncludingCurrent so the returned promise only resolves once a save
+  // that snapshotted the just-created task has actually completed (not merely the
+  // save that happened to be in flight when saveNow was called).
+  controller.saveNow = flushIncludingCurrent;
 
   // Network resilience: show an offline banner while disconnected and flush any
   // queued changes the moment we're back online. Dirty tasks/entries are
@@ -334,7 +451,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const fresh = await dataStore.loadNotifications();
         const arrivals = fresh.filter(n => !seenNotifIds.has(n.id) && !n.read);
-        notifModel.hydrate(fresh);
+        // Non-destructive merge (NOT hydrate): keeps just-created local rows that
+        // haven't saved yet and preserves read-state set on this device, while
+        // pulling in notifications created elsewhere. Mirrors the task poll above.
+        notifModel.merge(fresh);
         fresh.forEach(n => seenNotifIds.add(n.id));
         App.EventBus.emit('notifs:refreshed');
         arrivals.slice(0, 3).forEach(n => {
@@ -487,9 +607,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setInterval(() => App.EventBus.emit('clock:tick'), 1000);
 
+  // ---- Durable save on exit (fix #2) ----
+  // beforeunload can't reliably await an async fetch — the page tears down and
+  // the in-flight request is abandoned. The reliable trigger is the
+  // `visibilitychange -> hidden` transition: it fires on tab switch, app
+  // backgrounding, and (on mobile, where beforeunload often never fires) just
+  // before the page is frozen/discarded, and the browser keeps the tab alive
+  // long enough for an awaited fetch to complete. We flush there as the PRIMARY
+  // durable path. beforeunload stays as a best-effort secondary for the
+  // desktop close/reload case.
+  //
+  // We deliberately do NOT use navigator.sendBeacon / keepalive fetch here:
+  // constructing a correct PostgREST write by hand (REST URL, anon key, the live
+  // session auth token, snake_case row mapping, AND the optimistic-lock
+  // `updated_at` predicate) duplicates fragile logic that lives in
+  // SupabaseDataStore, and a beacon can't read back the lock result to reconcile
+  // conflicts. The visibilitychange flush — which reuses the normal awaited save
+  // path — is the robust fix; beacon would trade correctness for marginal
+  // coverage of the hard-kill case.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      if (persistTimer) window.clearTimeout(persistTimer);
+      // Awaited internally by the single-flight lock; the hidden tab stays alive
+      // long enough for this to land. flush() coalesces with any in-flight save.
+      flush().catch(err => console.warn('[app] visibility flush save failed', err));
+    }
+  });
   window.addEventListener('beforeunload', () => {
     if (persistTimer) window.clearTimeout(persistTimer);
-    doSave().catch(err => console.warn('[app] final Supabase save failed', err));
+    // Best-effort only — the fetch may be cut short by the unload. The
+    // visibilitychange handler above is the durable path.
+    flush().catch(err => console.warn('[app] final Supabase save failed', err));
   });
 });
 
