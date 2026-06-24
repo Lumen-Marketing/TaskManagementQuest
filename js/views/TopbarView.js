@@ -290,6 +290,11 @@ App.TopbarView = class TopbarView {
         const next = btn.dataset.themeSet;
         document.documentElement.setAttribute('data-theme', next);
         try { localStorage.setItem('questhq:theme', next); } catch (e) {}
+        // Sync the PWA / mobile chrome band to the chosen theme.
+        try {
+          const m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', next === 'dark' ? '#08090A' : '#FBFAF8');
+        } catch (e) {}
         menu.querySelectorAll('[data-theme-set]').forEach(b => {
           const on = b === btn;
           b.classList.toggle('active', on);
