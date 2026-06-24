@@ -73,12 +73,14 @@ App.TaskListView = class TaskListView {
     };
     let t = titles[view];
     if (!t && view.startsWith('company:')) {
-      const c = App.COMPANIES[view.split(':')[1]];
-      t = { eyebrow: 'Company', title: c.label };
+      const id = view.split(':')[1];
+      const c = App.COMPANIES[id];
+      t = { eyebrow: 'Company', title: (c && c.label) || id };
     }
     if (!t && view.startsWith('person:')) {
-      const p = App.PEOPLE[view.split(':')[1]];
-      t = { eyebrow: 'Assigned to', title: p.name };
+      const id = view.split(':')[1];
+      const p = App.PEOPLE[id];
+      t = { eyebrow: 'Assigned to', title: (p && p.name) || id };
     }
     if (t) {
       this.pageEyebrow.textContent = t.eyebrow;
@@ -249,7 +251,7 @@ App.TaskListView = class TaskListView {
       card.dataset.member = memberId;
       card.innerHTML = `
         <div class="team-card-head">
-          <div class="team-avatar" style="background:${person.color};">${App.utils.escapeHtml(initials)}</div>
+          <div class="team-avatar" style="background:${App.utils.safeColor(person.color)};">${App.utils.escapeHtml(initials)}</div>
           <div class="team-info">
             <div class="team-name">${App.utils.escapeHtml(person.full || person.name || memberId)}</div>
             <div class="team-role">${App.utils.escapeHtml(role)}</div>

@@ -1137,7 +1137,7 @@ App.AppController = class AppController {
         who: this.getUserName(this.currentUser),
         what: payload.assignee === this.currentUser
           ? 'created this task'
-          : `assigned this to ${App.PEOPLE[payload.assignee].name}`,
+          : `assigned this to ${App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].name : payload.assignee}`,
         at: new Date().toISOString(),
         when: 'just now',
       }],
