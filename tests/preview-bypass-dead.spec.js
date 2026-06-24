@@ -35,9 +35,13 @@ test('local preview exposes the command-center UI shell without backend access',
 
   await expect(page.locator('body')).toHaveClass(/ui-command-center/);
   await expect(page.locator('.deck')).toBeVisible();
-  await expect(page.locator('.ai-brief')).toBeVisible();
-  await expect(page.locator('.ai-brief')).toContainText(/morning brief|ops brief/i);
   await expect(page.locator('#newTaskBtn')).toBeVisible();
+
+  // The morning brief lives on the Home view (the landing view is now the
+  // task list after the Home/Reports redesign), so switch to Home to assert it.
+  await page.evaluate(() => App.controller.setView('home'));
+  await expect(page.locator('.qhq-brief')).toBeVisible();
+  await expect(page.locator('.qhq-brief')).toContainText(/morning brief|ops brief/i);
 
   const palette = await page.evaluate(() => {
     const styles = getComputedStyle(document.body);
@@ -48,9 +52,9 @@ test('local preview exposes the command-center UI shell without backend access',
     };
   });
   expect(palette).toEqual({
-    primary: '#475569',
-    primaryBg: '#eef2f7',
-    primaryInk: '#334155',
+    primary: '#ed4e0d',
+    primaryBg: '#fdeee6',
+    primaryInk: '#c2410c',
   });
 
   const overflow = await page.evaluate(() => ({

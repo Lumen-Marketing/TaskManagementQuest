@@ -5005,37 +5005,41 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
    fills, range tracks). Brand terracotta (--amber) and the accent
    dots are kept on purpose — they read well on the dark canvas.
    ============================================================ */
+/* DARK THEME — "Linear instrument-panel": near-black onyx canvas, charcoal
+   surfaces, graphite hairline borders, snow/fog/slate text. Terracotta kept
+   as the single accent (in place of Linear's acid-lime). Status uses Linear's
+   indigo/emerald/crimson. */
 [data-theme="dark"] body.ui-command-center {
-  --bg: #14171B;          /* warm-charcoal canvas */
-  --bg-2: #1A1E23;        /* hovers / section fills */
-  --bg-3: #20252B;
-  --surface: #1B1F25;     /* cards, topbar, menus (raised over --bg) */
-  --ink: #F2F4F6;
-  --ink-2: #B7BEC7;
-  --ink-3: #838C96;
-  --ink-4: #5D656F;
-  --border: #2A2F37;
-  --border-strong: #363C46;
-  --amber: #E0552B;       /* brand accent — unchanged */
-  --amber-bg: #3A2017;
+  --bg: #08090A;          /* onyx canvas */
+  --bg-2: #0F1011;        /* charcoal — hovers / raised */
+  --bg-3: #161718;        /* obsidian — deep */
+  --surface: #0F1011;     /* charcoal — cards, topbar, nav, menus */
+  --ink: #F7F8F8;         /* snow */
+  --ink-2: #8A8F98;       /* fog */
+  --ink-3: #62666D;       /* slate */
+  --ink-4: #4A4D52;
+  --border: #23252A;      /* graphite hairline */
+  --border-strong: #383B3F; /* steel */
+  --amber: #E0552B;       /* terracotta — the single accent */
+  --amber-bg: #2A1710;
   --amber-ink: #F0A582;
-  --rust: #E0484D;
-  --rust-bg: #391B1D;
+  --rust: #EB5757;        /* Linear crimson — danger */
+  --rust-bg: #2E1718;
   --rust-ink: #F09599;
-  --blue: #5B8DF5;
-  --blue-bg: #1B2740;
-  --blue-ink: #A3C2FB;
-  --green: #3DB37D;
-  --green-bg: #15311F;
-  --green-ink: #86DAB0;
-  --u-critical: #E0484D;
-  --u-urgent: #E0484D;
+  --blue: #5E6AD2;        /* Linear indigo */
+  --blue-bg: #1B1E33;
+  --blue-ink: #A3AAF0;
+  --green: #27A644;       /* Linear emerald */
+  --green-bg: #11241A;
+  --green-ink: #7FD89A;
+  --u-critical: #EB5757;
+  --u-urgent: #EB5757;
   --u-high: #E08A0B;
-  --u-medium: #5B8DF5;
-  --u-low: #838C96;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40), 0 1px 1px rgba(0, 0, 0, 0.30);
-  --shadow-md: 0 10px 28px -10px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.40);
-  --shadow-lg: 0 28px 64px -18px rgba(0, 0, 0, 0.65), 0 10px 24px -10px rgba(0, 0, 0, 0.50);
+  --u-medium: #5E6AD2;
+  --u-low: #62666D;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.50), 0 1px 1px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 4px 32px rgba(8, 9, 10, 0.60), 0 2px 6px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 28px 64px -18px rgba(0, 0, 0, 0.70), 0 10px 24px -10px rgba(0, 0, 0, 0.55);
 }
 
 /* Segment wells + their raised "on" chip (were #EDEFF2 / #fff). */
@@ -5108,10 +5112,10 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
    ============================================================ */
 :root { --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif; }
 html:not([data-theme="dark"]) body.ui-command-center {
-  --bg: #FFFFFF;          /* white canvas */
-  --bg-2: #FAFAFA;
-  --bg-3: #F2F2F3;
-  --surface: #FFFFFF;
+  --bg: #F3F3F5;          /* soft gray — shared by sidebar + topbar + canvas */
+  --bg-2: #FFFFFF;
+  --bg-3: #ECECEE;
+  --surface: #FFFFFF;     /* white cards float on the gray */
   --ink: #18181B;         /* near-black */
   --ink-2: #46464B;
   --ink-3: #6E6E76;
@@ -5172,10 +5176,15 @@ html:not([data-theme="dark"]) body.ui-command-center .qhq-stat:hover {
 html:not([data-theme="dark"]) body.ui-command-center .group-body { background: transparent; }
 html:not([data-theme="dark"]) body.ui-command-center .task-group .list-row { background: transparent; }
 html:not([data-theme="dark"]) body.ui-command-center .task-group .list-row::before { display: none; }
-/* Sidebar: clean monochrome rail, smooth nav transition (Panze-ish). */
+/* Cohesive chrome: sidebar + topbar share the gray canvas, NO divider lines,
+   so the whole shell reads as one surface and the white cards float on it. */
 html:not([data-theme="dark"]) body.ui-command-center .deck {
-  background: #FFFFFF;
-  border-right: 1px solid var(--border);
+  background: var(--bg);
+  border-right: none;
+}
+html:not([data-theme="dark"]) body.ui-command-center .topbar {
+  background: var(--bg);
+  border-bottom: none;
 }
 html:not([data-theme="dark"]) body.ui-command-center .deck .side-item {
   transition: background var(--dropdown-open-dur) var(--resize-ease),
