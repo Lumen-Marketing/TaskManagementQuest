@@ -5233,7 +5233,7 @@ body.panze-home, body.panze-tasks {
   --pz-card-2: #F6F8FC;
   --pz-bg: #F3F6FC;
   --pz-bg-3: #ECEFF5;
-  --pz-wash: linear-gradient(135deg, #FCEDE4 0%, #F2F4FC 46%, #E7F0FF 100%);
+  --pz-wash: linear-gradient(135deg, #F2F4FC 0%, #F2F4FC 46%, #E7F0FF 100%);
   --pz-ink: #1A1F2B;
   --pz-ink-2: #59616F;
   --pz-ink-3: #959EAD;
