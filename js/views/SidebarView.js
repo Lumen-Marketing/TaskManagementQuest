@@ -363,7 +363,7 @@ App.SidebarView = class SidebarView {
     set('cnt-mine', all.filter(t => t.assignee === this.currentUser).length);
     set('cnt-hot', all.filter(t => t.priority === 'critical' || t.priority === 'urgent').length);
     set('cnt-today', all.filter(t => t.due === today).length);
-    set('cnt-overdue', all.filter(t => t.due < today).length);
+    set('cnt-overdue', all.filter(t => t.due && t.due < today).length);
     set('cnt-watching', all.filter(t => (t.watchers || []).includes(this.currentUser)).length);
     set('cnt-clock-live', this.timeModel.allActive().length);
   }
