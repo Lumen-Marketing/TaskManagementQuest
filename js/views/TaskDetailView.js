@@ -207,116 +207,124 @@ App.TaskDetailView = class TaskDetailView {
         </div>
         <div class="detail-title">${App.utils.escapeHtml(t.title)}</div>
       </div>
-      <div class="detail-body">
-        ${delegated ? `
-          <div class="delegation-banner">
-            <i class="ti ti-send"></i>
-            <span><strong>${App.utils.escapeHtml(assignee.name)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
+      <div class="detail-body detail-grid">
+        <aside class="detail-side">
+          <div class="detail-card">
+            <div class="detail-card-title">Details</div>
+            <div class="detail-row">
+              <span class="label">Company</span>
+              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(company.label)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Type</span>
+              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' }).label)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Label</span>
+              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((t.label && t.label !== 'none' ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' }).label)}</span>
+            </div>
+            ${t.type === 'bid' ? `
+            <div class="detail-row">
+              <span class="label">Bid status</span>
+              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' }).label)}</span>
+            </div>` : ''}
+            <div class="detail-row">
+              <span class="label">Status</span>
+              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.STATUSES[t.status] || { label: t.status || '—' }).label)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Assignee</span>
+              <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
+                ${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}
+              </span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Created by</span>
+              <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
+                ${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}
+              </span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Due</span>
+              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(this._formatDue(t.due))}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Time</span>
+              <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Reminder</span>
+              <span style="font-size:12px; color:var(--ink-2);">${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Priority</span>
+              <span class="priority-block ${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).cls}">${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).label}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Time spent</span>
+              <span style="font-family:'SFMono-Regular',monospace; font-size:12px; color:var(--ink-2);">${App.utils.formatHours(totalMs)} total</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Watchers</span>
+              <div>${watchersHtml}</div>
+            </div>
           </div>
-        ` : ''}
+        </aside>
 
-        ${myTimerOnThis ? `
-          <div class="timer-banner">
-            <i class="ti ti-player-record-filled"></i>
-            <span>Tracking time on this task</span>
-            <span class="live-time" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
+        <div class="detail-main">
+          ${delegated ? `
+            <div class="delegation-banner">
+              <i class="ti ti-send"></i>
+              <span><strong>${App.utils.escapeHtml(assignee.name)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
+            </div>
+          ` : ''}
+
+          ${myTimerOnThis ? `
+            <div class="timer-banner">
+              <i class="ti ti-player-record-filled"></i>
+              <span>Tracking time on this task</span>
+              <span class="live-time" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
+            </div>
+          ` : ''}
+
+          <div class="detail-actions-row">
+            <button class="btn ${myTimerOnThis ? '' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
+              <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>
+              ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
+            </button>
           </div>
-        ` : ''}
 
-        <div style="display:flex; gap:6px; margin-bottom:14px;">
-          <button class="btn ${myTimerOnThis ? '' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
-            <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>
-            ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
-          </button>
-        </div>
+          <div class="detail-card">
+            <div class="detail-card-title">Description</div>
+            <div class="detail-desc">${App.utils.escapeHtml(t.description || '—')}</div>
+          </div>
 
-        <div class="detail-row">
-          <span class="label">Company</span>
-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(company.label)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Type</span>
-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' }).label)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Label</span>
-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((t.label && t.label !== 'none' ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' }).label)}</span>
-        </div>
-        ${t.type === 'bid' ? `
-        <div class="detail-row">
-          <span class="label">Bid status</span>
-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' }).label)}</span>
-        </div>` : ''}
-        <div class="detail-row">
-          <span class="label">Status</span>
-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.STATUSES[t.status] || { label: t.status || '—' }).label)}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Assignee</span>
-          <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
-            ${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}
-          </span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Created by</span>
-          <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
-            ${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}
-          </span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Due</span>
-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(this._formatDue(t.due))}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Time</span>
-          <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Reminder</span>
-          <span style="font-size:12px; color:var(--ink-2);">${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Priority</span>
-          <span class="priority-block ${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).cls}">${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).label}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Time spent</span>
-          <span style="font-family:'SFMono-Regular',monospace; font-size:12px; color:var(--ink-2);">${App.utils.formatHours(totalMs)} total</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Watchers</span>
-          <div>${watchersHtml}</div>
-        </div>
+          <div class="detail-cards-2col">
+            <div class="detail-card">
+              <div class="detail-card-title">Subtasks</div>
+              ${subtasksHtml}
+            </div>
+            <div class="detail-card">
+              <div class="detail-card-title">Time entries</div>
+              ${entriesHtml}
+            </div>
+          </div>
 
-        <div class="detail-section">
-          <div class="detail-section-title">Description</div>
-          <div class="detail-desc">${App.utils.escapeHtml(t.description || '—')}</div>
-        </div>
+          <div class="detail-card">
+            <div class="detail-card-title">Activity</div>
+            ${activityHtml}
+          </div>
 
-        <div class="detail-section">
-          <div class="detail-section-title">Subtasks</div>
-          ${subtasksHtml}
-        </div>
+          ${this._commentsSection(t)}
 
-        <div class="detail-section">
-          <div class="detail-section-title">Time entries</div>
-          ${entriesHtml}
+          ${this.controller.canDeleteTask(t) ? `
+          <div class="detail-danger-zone">
+            <button class="btn-link-danger" data-action="delete-task" type="button">
+              <i class="ti ti-trash"></i> Delete task
+            </button>
+          </div>
+          ` : ''}
         </div>
-
-        <div class="detail-section">
-          <div class="detail-section-title">Activity</div>
-          ${activityHtml}
-        </div>
-
-        ${this._commentsSection(t)}
-
-        ${this.controller.canDeleteTask(t) ? `
-        <div class="detail-danger-zone">
-          <button class="btn-link-danger" data-action="delete-task" type="button">
-            <i class="ti ti-trash"></i> Delete task
-          </button>
-        </div>
-        ` : ''}
       </div>
     `;
 
@@ -377,8 +385,8 @@ App.TaskDetailView = class TaskDetailView {
           : `<div class="cm-empty">Loading comments…</div>`);
     const draft = (this._commentDraft && this._commentDraft[t.id]) || '';
     return `
-      <div class="detail-section cm-section">
-        <div class="detail-section-title">Comments${comments.length ? ` <span class="cm-count">${comments.length}</span>` : ''}</div>
+      <div class="detail-card cm-section">
+        <div class="detail-card-title">Comments${comments.length ? ` <span class="cm-count">${comments.length}</span>` : ''}</div>
         <div class="cm-list">${rows}</div>
         <div class="cm-composer">
           <textarea id="cmInput" class="cm-input" rows="2" placeholder="Write a comment…  @ to mention">${esc(draft)}</textarea>

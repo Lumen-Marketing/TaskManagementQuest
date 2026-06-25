@@ -999,29 +999,36 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 
 /* ---- Task detail as a full page (#taskDetailWrap) ----
    Clicking a task row relocates #detailPane into this full-page surface instead
-   of a centered modal. The detail renders as a centered reading-width card so it
-   feels like a dedicated page, with the topbar + sidebar still in view. */
+   of a centered modal. The detail lays out as a dashboard of blocks (a meta card
+   on the side, the description / subtasks / activity / comments as cards in the
+   main column) so the content fills the width instead of running far down the
+   page — with the topbar + sidebar still in view. */
 #taskDetailWrap.detail-page {
   background: var(--bg);
-  padding: 20px 16px 48px;
+  padding: 20px 24px 48px;
 }
 /* ID specificity beats the legacy mobile `.detail:not(.hidden)` overlay rules so
-   the card stays a normal in-flow element at every breakpoint. */
+   the surface stays a normal in-flow element at every breakpoint. The outer
+   container is transparent — the blocks inside are the visible cards. */
 #taskDetailWrap .detail,
 #taskDetailWrap .detail:not(.hidden) {
   position: static;
   inset: auto;
   z-index: auto;
   width: 100%;
-  max-width: 860px;
+  max-width: 1180px;
   margin: 0 auto;
-  border: 1px solid var(--border);
-  border-left: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: visible;
-  animation: slideUp var(--dur-mid) var(--ease-out);
+  animation: fadeIn var(--dur-short) var(--ease-out);
+}
+#taskDetailWrap .detail-head {
+  padding: 0 0 14px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
 }
 .detail-back {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1032,12 +1039,54 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 }
 .detail-back:hover { color: var(--ink); }
 .detail-back i { font-size: 16px; }
-/* In the wide page layout, value chips shouldn't stretch to fill the row. */
+
+/* Block dashboard: a fixed-width meta column + a flexible main column. */
+#taskDetailWrap .detail-body.detail-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  padding: 0;
+  flex: none;
+}
+.detail-side { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 18px; }
+.detail-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.detail-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+}
+.detail-card .detail-card-title:first-child { margin-top: 0; }
+.detail-card-title {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ink-3); font-weight: 600; margin-bottom: 10px;
+}
+.detail-cards-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.detail-actions-row { display: flex; gap: 6px; }
+/* Inside the meta card the rows are tighter and divided, not full-width chips. */
+#taskDetailWrap .detail-card .detail-row { padding: 6px 0; border-bottom: 1px solid var(--border); }
+#taskDetailWrap .detail-card .detail-row:last-child { border-bottom: 0; }
 #taskDetailWrap .detail-row .priority-block { justify-self: start; }
-@media (max-width: 720px) {
-  #taskDetailWrap.detail-page { padding: 12px 10px 40px; }
-  #taskDetailWrap .detail,
-  #taskDetailWrap .detail:not(.hidden) { max-width: 100%; }
+/* The comments card keeps its own internal spacing. */
+#taskDetailWrap .cm-section { margin-top: 0; }
+/* Edit mode is a single-column form (no .detail-grid) — keep it readable-width
+   and on a card rather than sprawling across the full page. */
+#taskDetailWrap .detail-body:not(.detail-grid) {
+  max-width: 720px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 900px) {
+  #taskDetailWrap.detail-page { padding: 16px 14px 40px; }
+  #taskDetailWrap .detail-body.detail-grid { grid-template-columns: 1fr; }
+  .detail-side { position: static; }
+  .detail-cards-2col { grid-template-columns: 1fr; }
 }
 
 /* New task modal: a comfortable default that scales up on widescreen, plus a
