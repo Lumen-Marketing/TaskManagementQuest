@@ -209,6 +209,28 @@ App.TaskDetailView = class TaskDetailView {
       </div>
       <div class="detail-body detail-grid">
         <aside class="detail-side">
+          ${delegated ? `
+            <div class="delegation-banner">
+              <i class="ti ti-send"></i>
+              <span><strong>${App.utils.escapeHtml(assignee.name)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
+            </div>
+          ` : ''}
+
+          ${myTimerOnThis ? `
+            <div class="timer-banner">
+              <i class="ti ti-player-record-filled"></i>
+              <span>Tracking time on this task</span>
+              <span class="live-time" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
+            </div>
+          ` : ''}
+
+          <div class="detail-actions-row">
+            <button class="btn ${myTimerOnThis ? '' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
+              <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>
+              ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
+            </button>
+          </div>
+
           <div class="detail-card">
             <div class="detail-card-title">Details</div>
             <div class="detail-row">
@@ -272,42 +294,9 @@ App.TaskDetailView = class TaskDetailView {
         </aside>
 
         <div class="detail-main">
-          ${delegated ? `
-            <div class="delegation-banner">
-              <i class="ti ti-send"></i>
-              <span><strong>${App.utils.escapeHtml(assignee.name)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
-            </div>
-          ` : ''}
-
-          ${myTimerOnThis ? `
-            <div class="timer-banner">
-              <i class="ti ti-player-record-filled"></i>
-              <span>Tracking time on this task</span>
-              <span class="live-time" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
-            </div>
-          ` : ''}
-
-          <div class="detail-actions-row">
-            <button class="btn ${myTimerOnThis ? '' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
-              <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>
-              ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
-            </button>
-          </div>
-
           <div class="detail-card">
             <div class="detail-card-title">Description</div>
             <div class="detail-desc">${App.utils.escapeHtml(t.description || '—')}</div>
-          </div>
-
-          <div class="detail-cards-2col">
-            <div class="detail-card">
-              <div class="detail-card-title">Subtasks</div>
-              ${subtasksHtml}
-            </div>
-            <div class="detail-card">
-              <div class="detail-card-title">Time entries</div>
-              ${entriesHtml}
-            </div>
           </div>
 
           <div class="detail-card">
@@ -325,6 +314,17 @@ App.TaskDetailView = class TaskDetailView {
           </div>
           ` : ''}
         </div>
+
+        <aside class="detail-rail">
+          <div class="detail-card">
+            <div class="detail-card-title">Subtasks</div>
+            ${subtasksHtml}
+          </div>
+          <div class="detail-card">
+            <div class="detail-card-title">Time entries</div>
+            ${entriesHtml}
+          </div>
+        </aside>
       </div>
     `;
 

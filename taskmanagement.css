@@ -1028,7 +1028,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 #taskDetailWrap .detail-head {
   padding: 0 0 14px;
   margin-bottom: 18px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--ink);
 }
 .detail-back {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1040,53 +1040,77 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .detail-back:hover { color: var(--ink); }
 .detail-back i { font-size: 16px; }
 
-/* Block dashboard: a fixed-width meta column + a flexible main column. */
+/* Block dashboard, organised into three columns:
+     meta (left)  ·  feed: description / activity / comments (centre)  ·  rail:
+     subtasks / time entries (right).
+   Each block is a hard black-outline card (var(--ink) adapts: near-black in the
+   light themes, snow in dark) to match the app's B&W-outline aesthetic. */
 #taskDetailWrap .detail-body.detail-grid {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr) 280px;
+  grid-template-areas: "side main rail";
   gap: 18px;
   align-items: start;
   padding: 0;
   flex: none;
 }
-.detail-side { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 18px; }
-.detail-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.detail-side { grid-area: side; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 18px; }
+.detail-main { grid-area: main; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.detail-rail { grid-area: rail; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 18px; }
+
 .detail-card {
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: var(--radius-md);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 3px 3px 0 var(--ink);
   padding: 14px 16px;
 }
 .detail-card .detail-card-title:first-child { margin-top: 0; }
 .detail-card-title {
   font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--ink-3); font-weight: 600; margin-bottom: 10px;
+  color: var(--ink-3); font-weight: 700; margin-bottom: 10px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--ink);
 }
-.detail-cards-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .detail-actions-row { display: flex; gap: 6px; }
 /* Inside the meta card the rows are tighter and divided, not full-width chips. */
-#taskDetailWrap .detail-card .detail-row { padding: 6px 0; border-bottom: 1px solid var(--border); }
-#taskDetailWrap .detail-card .detail-row:last-child { border-bottom: 0; }
+#taskDetailWrap .detail-card .detail-row { padding: 7px 0; border-bottom: 1px solid var(--border); }
+#taskDetailWrap .detail-card .detail-row:last-child { border-bottom: 0; padding-bottom: 0; }
 #taskDetailWrap .detail-row .priority-block { justify-self: start; }
 /* The comments card keeps its own internal spacing. */
 #taskDetailWrap .cm-section { margin-top: 0; }
 /* Edit mode is a single-column form (no .detail-grid) — keep it readable-width
-   and on a card rather than sprawling across the full page. */
+   and on a black-outline card rather than sprawling across the full page. */
 #taskDetailWrap .detail-body:not(.detail-grid) {
-  max-width: 720px;
+  max-width: 760px;
   padding: 18px 20px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--ink);
   border-radius: var(--radius-md);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
-@media (max-width: 900px) {
+/* Two columns (meta + feed) — the rail tucks under the meta column. */
+@media (max-width: 1180px) {
+  #taskDetailWrap .detail-body.detail-grid {
+    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-areas:
+      "side main"
+      "rail main";
+  }
+  .detail-rail { position: static; }
+}
+/* Single column on narrow/phone widths. */
+@media (max-width: 820px) {
   #taskDetailWrap.detail-page { padding: 16px 14px 40px; }
-  #taskDetailWrap .detail-body.detail-grid { grid-template-columns: 1fr; }
-  .detail-side { position: static; }
-  .detail-cards-2col { grid-template-columns: 1fr; }
+  #taskDetailWrap .detail-body.detail-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "side"
+      "rail"
+      "main";
+  }
+  .detail-side, .detail-rail { position: static; }
+  .detail-card { box-shadow: 2px 2px 0 var(--ink); }
 }
 
 /* New task modal: a comfortable default that scales up on widescreen, plus a
