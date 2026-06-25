@@ -9,10 +9,11 @@ App.TaskDetailView = class TaskDetailView {
 
     this.pane = document.getElementById('detailPane');
     this.mainEl = document.getElementById('mainPane');
-    // The detail pane is shown as a centered popup (same shell as the New task
-    // modal). We relocate the existing #detailPane node into this backdrop on
-    // open so all the render/query code below keeps targeting `this.pane`.
-    this.backdrop = null;
+    // The detail pane is shown as a full-page surface (#taskDetailWrap) rather
+    // than a centered popup. We relocate the existing #detailPane node into that
+    // wrapper on open so all the render/query code below keeps targeting
+    // `this.pane`. _pageOpen guards against repeated mounts on re-render.
+    this._pageOpen = false;
 
     // Id of the task currently open in the staged Edit form, or null. While set,
     // background re-renders are suppressed so unsaved input survives. editDraft
@@ -41,38 +42,34 @@ App.TaskDetailView = class TaskDetailView {
     }
   }
 
-  /* Mount the detail pane inside a centered modal backdrop (idempotent — called
-     on every re-render). The #detailPane node is moved into the panel so the
-     rest of this view's innerHTML/querySelector code is unchanged. */
+  /* Mount the detail pane into the full-page #taskDetailWrap surface (idempotent
+     — called on every re-render). The #detailPane node is moved into the wrapper
+     so the rest of this view's innerHTML/querySelector code is unchanged. The
+     list pane behind it is hidden so the detail reads as its own page, with the
+     topbar + sidebar kept in place (the Home/Reports full-page pattern). */
   _openModal() {
-    if (this.backdrop) return;
-    this.backdrop = document.createElement('div');
-    this.backdrop.className = 'modal-backdrop';
-    this.backdrop.id = 'taskDetailModal';
-
-    const panel = document.createElement('div');
-    panel.className = 'modal modal-detail';
-    panel.setAttribute('data-stop', '');
-    panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-modal', 'true');
-    panel.setAttribute('aria-label', 'Task details');
+    if (this._pageOpen) return;
+    const wrap = document.getElementById('taskDetailWrap');
+    if (!wrap) return;
+    this._wrap = wrap;
 
     this.pane.classList.remove('hidden');
-    panel.appendChild(this.pane);
-    this.backdrop.appendChild(panel);
-    document.body.appendChild(this.backdrop);
+    wrap.appendChild(this.pane);
+    wrap.classList.remove('hidden');
 
-    // Click outside the panel closes, like the New task modal.
-    this.backdrop.addEventListener('click', (e) => {
-      if (e.target === this.backdrop) this.controller.closeDetail();
-    });
-    // Esc closes the detail in view mode (edit mode handles its own Esc to exit
-    // editing first). Trap Tab focus inside the dialog and remember the trigger.
-    this.backdrop.addEventListener('keydown', (e) => {
+    const listPane = document.getElementById('listPane');
+    if (listPane) listPane.classList.add('hidden');
+
+    // Esc returns to the list in view mode (edit mode handles its own Esc to
+    // exit editing first). Bound on document since there's no backdrop now.
+    this._escHandler = (e) => {
       if (e.key === 'Escape' && !this.editingId) { e.preventDefault(); this.controller.closeDetail(); }
-    });
-    this._releaseTrap = App.utils.trapFocus(this.backdrop);
+    };
+    document.addEventListener('keydown', this._escHandler);
+
+    this._pageOpen = true;
     this._justOpened = true;
+    try { window.scrollTo(0, 0); wrap.scrollTop = 0; } catch (e) { /* noop */ }
   }
 
   // Placeholder shown in the detail modal when a task is selected but its data
@@ -84,11 +81,9 @@ App.TaskDetailView = class TaskDetailView {
     ).join('');
     return `
       <div class="detail-head">
+        <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Back to tasks</button>
         <div class="detail-head-top">
           <span class="sk sk-pill" style="width:88px;"></span>
-          <div class="detail-head-actions">
-            <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
-          </div>
         </div>
         <div class="sk sk-line" style="height:24px; width:75%; margin-top:8px;"></div>
       </div>
@@ -102,14 +97,18 @@ App.TaskDetailView = class TaskDetailView {
   _closeModal() {
     // Legacy side-panel layout class (no longer used, kept defensive).
     this.mainEl.classList.remove('with-detail');
-    if (this.backdrop) {
-      // Removing the backdrop detaches #detailPane with it; we keep the JS
-      // reference in this.pane and re-attach it on the next _openModal().
-      if (this._releaseTrap) { this._releaseTrap(); this._releaseTrap = null; }
-      this._justOpened = false;
-      this.backdrop.remove();
-      this.backdrop = null;
-    }
+    if (!this._pageOpen) return;
+    if (this._escHandler) { document.removeEventListener('keydown', this._escHandler); this._escHandler = null; }
+    // Hide the full-page surface and the detail node (parked inside the hidden
+    // wrapper for reuse on the next open).
+    if (this._wrap) this._wrap.classList.add('hidden');
+    this.pane.classList.add('hidden');
+    this._pageOpen = false;
+    this._justOpened = false;
+    // Restore whichever pane the current view calls for (un-hides #listPane for
+    // task views; leaves Home/Reports as-is). Leaves the detail wrapper hidden.
+    if (typeof this.controller._togglePanes === 'function') this.controller._togglePanes();
+    else { const lp = document.getElementById('listPane'); if (lp) lp.classList.remove('hidden'); }
   }
 
   render() {
@@ -199,11 +198,11 @@ App.TaskDetailView = class TaskDetailView {
 
     this.pane.innerHTML = `
       <div class="detail-head">
+        <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Back to tasks</button>
         <div class="detail-head-top">
           <span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>
           <div class="detail-head-actions">
             ${App.can('tasks.write') ? `<button class="icon-btn" data-action="edit-task" aria-label="Edit task" title="Edit task" type="button"><i class="ti ti-pencil"></i></button>` : ''}
-            <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
           </div>
         </div>
         <div class="detail-title">${App.utils.escapeHtml(t.title)}</div>
@@ -327,12 +326,9 @@ App.TaskDetailView = class TaskDetailView {
       if (App.observability) App.observability.captureException(err, { source: 'TaskDetailView.render' });
       console.error('[TaskDetailView] render failed', err);
       this.pane.innerHTML = `
-        <div class="detail-head"><div class="detail-head-top">
-          <span></span>
-          <div class="detail-head-actions">
-            <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
-          </div>
-        </div></div>
+        <div class="detail-head">
+          <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Back to tasks</button>
+        </div>
         <div style="padding:20px; font-size:13px; color:var(--ink-2); line-height:1.5;">
           Couldn't open this task's details — it may reference a removed company or person.
         </div>`;

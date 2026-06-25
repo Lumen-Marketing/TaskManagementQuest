@@ -997,6 +997,49 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   animation: none;
 }
 
+/* ---- Task detail as a full page (#taskDetailWrap) ----
+   Clicking a task row relocates #detailPane into this full-page surface instead
+   of a centered modal. The detail renders as a centered reading-width card so it
+   feels like a dedicated page, with the topbar + sidebar still in view. */
+#taskDetailWrap.detail-page {
+  background: var(--bg);
+  padding: 20px 16px 48px;
+}
+/* ID specificity beats the legacy mobile `.detail:not(.hidden)` overlay rules so
+   the card stays a normal in-flow element at every breakpoint. */
+#taskDetailWrap .detail,
+#taskDetailWrap .detail:not(.hidden) {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: visible;
+  animation: slideUp var(--dur-mid) var(--ease-out);
+}
+.detail-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 0; cursor: pointer;
+  color: var(--ink-3); font-size: 12px; font-weight: 600;
+  padding: 2px 4px 2px 0; margin-bottom: 10px;
+  border-radius: var(--radius-sm);
+}
+.detail-back:hover { color: var(--ink); }
+.detail-back i { font-size: 16px; }
+/* In the wide page layout, value chips shouldn't stretch to fill the row. */
+#taskDetailWrap .detail-row .priority-block { justify-self: start; }
+@media (max-width: 720px) {
+  #taskDetailWrap.detail-page { padding: 12px 10px 40px; }
+  #taskDetailWrap .detail,
+  #taskDetailWrap .detail:not(.hidden) { max-width: 100%; }
+}
+
 /* New task modal: a comfortable default that scales up on widescreen, plus a
    drag handle (bottom-right) so it can be resized by hand. Uses `width` (not
    `max-width`) for the breakpoints so a manual drag can still grow it up to the

@@ -197,6 +197,11 @@
     <section id="homeWrap" class="qhq-page hidden" aria-label="Home"></section>
     <section id="reportsWrap" class="qhq-page hidden" aria-label="Reports"></section>
 
+    <!-- Full-page task detail. Clicking a task row relocates #detailPane into
+         this surface (instead of a centered modal) so the details read as their
+         own page, with the topbar + sidebar kept in place — like Home/Reports. -->
+    <section id="taskDetailWrap" class="qhq-page detail-page hidden" aria-label="Task details"></section>
+
     <!-- Drag-resize handle (only visible when the detail pane is open) -->
     <div class="resize-handle hidden" id="resizeHandle" aria-hidden="true"></div>
 
