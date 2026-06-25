@@ -4488,7 +4488,7 @@ body.ui-command-center.sidebar-minimized .kbar span { display: none; }
 /* Sidebar footer: clock-in + user chip pinned to the bottom. */
 body.ui-command-center .side-foot {
   margin-top: auto;
-  border-top: 1px solid var(--border);
+  border-top: 0;
   padding: 9px 4px 4px;
   display: flex; flex-direction: column; gap: 8px;
 }
