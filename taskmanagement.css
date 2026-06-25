@@ -1028,7 +1028,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 #taskDetailWrap .detail-head {
   padding: 0 0 14px;
   margin-bottom: 18px;
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
 }
 .detail-back {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1059,17 +1059,17 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .detail-rail { grid-area: rail; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 18px; }
 
 .detail-card {
-  border: 2px solid var(--ink);
+  border: 1px solid var(--ink);
   border-radius: var(--radius-md);
   background: var(--surface);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: none;
   padding: 14px 16px;
 }
 .detail-card .detail-card-title:first-child { margin-top: 0; }
 .detail-card-title {
   font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--ink-3); font-weight: 700; margin-bottom: 10px;
-  padding-bottom: 8px; border-bottom: 2px solid var(--ink);
+  padding-bottom: 8px; border-bottom: 1px solid var(--ink);
 }
 .detail-actions-row { display: flex; gap: 6px; }
 /* Inside the meta card the rows are tighter and divided, not full-width chips. */
@@ -1083,10 +1083,10 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 #taskDetailWrap .detail-body:not(.detail-grid) {
   max-width: 760px;
   padding: 18px 20px;
-  border: 2px solid var(--ink);
+  border: 1px solid var(--ink);
   border-radius: var(--radius-md);
   background: var(--surface);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: none;
 }
 
 /* Two columns (meta + feed) — the rail tucks under the meta column. */
@@ -1110,7 +1110,6 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
       "main";
   }
   .detail-side, .detail-rail { position: static; }
-  .detail-card { box-shadow: 2px 2px 0 var(--ink); }
 }
 
 /* New task modal: a comfortable default that scales up on widescreen, plus a
