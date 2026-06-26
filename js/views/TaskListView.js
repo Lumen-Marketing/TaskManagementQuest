@@ -32,6 +32,140 @@ App.TaskListView = class TaskListView {
     document.querySelectorAll('#layoutSwitcher [data-layout]').forEach(btn => {
       btn.addEventListener('click', () => this.controller.setLayout(btn.dataset.layout));
     });
+    this._bindColumnFilters();
+  }
+
+  /* ---- Column-header filter dropdowns -------------------------------------
+     The Table header's Assignee / Priority / Status / Due labels are buttons
+     that open a dropdown to filter by that column. They drive the SAME filter
+     state as the toolbar Filter panel (uiState.filters via toggleFilterValue /
+     setFilterDueRange), so the two stay in sync and the list re-renders on the
+     existing 'filters:changed' event. */
+  _bindColumnFilters() {
+    const header = document.querySelector('#taskViewWrap .list-header');
+    if (!header) return;
+    header.querySelectorAll('.col-filter').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this._cfMenu && this._cfMenuCol === btn.dataset.filterCol) { this._closeColumnFilter(); return; }
+        this._openColumnFilter(btn);
+      });
+    });
+    App.EventBus.on('filters:changed', () => { this._syncColumnFilterState(); this._renderColumnFilterMenu(); });
+    this._syncColumnFilterState();
+  }
+
+  // Options for a given column, reading current selection from uiState.filters.
+  _columnFilterModel(col) {
+    const f = this.controller.uiState.filters || {};
+    if (col === 'assignees') {
+      const people = (App.utils.activePeople ? App.utils.activePeople() : Object.values(App.PEOPLE || {}));
+      return { multi: true, group: 'assignees', title: 'Filter assignee',
+        options: people.map(p => ({ value: p.id, label: p.name || p.full || p.id, selected: (f.assignees || []).includes(p.id) })) };
+    }
+    if (col === 'priorities') {
+      return { multi: true, group: 'priorities', title: 'Filter priority',
+        options: Object.entries(App.PRIORITIES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.priorities || []).includes(k) })) };
+    }
+    if (col === 'statuses') {
+      return { multi: true, group: 'statuses', title: 'Filter status',
+        options: Object.entries(App.STATUSES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.statuses || []).includes(k) })) };
+    }
+    // Due is a single-select range (mirrors FilterBarView's options).
+    const ranges = [
+      { value: 'all', label: 'Any' }, { value: 'overdue', label: 'Overdue' },
+      { value: 'today', label: 'Today' }, { value: 'tomorrow', label: 'Tomorrow' },
+      { value: 'week', label: 'This week' }, { value: 'month', label: 'This month' },
+    ];
+    return { multi: false, group: 'due', title: 'Filter due',
+      options: ranges.map(r => ({ value: r.value, label: r.label, selected: (f.dueRange || 'all') === r.value })) };
+  }
+
+  _openColumnFilter(btn) {
+    this._closeColumnFilter();
+    const col = btn.dataset.filterCol;
+    this._cfMenuCol = col;
+    this._cfAnchor = btn;
+    const menu = document.createElement('div');
+    menu.className = 'col-filter-menu';
+    menu.setAttribute('role', 'listbox');
+    document.body.appendChild(menu);
+    this._cfMenu = menu;
+    this._renderColumnFilterMenu();
+
+    // Position under the header button.
+    const r = btn.getBoundingClientRect();
+    menu.style.top = `${Math.round(r.bottom + 6)}px`;
+    menu.style.left = `${Math.round(Math.min(r.left, window.innerWidth - menu.offsetWidth - 12))}px`;
+    btn.setAttribute('aria-expanded', 'true');
+
+    // Close on outside click / Esc.
+    this._cfOnDocClick = (e) => { if (this._cfMenu && !this._cfMenu.contains(e.target) && e.target !== btn) this._closeColumnFilter(); };
+    this._cfOnKey = (e) => { if (e.key === 'Escape') this._closeColumnFilter(); };
+    setTimeout(() => document.addEventListener('click', this._cfOnDocClick), 0);
+    document.addEventListener('keydown', this._cfOnKey);
+  }
+
+  _renderColumnFilterMenu() {
+    if (!this._cfMenu || !this._cfMenuCol) return;
+    const model = this._columnFilterModel(this._cfMenuCol);
+    const esc = App.utils.escapeHtml;
+    this._cfMenu.innerHTML =
+      model.options.map(o => `
+        <div class="cf-item ${o.selected ? 'selected' : ''}" data-value="${esc(String(o.value))}" role="option" aria-selected="${o.selected}">
+          <span class="cf-check"><i class="ti ti-check"></i></span>
+          <span class="cf-label">${esc(o.label)}</span>
+        </div>`).join('') +
+      `<div class="cf-clear" data-action="cf-clear">Clear filter</div>`;
+
+    this._cfMenu.querySelectorAll('.cf-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const value = item.dataset.value;
+        if (model.multi) {
+          this.controller.toggleFilterValue(model.group, value);
+          // multi-select: keep the menu open; filters:changed re-renders it.
+        } else {
+          this.controller.setFilterDueRange(value);
+          this._closeColumnFilter();
+        }
+      });
+    });
+    const clear = this._cfMenu.querySelector('[data-action="cf-clear"]');
+    if (clear) clear.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._clearColumnFilter(model);
+      if (!model.multi) this._closeColumnFilter();
+    });
+  }
+
+  _clearColumnFilter(model) {
+    if (model.group === 'due') { this.controller.setFilterDueRange('all'); return; }
+    const arr = (this.controller.uiState.filters[model.group] || []).slice();
+    arr.forEach(v => this.controller.toggleFilterValue(model.group, v));
+  }
+
+  _closeColumnFilter() {
+    if (this._cfAnchor) this._cfAnchor.setAttribute('aria-expanded', 'false');
+    if (this._cfMenu) { this._cfMenu.remove(); this._cfMenu = null; }
+    this._cfMenuCol = null;
+    this._cfAnchor = null;
+    if (this._cfOnDocClick) { document.removeEventListener('click', this._cfOnDocClick); this._cfOnDocClick = null; }
+    if (this._cfOnKey) { document.removeEventListener('keydown', this._cfOnKey); this._cfOnKey = null; }
+  }
+
+  // Highlight a header button whenever its filter group is active.
+  _syncColumnFilterState() {
+    const f = this.controller.uiState.filters || {};
+    const header = document.querySelector('#taskViewWrap .list-header');
+    if (!header) return;
+    header.querySelectorAll('.col-filter').forEach(btn => {
+      const col = btn.dataset.filterCol;
+      const active = col === 'due'
+        ? (f.dueRange && f.dueRange !== 'all')
+        : ((f[col] || []).length > 0);
+      btn.classList.toggle('active', !!active);
+    });
   }
 
   subscribe() {
@@ -913,9 +1047,6 @@ App.TaskListView = class TaskListView {
 
   renderRow(t) {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
-    const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
-    const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
-    const label = t.label && t.label !== 'none' ? App.TASK_LABELS[t.label] : null;
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
@@ -943,29 +1074,24 @@ App.TaskListView = class TaskListView {
         <span class="tt-text">${App.utils.escapeHtml(t.title)}</span>
         ${subCount ? `<span class="subtask-badge">${subDone}/${subCount}</span>` : ''}
       </div>
-      <div class="type-cell">
-        <span class="type-text">${type.label}</span>
-        ${t.type === 'bid' && App.BID_STATUSES[t.bidStatus] ? `<span class="pill-bid-status ${App.BID_STATUSES[t.bidStatus].cls}">${App.BID_STATUSES[t.bidStatus].label}</span>` : ''}
-      </div>
-      <div class="label-cell">${label ? `<span class="label-text">${label.label}</span>` : '<span class="label-empty">—</span>'}</div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
         ${App.utils.avatarHtml(person)}${App.utils.escapeHtml(person.name)}
       </div>
-      <div><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
-      <div>${App.can('tasks.write')
+      <div class="priority-cell"><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
+      <div class="status-cell">${App.can('tasks.write')
         ? `<button class="pill-status status-pill-trigger ${status.cls}" data-action="open-status" data-current="${t.status || 'todo'}" title="Change status" aria-haspopup="listbox" aria-expanded="false">
             <span class="status-pill-label">${App.utils.escapeHtml(status.label)}</span>
             <i class="ti ti-chevron-down status-pill-caret"></i>
           </button>`
         : `<span class="pill-status ${status.cls}">${status.label}</span>`}</div>
       <div class="due-cell ${due.cls}">${due.text}${t.dueTime ? `<span class="due-time">${App.utils.formatClockTz(t.dueTime)}</span>` : ''}</div>
-      <div class="desc-cell" title="${App.utils.escapeHtml(t.description || '')}">${App.utils.escapeHtml(t.description || '')}</div>
       <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}">
         <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i>
       </button>
       <button class="finish-btn ${isDone ? 'is-done' : ''} ${App.can('tasks.write') ? '' : 'hidden'}" data-action="finish-task" title="${isDone ? 'Mark as not done' : 'Finish this task'}" aria-label="${isDone ? 'Mark as not done' : 'Finish this task'}">
         <i class="ti ${isDone ? 'ti-check' : 'ti-circle-check'}"></i>
       </button>
+      <button type="button" class="quick-actions-btn ${App.can('tasks.write') ? '' : 'hidden'}" data-action="open-quick" aria-label="Quick actions" aria-haspopup="dialog"><i class="ti ti-dots-vertical"></i></button>
     `;
 
     row.addEventListener('click', (e) => {
@@ -980,6 +1106,7 @@ App.TaskListView = class TaskListView {
         else if (action === 'finish-task') this.controller.completeTask(t.id);
         else if (action === 'toggle-subtasks') this._toggleSubtaskDrawer(t.id, row, target);
         else if (action === 'open-status') this._openStatusMenu(t.id, target);
+        else if (action === 'open-quick') this._openQuickSheet(t.id);
         return;
       }
       // In bulk mode the whole row toggles selection instead of opening detail.
@@ -1225,5 +1352,134 @@ App.TaskListView = class TaskListView {
       trigger.setAttribute('aria-expanded', 'false');
       trigger.focus();
     }
+  }
+
+  // ---- Mobile quick-actions bottom sheet -----------------------------------
+  // A thumb-friendly menu on each task card. Surfaces the two actions that
+  // aren't already reachable from the card — Reassign and Set due — plus
+  // Status / Mark done / Clock for one consolidated menu. Mounted on <body>
+  // (like the status menu) so the frequent list re-renders can't tear it down
+  // mid-interaction.
+  _ensureQuickSheet() {
+    if (this._quickSheetBackdrop) return this._quickSheetBackdrop;
+    const backdrop = document.createElement('div');
+    backdrop.className = 'quick-sheet-backdrop hidden';
+    const sheet = document.createElement('div');
+    sheet.className = 'quick-sheet';
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-modal', 'true');
+    sheet.setAttribute('aria-label', 'Task quick actions');
+    backdrop.appendChild(sheet);
+    document.body.appendChild(backdrop);
+    // Tap the dimmed area (outside the sheet) to dismiss; Esc closes too.
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) this._closeQuickSheet(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this._quickSheetBackdrop && !this._quickSheetBackdrop.classList.contains('hidden')) {
+        this._closeQuickSheet();
+      }
+    });
+    this._quickSheetBackdrop = backdrop;
+    this._quickSheetEl = sheet;
+    return backdrop;
+  }
+
+  _openQuickSheet(taskId) {
+    this._ensureQuickSheet();
+    this._quickSheetTaskId = taskId;
+    this._renderQuickRoot();
+    this._quickSheetBackdrop.classList.remove('hidden');
+  }
+
+  _closeQuickSheet() {
+    if (this._quickSheetBackdrop) this._quickSheetBackdrop.classList.add('hidden');
+    this._quickSheetTaskId = null;
+  }
+
+  _renderQuickRoot() {
+    const t = this.taskModel.find(this._quickSheetTaskId);
+    if (!t) return this._closeQuickSheet();
+    const myActive = this.timeModel.activeFor(this.currentUser);
+    const onThis = myActive && myActive.taskId === t.id;
+    const isDone = t.status === 'done';
+    const el = this._quickSheetEl;
+    el.innerHTML = `
+      <div class="quick-sheet-title">${App.utils.escapeHtml(t.title)}</div>
+      <button type="button" class="quick-sheet-item" data-q="status"><i class="ti ti-circle-dot"></i><span>Change status</span></button>
+      <button type="button" class="quick-sheet-item" data-q="done"><i class="ti ti-circle-check"></i><span>${isDone ? 'Mark not done' : 'Mark done'}</span></button>
+      ${App.can('clock.use') ? `<button type="button" class="quick-sheet-item" data-q="clock"><i class="ti ti-player-${onThis ? 'pause' : 'play'}"></i><span>${onThis ? 'Clock out' : 'Clock in'}</span></button>` : ''}
+      <button type="button" class="quick-sheet-item" data-q="reassign"><i class="ti ti-user"></i><span>Reassign</span></button>
+      <button type="button" class="quick-sheet-item" data-q="due"><i class="ti ti-calendar"></i><span>Set due date</span></button>
+      <div class="quick-sheet-foot"><button type="button" class="quick-sheet-item quick-sheet-cancel" data-q="cancel"><span>Cancel</span></button></div>
+    `;
+    el.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._onQuickRootAction(b.dataset.q);
+    }));
+  }
+
+  _onQuickRootAction(q) {
+    const id = this._quickSheetTaskId;
+    if (q === 'cancel') return this._closeQuickSheet();
+    if (q === 'done') { this.controller.completeTask(id); return this._closeQuickSheet(); }
+    if (q === 'clock') { this.controller.toggleTimerForTask(id); return this._closeQuickSheet(); }
+    if (q === 'status') return this._renderQuickStatus();
+    if (q === 'reassign') return this._renderQuickReassign();
+    if (q === 'due') return this._renderQuickDue();
+  }
+
+  _renderQuickStatus() {
+    const el = this._quickSheetEl;
+    el.innerHTML = `
+      <div class="quick-sheet-title">Set status</div>
+      ${Object.entries(App.STATUSES).map(([k, v]) =>
+        `<button type="button" class="quick-sheet-item" data-status="${k}"><span class="status-dot ${v.cls}"></span><span>${App.utils.escapeHtml(v.label)}</span></button>`
+      ).join('')}
+      <div class="quick-sheet-foot"><button type="button" class="quick-sheet-item" data-q="back"><span>Back</span></button></div>
+    `;
+    el.querySelectorAll('[data-status]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.controller.updateTaskField(this._quickSheetTaskId, 'status', b.dataset.status);
+      this._closeQuickSheet();
+    }));
+    el.querySelector('[data-q="back"]').addEventListener('click', () => this._renderQuickRoot());
+  }
+
+  _renderQuickReassign() {
+    const t = this.taskModel.find(this._quickSheetTaskId);
+    const people = App.utils.peopleInCompany(t.company, this.currentUser) || [];
+    const el = this._quickSheetEl;
+    el.innerHTML = `
+      <div class="quick-sheet-title">Reassign to</div>
+      ${people.map(p =>
+        `<button type="button" class="quick-sheet-item" data-assignee="${p.id}">${App.utils.avatarHtml(p)}<span>${App.utils.escapeHtml(p.name)}${p.id === t.assignee ? ' · current' : ''}</span></button>`
+      ).join('')}
+      <div class="quick-sheet-foot"><button type="button" class="quick-sheet-item" data-q="back"><span>Back</span></button></div>
+    `;
+    el.querySelectorAll('[data-assignee]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.controller.reassignTask(this._quickSheetTaskId, b.dataset.assignee);
+      this._closeQuickSheet();
+    }));
+    el.querySelector('[data-q="back"]').addEventListener('click', () => this._renderQuickRoot());
+  }
+
+  _renderQuickDue() {
+    const t = this.taskModel.find(this._quickSheetTaskId);
+    const el = this._quickSheetEl;
+    el.innerHTML = `
+      <div class="quick-sheet-title">Set due date</div>
+      <div class="quick-sheet-due"><input type="date" value="${t.due || ''}" aria-label="Due date" /></div>
+      <div class="quick-sheet-foot">
+        <button type="button" class="quick-sheet-item" data-q="back"><span>Back</span></button>
+        <button type="button" class="quick-sheet-item quick-sheet-primary" data-action="due-save"><span>Save</span></button>
+      </div>
+    `;
+    el.querySelector('[data-action="due-save"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const v = el.querySelector('input[type="date"]').value;
+      this.controller.updateTaskField(this._quickSheetTaskId, 'due', v || null);
+      this._closeQuickSheet();
+    });
+    el.querySelector('[data-q="back"]').addEventListener('click', () => this._renderQuickRoot());
   }
 };

@@ -351,7 +351,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 /* List */
 .list-row {
   display: grid;
-  grid-template-columns: 28px 1fr 150px 116px 100px 110px 124px 80px 88px 28px 36px;
+  grid-template-columns: 28px 1fr 100px 110px 124px 80px 28px 36px;
   gap: 12px;
   align-items: center;
   padding: 14px 24px;
@@ -367,7 +367,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-row.selected .task-title-cell { color: var(--ink); }
 .list-header {
   display: grid;
-  grid-template-columns: 28px 1fr 150px 116px 100px 110px 124px 80px 88px 28px 36px;
+  grid-template-columns: 28px 1fr 100px 110px 124px 80px 28px 36px;
   gap: 12px;
   padding: 10px 48px;
   font-size: 12.5px;
@@ -380,6 +380,66 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   border-bottom: none;
   cursor: default;
 }
+/* Clickable column-header filters (Assignee / Priority / Status / Due).
+   Styled to read like the plain header labels, with a caret + hover/active. */
+.list-header .col-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  color: var(--ink-3);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.list-header .col-filter i { font-size: 13px; opacity: 0.6; }
+.list-header .col-filter:hover { background: var(--bg-2); color: var(--ink); }
+.list-header .col-filter.active { color: var(--amber); }
+.list-header .col-filter.active i { opacity: 1; }
+
+/* Header filter dropdown — floats over the page, mirrors the status menu. */
+.col-filter-menu {
+  position: fixed;
+  z-index: 90;
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 5px;
+}
+.col-filter-menu .cf-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.col-filter-menu .cf-item:hover { background: var(--bg-2); }
+.col-filter-menu .cf-check {
+  width: 16px; height: 16px; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--border-strong); border-radius: 5px;
+  color: transparent; font-size: 11px;
+}
+.col-filter-menu .cf-item.selected .cf-check { background: var(--amber); border-color: var(--amber); color: #fff; }
+.col-filter-menu .cf-clear {
+  margin-top: 4px; border-top: 1px solid var(--border); padding-top: 7px;
+  color: var(--ink-3); font-size: 12px; text-align: center; cursor: pointer; border-radius: var(--radius-sm);
+}
+.col-filter-menu .cf-clear:hover { background: var(--bg-2); color: var(--ink); }
+
 /* ============================================================
    Monday-style task groups — a colored left rail + sticky head
    + collapse chevron. Each .task-group sets --group-color via
@@ -1882,12 +1942,11 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
     white-space: normal;
     font-size: 14px;
   }
-  .list-row .type-cell { order: 3; }
-  .list-row .due-cell  { order: 4; }
-  .list-row > div:nth-child(9) { order: 5; } /* status pill */
-  /* Hide the lower-signal columns on a phone */
-  .list-row > div:nth-child(5),  /* company */
-  .list-row > div:nth-child(7),  /* priority */
+  .list-row .due-cell    { order: 4; }
+  .list-row .status-cell { order: 5; }
+  /* Hide the lower-signal columns on a phone (class-based — robust to column
+     changes; the desktop table now drops Type/Label/Description entirely). */
+  .list-row .priority-cell,
   .list-row .more-btn { display: none; }
   /* .meta-cell carries an inline display:flex, so override needs !important */
   .list-row .meta-cell { display: none !important; }
