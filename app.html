@@ -97,6 +97,7 @@
         <div class="side-item" data-view="today" title="Today"><i class="ti ti-flame" style="color: var(--rust);"></i><span class="side-item-label">Today</span><span class="side-count danger-text" id="cnt-today">0</span></div>
         <div class="side-item" data-view="overdue" title="Overdue"><i class="ti ti-alert-triangle"></i><span class="side-item-label">Overdue</span><span class="side-count" id="cnt-overdue">0</span></div>
         <div class="side-item" data-view="watching" title="Watching"><i class="ti ti-eye"></i><span class="side-item-label">Watching</span><span class="side-count" id="cnt-watching">0</span></div>
+        <div class="side-item" data-view="wallboard" title="Wallboard"><i class="ti ti-device-tv"></i><span class="side-item-label">Wallboard</span></div>
       </div>
 
       <div id="sideExtraGroups">
@@ -196,6 +197,7 @@
     <!-- Full-page redesigned surfaces (HomeView / ReportsView render into these) -->
     <section id="homeWrap" class="qhq-page hidden" aria-label="Home"></section>
     <section id="reportsWrap" class="qhq-page hidden" aria-label="Reports"></section>
+    <section id="wallboardWrap" class="qhq-page hidden" aria-label="Wallboard"></section>
 
     <!-- Full-page task detail. Clicking a task row relocates #detailPane into
          this surface (instead of a centered modal) so the details read as their
@@ -274,6 +276,7 @@
 <script src="js/views/FocusWidgetView.js"></script>
 <script src="js/views/HomeView.js"></script>
 <script src="js/views/ReportsView.js"></script>
+<script src="js/views/WallboardView.js"></script>
 
 <!-- Controllers -->
 <script src="js/controllers/AppController.js"></script>

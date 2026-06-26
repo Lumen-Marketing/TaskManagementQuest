@@ -82,6 +82,7 @@ App.AppController = class AppController {
 
   canView(view) {
     if (view === 'home') return App.can('home.view');
+    if (view === 'wallboard') return App.can('home.view');
     if (view === 'reports') return App.can('reports.view');
     if (view === 'approvals') return App.can('roles.manage');
     if (view === 'admin:clock') return App.can('clock.admin');
@@ -485,7 +486,7 @@ App.AppController = class AppController {
     const v = this.uiState.view;
     // Home / Reports are full-page surfaces in their own containers — hide the
     // entire list pane (table + toolbar + page head + ops brief) for them.
-    const isPageView = v === 'home' || v === 'reports';
+    const isPageView = v === 'home' || v === 'reports' || v === 'wallboard';
     const isTimeView = v.startsWith('time:') || v === 'approvals' || v === 'team:hierarchy' || v.startsWith('admin:');
     this._applyPanseSkin();
     const listPane = document.getElementById('listPane');
@@ -494,6 +495,9 @@ App.AppController = class AppController {
     const reportsWrap = document.getElementById('reportsWrap');
     if (homeWrap) homeWrap.classList.toggle('hidden', v !== 'home');
     if (reportsWrap) reportsWrap.classList.toggle('hidden', v !== 'reports');
+    const wallboardWrap = document.getElementById('wallboardWrap');
+    if (wallboardWrap) wallboardWrap.classList.toggle('hidden', v !== 'wallboard');
+    document.body.classList.toggle('wallboard-active', v === 'wallboard');
 
     document.getElementById('taskViewWrap').classList.toggle('hidden', isTimeView || isPageView);
     document.getElementById('timeViewWrap').classList.toggle('hidden', !isTimeView);
