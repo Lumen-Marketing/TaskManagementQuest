@@ -57,24 +57,27 @@ App.TaskDetailView = class TaskDetailView {
     wrap.appendChild(this.pane);
     wrap.classList.remove('hidden');
 
-    const listPane = document.getElementById('listPane');
-    if (listPane) listPane.classList.add('hidden');
+    // Hide every sibling work-surface behind the detail page. A task can be
+    // opened from any view — the list (#listPane) but also the Home / Reports
+    // full-page surfaces (their Up next / recents rows call selectTask) — so all
+    // of them must be hidden or they'd stack in-flow above the detail. On close,
+    // _togglePanes restores whichever one the current view calls for.
+    ['listPane', 'homeWrap', 'reportsWrap'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    });
 
-    // Esc returns to the list in view mode (edit mode handles its own Esc to
-    // exit editing first). Bound on document since there's no backdrop now.
-    this._escHandler = (e) => {
-      if (e.key === 'Escape' && !this.editingId) { e.preventDefault(); this.controller.closeDetail(); }
-    };
-    document.addEventListener('keydown', this._escHandler);
-
+    // Esc closes the detail in view mode via the app's global Escape handler
+    // (app.js → controller.handleEscape → closeDetail); no local handler needed.
+    // Edit mode stops Esc from reaching it so editing exits to the read view.
     this._pageOpen = true;
     this._justOpened = true;
     try { window.scrollTo(0, 0); wrap.scrollTop = 0; } catch (e) { /* noop */ }
   }
 
-  // Placeholder shown in the detail modal when a task is selected but its data
+  // Placeholder shown on the detail page when a task is selected but its data
   // hasn't loaded yet (rare — the detail normally renders instantly from the
-  // in-memory model). Keeps a working Close button.
+  // in-memory model). Keeps a working "Back to tasks" button.
   _detailSkeletonHtml() {
     const rows = Array.from({ length: 7 }).map(() =>
       `<div class="detail-row"><span class="sk sk-line" style="width:70px;"></span><span class="sk sk-line" style="width:130px;"></span></div>`
@@ -98,7 +101,6 @@ App.TaskDetailView = class TaskDetailView {
     // Legacy side-panel layout class (no longer used, kept defensive).
     this.mainEl.classList.remove('with-detail');
     if (!this._pageOpen) return;
-    if (this._escHandler) { document.removeEventListener('keydown', this._escHandler); this._escHandler = null; }
     // Hide the full-page surface and the detail node (parked inside the hidden
     // wrapper for reuse on the next open).
     if (this._wrap) this._wrap.classList.add('hidden');
@@ -770,7 +772,10 @@ App.TaskDetailView = class TaskDetailView {
     // Keydown on the edit body (replaced each render) so listeners can't stack.
     const editBody = this.pane.querySelector('.detail-body');
     if (editBody) editBody.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') exitEdit();
+      // Escape exits edit mode back to the read view only. Stop it bubbling to
+      // the document-level Escape handler (controller.handleEscape), which would
+      // otherwise also closeDetail() and kick the user all the way to the list.
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); exitEdit(); }
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); save(); }
     });
 

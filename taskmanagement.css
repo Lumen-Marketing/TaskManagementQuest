@@ -971,31 +971,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .modal-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
 .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); background: var(--bg-2); display: flex; justify-content: space-between; align-items: center; }
 
-/* Task detail rendered as a centered popup (same shell as the New task modal)
-   instead of a right-hand side panel. The #detailPane markup is moved into a
-   .modal panel at runtime, so we just drop the side-panel border and let the
-   detail body scroll within the modal's height cap. */
-#taskDetailModal .modal { max-width: 560px; }
-.modal-detail .detail {
-  border-left: 0;
-  background: transparent;
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-/* The detail is ALWAYS rendered inside this .modal shell now (TaskDetailView
-   relocates #detailPane into a .modal-backdrop). It must stay a normal child of
-   the modal — not the legacy `position: fixed; inset: 0` full-screen overlay
-   from the old side-panel era. On phones those mobile `.detail:not(.hidden)`
-   rules pulled it out of the white modal, and combined with the transparent
-   background above it rendered see-through over the list and covered the topbar.
-   Higher specificity (+ :not(.hidden)) so it beats every mobile breakpoint. */
-.modal-detail .detail:not(.hidden) {
-  position: static;
-  inset: auto;
-  z-index: auto;
-  animation: none;
-}
+/* (The task detail is no longer a modal — it renders as a full page; see the
+   "#taskDetailWrap" block below. The old #taskDetailModal / .modal-detail rules
+   were removed as dead code.) */
 
 /* ---- Task detail as a full page (#taskDetailWrap) ----
    Clicking a task row relocates #detailPane into this full-page surface instead
@@ -1106,8 +1084,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
     grid-template-columns: 1fr;
     grid-template-areas:
       "side"
-      "rail"
-      "main";
+      "main"
+      "rail";
   }
   .detail-side, .detail-rail { position: static; }
 }
