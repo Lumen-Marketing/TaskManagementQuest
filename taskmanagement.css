@@ -5582,8 +5582,8 @@ body.panze-home .qhq-donut-legend .d { width: 10px; height: 10px; border-radius:
 body.panze-home .qhq-donut-legend b { margin-left: auto; color: var(--ink); font-weight: 700; }
 
 /* ---- All Tasks: Cards view ---- */
-body.panze-tasks .cards-view { padding: 4px 0 24px; }
-body.panze-tasks .cards-grid {
+.cards-view { padding: 4px 24px 24px; }
+.cards-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; padding: 2px;
 }
 .cards-view .task-card {
@@ -5597,6 +5597,18 @@ body.panze-tasks .cards-grid {
     transform: translateY(-3px); box-shadow: var(--shadow-md);
     border-color: color-mix(in srgb, var(--amber) 38%, var(--border));
   }
+}
+/* Flat-outline restyle: cards read as flat blocks (no shadow/lift) like the
+   rest of the ui-command-center surfaces. Light-theme scoped to match. */
+html:not([data-theme="dark"]) body.ui-command-center .cards-view .task-card {
+  border: 1px solid var(--block-line);
+  border-radius: var(--block-radius);
+  box-shadow: none;
+}
+html:not([data-theme="dark"]) body.ui-command-center .cards-view .task-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--block-line);
 }
 .cards-view .task-card-edge { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--u-medium); }
 .cards-view .task-card.prio-critical .task-card-edge { background: var(--u-critical); }
