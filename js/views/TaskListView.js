@@ -67,9 +67,9 @@ App.TaskListView = class TaskListView {
       return { multi: true, group: 'priorities', title: 'Filter priority',
         options: Object.entries(App.PRIORITIES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.priorities || []).includes(k) })) };
     }
-    if (col === 'statuses') {
-      return { multi: true, group: 'statuses', title: 'Filter status',
-        options: Object.entries(App.STATUSES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.statuses || []).includes(k) })) };
+    if (col === 'types') {
+      return { multi: true, group: 'types', title: 'Filter type',
+        options: Object.entries(App.TASK_TYPES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.types || []).includes(k) })) };
     }
     // Due is a single-select range (mirrors FilterBarView's options).
     const ranges = [
@@ -1047,7 +1047,7 @@ App.TaskListView = class TaskListView {
 
   renderRow(t) {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
-    const status = App.STATUSES[t.status] || App.STATUSES.todo;
+    const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
@@ -1069,21 +1069,17 @@ App.TaskListView = class TaskListView {
     row.innerHTML = `
       <button type="button" class="bulk-check" data-action="bulk-toggle" aria-label="Select task" aria-pressed="${bulkSel}"><i class="ti ti-check"></i></button>
       <input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${App.can('tasks.write') ? '' : 'disabled'} />
+      <span class="row-dot ${priority.cls}" title="${priority.label}"></span>
       <div class="task-title-cell ${isDone ? 'done' : ''}">
         ${subCount ? `<button class="subtask-toggle${expanded ? ' expanded' : ''}" data-action="toggle-subtasks" aria-label="Toggle subtasks" title="${subDone}/${subCount} subtasks done"><i class="ti ti-chevron-right"></i></button>` : '<span class="subtask-spacer" aria-hidden="true"></span>'}
         <span class="tt-text">${App.utils.escapeHtml(t.title)}</span>
         ${subCount ? `<span class="subtask-badge">${subDone}/${subCount}</span>` : ''}
       </div>
+      <div class="priority-cell"><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
+      <div class="type-cell"><span class="type-text type-${t.type || 'admin'}">${App.utils.escapeHtml(type.label)}</span></div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
         ${App.utils.avatarHtml(person)}${App.utils.escapeHtml(person.name)}
       </div>
-      <div class="priority-cell"><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
-      <div class="status-cell">${App.can('tasks.write')
-        ? `<button class="pill-status status-pill-trigger ${status.cls}" data-action="open-status" data-current="${t.status || 'todo'}" title="Change status" aria-haspopup="listbox" aria-expanded="false">
-            <span class="status-pill-label">${App.utils.escapeHtml(status.label)}</span>
-            <i class="ti ti-chevron-down status-pill-caret"></i>
-          </button>`
-        : `<span class="pill-status ${status.cls}">${status.label}</span>`}</div>
       <div class="due-cell ${due.cls}">${due.text}${t.dueTime ? `<span class="due-time">${App.utils.formatClockTz(t.dueTime)}</span>` : ''}</div>
       <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}">
         <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i>

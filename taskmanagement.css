@@ -365,6 +365,15 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-row:hover { background: var(--bg-2); }
 .list-row.selected { background: var(--bg-2); }
 .list-row.selected .task-title-cell { color: var(--ink); }
+/* Leading priority dot — colored by urgency, like the clean List layout. */
+.list-row .row-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--u-medium); justify-self: center; flex: 0 0 auto;
+}
+.list-row .row-dot.priority-critical { background: var(--u-critical); }
+.list-row .row-dot.priority-urgent   { background: var(--u-urgent); }
+.list-row .row-dot.priority-high     { background: var(--u-high); }
+.list-row .row-dot.priority-low      { background: var(--u-low); }
 .list-header {
   display: grid;
   grid-template-columns: 28px 1fr 100px 110px 124px 80px 28px 36px;
@@ -1935,17 +1944,18 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
     gap: 8px;
     padding: 12px 14px;
   }
+  .list-row .row-dot { order: 0; }
   .list-row > input[type="checkbox"] { order: 0; }
   .list-row .task-title-cell {
     order: 1;
-    flex: 1 1 calc(100% - 40px);
+    flex: 1 1 calc(100% - 52px);
     white-space: normal;
     font-size: 14px;
   }
-  .list-row .due-cell    { order: 4; }
-  .list-row .status-cell { order: 5; }
+  .list-row .type-cell { order: 4; }
+  .list-row .due-cell  { order: 5; }
   /* Hide the lower-signal columns on a phone (class-based — robust to column
-     changes; the desktop table now drops Type/Label/Description entirely). */
+     changes). Keep dot + title + type + due for a compact card. */
   .list-row .priority-cell,
   .list-row .more-btn { display: none; }
   /* .meta-cell carries an inline display:flex, so override needs !important */
@@ -2771,15 +2781,13 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 .task-group + .task-group { margin-top: 8px; }
 .task-group::before { width: 4px; border-top-left-radius: var(--radius-md); border-bottom-left-radius: var(--radius-md); }
 
-/* Hide the per-row checkbox column AND collapse the 28px column it lived in,
-   so the task title is the first column instead.
-   Column order: Task | Assignee | Priority | Status | Due | timer | finish
-   (Type / Label / Description columns were removed 2026-06-27.) */
+/* Hide the per-row checkbox; a small priority dot leads each row instead.
+   Column order: dot | Task | Priority | Type | Assignee | Due | timer | finish
+   (matches the clean List layout, 2026-06-27.) */
 .list-row > input[type="checkbox"] { display: none; }
-#taskViewWrap .list-header > span:first-child { display: none; }
 .list-row,
 #taskViewWrap .list-header {
-  grid-template-columns: minmax(0, 1fr) 124px 90px 118px 78px 28px 36px;
+  grid-template-columns: 14px minmax(0, 1fr) 92px 120px 124px 78px 28px 36px;
   gap: 10px;
   padding-left: 18px;
   padding-right: 18px;
@@ -2804,18 +2812,17 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 #taskViewWrap .list-header > span:nth-child(8) {
   text-align: center;
 }
-/* Center the middle columns only. The row has TWO hidden leading elements —
-   the bulk-select button AND the checkbox — so the title is nth-child(3) and
-   the middle columns (Type…Due) are 4–9. Centering the title cell is what made
-   long titles size-to-content and spill over the next column instead of
-   truncating, so it MUST stay out of this list (Task + Description are prose,
-   left-aligned). */
-.list-row > :nth-child(4),
+/* Center the middle columns only. The row has THREE hidden/leading elements —
+   the bulk-select button, the checkbox, and the priority dot — so the title is
+   nth-child(4) and the middle columns (Priority…Due + the two action buttons)
+   are 5–10. The title MUST stay left (prose); centering it made long titles
+   size-to-content and spill over the next column instead of truncating. */
 .list-row > :nth-child(5),
 .list-row > :nth-child(6),
 .list-row > :nth-child(7),
 .list-row > :nth-child(8),
-.list-row > :nth-child(9) {
+.list-row > :nth-child(9),
+.list-row > :nth-child(10) {
   justify-self: center;
   text-align: center;
 }
@@ -3024,7 +3031,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     /* Title track min is 0 so a long name shrinks-and-ellipsises instead of
        forcing the grid wider than the pane. 7-column layout fits comfortably
        here now that Type/Label/Description are gone. */
-    grid-template-columns: minmax(0, 1fr) 116px 84px 118px 74px 28px 34px;
+    grid-template-columns: 14px minmax(0, 1fr) 84px 104px 116px 74px 28px 34px;
     gap: 6px;
   }
 }
@@ -3039,7 +3046,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 @media (min-width: 1201px) and (max-width: 1365px) {
   .list-row,
   #taskViewWrap .list-header {
-    grid-template-columns: minmax(0, 1fr) 124px 90px 118px 78px 28px 36px;
+    grid-template-columns: 14px minmax(0, 1fr) 92px 120px 124px 78px 28px 36px;
     gap: 8px;
   }
 }
