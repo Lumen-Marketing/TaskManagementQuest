@@ -3089,6 +3089,17 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
 }
 
+/* ---- Wide desktop (≥1366px) ---- The Task column is otherwise 1fr and eats
+   all the extra width, pushing the data columns far to the right. Cap Task at a
+   fixed width and let a trailing spacer absorb the slack, so the columns sit
+   right next to the title. Narrower tiers keep 1fr (no excess width there). */
+@media (min-width: 1366px) {
+  .list-row,
+  #taskViewWrap .list-header {
+    grid-template-columns: 12px 380px 104px 76px 92px 96px 116px 64px 22px 28px minmax(0, 1fr);
+  }
+}
+
 /* ---- Small tablets (721-900px) — collapse second-row widgets ---- */
 @media (max-width: 900px) and (min-width: 721px) {
   .page-head { flex-wrap: wrap; gap: 10px; padding: 14px 18px; }
