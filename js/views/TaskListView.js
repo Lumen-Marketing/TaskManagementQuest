@@ -71,6 +71,14 @@ App.TaskListView = class TaskListView {
       return { multi: true, group: 'types', title: 'Filter type',
         options: Object.entries(App.TASK_TYPES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.types || []).includes(k) })) };
     }
+    if (col === 'statuses') {
+      return { multi: true, group: 'statuses', title: 'Filter status',
+        options: Object.entries(App.STATUSES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.statuses || []).includes(k) })) };
+    }
+    if (col === 'companies') {
+      return { multi: true, group: 'companies', title: 'Filter label',
+        options: Object.entries(App.COMPANIES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.companies || []).includes(k) })) };
+    }
     // Due is a single-select range (mirrors FilterBarView's options).
     const ranges = [
       { value: 'all', label: 'Any' }, { value: 'overdue', label: 'Overdue' },
@@ -1048,6 +1056,8 @@ App.TaskListView = class TaskListView {
   renderRow(t) {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
+    const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
+    const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
@@ -1075,8 +1085,14 @@ App.TaskListView = class TaskListView {
         <span class="tt-text">${App.utils.escapeHtml(t.title)}</span>
         ${subCount ? `<span class="subtask-badge">${subDone}/${subCount}</span>` : ''}
       </div>
+      <div class="status-cell">${App.can('tasks.write')
+        ? `<button class="status-sel status-${t.status || 'todo'}" data-action="open-status" data-current="${t.status || 'todo'}" title="Change status" aria-haspopup="listbox" aria-expanded="false">
+            <span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span>
+          </button>`
+        : `<span class="status-sel status-${t.status || 'todo'}"><span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span></span>`}</div>
       <div class="priority-cell"><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
       <div class="type-cell"><span class="type-text type-${t.type || 'admin'}">${App.utils.escapeHtml(type.label)}</span></div>
+      <div class="label-cell"><span class="co-chip co-${t.company || 'roofing'}"><span class="co-dot"></span>${App.utils.escapeHtml(company.label)}</span></div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
         ${App.utils.avatarHtml(person)}${App.utils.escapeHtml(person.name)}
       </div>

@@ -354,9 +354,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   grid-template-columns: 28px 1fr 100px 110px 124px 80px 28px 36px;
   gap: 12px;
   align-items: center;
-  padding: 14px 24px;
+  padding: 6px 16px;
   border-bottom: 1px solid var(--bg-3);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   background: var(--surface);
@@ -374,6 +374,42 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-row .row-dot.priority-urgent   { background: var(--u-urgent); }
 .list-row .row-dot.priority-high     { background: var(--u-high); }
 .list-row .row-dot.priority-low      { background: var(--u-low); }
+
+/* Compact status chip (dot + text), matching the dense List picture. */
+.list-row .status-sel {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  background: transparent; border: 0; font: inherit; color: var(--ink-2);
+  font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0;
+}
+.list-row .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: 0 0 auto; }
+.list-row .status-sel.status-todo    .status-dot { background: var(--blue); }
+.list-row .status-sel.status-pending .status-dot { background: var(--ink-3); }
+.list-row .status-sel.status-hold    .status-dot { background: var(--rust); }
+.list-row .status-sel.status-review  .status-dot { background: var(--amber); }
+.list-row .status-sel.status-done    .status-dot { background: var(--green); }
+.list-row .status-sel-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Compact company "Label" chip (dot + text). */
+.list-row .co-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap;
+}
+.list-row .co-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: 0 0 auto; }
+.list-row .co-chip.co-roofing  .co-dot { background: var(--u-high); }
+.list-row .co-chip.co-drafting .co-dot { background: var(--blue); }
+.list-row .co-chip.co-lumen    .co-dot { background: var(--amber); }
+
+/* Dense look: tighter pills/text, and row actions only on hover so the
+   resting row ends cleanly at Due (like the picture). */
+.list-row .priority-block { font-size: 11px; padding: 2px 8px; }
+.list-row .type-text { font-size: 12.5px; }
+.list-row .meta-cell { font-size: 12.5px; }
+.list-row .timer-btn,
+.list-row .finish-btn { opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+.list-row:hover .timer-btn,
+.list-row:hover .finish-btn,
+.list-row .timer-btn.active,
+.list-row .finish-btn.is-done { opacity: 1; }
 .list-header {
   display: grid;
   grid-template-columns: 28px 1fr 100px 110px 124px 80px 28px 36px;
@@ -1952,11 +1988,13 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
     white-space: normal;
     font-size: 14px;
   }
-  .list-row .type-cell { order: 4; }
-  .list-row .due-cell  { order: 5; }
+  .list-row .status-cell { order: 4; }
+  .list-row .due-cell    { order: 5; }
   /* Hide the lower-signal columns on a phone (class-based — robust to column
-     changes). Keep dot + title + type + due for a compact card. */
+     changes). Keep dot + title + status + due for a compact card. */
   .list-row .priority-cell,
+  .list-row .type-cell,
+  .list-row .label-cell,
   .list-row .more-btn { display: none; }
   /* .meta-cell carries an inline display:flex, so override needs !important */
   .list-row .meta-cell { display: none !important; }
@@ -2787,10 +2825,10 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 .list-row > input[type="checkbox"] { display: none; }
 .list-row,
 #taskViewWrap .list-header {
-  grid-template-columns: 14px minmax(0, 1fr) 92px 120px 124px 78px 28px 36px;
-  gap: 10px;
-  padding-left: 18px;
-  padding-right: 18px;
+  grid-template-columns: 12px minmax(0, 1fr) 104px 76px 92px 96px 116px 64px 22px 28px;
+  gap: 8px;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 /* The .list-header sits outside the .task-group cards (which have 24px side
    margins). Mirror those margins on the header so its column labels line up
@@ -3031,7 +3069,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     /* Title track min is 0 so a long name shrinks-and-ellipsises instead of
        forcing the grid wider than the pane. 7-column layout fits comfortably
        here now that Type/Label/Description are gone. */
-    grid-template-columns: 14px minmax(0, 1fr) 84px 104px 116px 74px 28px 34px;
+    grid-template-columns: 12px minmax(0, 1fr) 92px 70px 84px 88px 104px 60px 22px 26px;
     gap: 6px;
   }
 }
@@ -3046,7 +3084,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 @media (min-width: 1201px) and (max-width: 1365px) {
   .list-row,
   #taskViewWrap .list-header {
-    grid-template-columns: 14px minmax(0, 1fr) 92px 120px 124px 78px 28px 36px;
+    grid-template-columns: 12px minmax(0, 1fr) 104px 76px 92px 96px 116px 64px 22px 28px;
     gap: 8px;
   }
 }
@@ -4842,8 +4880,8 @@ body.ui-command-center .group-count {
 }
 body.ui-command-center .group-body { background: var(--surface); }
 body.ui-command-center .task-group .list-row {
-  min-height: 48px;
-  padding: 8px 16px;
+  min-height: 34px;
+  padding: 5px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   position: relative;
