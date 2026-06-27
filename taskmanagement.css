@@ -3102,6 +3102,8 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   #taskViewWrap .list-header,
   .task-group {
     max-width: 1120px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
