@@ -385,9 +385,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-header .col-filter {
   display: inline-flex;
   align-items: center;
+  justify-self: center;   /* match the centered row cells (Assignee…Due) */
   gap: 4px;
   padding: 2px 6px;
-  margin: -2px -6px;
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
@@ -2773,12 +2773,13 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 
 /* Hide the per-row checkbox column AND collapse the 28px column it lived in,
    so the task title is the first column instead.
-   Column order: Task | Type | Label | Assignee | Priority | Status | Due | Description | timer | finish */
+   Column order: Task | Assignee | Priority | Status | Due | timer | finish
+   (Type / Label / Description columns were removed 2026-06-27.) */
 .list-row > input[type="checkbox"] { display: none; }
 #taskViewWrap .list-header > span:first-child { display: none; }
 .list-row,
 #taskViewWrap .list-header {
-  grid-template-columns: minmax(0, 1fr) 86px 118px 124px 90px 118px 78px minmax(110px, 1.3fr) 28px 36px;
+  grid-template-columns: minmax(0, 1fr) 124px 90px 118px 78px 28px 36px;
   gap: 10px;
   padding-left: 18px;
   padding-right: 18px;
@@ -3021,16 +3022,11 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .list-row,
   #taskViewWrap .list-header {
     /* Title track min is 0 so a long name shrinks-and-ellipsises instead of
-       forcing the grid wider than the pane. */
-    grid-template-columns: minmax(0, 1fr) 92px 84px 80px 146px 74px 28px 34px;
+       forcing the grid wider than the pane. 7-column layout fits comfortably
+       here now that Type/Label/Description are gone. */
+    grid-template-columns: minmax(0, 1fr) 116px 84px 118px 74px 28px 34px;
     gap: 6px;
   }
-  #taskViewWrap .list-header > span:nth-child(4),   /* Label label */
-  #taskViewWrap .list-header > span:nth-child(9) {  /* Description label */
-    display: none;
-  }
-  .list-row .label-cell,
-  .list-row .desc-cell { display: none; }
 }
 
 /* ---- Laptop band (1201-1365px) ----
@@ -3043,11 +3039,9 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 @media (min-width: 1201px) and (max-width: 1365px) {
   .list-row,
   #taskViewWrap .list-header {
-    grid-template-columns: minmax(0, 1fr) 76px 100px 86px 150px 80px minmax(110px, 1.3fr) 28px 34px;
+    grid-template-columns: minmax(0, 1fr) 124px 90px 118px 78px 28px 36px;
     gap: 8px;
   }
-  #taskViewWrap .list-header > span:nth-child(4) { display: none; } /* Label label */
-  .list-row .label-cell { display: none; }
 }
 
 /* ---- Small tablets (721-900px) — collapse second-row widgets ---- */
@@ -4841,8 +4835,8 @@ body.ui-command-center .group-count {
 }
 body.ui-command-center .group-body { background: var(--surface); }
 body.ui-command-center .task-group .list-row {
-  min-height: 70px;
-  padding: 14px 16px;
+  min-height: 48px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   position: relative;
