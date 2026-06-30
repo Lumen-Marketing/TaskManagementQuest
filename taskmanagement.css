@@ -3102,7 +3102,7 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   #taskViewWrap .list-header,
   #taskViewWrap .task-group {
-    max-width: 1120px;
+    max-width: 1180px;
     margin-left: auto !important;
     margin-right: auto !important;
   }
@@ -5801,3 +5801,110 @@ body.wallboard-active #mainPane { padding: 0; }
 
 .wb-foot { margin-top: 22px; font-size: 12px; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
 .wb-live { width: 9px; height: 9px; border-radius: 50%; background: var(--green); display: inline-block; }
+
+/* ============================================================
+   Boss-spec Tasks table reskin (2026-06-27) — match the approved
+   Hanken Grotesk / warm-palette mockup. Scoped to #taskViewWrap so it
+   out-ranks the ui-command-center skin rules. Applies to the shared
+   List/Table rows. Palette: hair #ebe7e2, row-hair #f3f0eb, head #faf9f7,
+   text #1c1a18/#56504a/#908981/#a59e96, accent #ee5a26.
+   ============================================================ */
+#taskViewWrap .list-header,
+#taskViewWrap .list-row,
+#taskViewWrap .list-row .task-title-cell,
+#taskViewWrap .group-title {
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+}
+
+/* Group card: flat, hairline border, rounded. */
+#taskViewWrap .task-group {
+  border: 1px solid #ebe7e2;
+  border-radius: 14px;
+  box-shadow: none;
+  background: #fff;
+  overflow: hidden;
+}
+#taskViewWrap .task-group > .group-head {
+  background: #faf9f7;
+  border-bottom: 1px solid #ebe7e2;
+  padding: 9px 14px;
+}
+/* Group dot (the letter pill becomes a small colored dot) + mono count chip. */
+#taskViewWrap .group-head .group-pill {
+  width: 8px; height: 8px; min-width: 0; padding: 0;
+  border-radius: 50%; font-size: 0; line-height: 0;
+}
+#taskViewWrap .group-head .group-title { color: #1c1a18; font-weight: 700; font-size: 12.5px; }
+#taskViewWrap .group-head .group-count {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #908981;
+  background: #efeae5; border-radius: 20px; padding: 1px 8px; font-weight: 600;
+}
+
+/* Rows: warm hairlines, hover, compact padding, base ink. */
+#taskViewWrap .task-group .list-row { border-bottom: 1px solid #f3f0eb; }
+#taskViewWrap .task-group .list-row:last-child { border-bottom: none; }
+#taskViewWrap .task-group .list-row { padding: 8px 14px; min-height: 0; }
+#taskViewWrap .list-row:hover { background: #faf9f7; }
+#taskViewWrap .list-row .task-title-cell { color: #1c1a18; font-weight: 600; }
+
+/* Column headers: plain, tiny, uppercase, muted — no filter caret (the boss
+   spec edits via the cells, not the headers; filtering still works on click). */
+#taskViewWrap .list-header { color: #a59e96; }
+#taskViewWrap .list-header .col-filter,
+#taskViewWrap .list-header > span {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #a59e96;
+}
+#taskViewWrap .list-header .col-filter i { display: none; }
+
+/* Status — dot + text. */
+#taskViewWrap .list-row .status-sel { color: #56504a; font-weight: 500; font-size: 12.5px; }
+#taskViewWrap .list-row .status-sel.status-todo    .status-dot { background: #ee5a26; }
+#taskViewWrap .list-row .status-sel.status-pending .status-dot { background: #9a938a; }
+#taskViewWrap .list-row .status-sel.status-hold    .status-dot { background: #e0484d; }
+#taskViewWrap .list-row .status-sel.status-review  .status-dot { background: #7c6bd0; }
+#taskViewWrap .list-row .status-sel.status-done    .status-dot { background: #3a9b6e; }
+
+/* Priority — soft-tinted pill. */
+#taskViewWrap .list-row .priority-block {
+  height: 21px; line-height: 21px; padding: 0 9px; border-radius: 6px;
+  font-size: 10.5px; font-weight: 700;
+}
+#taskViewWrap .list-row .priority-block.priority-critical,
+#taskViewWrap .list-row .priority-block.priority-urgent { background: #fce8e6; color: #c43c2f; }
+#taskViewWrap .list-row .priority-block.priority-high   { background: #fcefe0; color: #b5701a; }
+#taskViewWrap .list-row .priority-block.priority-medium { background: #e9f0fb; color: #3066b8; }
+#taskViewWrap .list-row .priority-block.priority-low    { background: #f1efeb; color: #8a847c; }
+
+/* Type — colored text. */
+#taskViewWrap .list-row .type-text { font-weight: 500; color: #8f867b; }
+#taskViewWrap .list-row .type-text.type-invoicing { color: #b5701a; }
+#taskViewWrap .list-row .type-text.type-bid       { color: #6a52c4; }
+#taskViewWrap .list-row .type-text.type-admin     { color: #8f867b; }
+#taskViewWrap .list-row .type-text.type-lead      { color: #3a9b6e; }
+#taskViewWrap .list-row .type-text.type-ar        { color: #c2762e; }
+#taskViewWrap .list-row .type-text.type-meeting   { color: #3e7bf2; }
+#taskViewWrap .list-row .type-text.type-web_dev   { color: #8268dc; }
+
+/* Label (company) — dot + text. */
+#taskViewWrap .list-row .co-chip { color: #56504a; font-weight: 500; }
+#taskViewWrap .list-row .co-chip.co-roofing  .co-dot { background: #e0902a; }
+#taskViewWrap .list-row .co-chip.co-drafting .co-dot { background: #3e7bf2; }
+#taskViewWrap .list-row .co-chip.co-lumen    .co-dot { background: #8268dc; }
+
+/* Assignee avatar + Due (mono). */
+#taskViewWrap .list-row .meta-cell { color: #56504a; font-weight: 500; }
+#taskViewWrap .list-row .meta-cell .avatar-sm,
+#taskViewWrap .list-row .meta-cell .avatar { width: 22px; height: 22px; font-size: 9px; }
+#taskViewWrap .list-row .due-cell {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 500; color: #a59e96;
+}
+#taskViewWrap .list-row .due-cell.over,
+#taskViewWrap .list-row .due-cell.overdue { color: #c2641f; }
+
+/* Leading priority dot — exact mockup colors. */
+#taskViewWrap .list-row .row-dot { width: 9px; height: 9px; }
+#taskViewWrap .list-row .row-dot.priority-critical,
+#taskViewWrap .list-row .row-dot.priority-urgent { background: #e0484d; }
+#taskViewWrap .list-row .row-dot.priority-high   { background: #ee9a3a; }
+#taskViewWrap .list-row .row-dot.priority-medium { background: #3e7bf2; }
+#taskViewWrap .list-row .row-dot.priority-low    { background: #b8b0a6; }
