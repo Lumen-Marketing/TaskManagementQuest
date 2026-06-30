@@ -1,9 +1,9 @@
 window.App = window.App || {};
 
 /* HomeView — the personal landing screen (every role). Greeting + quick actions,
-   a 4-chip stat strip, the AI brief (static), an "Up next" card (Focus order then
-   soonest-due), the live "At risk" list, and a "Recents" activity feed built from
-   each task's persisted activity[]. Renders into #homeWrap when view is 'home'. */
+   a 4-chip stat strip, an "Up next" card (Focus order then soonest-due), the live
+   "At risk" list, and a "Recents" activity feed built from each task's persisted
+   activity[]. Renders into #homeWrap when view is 'home'. */
 App.HomeView = class HomeView {
   constructor({ controller }) {
     this.controller = controller;
@@ -187,15 +187,6 @@ App.HomeView = class HomeView {
         </div>
 
         <div class="qhq-statstrip">${statHtml}</div>
-
-        <div class="qhq-brief">
-          <div class="qhq-brief-h">
-            <span class="qhq-spark"><i class="ti ti-sparkles"></i></span>
-            <span class="t">Your morning brief</span>
-            <span class="b">QUEST AI</span>
-          </div>
-          <p class="qhq-brief-tx">Prioritize overdue and high-impact work first. An automatic summary of your workspace will appear here — for now, the cards below show what needs you.</p>
-        </div>
 
         <div class="qhq-home-grid">
           <div class="qhq-card">
