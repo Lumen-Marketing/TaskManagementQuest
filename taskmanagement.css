@@ -5824,6 +5824,8 @@ body.wallboard-active #mainPane { padding: 0; }
   background: #fff;
   overflow: hidden;
 }
+/* No colored left rail — the mockup leads each row with a priority dot only. */
+#taskViewWrap .task-group::before { display: none; }
 #taskViewWrap .task-group > .group-head {
   background: #faf9f7;
   border-bottom: 1px solid #ebe7e2;
