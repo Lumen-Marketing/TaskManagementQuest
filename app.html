@@ -194,6 +194,10 @@
          own page, with the topbar + sidebar kept in place — like Home/Reports. -->
     <section id="taskDetailWrap" class="qhq-page detail-page hidden" aria-label="Task details"></section>
 
+    <!-- Full-page New task form. Replaces the old centered modal; rendered by
+         NewTaskPageView and driven by controller.uiState.creatingTask. -->
+    <section id="newTaskWrap" class="qhq-page detail-page hidden" aria-label="New task"></section>
+
     <!-- Drag-resize handle (only visible when the detail pane is open) -->
     <div class="resize-handle hidden" id="resizeHandle" aria-hidden="true"></div>
 
@@ -255,7 +259,7 @@
 <script src="js/views/ClockDashboardView.js"></script>
 <script src="js/views/HierarchyView.js"></script>
 <script src="js/views/TourView.js"></script>
-<script src="js/views/NewTaskModalView.js"></script>
+<script src="js/views/NewTaskPageView.js"></script>
 <script src="js/views/ProfileView.js"></script>
 <script src="js/views/FilterBarView.js"></script>
 <script src="js/views/ResizeHandleView.js"></script>

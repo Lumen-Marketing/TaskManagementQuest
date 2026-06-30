@@ -198,19 +198,72 @@ App.TaskDetailView = class TaskDetailView {
         ).join('')
       : `<div style="font-size:11.5px; color:var(--ink-3);">No time logged yet</div>`;
 
+    const statusObj = App.STATUSES[t.status] || { label: t.status || '—', cls: '' };
+    const typeObj = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' };
+    const priObj = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
+    const labelObj = (t.label && t.label !== 'none') ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' };
+    const bidObj = App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' };
+    const isDone = t.status === 'done';
+    const today = App.utils.todayISO(0);
+    const overdue = !!(t.due && t.due < today && !isDone);
+    let daysOverdue = 0;
+    if (overdue) {
+      const d1 = new Date(t.due + 'T00:00:00'), d2 = new Date(today + 'T00:00:00');
+      daysOverdue = Math.max(1, Math.round((d2 - d1) / 86400000));
+    }
+    const isWatching = watcherIds.includes(this.currentUser);
+    const commentsCount = (t.comments || []).length;
+    const subtaskCount = (t.subtasks || []).length;
+    const canDelete = this.controller.canDeleteTask(t);
+    const watcherChipsHtml = watcherIds.map(w => {
+      const p = App.PEOPLE[w];
+      return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
+    }).join('');
+    // Remember which tab the user is on so a background re-render (a posted
+    // comment, a sync poll) doesn't yank them back to Activity.
+    this._activeTab = this._activeTab || 'activity';
+    const tabActive = (name) => this._activeTab === name ? ' active' : '';
+
     this.pane.innerHTML = `
-      <div class="detail-head">
-        <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Back to tasks</button>
-        <div class="detail-head-top">
-          <span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>
-          <div class="detail-head-actions">
-            ${App.can('tasks.write') ? `<button class="icon-btn" data-action="edit-task" aria-label="Edit task" title="Edit task" type="button"><i class="ti ti-pencil"></i></button>` : ''}
+      <div class="tdp-head">
+        <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
+        <div class="tdp-chiprow">
+          <button class="tdp-chip tdp-chip-status ${statusObj.cls}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
+          ${t.type === 'bid' ? `<span class="tdp-chip">${App.utils.escapeHtml(bidObj.label)}</span>` : ''}
+          <span class="tdp-chip">${App.utils.escapeHtml(typeObj.label)}</span>
+        </div>
+        <div class="tdp-title-row">
+          <h1 class="tdp-title">${App.utils.escapeHtml(t.title)}</h1>
+          <div class="tdp-head-actions">
+            <button class="btn" data-action="focus-comment" type="button"><i class="ti ti-message"></i>Comment</button>
+            <button class="btn ${isWatching ? 'is-on' : ''}" data-action="toggle-watch" type="button"><i class="ti ti-eye"></i>${isWatching ? 'Watching' : 'Watch'}</button>
+            ${App.can('tasks.write') ? `<button class="btn" data-action="edit-task" type="button"><i class="ti ti-pencil"></i>Edit</button>` : ''}
+            <button class="btn icon-btn" data-action="overflow" aria-label="More actions" aria-haspopup="true" type="button"><i class="ti ti-dots"></i></button>
+            <div class="tdp-overflow-menu hidden" id="tdpOverflow">
+              <button class="tdp-overflow-item" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
+              ${canDelete ? `<button class="tdp-overflow-item danger" data-action="delete-task" type="button"><i class="ti ti-trash"></i>Delete task</button>` : ''}
+            </div>
           </div>
         </div>
-        <div class="detail-title">${App.utils.escapeHtml(t.title)}</div>
+        <div class="tdp-meta">
+          <span class="tdp-meta-item">${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span>
+          <span class="tdp-meta-item ${overdue ? 'over' : ''}"><i class="ti ti-calendar"></i>Due ${App.utils.escapeHtml(this._formatDue(t.due))}${overdue ? ` · ${daysOverdue}d overdue` : ''}</span>
+          <span class="tdp-meta-item"><span class="tdp-pri-dot ${priObj.cls}"></span>${App.utils.escapeHtml(priObj.label)}</span>
+        </div>
       </div>
-      <div class="detail-body detail-grid">
-        <aside class="detail-side">
+
+      <div class="tdp-stats">
+        <span class="pill ${statusObj.cls}">${App.utils.escapeHtml(statusObj.label)}</span>
+        <div class="tdp-stat"><b>${commentsCount}</b><span>Comments</span></div>
+        <div class="tdp-stat"><b>${watcherIds.length}</b><span>Watchers</span></div>
+        <div class="tdp-stat"><b>${subtaskCount}</b><span>Subtasks</span></div>
+        ${overdue ? `<div class="tdp-stat over"><b>${daysOverdue}d</b><span>Overdue</span></div>` : ''}
+        <div class="tdp-stats-spacer"></div>
+        ${App.can('tasks.write') ? `<button class="btn btn-primary tdp-complete ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
+      </div>
+
+      <div class="tdp-grid">
+        <aside class="tdp-col-left">
           ${delegated ? `
             <div class="delegation-banner">
               <i class="ti ti-send"></i>
@@ -233,98 +286,66 @@ App.TaskDetailView = class TaskDetailView {
             </button>
           </div>
 
-          <div class="detail-card">
-            <div class="detail-card-title">Details</div>
-            <div class="detail-row">
-              <span class="label">Company</span>
-              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(company.label)}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Type</span>
-              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' }).label)}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Label</span>
-              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((t.label && t.label !== 'none' ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' }).label)}</span>
-            </div>
-            ${t.type === 'bid' ? `
-            <div class="detail-row">
-              <span class="label">Bid status</span>
-              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' }).label)}</span>
-            </div>` : ''}
-            <div class="detail-row">
-              <span class="label">Status</span>
-              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.STATUSES[t.status] || { label: t.status || '—' }).label)}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Assignee</span>
-              <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
-                ${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}
-              </span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Created by</span>
-              <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
-                ${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}
-              </span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Due</span>
-              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(this._formatDue(t.due))}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Time</span>
-              <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Reminder</span>
-              <span style="font-size:12px; color:var(--ink-2);">${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Priority</span>
-              <span class="priority-block ${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).cls}">${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).label}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Time spent</span>
-              <span style="font-family:'SFMono-Regular',monospace; font-size:12px; color:var(--ink-2);">${App.utils.formatHours(totalMs)} total</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Watchers</span>
-              <div>${watchersHtml}</div>
-            </div>
+          <div class="tdp-card">
+            <div class="tdp-card-title"><i class="ti ti-info-circle"></i> Details</div>
+            <div class="detail-row"><span class="label">Status</span><span class="detail-val">${App.utils.escapeHtml(statusObj.label)}</span></div>
+            <div class="detail-row"><span class="label">Priority</span><span class="priority-block ${priObj.cls}">${App.utils.escapeHtml(priObj.label)}</span></div>
+            <div class="detail-row"><span class="label">Assignee</span><span class="detail-val detail-person">${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
+            <div class="detail-row"><span class="label">Created by</span><span class="detail-val detail-person">${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}</span></div>
+            <div class="detail-row"><span class="label">Due</span><span class="detail-val ${overdue ? 'over' : ''}">${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
+            <div class="detail-row"><span class="label">Time</span><span class="detail-val">${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
+            <div class="detail-row"><span class="label">Reminder</span><span class="detail-val">${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
+            <div class="detail-row"><span class="label">Type</span><span class="detail-val">${App.utils.escapeHtml(typeObj.label)}</span></div>
+            ${t.type === 'bid' ? `<div class="detail-row"><span class="label">Bid status</span><span class="detail-val">${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
+            <div class="detail-row"><span class="label">Label</span><span class="detail-val">${App.utils.escapeHtml(labelObj.label)}</span></div>
+            <div class="detail-row"><span class="label">Company</span><span class="detail-val">${App.utils.escapeHtml(company.label)}</span></div>
+            <div class="detail-row"><span class="label">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
           </div>
         </aside>
 
-        <div class="detail-main">
-          <div class="detail-card">
-            <div class="detail-card-title">Description</div>
-            <div class="detail-desc">${App.utils.escapeHtml(t.description || '—')}</div>
+        <div class="tdp-col-main">
+          <div class="tdp-card">
+            <div class="tdp-card-title">Description</div>
+            <div class="detail-desc">${App.utils.escapeHtml(t.description || 'No description yet.')}</div>
           </div>
 
-          <div class="detail-card">
-            <div class="detail-card-title">Activity</div>
-            ${activityHtml}
-          </div>
+          ${subtaskCount ? `
+          <div class="tdp-card">
+            <div class="tdp-card-title">Subtasks</div>
+            ${subtasksHtml}
+          </div>` : ''}
 
-          ${this._commentsSection(t)}
-
-          ${this.controller.canDeleteTask(t) ? `
-          <div class="detail-danger-zone">
-            <button class="btn-link-danger" data-action="delete-task" type="button">
-              <i class="ti ti-trash"></i> Delete task
-            </button>
+          <div class="tdp-card tdp-tabs">
+            <div class="tdp-tablist" role="tablist">
+              <button class="tdp-tab${tabActive('activity')}" data-tab="activity" type="button"><i class="ti ti-bolt"></i>Activity</button>
+              <button class="tdp-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments</button>
+              <button class="tdp-tab${tabActive('history')}" data-tab="history" type="button"><i class="ti ti-history"></i>History</button>
+            </div>
+            <div class="tdp-tabpanel${tabActive('activity')}" data-panel="activity">${activityHtml}</div>
+            <div class="tdp-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
+            <div class="tdp-tabpanel${tabActive('history')}" data-panel="history">${entriesHtml}</div>
           </div>
-          ` : ''}
         </div>
 
-        <aside class="detail-rail">
-          <div class="detail-card">
-            <div class="detail-card-title">Subtasks</div>
-            ${subtasksHtml}
+        <aside class="tdp-col-right">
+          <div class="tdp-card">
+            <div class="tdp-card-title">Quick actions</div>
+            <div class="tdp-qa-grid">
+              <button class="tdp-qa" data-action="qa-reassign" type="button"><i class="ti ti-user-share"></i>Reassign</button>
+              <button class="tdp-qa" data-action="qa-subtask" type="button"><i class="ti ti-subtask"></i>Add subtask</button>
+              <button class="tdp-qa" data-action="qa-setdue" type="button"><i class="ti ti-calendar"></i>Set due</button>
+              <button class="tdp-qa" data-action="qa-note" type="button"><i class="ti ti-note"></i>Add note</button>
+              <button class="tdp-qa" data-action="qa-logcall" type="button"><i class="ti ti-phone"></i>Log call</button>
+              <button class="tdp-qa" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
+            </div>
           </div>
-          <div class="detail-card">
-            <div class="detail-card-title">Time entries</div>
-            ${entriesHtml}
+
+          <div class="tdp-card">
+            <div class="tdp-card-title"><i class="ti ti-eye"></i> Watchers</div>
+            <div class="watchers-cell tdp-watchers">
+              ${watcherChipsHtml || '<span class="tdp-empty">No watchers</span>'}
+              <button class="tdp-watch-add" data-action="toggle-watch" title="${isWatching ? 'Stop watching' : 'Watch this task'}" aria-label="Toggle watch" type="button"><i class="ti ${isWatching ? 'ti-eye-off' : 'ti-plus'}"></i></button>
+            </div>
           </div>
         </aside>
       </div>
@@ -348,21 +369,92 @@ App.TaskDetailView = class TaskDetailView {
   }
 
   bindHandlers(t) {
-    this.pane.querySelector('[data-action="close"]').addEventListener('click', () => this.controller.closeDetail());
+    const q = (sel) => this.pane.querySelector(sel);
+    const qa = (sel) => this.pane.querySelectorAll(sel);
 
-    const editBtn = this.pane.querySelector('[data-action="edit-task"]');
-    if (editBtn) editBtn.addEventListener('click', () => {
+    q('[data-action="close"]').addEventListener('click', () => this.controller.closeDetail());
+
+    // Enter the staged Edit form, optionally focusing a specific field. The
+    // Reassign / Set due / Add subtask quick actions reuse this rather than
+    // bespoke popovers — same proven save path, far less surface area.
+    const enterEdit = (focusId) => {
       this.editingId = t.id;
       this.editDraft = this._draftFromTask(t);
-      this.renderEditMode(t, { focusTitle: true });
-    });
+      this.renderEditMode(t, { focusTitle: focusId === 'edit-title' });
+      if (focusId && focusId !== 'edit-title') {
+        const el = document.getElementById(focusId);
+        if (el) { el.focus(); try { el.showPicker && el.showPicker(); } catch (e) { /* not user-activated */ } }
+      }
+    };
 
-    const timerBtn = this.pane.querySelector('[data-action="toggle-timer"]');
+    const editBtn = q('[data-action="edit-task"]');
+    if (editBtn) editBtn.addEventListener('click', () => enterEdit('edit-title'));
+
+    const timerBtn = q('[data-action="toggle-timer"]');
     if (timerBtn) timerBtn.addEventListener('click', () => this.controller.toggleTimerForTask(t.id));
 
-    // View mode is read-only — all field editing lives behind the Edit button.
-    const deleteBtn = this.pane.querySelector('[data-action="delete-task"]');
-    if (deleteBtn) deleteBtn.addEventListener('click', () => this.controller.deleteTask(t.id));
+    // Delete lives in the ⋯ overflow menu now (may be absent if not permitted).
+    qa('[data-action="delete-task"]').forEach(el => el.addEventListener('click', () => this.controller.deleteTask(t.id)));
+
+    const completeBtn = q('[data-action="mark-complete"]');
+    if (completeBtn) completeBtn.addEventListener('click', () => this.controller.completeTask(t.id));
+
+    // Watch toggle — header button AND the watchers-card "+" share one action.
+    qa('[data-action="toggle-watch"]').forEach(el => el.addEventListener('click', () => this.controller.toggleSelfWatch(t.id)));
+
+    // Tabs — switch active class locally (no re-render) and remember the choice
+    // so the next background re-render restores it (see _activeTab in render).
+    const setTab = (name) => {
+      this._activeTab = name;
+      qa('.tdp-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      qa('.tdp-tabpanel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+    };
+    qa('.tdp-tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+
+    const focusComment = () => {
+      setTab('comments');
+      const input = q('#cmInput');
+      if (input) input.focus();
+    };
+
+    // Header Comment button + the "Add note" quick action both jump to comments.
+    const fc = q('[data-action="focus-comment"]');
+    if (fc) fc.addEventListener('click', focusComment);
+    const qaNote = q('[data-action="qa-note"]');
+    if (qaNote) qaNote.addEventListener('click', focusComment);
+
+    const qaReassign = q('[data-action="qa-reassign"]');
+    if (qaReassign) qaReassign.addEventListener('click', () => enterEdit('edit-assignee'));
+    const qaSubtask = q('[data-action="qa-subtask"]');
+    if (qaSubtask) qaSubtask.addEventListener('click', () => enterEdit('edit-subtask-input'));
+    const qaSetdue = q('[data-action="qa-setdue"]');
+    if (qaSetdue) qaSetdue.addEventListener('click', () => enterEdit('edit-due'));
+    const qaLogcall = q('[data-action="qa-logcall"]');
+    if (qaLogcall) qaLogcall.addEventListener('click', () => { this._activeTab = 'comments'; this.controller.addCallLog(t.id); });
+    qa('[data-action="qa-duplicate"]').forEach(el => el.addEventListener('click', () => this.controller.duplicateTask(t.id)));
+
+    // Overflow (⋯) menu toggle.
+    const overflowBtn = q('[data-action="overflow"]');
+    const overflowMenu = q('#tdpOverflow');
+    if (overflowBtn && overflowMenu) {
+      overflowBtn.addEventListener('click', (e) => { e.stopPropagation(); overflowMenu.classList.toggle('hidden'); });
+    }
+    // Close the overflow menu on any outside click — bound ONCE for the view's
+    // lifetime (the menu node is re-queried each click, since render replaces it).
+    if (!this._docClickBound) {
+      this._docClickBound = true;
+      document.addEventListener('click', (e) => {
+        const menu = this.pane && this.pane.querySelector('#tdpOverflow');
+        if (!menu || menu.classList.contains('hidden')) return;
+        const btn = this.pane.querySelector('[data-action="overflow"]');
+        if (menu.contains(e.target) || (btn && btn.contains(e.target))) return;
+        menu.classList.add('hidden');
+      });
+    }
+
+    // Status chip → quick status menu.
+    const statusBtn = q('[data-action="status-menu"]');
+    if (statusBtn) statusBtn.addEventListener('click', (e) => { e.stopPropagation(); this._openStatusMenu(t, statusBtn); });
 
     // Comments: lazy-load on first render, then wire the composer.
     if (!t._commentsLoaded) this.controller.loadTaskComments(t.id);
@@ -371,13 +463,49 @@ App.TaskDetailView = class TaskDetailView {
     // On first open, move focus into the dialog (not on background re-renders).
     if (this._justOpened) {
       this._justOpened = false;
-      const cb = this.pane.querySelector('[data-action="close"]');
+      const cb = q('[data-action="close"]');
       if (cb) cb.focus();
     }
   }
 
+  // Tiny popover to change a task's status straight from the header chip, without
+  // entering full Edit mode. Persists through updateTaskDetails (which notifies
+  // watchers of the status change). Re-clicking the chip closes it.
+  _openStatusMenu(t, anchor) {
+    const existing = this.pane.querySelector('.tdp-status-menu');
+    if (existing) { existing.remove(); return; }
+    const menu = document.createElement('div');
+    menu.className = 'tdp-status-menu';
+    menu.innerHTML = Object.entries(App.STATUSES).map(([k, v]) =>
+      `<button class="tdp-status-opt ${k === t.status ? 'is-cur' : ''}" data-status="${App.utils.escapeHtml(k)}" type="button">${App.utils.escapeHtml(v.label)}</button>`
+    ).join('');
+    anchor.parentElement.appendChild(menu);
+    menu.querySelectorAll('[data-status]').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const status = b.dataset.status;
+      menu.remove();
+      if (status && status !== t.status) {
+        this.controller.updateTaskDetails(t.id, {
+          title: t.title, description: t.description, company: t.company,
+          type: t.type, label: t.label, bidStatus: t.bidStatus, status,
+          assignee: t.assignee, due: t.due, dueTime: t.dueTime, reminderAt: t.reminderAt,
+          priority: t.priority, watchers: t.watchers, subtasks: t.subtasks,
+        });
+      }
+    }));
+    const close = (e) => {
+      if (menu.contains(e.target) || (anchor && anchor.contains(e.target))) return;
+      menu.remove();
+      document.removeEventListener('click', close);
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+
   /* ---------- comments ---------- */
-  _commentsSection(t) {
+  // Inner comments markup (list + composer) for the Activity/Comments/History
+  // tab panel. No outer card — the tab panel is the container. `_wireComments`
+  // finds #cmInput/#cmSend/#cmMentionMenu within this.pane after render.
+  _commentsInner(t) {
     const esc = App.utils.escapeHtml;
     const comments = t.comments || [];
     const rows = comments.length
@@ -387,16 +515,13 @@ App.TaskDetailView = class TaskDetailView {
           : `<div class="cm-empty">Loading comments…</div>`);
     const draft = (this._commentDraft && this._commentDraft[t.id]) || '';
     return `
-      <div class="detail-card cm-section">
-        <div class="detail-card-title">Comments${comments.length ? ` <span class="cm-count">${comments.length}</span>` : ''}</div>
-        <div class="cm-list">${rows}</div>
-        <div class="cm-composer">
-          <textarea id="cmInput" class="cm-input" rows="2" placeholder="Write a comment…  @ to mention">${esc(draft)}</textarea>
-          <div id="cmMentionMenu" class="cm-mention-menu hidden" role="listbox"></div>
-          <div class="cm-actions">
-            <span class="cm-hint">Type <b>@</b> to mention a teammate</span>
-            <button id="cmSend" class="btn btn-primary cm-send" type="button">Comment</button>
-          </div>
+      <div class="cm-list">${rows}</div>
+      <div class="cm-composer">
+        <textarea id="cmInput" class="cm-input" rows="2" placeholder="Write an update or @mention…">${esc(draft)}</textarea>
+        <div id="cmMentionMenu" class="cm-mention-menu hidden" role="listbox"></div>
+        <div class="cm-actions">
+          <span class="cm-hint">Type <b>@</b> to mention a teammate</span>
+          <button id="cmSend" class="btn btn-primary cm-send" type="button">Comment</button>
         </div>
       </div>`;
   }

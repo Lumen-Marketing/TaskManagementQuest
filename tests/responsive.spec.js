@@ -70,24 +70,24 @@ test.describe('responsive · mobile sweep', () => {
           .style.removeProperty('--ui-scale');
       });
 
-      // --- 2. New-task modal footer stays on screen (the dvh fix) ---
+      // --- 2. New-task page footer stays on screen (sticky/fixed action bar) ---
       await page.click('#newTaskBtn');
-      await expect(page.locator('#newTaskModal')).toBeVisible();
-      const foot = page.locator('#newTaskModal .modal-foot');
+      await expect(page.locator('#newTaskWrap')).toBeVisible();
+      const foot = page.locator('.tdp-form-foot');
       const box = await foot.boundingBox();
-      await testInfo.attach(`${bp.name}-newtask-modal.png`, {
+      await testInfo.attach(`${bp.name}-newtask-page.png`, {
         body: await page.screenshot({ fullPage: false }),
         contentType: 'image/png',
       });
-      expect(box, 'modal footer should be laid out').not.toBeNull();
+      expect(box, 'create-page footer should be laid out').not.toBeNull();
       if (box) {
         expect(
           box.y + box.height,
-          `New-task footer bottom (${Math.round(box.y + box.height)}px) is below the ${bp.height}px viewport — Save/Cancel unreachable`,
+          `New-task footer bottom (${Math.round(box.y + box.height)}px) is below the ${bp.height}px viewport — Create/Cancel unreachable`,
         ).toBeLessThanOrEqual(bp.height + 1);
       }
       await page.keyboard.press('Escape');
-      await expect(page.locator('#newTaskModal')).toBeHidden();
+      await expect(page.locator('#newTaskWrap')).toBeHidden();
 
       // --- 3. Soft check: touch targets < 44px (reported, not failed) ---
       if (bp.width < 768) {

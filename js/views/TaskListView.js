@@ -22,7 +22,7 @@ App.TaskListView = class TaskListView {
   }
 
   bindStaticButtons() {
-    document.getElementById('newTaskBtn').addEventListener('click', () => this.controller.openNewTaskModal());
+    document.getElementById('newTaskBtn').addEventListener('click', () => this.controller.openNewTaskPage());
     document.getElementById('filterBtn').addEventListener('click', () => this.controller.toggleFilters());
     const selectBtn = document.getElementById('selectBtn');
     if (selectBtn) {
@@ -1046,7 +1046,7 @@ App.TaskListView = class TaskListView {
       // Phone + a day that has tasks → reveal that day's list. Otherwise, jump
       // straight to creating a task on that day (when allowed).
       if (isPhone && cell.classList.contains('has-tasks')) { c.selectCalendarDay(iso); return; }
-      if (App.can('tasks.write')) c.openNewTaskModal({ due: iso });
+      if (App.can('tasks.write')) c.openNewTaskPage({ due: iso });
       else c.selectCalendarDay(iso);
     }));
   }
@@ -1240,7 +1240,7 @@ App.TaskListView = class TaskListView {
       </div>
     </div>`;
     const newBtn = this.body.querySelector('[data-action="empty-new-task"]');
-    if (newBtn) newBtn.addEventListener('click', () => this.controller.openNewTaskModal());
+    if (newBtn) newBtn.addEventListener('click', () => this.controller.openNewTaskPage());
     const allBtn = this.body.querySelector('[data-action="empty-show-all"]');
     if (allBtn) allBtn.addEventListener('click', () => this.controller.setView('all'));
   }

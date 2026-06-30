@@ -16,6 +16,10 @@ App.AppController = class AppController {
       view: App.can('tasks.view') ? 'all' : 'time:mine',
       searchQuery: '',
       selectedTaskId: null,
+      // Transient: true while the full-page New task form is open. Not a real
+      // `view` (so it isn't persisted, sidebar-listed, or canView-gated) — it
+      // drives #newTaskWrap the way selectedTaskId drives the detail page.
+      creatingTask: false,
       layout: 'table',
       // Calendar view state: 'month' | 'week', and the focused anchor date
       // (ISO; null → today at render time).
@@ -40,12 +44,12 @@ App.AppController = class AppController {
 
     // Views are attached after construction by app.js
     this.toastView = null;
-    this.newTaskModal = null;
+    this.newTaskPage = null;
   }
 
-  attachViews({ toastView, newTaskModal, profileView }) {
+  attachViews({ toastView, newTaskPage, profileView }) {
     this.toastView = toastView;
-    this.newTaskModal = newTaskModal;
+    this.newTaskPage = newTaskPage;
     this.profileView = profileView;
   }
 
@@ -484,6 +488,19 @@ App.AppController = class AppController {
 
   _togglePanes() {
     const v = this.uiState.view;
+    // Full-page New task form takes over the whole work area: hide every other
+    // surface (incl. the detail page, which is normally managed by TaskDetailView)
+    // and show #newTaskWrap. Nothing else needs toggling while it's up.
+    const newTaskWrap = document.getElementById('newTaskWrap');
+    if (newTaskWrap) newTaskWrap.classList.toggle('hidden', !this.uiState.creatingTask);
+    if (this.uiState.creatingTask) {
+      ['listPane', 'homeWrap', 'reportsWrap', 'wallboardWrap', 'taskDetailWrap', 'timeViewWrap'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      document.querySelectorAll('.work-toolbar, .page-head-widgets').forEach(el => el.classList.add('hidden'));
+      return;
+    }
     // Home / Reports are full-page surfaces in their own containers — hide the
     // entire list pane (table + toolbar + page head + ops brief) for them.
     const isPageView = v === 'home' || v === 'reports' || v === 'wallboard';
@@ -539,6 +556,69 @@ App.AppController = class AppController {
     } else if (result) {
       this._notifyTaskChange(task, 'reopened this task');
     }
+  }
+
+  /* ---------- detail-page quick actions ---------- */
+
+  // Clone a task into a new draft assigned to the current user. Reuses createTask
+  // (RLS + persistence + select-the-new-task) so there's no separate insert path.
+  // Watchers are dropped and subtasks reset to not-done so the copy starts clean;
+  // assignee is the current user to avoid emailing the original assignee a "created"
+  // notice for a copy they didn't ask for.
+  duplicateTask(id) {
+    if (!App.can('tasks.write')) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot create tasks.' });
+      return;
+    }
+    const t = this.taskModel.find(id);
+    if (!t) return;
+    this.createTask({
+      title: 'Copy of ' + (t.title || 'task'),
+      description: t.description || '',
+      type: t.type || 'admin',
+      label: t.label || 'roof',
+      bidStatus: t.bidStatus || 'queue',
+      company: t.company,
+      due: t.due || App.utils.todayISO(1),
+      dueTime: t.dueTime || null,
+      reminderAt: null,
+      priority: t.priority || 'medium',
+      status: 'todo',
+      assignee: this.currentUser,
+      watchers: [],
+      subtasks: (t.subtasks || []).map(s => ({ t: s.t, d: false })),
+      notify: { inapp: false, watchers: false, whatsapp: false },
+    });
+  }
+
+  // Add/remove the current user from a task's watcher list. Persists through the
+  // same validated path the Edit form uses; returns the new watching state.
+  toggleSelfWatch(id) {
+    const t = this.taskModel.find(id);
+    if (!t) return false;
+    if (!App.can('tasks.write')) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot change this task.' });
+      return (t.watchers || []).includes(this.currentUser);
+    }
+    const watchers = (t.watchers || []).slice();
+    const i = watchers.indexOf(this.currentUser);
+    const nowWatching = i === -1;
+    if (nowWatching) watchers.push(this.currentUser);
+    else watchers.splice(i, 1);
+    const ok = this.updateTaskDetails(id, {
+      title: t.title, description: t.description, company: t.company,
+      type: t.type, label: t.label, bidStatus: t.bidStatus, status: t.status,
+      assignee: t.assignee, due: t.due, dueTime: t.dueTime, reminderAt: t.reminderAt,
+      priority: t.priority, watchers, subtasks: t.subtasks,
+    });
+    if (ok && this.toastView) this.toastView.show({ title: nowWatching ? 'Watching this task' : 'Stopped watching' });
+    return ok ? nowWatching : (t.watchers || []).includes(this.currentUser);
+  }
+
+  // Quick "Log call" — drops a lightweight tagged note on the task's thread.
+  // No call/CRM data model; it's just a recognizable comment.
+  addCallLog(id) {
+    this.addTaskComment(id, '📞 Logged a call', []);
   }
 
   // Hard stop: close the current user's timer if it's pointed at this task.
@@ -1103,12 +1183,36 @@ App.AppController = class AppController {
     `;
   }
 
-  openNewTaskModal(prefill) {
+  // Open the full-page New task form. `creatingTask` drives _togglePanes to show
+  // #newTaskWrap; the page view renders on the newtask:changed event. We remember
+  // the view to return to so Cancel/Create restores it.
+  openNewTaskPage(prefill) {
     if (!App.can('tasks.write')) {
       this.toastView.show({ title: 'No access', sub: 'Your role cannot create tasks.' });
       return;
     }
-    this.newTaskModal.open(prefill);
+    if (this.uiState.creatingTask) return; // already open
+    this._returnView = this.uiState.view;
+    this._newTaskPrefill = prefill || {};
+    this.uiState.creatingTask = true;
+    // Tear down any open detail page first so its internal _pageOpen flag resets
+    // (selection:changed → TaskDetailView._closeModal). _togglePanes then shows
+    // #newTaskWrap because creatingTask is already true.
+    if (this.uiState.selectedTaskId) {
+      this.uiState.selectedTaskId = null;
+      App.EventBus.emit('selection:changed');
+    }
+    this._togglePanes();
+    App.EventBus.emit('newtask:changed', true);
+  }
+
+  // Close the New task page and restore whatever surface was showing before.
+  closeNewTaskPage() {
+    if (!this.uiState.creatingTask) return;
+    this.uiState.creatingTask = false;
+    this._newTaskPrefill = null;
+    this._togglePanes();
+    App.EventBus.emit('newtask:changed', false);
   }
 
   async createTask(payload) {
@@ -1500,7 +1604,9 @@ App.AppController = class AppController {
 
   /* ---------- misc ---------- */
   handleEscape() {
-    if (this.uiState.bulkMode) {
+    if (this.uiState.creatingTask) {
+      this.closeNewTaskPage();
+    } else if (this.uiState.bulkMode) {
       this.exitBulkMode();
     } else if (this.uiState.selectedTaskId) {
       this.closeDetail();

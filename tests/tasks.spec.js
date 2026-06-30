@@ -9,17 +9,20 @@ test.describe('tasks · create + appears in list', () => {
     const title = `E2E task ${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
     await page.click('#newTaskBtn');
-    await expect(page.locator('#newTaskModal')).toBeVisible();
+    // The New task form is a full page now, not a modal.
+    await expect(page.locator('#newTaskWrap')).toBeVisible();
 
     await page.fill('#nt-title', title);
     await page.fill('#nt-desc', 'Created by Playwright critical-path test.');
     await page.click('[data-action="submit"]');
 
-    // Modal closes on successful submit.
-    await expect(page.locator('#newTaskModal')).toBeHidden({ timeout: 10_000 });
+    // The create page closes on successful submit...
+    await expect(page.locator('#newTaskWrap')).toBeHidden({ timeout: 10_000 });
+    // ...and the freshly created task opens in the detail page.
+    await expect(page.locator('#taskDetailWrap .tdp-title')).toContainText(title, { timeout: 10_000 });
 
-    // The new task should appear in the visible list. Search keeps the
-    // assertion fast even if there are many tasks already.
+    // It should also be findable back in the list.
+    await page.keyboard.press('Escape'); // close the detail page → back to the list
     await page.fill('#searchInput', title);
     await expect(page.locator('#listBody').getByText(title, { exact: false })).toBeVisible({ timeout: 10_000 });
   });
@@ -30,8 +33,8 @@ test.describe('tasks · create + appears in list', () => {
     await page.fill('#nt-title', '   ');   // whitespace only
     await page.click('[data-action="submit"]');
 
-    // Modal stays open (submit was rejected). Toast surfaces the reason.
-    await expect(page.locator('#newTaskModal')).toBeVisible();
+    // Create page stays open (submit was rejected). Toast surfaces the reason.
+    await expect(page.locator('#newTaskWrap')).toBeVisible();
     await expect(page.locator('.toast-title')).toContainText('Cannot create task');
   });
 
@@ -41,7 +44,7 @@ test.describe('tasks · create + appears in list', () => {
     await page.fill('#nt-title', 'x'.repeat(600));
     await page.click('[data-action="submit"]');
 
-    await expect(page.locator('#newTaskModal')).toBeVisible();
+    await expect(page.locator('#newTaskWrap')).toBeVisible();
     await expect(page.locator('.toast-sub')).toContainText(/too long/i);
   });
 });

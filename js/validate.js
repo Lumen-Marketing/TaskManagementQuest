@@ -98,7 +98,7 @@ App.validate = (function () {
     return v;
   }
 
-  /* Validate the payload coming out of NewTaskModalView. Returns a frozen,
+  /* Validate the payload coming out of NewTaskPageView. Returns a frozen,
      cleaned object — callers should use the return value, not the input. */
   function newTask(payload) {
     if (!payload || typeof payload !== 'object') {

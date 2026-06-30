@@ -14,6 +14,7 @@ const HOME_ICONS = {
   activity: `<path fill="currentColor" d="M2 12c0-4.714 0-7.071 1.464-8.536C4.93 2 7.286 2 12 2s7.071 0 8.535 1.464C22 4.93 22 7.286 22 12s0 7.071-1.465 8.535C19.072 22 16.714 22 12 22s-7.071 0-8.536-1.465C2 19.072 2 16.714 2 12" opacity=".5"/><path fill="currentColor" d="M15.1 12.094c-.185-.302-.366-.597-.542-.807c-.187-.224-.515-.532-1.017-.512s-.804.353-.973.591c-.159.225-.315.532-.475.848l-1.988 3.92q-.11.22-.193.377l-.238-.351l-.176-.266a11 11 0 0 0-.557-.788a2.2 2.2 0 0 0-.682-.59a2.2 2.2 0 0 0-.87-.24a11 11 0 0 0-.964-.026H5a.75.75 0 1 0 0 1.5h1.394c.407 0 .661 0 .856.019c.18.017.254.044.301.07c.047.025.111.07.225.211c.123.152.265.363.49.702l.187.279c.188.283.373.56.553.759c.192.213.522.497 1.01.468c.486-.029.78-.35.947-.584c.154-.219.305-.517.459-.82l1.987-3.918q.117-.23.203-.395q.1.158.233.377l.654 1.068c.2.327.378.616.55.844c.186.247.399.469.692.633s.593.23.901.26c.284.027.623.027 1.006.027H19a.75.75 0 0 0 0-1.5h-1.32c-.424 0-.69 0-.894-.02c-.188-.019-.264-.049-.312-.076c-.049-.027-.114-.076-.227-.227a11 11 0 0 1-.485-.752z"/>`,
   pause: `<path fill="currentColor" d="M2 6c0-1.886 0-2.828.586-3.414S4.114 2 6 2s2.828 0 3.414.586S10 4.114 10 6v12c0 1.886 0 2.828-.586 3.414S7.886 22 6 22s-2.828 0-3.414-.586S2 19.886 2 18z"/><path fill="currentColor" d="M14 6c0-1.886 0-2.828.586-3.414S16.114 2 18 2s2.828 0 3.414.586S22 4.114 22 6v12c0 1.886 0 2.828-.586 3.414S19.886 22 18 22s-2.828 0-3.414-.586S14 19.886 14 18z" opacity=".5"/>`,
   date: `<path fill="currentColor" d="M6.96 2c.418 0 .756.31.756.692V4.09c.67-.012 1.422-.012 2.268-.012h4.032c.846 0 1.597 0 2.268.012V2.692c0-.382.338-.692.756-.692s.756.31.756.692V4.15c1.45.106 2.403.368 3.103 1.008c.7.641.985 1.513 1.101 2.842v1H2V8c.116-1.329.401-2.2 1.101-2.842c.7-.64 1.652-.902 3.103-1.008V2.692c0-.382.339-.692.756-.692"/><path fill="currentColor" d="M22 14v-2c0-.839-.013-2.335-.026-3H2.006c-.013.665 0 2.161 0 3v2c0 3.771 0 5.657 1.17 6.828C4.349 22 6.234 22 10.004 22h4c3.77 0 5.654 0 6.826-1.172S22 17.771 22 14" opacity=".5"/><path fill="currentColor" fill-rule="evenodd" d="M14 12.25A1.75 1.75 0 0 0 12.25 14v2a1.75 1.75 0 1 0 3.5 0v-2A1.75 1.75 0 0 0 14 12.25m0 1.5a.25.25 0 0 0-.25.25v2a.25.25 0 1 0 .5 0v-2a.25.25 0 0 0-.25-.25" clip-rule="evenodd"/><path fill="currentColor" d="M11.25 13a.75.75 0 0 0-1.28-.53l-1.5 1.5a.75.75 0 0 0 1.06 1.06l.22-.22V17a.75.75 0 0 0 1.5 0z"/>`,
+  coffee: `<path fill="currentColor" fill-rule="evenodd" d="M6.977 1.327a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 0 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175m4 0a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 1 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175m4 0a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 1 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175" clip-rule="evenodd" opacity=".5"/><path fill="currentColor" d="M9.613 22h.774c2.66 0 3.991 0 4.856-.81c.67-.626.874-1.564 1.015-3.19H3.742c.14 1.626.344 2.564 1.014 3.19c.865.81 2.196.81 4.856.81" opacity=".5"/><path fill="currentColor" fill-rule="evenodd" d="M3.284 11.266c-.133-2-.2-2.999.393-3.632C4.27 7 5.272 7 7.276 7h5.449c2.003 0 3.005 0 3.598.634c.162.173.275.374.35.616H17a4.75 4.75 0 1 1 0 9.5h-.722l-.02.25H3.742a86 86 0 0 1-.116-1.6zm13.1 4.984H17a3.25 3.25 0 0 0 0-6.5h-.2c-.012.43-.045.93-.084 1.516z" clip-rule="evenodd"/>`,
 };
 
 /* HomeView — the personal landing screen (every role). Greeting + quick actions,
@@ -175,7 +176,10 @@ App.HomeView = class HomeView {
         <span class="qhq-un-t">${esc(r.t.title)}</span>
         <span class="qhq-un-due ${r.overdue ? 'over' : ''}">${r.t.due ? esc(r.t.due.slice(5)) : '—'}</span>
       </div>`).join('')
-      : `<div class="qhq-empty"><span class="qhq-empty-ic tone-green">${icon('done')}</span>You're all caught up — no open tasks.</div>`;
+      : `<div class="qhq-empty qhq-empty-lg">
+          <span class="qhq-empty-hero tone-amber">${icon('coffee')}</span>
+          <span class="qhq-empty-tx"><b>You're all caught up</b>No open tasks in your queue.</span>
+        </div>`;
 
     const riskRows = atRisk.length ? atRisk.map(r => `
       <div class="qhq-ar-row">
@@ -186,7 +190,10 @@ App.HomeView = class HomeView {
         </div>
         <span class="qhq-chip ${r.chip.cls}">${esc(r.chip.label)}</span>
       </div>`).join('')
-      : `<div class="qhq-empty"><span class="qhq-empty-ic tone-green">${icon('done')}</span>Nothing at risk right now.</div>`;
+      : `<div class="qhq-empty qhq-empty-lg">
+          <span class="qhq-empty-hero tone-green">${icon('done')}</span>
+          <span class="qhq-empty-tx"><b>Nothing at risk</b>Everything's on track right now.</span>
+        </div>`;
 
     // Projects-overview donut from the real status mix (conic-gradient bands).
     const mix = this._statusMix();
@@ -201,9 +208,9 @@ App.HomeView = class HomeView {
         <div class="qhq-donut-wrap">
           <div class="qhq-donut" style="${donutStyle}"><div class="qhq-donut-hole"><div class="qhq-donut-num tnum">${mix.total}</div><div class="qhq-donut-lbl">tasks</div></div></div>
           <div class="qhq-donut-legend">
-            <div><span class="d" style="background:var(--blue)"></span>In progress <b class="tnum">${mix.inProg}</b></div>
-            <div><span class="d" style="background:var(--amber)"></span>Completed <b class="tnum">${mix.done}</b></div>
-            <div><span class="d" style="background:var(--bg-3)"></span>Not started <b class="tnum">${mix.notStarted}</b></div>
+            <div class="qhq-leg"><span class="qhq-leg-v tnum">${mix.inProg}</span><span class="qhq-leg-l"><span class="d" style="background:var(--blue)"></span>In progress</span></div>
+            <div class="qhq-leg"><span class="qhq-leg-v tnum">${mix.done}</span><span class="qhq-leg-l"><span class="d" style="background:var(--amber)"></span>Completed</span></div>
+            <div class="qhq-leg"><span class="qhq-leg-v tnum">${mix.notStarted}</span><span class="qhq-leg-l"><span class="d" style="background:var(--bg-3)"></span>Not started</span></div>
           </div>
         </div>
       </div>`;

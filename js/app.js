@@ -148,9 +148,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   App.dataStore = dataStore;
 
   const toastView = new App.ToastView('toastContainer');
-  const newTaskModal = new App.NewTaskModalView({ controller, currentUser: App.CURRENT_USER });
+  const newTaskPage = new App.NewTaskPageView({ controller, currentUser: App.CURRENT_USER });
   const profileView = new App.ProfileView({ controller });
-  controller.attachViews({ toastView, newTaskModal, profileView });
+  controller.attachViews({ toastView, newTaskPage, profileView });
 
   // Last-resort handlers: any error that escaped its own try/catch ends up
   // here as a clean toast instead of an unhandled rejection in the console.
@@ -425,10 +425,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       if (App.toggleShortcutsHelp) App.toggleShortcutsHelp();
     } else if (e.key === 'n' || e.key === 'N') {
-      if (document.getElementById('newTaskModal')) return;
+      if (controller.uiState.creatingTask) return;
       if (!App.can('tasks.write')) return;
       e.preventDefault();
-      controller.openNewTaskModal();
+      controller.openNewTaskPage();
     } else if (e.key === 't' || e.key === 'T') {
       e.preventDefault();
       controller.toggleGlobalClock();
@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- Floating quick-add button (mobile) ----
   const fab = document.getElementById('fab');
   if (fab) {
-    fab.addEventListener('click', () => controller.openNewTaskModal());
+    fab.addEventListener('click', () => controller.openNewTaskPage());
     App.syncFab = () => fab.classList.toggle('hidden', !App.can('tasks.write'));
     App.syncFab();
   }
