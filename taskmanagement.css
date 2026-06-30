@@ -3102,7 +3102,10 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   }
   #taskViewWrap .list-header,
   #taskViewWrap .task-group {
-    max-width: 1180px;
+    /* Snug to the fixed column width (~1094px) so there's no empty band on the
+       right — keeps the group-head "Clear" button + count aligned with the
+       columns instead of floating past them. */
+    max-width: 1100px;
     margin-left: auto !important;
     margin-right: auto !important;
   }
