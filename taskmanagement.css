@@ -4470,8 +4470,10 @@ body.ui-command-center .app > .main   { grid-column: 2; grid-row: 2; }
 
 body.ui-command-center .topbar {
   padding: 0 18px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  /* Blend the topbar into the warm canvas (no white band / divider line) so the
+     sidebar + topbar + content read as one seamless surface. */
+  background: var(--bg);
+  border-bottom: none;
 }
 
 /* The brand moved into the sidebar; the topbar-left now holds the title + scope
@@ -5712,7 +5714,7 @@ html:not([data-theme="dark"]) body.ui-command-center .cards-view .task-card:hove
 
 /* ---- Panze sidebar rail (scoped to the two views) ---- */
 body.panze-home .deck,
-body.panze-tasks .deck { background: var(--surface); border-right: 1px solid var(--border); }
+body.panze-tasks .deck { background: var(--bg); border-right: none; }
 body.panze-home .deck .side-item,
 body.panze-tasks .deck .side-item { border-radius: 11px; }
 body.panze-home .deck .side-item.active,
