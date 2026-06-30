@@ -1290,7 +1290,7 @@ button.tdp-chip:hover { border-color: var(--ink-3); }
   color: var(--ink-3); font-weight: 700; margin-bottom: 12px;
 }
 .tdp-card-title i { font-size: 14px; }
-#taskDetailWrap .tdp-card .detail-row { display: grid; grid-template-columns: 84px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); align-items: center; }
+#taskDetailWrap .tdp-card .detail-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); align-items: center; }
 #taskDetailWrap .tdp-card .detail-row:last-child { border-bottom: 0; padding-bottom: 0; }
 .tdp-card .detail-val { font-size: 12px; color: var(--ink-2); }
 .tdp-card .detail-val.over { color: var(--rust); font-weight: 600; }
@@ -1310,14 +1310,14 @@ button.tdp-chip:hover { border-color: var(--ink-3); }
 .tdp-editable:hover::after, .tdp-editable:focus-visible::after { opacity: 0.65; }
 /* While editing, neutralize the value's own styling (incl. the priority pill's
    background/padding and its justify-self:start) so the editor fills the cell. */
-.tdp-editable.is-editing { cursor: default; display: block; width: 100%; justify-self: stretch; background: none; box-shadow: none; }
+.tdp-editable.is-editing { cursor: default; display: block; width: 100%; min-width: 0; justify-self: stretch; background: none; box-shadow: none; }
 #taskDetailWrap .tdp-card .detail-row .priority-block.is-editing { justify-self: stretch; background: none; padding: 0; color: inherit; }
 .tdp-editable.is-editing::after { content: none; }
 
-.tdp-inline-edit { display: inline-flex; align-items: center; gap: 6px; width: 100%; }
-.tdp-ie-input { flex: 1 1 auto; min-width: 0; font-size: 12px; padding: 4px 6px; }
-.tdp-ie-save, .tdp-ie-cancel { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
-.tdp-ie-save i, .tdp-ie-cancel i { font-size: 15px; }
+.tdp-inline-edit { display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; max-width: 100%; }
+.tdp-ie-input { flex: 1 1 auto; min-width: 0; width: 100%; font-size: 12px; padding: 4px 6px; }
+.tdp-ie-save, .tdp-ie-cancel { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: 0 0 24px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; padding: 0; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
+.tdp-ie-save i, .tdp-ie-cancel i { font-size: 14px; }
 .tdp-ie-save { color: var(--green); border-color: var(--green); }
 .tdp-ie-save:hover { background: var(--green); color: #fff; }
 .tdp-ie-cancel { color: var(--ink-3); }
