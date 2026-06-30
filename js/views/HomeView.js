@@ -143,7 +143,8 @@ App.HomeView = class HomeView {
     const recents = this._recents();
 
     // Inline Solar duotone glyph; colors itself from the chip's currentColor.
-    const icon = name => `<svg class="qhq-ic" viewBox="0 0 24 24" aria-hidden="true">${HOME_ICONS[name] || ''}</svg>`;
+    // The ic-<name> class lets each glyph carry its own signature animation.
+    const icon = name => `<svg class="qhq-ic ic-${name}" viewBox="0 0 24 24" aria-hidden="true">${HOME_ICONS[name] || ''}</svg>`;
 
     // Each stat is an icon chip + figure. The overdue tile flips to an alert
     // wash only when it actually has a count, so it earns the eye.
