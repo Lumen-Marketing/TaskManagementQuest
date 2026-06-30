@@ -5856,7 +5856,11 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .list-header > span {
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #a59e96;
 }
-#taskViewWrap .list-header .col-filter i { display: none; }
+/* Keep the filter caret visible so the quick-filter dropdown is discoverable. */
+#taskViewWrap .list-header .col-filter i { display: inline-block; font-size: 11px; opacity: 0.55; margin-left: 2px; }
+#taskViewWrap .list-header .col-filter { cursor: pointer; }
+#taskViewWrap .list-header .col-filter:hover { color: #56504a; }
+#taskViewWrap .list-header .col-filter.active { color: var(--accent, #ee5a26); }
 
 /* Status — colored TEXT (no dot). */
 #taskViewWrap .list-row .status-dot { display: none; }
