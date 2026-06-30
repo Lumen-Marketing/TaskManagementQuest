@@ -5553,13 +5553,14 @@ body.panze-home, body.panze-tasks {
   --pz-bg: #FBFAF8;
   --pz-bg-3: #F3F0EB;
   --pz-wash: #FBFAF8;
-  --pz-ink: #1A1F2B;
-  --pz-ink-2: #59616F;
-  --pz-ink-3: #959EAD;
-  --pz-ink-4: #BBC2CD;
-  --pz-border: #EBEEF3;
-  --pz-border-2: #E0E4EB;
-  --pz-radius: 18px;
+  /* Warm text + hairlines to match the boss table reskin. */
+  --pz-ink: #1c1a18;
+  --pz-ink-2: #56504a;
+  --pz-ink-3: #908981;
+  --pz-ink-4: #a59e96;
+  --pz-border: #ebe7e2;
+  --pz-border-2: #ddd6cf;
+  --pz-radius: 14px;
   --pz-shadow-sm: 0 1px 2px rgba(28,39,64,.05), 0 1px 1px rgba(28,39,64,.03);
   --pz-shadow: 0 14px 32px -16px rgba(28,39,64,.18), 0 3px 8px rgba(28,39,64,.05);
   --pz-shadow-lg: 0 30px 60px -20px rgba(28,39,64,.22), 0 10px 24px -12px rgba(28,39,64,.12);
@@ -5601,8 +5602,8 @@ body.panze-tasks .deck {
   --shadow-lg: var(--pz-shadow-lg);
   /* Remap the font tokens too — several rules (e.g. .qhq-home) set
      font-family: var(--font-body) directly, so inheriting isn't enough. */
-  --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-display: 'Hanken Grotesk', system-ui, sans-serif;
   font-family: var(--font-body);
 }
 
@@ -5616,7 +5617,7 @@ html:not([data-theme="dark"]) body.ui-command-center.panze-home .qhq-home { back
 /* ---- headings in Plus Jakarta (beat Steep's Fraunces serif in light) ---- */
 html:not([data-theme="dark"]) body.ui-command-center.panze-home .qhq-greet,
 html:not([data-theme="dark"]) body.ui-command-center.panze-tasks .page-title {
-  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
