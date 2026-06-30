@@ -1200,71 +1200,207 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   .detail-side, .detail-rail { position: static; }
 }
 
-/* New task modal: a comfortable default that scales up on widescreen, plus a
-   drag handle (bottom-right) so it can be resized by hand. Uses `width` (not
-   `max-width`) for the breakpoints so a manual drag can still grow it up to the
-   viewport cap below. */
-#newTaskModal .modal {
-  position: relative;
-  width: 540px;
-  min-width: 380px;
-  min-height: 320px;
-  max-width: 96vw;
-  max-height: 92vh;
-  /* Live zoom factor — updated by the resize handler so text grows/shrinks
-     with the popup. Defaults to 1 (no scaling) until the user drags. */
-  --nt-scale: 1;
+/* ============================================================
+   Task detail page — card redesign (.tdp-*) — 2026-07-01
+   Soft card system matching the supplied mockup: white cards on the
+   page canvas, subtle borders + a gentle elevation shadow, and the
+   brand orange (--amber) for the primary "Mark complete" action. The
+   legacy .detail-* classes are kept for Edit mode, which still uses
+   them. New read-mode markup lives in #taskDetailWrap > .detail.
+   ============================================================ */
+#taskDetailWrap .tdp-head { padding: 0 0 14px; margin-bottom: 16px; }
+.tdp-chiprow { position: relative; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.tdp-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; color: var(--ink-2);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-pill); padding: 4px 11px;
 }
-/* Scale the popup with the screen: comfortable on normal displays, bigger on a
-   genuinely wide one (boss) — without ever dominating the viewport. The grip is
-   still there for manual fine-tuning. */
-@media (min-width: 1280px) {
-  #newTaskModal .modal { width: 560px; }
-}
-@media (min-width: 1600px) {
-  #newTaskModal .modal { width: 600px; }
-}
-@media (min-width: 2000px) {
-  #newTaskModal .modal { width: 760px; }
-}
-/* Bottom-LEFT grip — kept clear of the Cancel/Create buttons on the right. */
-.modal-resize-handle {
-  position: absolute;
-  left: 4px;
-  bottom: 4px;
-  width: 20px;
-  height: 20px;
-  z-index: 6;
-  cursor: nesw-resize;
-  opacity: 0.5;
-  background:
-    linear-gradient(225deg, transparent 0 46%, var(--ink-3) 46% 54%, transparent 54%),
-    linear-gradient(225deg, transparent 0 71%, var(--ink-3) 71% 79%, transparent 79%);
-  transition: opacity var(--dur-short) var(--ease-out);
-}
-.modal-resize-handle:hover { opacity: 0.9; }
-/* Make room so the grip doesn't sit on top of the "Press Ctrl ↵" hint. */
-#newTaskModal .modal-foot { padding-left: 30px; }
+.tdp-chip i { font-size: 13px; }
+button.tdp-chip { cursor: pointer; }
+button.tdp-chip:hover { border-color: var(--ink-3); }
+.tdp-chip-status { font-weight: 700; }
 
-/* Larger, more readable type throughout the New task popup. Each size is
-   multiplied by --nt-scale so the whole popup zooms as it's resized. */
-#newTaskModal .modal-title { font-size: calc(22px * var(--nt-scale)); }
-#newTaskModal .field-title input { font-size: calc(22px * var(--nt-scale)) !important; }
-#newTaskModal .field-label { font-size: calc(12px * var(--nt-scale)); }
-#newTaskModal input,
-#newTaskModal select,
-#newTaskModal textarea { font-size: calc(14px * var(--nt-scale)) !important; }
-#newTaskModal .locked-field { font-size: calc(14px * var(--nt-scale)); }
-#newTaskModal .notify-title { font-size: calc(14px * var(--nt-scale)); }
-#newTaskModal .notify-option { font-size: calc(13px * var(--nt-scale)); }
-#newTaskModal .notify-option i { font-size: calc(16px * var(--nt-scale)); }
-#newTaskModal .user-menu-hint { font-size: calc(12px * var(--nt-scale)); }
-#newTaskModal .field-optional { font-size: calc(10px * var(--nt-scale)); }
-#newTaskModal .watcher-add { font-size: calc(12.5px * var(--nt-scale)); }
-#newTaskModal .watcher-tag { font-size: calc(13px * var(--nt-scale)); }
-#newTaskModal .modal-foot .btn { font-size: calc(13px * var(--nt-scale)); }
-#newTaskModal .modal-foot kbd { font-size: calc(11px * var(--nt-scale)); }
-#newTaskModal .modal-foot > span { font-size: calc(11px * var(--nt-scale)) !important; }
+.tdp-title-row { display: flex; align-items: flex-start; gap: 14px; }
+.tdp-title {
+  font-family: var(--font-display); font-size: 24px; line-height: 1.2;
+  letter-spacing: -0.01em; color: var(--ink); margin: 0; flex: 1; min-width: 0;
+}
+.tdp-head-actions { position: relative; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.tdp-head-actions .btn { padding: 7px 12px; }
+.tdp-head-actions .btn.is-on { background: var(--blue-bg); border-color: var(--blue-bg); color: var(--blue-ink); }
+
+.tdp-overflow-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+  padding: 5px; min-width: 168px;
+}
+.tdp-overflow-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 10px; border: 0; background: none; cursor: pointer;
+  font-size: 12.5px; font-weight: 500; color: var(--ink); border-radius: var(--radius-sm);
+}
+.tdp-overflow-item:hover { background: var(--bg-2); }
+.tdp-overflow-item.danger { color: var(--rust); }
+.tdp-overflow-item i { font-size: 15px; }
+
+.tdp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 12px; }
+.tdp-meta-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+.tdp-meta-item i { font-size: 14px; color: var(--ink-3); }
+.tdp-meta-item.over { color: var(--rust); font-weight: 600; }
+.tdp-meta-item.over i { color: var(--rust); }
+.tdp-pri-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); display: inline-block; }
+.tdp-pri-dot.priority-critical, .tdp-pri-dot.priority-urgent { background: var(--rust); }
+.tdp-pri-dot.priority-high { background: var(--amber); }
+
+/* Stat strip */
+.tdp-stats {
+  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+.tdp-stat { display: flex; flex-direction: column; line-height: 1.1; }
+.tdp-stat b { font-family: var(--font-display); font-size: 18px; color: var(--ink); }
+.tdp-stat span { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); font-weight: 600; margin-top: 3px; }
+.tdp-stat.over b { color: var(--rust); }
+.tdp-stats-spacer { flex: 1; }
+.tdp-complete { background: var(--amber); color: #fff; border-color: var(--amber); padding: 10px 20px; font-weight: 600; font-size: 13px; }
+.tdp-complete:hover { filter: brightness(0.95); }
+.tdp-complete.is-done { background: var(--surface); color: var(--ink-2); border-color: var(--border); }
+
+/* 3-column grid */
+.tdp-grid {
+  display: grid; grid-template-columns: 264px minmax(0, 1fr) 236px;
+  grid-template-areas: "left main right"; gap: 18px; align-items: start;
+}
+.tdp-col-left { grid-area: left; display: flex; flex-direction: column; gap: 14px; }
+.tdp-col-main { grid-area: main; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.tdp-col-right { grid-area: right; display: flex; flex-direction: column; gap: 14px; }
+
+.tdp-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+.tdp-card-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--ink-3); font-weight: 700; margin-bottom: 12px;
+}
+.tdp-card-title i { font-size: 14px; }
+#taskDetailWrap .tdp-card .detail-row { display: grid; grid-template-columns: 84px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); align-items: center; }
+#taskDetailWrap .tdp-card .detail-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.tdp-card .detail-val { font-size: 12px; color: var(--ink-2); }
+.tdp-card .detail-val.over { color: var(--rust); font-weight: 600; }
+.tdp-card .detail-person { display: flex; align-items: center; gap: 6px; }
+#taskDetailWrap .tdp-card .detail-row .priority-block { justify-self: start; }
+#taskDetailWrap .tdp-card .detail-desc { font-size: 13px; line-height: 1.55; color: var(--ink-2); white-space: pre-wrap; }
+
+/* Tabbed Activity / Comments / History */
+.tdp-tablist { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: -2px 0 14px; }
+.tdp-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 0; cursor: pointer; padding: 8px 12px;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-3);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tdp-tab i { font-size: 14px; }
+.tdp-tab:hover { color: var(--ink-2); }
+.tdp-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.tdp-tabpanel { display: none; }
+.tdp-tabpanel.active { display: block; }
+
+/* Quick actions */
+.tdp-qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tdp-qa {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 9px 10px; cursor: pointer;
+  font-size: 12px; font-weight: 500; color: var(--ink-2); text-align: left;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.tdp-qa:hover { border-color: var(--ink-3); background: var(--bg-2); color: var(--ink); }
+.tdp-qa i { font-size: 15px; color: var(--ink-3); flex-shrink: 0; }
+
+/* Watchers card */
+.tdp-watchers { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tdp-empty { font-size: 11.5px; color: var(--ink-3); }
+.tdp-watch-add {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px dashed var(--ink-3); background: var(--surface); color: var(--ink-2); cursor: pointer;
+}
+.tdp-watch-add:hover { border-style: solid; border-color: var(--amber); color: var(--amber); }
+.tdp-watch-add i { font-size: 14px; }
+
+/* Status quick-menu popover (anchored under the status chip) */
+.tdp-status-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 5px; min-width: 160px;
+}
+.tdp-status-opt {
+  display: block; width: 100%; text-align: left; padding: 7px 10px;
+  border: 0; background: none; cursor: pointer; font-size: 12.5px; color: var(--ink); border-radius: var(--radius-sm);
+}
+.tdp-status-opt:hover { background: var(--bg-2); }
+.tdp-status-opt.is-cur { font-weight: 700; color: var(--amber); }
+
+/* Responsive: tablet → 2 columns, phone → 1 column + sticky Mark complete bar */
+@media (max-width: 1080px) {
+  .tdp-grid { grid-template-columns: 240px minmax(0, 1fr); grid-template-areas: "left main" "right main"; }
+}
+@media (max-width: 720px) {
+  #taskDetailWrap.detail-page { padding: 14px 12px 88px; }
+  .tdp-grid { grid-template-columns: 1fr; grid-template-areas: "main" "left" "right"; }
+  .tdp-title { font-size: 20px; }
+  .tdp-stats { gap: 14px; padding: 12px 14px; }
+  .tdp-stats-spacer { display: none; }
+  .tdp-complete {
+    position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 40;
+    justify-content: center; box-shadow: var(--shadow-lg);
+  }
+}
+
+/* New task page (#newTaskWrap) — the create form reuses the .tdp-* card system
+   in "input mode". Replaces the old #newTaskModal styles (modal + drag-resize +
+   --nt-scale zoom), which were removed with the modal itself. */
+#newTaskWrap.detail-page { background: var(--bg); padding: 20px 24px 96px; }
+#newTaskWrap .tdp-form { max-width: 1180px; margin: 0 auto; }
+#newTaskWrap .tdp-head { padding: 0 0 14px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+#newTaskWrap .detail-row { grid-template-columns: 92px 1fr; align-items: center; }
+#newTaskWrap .detail-row select,
+#newTaskWrap .detail-row input { width: 100%; }
+#newTaskWrap .field { margin-bottom: 0; }
+#newTaskWrap .field-title input { width: 100%; }
+
+/* Sticky form footer with the primary Create action. Goes full-width fixed on
+   phones so the button is always reachable. */
+.tdp-form-foot {
+  position: sticky; bottom: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  max-width: 1180px; margin: 18px auto 0; padding: 12px 0;
+}
+.tdp-form-foot-btns { display: flex; gap: 8px; }
+.tdp-form-hint { font-size: 11px; color: var(--ink-3); }
+/* Orange primary, like the detail page's Mark complete — but WITHOUT the
+   .tdp-complete mobile position:fixed rule (the footer already handles that). */
+.tdp-create-btn { background: var(--amber); color: #fff; border-color: var(--amber); padding: 10px 20px; font-weight: 600; }
+.tdp-create-btn:hover { filter: brightness(0.95); }
+
+@media (max-width: 720px) {
+  #newTaskWrap.detail-page { padding: 14px 12px 96px; }
+  .tdp-form-foot {
+    position: fixed; left: 0; right: 0; bottom: 0; margin: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 10px 12px; box-shadow: var(--shadow-lg);
+  }
+  .tdp-form-hint { display: none; }
+  .tdp-form-foot-btns { flex: 1; }
+  .tdp-form-foot-btns .btn { flex: 1; justify-content: center; }
+}
 
 .field { margin-bottom: 14px; }
 .field-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); margin-bottom: 5px; display: flex; align-items: center; gap: 4px; font-weight: 600; }
@@ -3297,12 +3433,10 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
   .finish-btn { width: 44px; height: 44px; }
   .priority-block { padding: 6px 12px; }
 
-  /* New-task modal fields carry their own !important sizing; lift the small
-     ones to 16px on mobile too (the larger title input stays — it's more
-     specific). The modal isn't drag-resizable on touch, so this is safe. */
-  #newTaskModal input,
-  #newTaskModal select,
-  #newTaskModal textarea { font-size: 16px !important; }
+  /* New task page inputs: lift to 16px on mobile so iOS doesn't zoom on focus. */
+  #newTaskWrap input,
+  #newTaskWrap select,
+  #newTaskWrap textarea { font-size: 16px; }
 
   /* Toolbar buttons — wrap onto multiple rows so every control stays visible
      and reachable. (Was a hidden-scrollbar horizontal scroll, which silently
@@ -5030,17 +5164,21 @@ body.ui-command-center .detail-title {
    Phase 2 — Home & Reports surfaces (scoped to .qhq-page; reuse Phase-1 tokens)
    ============================================================================ */
 .qhq-page { overflow-y: auto; }
-.qhq-empty { font-size: 12.5px; color: var(--ink-3); padding: 14px 0; }
+.qhq-empty { font-size: 12.5px; color: var(--ink-3); padding: 18px 0; display: flex; align-items: center; gap: 10px; }
+.qhq-empty-ic { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 8px; display: grid; place-items: center; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
+.qhq-empty-ic .qhq-ic { width: 17px; height: 17px; }
+/* Inline SVG glyphs (Solar duotone) sit in tinted chips and inherit currentColor. */
+.qhq-ic { display: block; flex: 0 0 auto; width: 20px; height: 20px; }
 .qhq-chip { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px; white-space: nowrap; }
 .qhq-chip.risk { color: var(--rust); background: var(--rust-bg); }
 .qhq-chip.hold { color: #9A5E08; background: #FCEFD7; }
 
 /* ----- Home ----- */
 .qhq-home { padding: 16px 18px 36px; max-width: 1700px; font-family: var(--font-body); }
-.qhq-greet { font-size: 25px; font-weight: 800; letter-spacing: -.026em; color: var(--ink); line-height: 1.1; }
+.qhq-greet { font-size: 28px; font-weight: 800; letter-spacing: -.028em; color: var(--ink); line-height: 1.08; }
 .qhq-greet .em { color: var(--amber); }
 .qhq-dateline { font-size: 12px; color: var(--ink-3); margin-top: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
-.qhq-dateline i { font-size: 14px; color: var(--ink-4); }
+.qhq-dateline .qhq-ic { width: 16px; height: 16px; color: var(--ink-4); }
 .qhq-brief { border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(180deg,#FFFCFA,var(--surface)); padding: 16px 18px; margin: 16px 0; box-shadow: var(--shadow-sm); }
 .qhq-brief-h { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
 .qhq-spark { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg,#ED4E0D,#F2902E); display: grid; place-items: center; color: #fff; }
@@ -5049,17 +5187,18 @@ body.ui-command-center .detail-title {
 .qhq-brief-tx { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
 .qhq-home-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 12px; margin-top: 16px; }
 .qhq-card { background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: var(--block-radius, 14px); box-shadow: none; }
-.qhq-card-h { display: flex; align-items: center; gap: 11px; padding: 14px 16px 13px; border-bottom: 1px solid var(--border); }
-.qhq-hicon { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 9px; display: grid; place-items: center; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
-.qhq-hicon i { font-size: 17px; }
+.qhq-card-h { display: flex; align-items: center; gap: 12px; padding: 15px 16px 14px; border-bottom: 1px solid var(--border); }
+.qhq-hicon { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; display: grid; place-items: center; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
+.qhq-hicon .qhq-ic { width: 21px; height: 21px; }
 .qhq-htext { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.qhq-card-h .ct { font-size: 14.5px; font-weight: 800; letter-spacing: -.012em; color: var(--ink); line-height: 1.15; }
-.qhq-card-h .meta { font-size: 10.5px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.qhq-card-h .ct { font-size: 17px; font-weight: 800; letter-spacing: -.016em; color: var(--ink); line-height: 1.15; }
+.qhq-card-h .meta { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
 .qhq-arlist, .qhq-hdlist { padding: 2px 16px 12px; }
 .qhq-ar-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
 .qhq-ar-row:first-child { border-top: none; }
 .qhq-ar-ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
 .qhq-ar-ic.hold { background: #FCEFD7; color: #9A5E08; }
+.qhq-ar-ic .qhq-ic { width: 18px; height: 18px; }
 .qhq-ar-b { flex: 1; min-width: 0; }
 .qhq-ar-t { font-size: 12.8px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qhq-ar-s { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
@@ -5260,7 +5399,7 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
   display: grid; place-items: center;
   background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2));
 }
-.qhq-stat-ic i { font-size: 20px; }
+.qhq-stat-ic .qhq-ic { width: 23px; height: 23px; }
 .qhq-stat-body { min-width: 0; }
 .qhq-stat .sv { font-family: var(--font-display); font-size: 27px; font-weight: 800; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
 .qhq-stat .sv.warn { color: var(--rust); }
@@ -5309,20 +5448,48 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-rec-row:hover .qhq-rec-task { color: var(--amber); }
 .qhq-rec-ago { font-size: 11px; color: var(--ink-4); white-space: nowrap; flex-shrink: 0; }
 
-/* Gentle warmth on hover so the cards feel alive without resting elevation. */
+/* Hover micro-interactions. The outline restyle keeps the blocks flat (no lift /
+   shadow), so the motion lives in the glyphs — chips scale, dots & avatars pop. */
 .qhq-card { transition: border-color var(--dur-fast) var(--ease-out); }
 .qhq-card:hover { border-color: var(--border-strong); }
-.qhq-stat:hover { border-color: var(--border-strong); }
+.qhq-hicon, .qhq-stat-ic, .qhq-un-dot, .qhq-rec-av { transition: transform var(--dur-mid) var(--ease-out); }
+.qhq-card:hover .qhq-hicon { transform: scale(1.09) rotate(-4deg); }
+.qhq-stat:hover .qhq-stat-ic { transform: scale(1.1); }
+.qhq-un-row:hover .qhq-un-dot { transform: scale(1.5); }
+.qhq-rec-row:hover .qhq-rec-av { transform: scale(1.12); }
+.qhq-act:active { transform: translateY(1px) scale(.985); }
 
-/* Staggered entrance — one orchestrated reveal on landing, motion-safe only.
-   Re-armed in HomeView.subscribe() each time the view leaves Home. */
+/* Staggered entrance (a waterfall over head -> stat tiles -> cards -> recents),
+   a donut that draws itself in, and one meaningful perpetual loop on the overdue
+   flame. Motion-safe only; re-armed in HomeView.subscribe() when Home is left. */
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes qhqRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  .qhq-home.qhq-enter > * { opacity: 0; animation: qhqRise 420ms var(--ease-out) both; }
+  @keyframes qhqRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes qhqPop  { from { opacity: 0; transform: scale(.8); }        to { opacity: 1; transform: scale(1); } }
+  @keyframes qhqAlert { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.13); } }
+
+  .qhq-home.qhq-enter > .qhq-head,
+  .qhq-home.qhq-enter .qhq-statstrip > .qhq-stat,
+  .qhq-home.qhq-enter .qhq-home-grid > .qhq-card,
+  .qhq-home.qhq-enter > .qhq-recents { opacity: 0; animation: qhqRise 460ms var(--ease-out) both; }
+
   .qhq-home.qhq-enter > .qhq-head { animation-delay: 0ms; }
-  .qhq-home.qhq-enter > .qhq-statstrip { animation-delay: 60ms; }
-  .qhq-home.qhq-enter > .qhq-home-grid { animation-delay: 120ms; }
-  .qhq-home.qhq-enter > .qhq-recents { animation-delay: 180ms; }
+  .qhq-home.qhq-enter .qhq-statstrip > .qhq-stat:nth-child(1) { animation-delay: 70ms; }
+  .qhq-home.qhq-enter .qhq-statstrip > .qhq-stat:nth-child(2) { animation-delay: 110ms; }
+  .qhq-home.qhq-enter .qhq-statstrip > .qhq-stat:nth-child(3) { animation-delay: 150ms; }
+  .qhq-home.qhq-enter .qhq-statstrip > .qhq-stat:nth-child(4) { animation-delay: 190ms; }
+  .qhq-home.qhq-enter .qhq-home-grid > .qhq-card:nth-child(1) { animation-delay: 240ms; }
+  .qhq-home.qhq-enter .qhq-home-grid > .qhq-card:nth-child(2) { animation-delay: 290ms; }
+  .qhq-home.qhq-enter .qhq-home-grid > .qhq-card:nth-child(3) { animation-delay: 340ms; }
+  .qhq-home.qhq-enter > .qhq-recents { animation-delay: 400ms; }
+
+  .qhq-home.qhq-enter .qhq-donut { animation: qhqPop 560ms var(--ease-out) both; animation-delay: 360ms; }
+
+  .qhq-stat.is-alert .qhq-stat-ic .qhq-ic { animation: qhqAlert 2.6s ease-in-out infinite; transform-origin: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qhq-card:hover .qhq-hicon, .qhq-stat:hover .qhq-stat-ic,
+  .qhq-un-row:hover .qhq-un-dot, .qhq-rec-row:hover .qhq-rec-av { transform: none; }
 }
 
 @media (max-width: 720px) {
