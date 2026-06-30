@@ -125,6 +125,13 @@ App.TaskDetailView = class TaskDetailView {
       this.editingId = null;
     }
 
+    // Same protection for an open inline (single-field) editor: a background
+    // re-render must not wipe the editor before the user hits ✓ / ✗.
+    if (this._inlineEdit) {
+      if (this._inlineEdit.taskId === selId && !view.startsWith('time:')) return;
+      this._inlineEdit = null;
+    }
+
     // Time-tracking views don't show a detail pane
     if (!selId || view.startsWith('time:')) {
       this._closeModal();
@@ -220,9 +227,19 @@ App.TaskDetailView = class TaskDetailView {
       return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
     }).join('');
     // Remember which tab the user is on so a background re-render (a posted
-    // comment, a sync poll) doesn't yank them back to Activity.
-    this._activeTab = this._activeTab || 'activity';
+    // comment, a sync poll) doesn't yank them off it. Activity now lives in its
+    // own right-column card, so default to Comments and migrate any stale
+    // 'activity' value left over from before.
+    if (!this._activeTab || this._activeTab === 'activity') this._activeTab = 'comments';
     const tabActive = (name) => this._activeTab === name ? ' active' : '';
+
+    // Inline per-field editing: Details-card values are click-to-edit for users
+    // with write access. `ev(field, baseCls)` returns the class + data attrs that
+    // mark a value cell editable; read-only viewers just get the base class.
+    const canWrite = App.can('tasks.write');
+    const ev = (field, baseCls = 'detail-val') => canWrite
+      ? `class="${baseCls} tdp-editable" data-edit-field="${field}" title="Click to edit" tabindex="0" role="button"`
+      : `class="${baseCls}"`;
 
     this.pane.innerHTML = `
       <div class="tdp-head">
@@ -288,17 +305,17 @@ App.TaskDetailView = class TaskDetailView {
 
           <div class="tdp-card">
             <div class="tdp-card-title"><i class="ti ti-info-circle"></i> Details</div>
-            <div class="detail-row"><span class="label">Status</span><span class="detail-val">${App.utils.escapeHtml(statusObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Priority</span><span class="priority-block ${priObj.cls}">${App.utils.escapeHtml(priObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Assignee</span><span class="detail-val detail-person">${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
+            <div class="detail-row"><span class="label">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
+            <div class="detail-row"><span class="label">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
+            <div class="detail-row"><span class="label">Assignee</span><span ${ev('assignee', 'detail-val detail-person')}>${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
             <div class="detail-row"><span class="label">Created by</span><span class="detail-val detail-person">${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}</span></div>
-            <div class="detail-row"><span class="label">Due</span><span class="detail-val ${overdue ? 'over' : ''}">${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
-            <div class="detail-row"><span class="label">Time</span><span class="detail-val">${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
-            <div class="detail-row"><span class="label">Reminder</span><span class="detail-val">${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
-            <div class="detail-row"><span class="label">Type</span><span class="detail-val">${App.utils.escapeHtml(typeObj.label)}</span></div>
-            ${t.type === 'bid' ? `<div class="detail-row"><span class="label">Bid status</span><span class="detail-val">${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
-            <div class="detail-row"><span class="label">Label</span><span class="detail-val">${App.utils.escapeHtml(labelObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Company</span><span class="detail-val">${App.utils.escapeHtml(company.label)}</span></div>
+            <div class="detail-row"><span class="label">Due</span><span ${ev('due', `detail-val ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
+            <div class="detail-row"><span class="label">Time</span><span ${ev('dueTime')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
+            <div class="detail-row"><span class="label">Reminder</span><span ${ev('reminderAt')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
+            <div class="detail-row"><span class="label">Type</span><span ${ev('type')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
+            ${t.type === 'bid' ? `<div class="detail-row"><span class="label">Bid status</span><span ${ev('bidStatus')}>${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
+            <div class="detail-row"><span class="label">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
+            <div class="detail-row"><span class="label">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
             <div class="detail-row"><span class="label">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
           </div>
         </aside>
@@ -317,11 +334,9 @@ App.TaskDetailView = class TaskDetailView {
 
           <div class="tdp-card tdp-tabs">
             <div class="tdp-tablist" role="tablist">
-              <button class="tdp-tab${tabActive('activity')}" data-tab="activity" type="button"><i class="ti ti-bolt"></i>Activity</button>
               <button class="tdp-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments</button>
               <button class="tdp-tab${tabActive('history')}" data-tab="history" type="button"><i class="ti ti-history"></i>History</button>
             </div>
-            <div class="tdp-tabpanel${tabActive('activity')}" data-panel="activity">${activityHtml}</div>
             <div class="tdp-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
             <div class="tdp-tabpanel${tabActive('history')}" data-panel="history">${entriesHtml}</div>
           </div>
@@ -346,6 +361,11 @@ App.TaskDetailView = class TaskDetailView {
               ${watcherChipsHtml || '<span class="tdp-empty">No watchers</span>'}
               <button class="tdp-watch-add" data-action="toggle-watch" title="${isWatching ? 'Stop watching' : 'Watch this task'}" aria-label="Toggle watch" type="button"><i class="ti ${isWatching ? 'ti-eye-off' : 'ti-plus'}"></i></button>
             </div>
+          </div>
+
+          <div class="tdp-card">
+            <div class="tdp-card-title"><i class="ti ti-bolt"></i> Activity</div>
+            <div class="tdp-activity">${activityHtml}</div>
           </div>
         </aside>
       </div>
@@ -456,6 +476,14 @@ App.TaskDetailView = class TaskDetailView {
     const statusBtn = q('[data-action="status-menu"]');
     if (statusBtn) statusBtn.addEventListener('click', (e) => { e.stopPropagation(); this._openStatusMenu(t, statusBtn); });
 
+    // Inline per-field editing: click (or Enter/Space on) a Details value to edit it.
+    qa('.tdp-editable').forEach(el => {
+      el.addEventListener('click', () => this._openInlineEdit(t, el.dataset.editField));
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._openInlineEdit(t, el.dataset.editField); }
+      });
+    });
+
     // Comments: lazy-load on first render, then wire the composer.
     if (!t._commentsLoaded) this.controller.loadTaskComments(t.id);
     this._wireComments(t);
@@ -466,6 +494,101 @@ App.TaskDetailView = class TaskDetailView {
       const cb = q('[data-action="close"]');
       if (cb) cb.focus();
     }
+  }
+
+  /* ---------- inline per-field editing (Details card) ---------- */
+
+  // Swap a single Details value for an inline editor with ✓ (save) / ✗ (cancel).
+  // Only one is open at a time — opening another first re-renders to a clean state.
+  // While open, render() is suppressed for this task (see the _inlineEdit guard),
+  // so a background sync poll can't wipe the editor mid-edit.
+  _openInlineEdit(t, field) {
+    if (!App.can('tasks.write') || !field) return;
+    // Already editing this exact field (e.g. a bubbled click) — leave it be.
+    if (this._inlineEdit && this._inlineEdit.taskId === t.id && this._inlineEdit.field === field) return;
+    // Close any other open editor by re-rendering to the plain display first.
+    if (this._inlineEdit) { this._inlineEdit = null; this.render(); }
+
+    this._inlineEdit = { taskId: t.id, field };
+    const cell = this.pane.querySelector(`[data-edit-field="${field}"]`);
+    if (!cell) { this._inlineEdit = null; return; }
+    cell.classList.add('is-editing');
+    cell.innerHTML = `
+      <span class="tdp-inline-edit">
+        ${this._inlineEditorHtml(t, field)}
+        <button class="tdp-ie-save" data-ie="save" title="Save" aria-label="Save" type="button"><i class="ti ti-check"></i></button>
+        <button class="tdp-ie-cancel" data-ie="cancel" title="Cancel" aria-label="Cancel" type="button"><i class="ti ti-x"></i></button>
+      </span>`;
+
+    const wrap = cell.querySelector('.tdp-inline-edit');
+    const input = cell.querySelector('#tdp-ie-input');
+    // Keep clicks inside the editor from bubbling to the cell's own click handler
+    // (which would otherwise re-open the editor) or the document Escape/close.
+    if (wrap) wrap.addEventListener('click', (e) => e.stopPropagation());
+
+    const commit = () => this._commitInlineEdit(t, field, input ? input.value : '');
+    const cancel = () => { this._inlineEdit = null; this.render(); };
+    const saveBtn = cell.querySelector('[data-ie="save"]');
+    const cancelBtn = cell.querySelector('[data-ie="cancel"]');
+    if (saveBtn) saveBtn.addEventListener('click', commit);
+    if (cancelBtn) cancelBtn.addEventListener('click', cancel);
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
+      });
+      input.focus();
+      // Open the native date/time picker straight away where supported.
+      if (/^(date|time|datetime-local)$/.test(input.type)) {
+        try { input.showPicker(); } catch (e) { /* not user-activated / unsupported */ }
+      }
+    }
+  }
+
+  // Build the editor element (id="tdp-ie-input") for a given field.
+  _inlineEditorHtml(t, field) {
+    const esc = App.utils.escapeHtml;
+    const sel = (entries, selected) =>
+      `<select id="tdp-ie-input" class="tdp-ie-input">${entries.map(([k, label]) =>
+        `<option value="${esc(k)}" ${k === selected ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select>`;
+    switch (field) {
+      case 'status':    return sel(Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]), t.status);
+      case 'priority':  return sel(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), t.priority);
+      case 'type':      return sel(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), t.type);
+      case 'label':     return sel(Object.entries(App.TASK_LABELS).map(([k, v]) => [k, v.label]), t.label || 'none');
+      case 'bidStatus': return sel(Object.entries(App.BID_STATUSES).map(([k, v]) => [k, v.label]), t.bidStatus || 'queue');
+      case 'company':   return sel(Object.values(App.COMPANIES).map(c => [c.id, c.label]), t.company);
+      case 'assignee':  return sel(App.utils.peopleInCompany(t.company, t.assignee).map(p => [p.id, p.name]), t.assignee);
+      case 'due':       return `<input type="date" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc(t.due || '')}" />`;
+      case 'dueTime':   return `<input type="time" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc(t.dueTime || '')}" />`;
+      case 'reminderAt':return `<input type="datetime-local" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc((t.reminderAt || '').slice(0, 16))}" />`;
+      default:          return '';
+    }
+  }
+
+  // Save the edited value (✓). assignee uses reassignTask (notifies the new
+  // assignee); everything else uses updateTaskField. A no-op change just restores
+  // the display. Clearing the _inlineEdit guard BEFORE saving lets the resulting
+  // tasks:changed re-render the card with the saved value.
+  _commitInlineEdit(t, field, rawValue) {
+    this._inlineEdit = null;
+    if (field === 'assignee') {
+      if (rawValue && rawValue !== t.assignee) { this.controller.reassignTask(t.id, rawValue); this._toastSaved(); }
+      else this.render();
+      return;
+    }
+    // Optional date/time/reminder clear to null; the rest are constrained selects.
+    let value = rawValue;
+    if (field === 'due' || field === 'dueTime' || field === 'reminderAt') value = rawValue || null;
+    const cur = t[field] == null ? '' : String(t[field]);
+    const next = value == null ? '' : String(value);
+    if (cur !== next) { this.controller.updateTaskField(t.id, field, value); this._toastSaved(); }
+    else this.render();
+  }
+
+  _toastSaved() {
+    const tv = this.controller && this.controller.toastView;
+    if (tv && tv.show) tv.show({ title: 'Saved' });
   }
 
   // Tiny popover to change a task's status straight from the header chip, without
