@@ -5885,6 +5885,31 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .list-row .status-sel.status-review  { color: #7c6bd0; }
 #taskViewWrap .list-row .status-sel.status-done    { color: #3a9b6e; }
 
+/* Status is an editable dropdown, not plain text — give the button a caret and
+   a hover/open pill so it's obviously clickable. The read-only <span> variant
+   (no tasks.write) has no caret and stays inert. */
+#taskViewWrap .list-row button.status-sel {
+  gap: 4px; padding: 3px 7px; border-radius: 6px; border: 1px solid transparent;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+#taskViewWrap .list-row .status-sel-caret {
+  flex: none; font-size: 13px; opacity: 0.55; margin-left: -1px;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+#taskViewWrap .list-row button.status-sel:hover {
+  background: #f4f1ec; border-color: #e6e1d9;
+}
+#taskViewWrap .list-row button.status-sel:hover .status-sel-caret { opacity: 0.85; }
+#taskViewWrap .list-row button.status-sel:focus-visible {
+  outline: none; border-color: var(--accent, #ee5a26);
+}
+#taskViewWrap .list-row button.status-sel[aria-expanded="true"] {
+  background: #f4f1ec; border-color: #e6e1d9;
+}
+#taskViewWrap .list-row button.status-sel[aria-expanded="true"] .status-sel-caret {
+  transform: rotate(180deg); opacity: 0.85;
+}
+
 /* Priority — soft-tinted pill. */
 #taskViewWrap .list-row .priority-block {
   height: 21px; line-height: 21px; padding: 0 9px; border-radius: 6px;

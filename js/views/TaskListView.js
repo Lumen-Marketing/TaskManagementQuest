@@ -1085,7 +1085,7 @@ App.TaskListView = class TaskListView {
       </div>
       <div class="status-cell">${App.can('tasks.write')
         ? `<button class="status-sel status-${t.status || 'todo'}" data-action="open-status" data-current="${t.status || 'todo'}" title="Change status" aria-haspopup="listbox" aria-expanded="false">
-            <span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span>
+            <span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span><i class="status-sel-caret ti ti-chevron-down" aria-hidden="true"></i>
           </button>`
         : `<span class="status-sel status-${t.status || 'todo'}"><span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span></span>`}</div>
       <div class="priority-cell"><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
