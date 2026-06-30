@@ -38,6 +38,23 @@ App.TopbarView = class TopbarView {
     this.bindEvents();
     this.subscribe();
     this.render();
+    this.paintAccountChip();
+    App.EventBus.on('profile:changed', () => this.paintAccountChip());
+  }
+
+  /* The deck account chip (.uc-name / .uc-role) ships as static
+     "Abraham M. / Owner · Admin" demo placeholders in app.html that nothing
+     updated — so every signed-in user showed up as Abraham. Bind it to the
+     real profile. (The avatar is already painted from profile.avatar_url.) */
+  paintAccountChip() {
+    const profile = App.currentProfile || {};
+    const person = App.PEOPLE[this.currentUser] || {};
+    const name = profile.full_name || person.full || person.name || 'Member';
+    const roleLabel = (App.ROLES[profile.role] || { label: profile.role || 'Member' }).label;
+    const nameEl = document.querySelector('.userchip .uc-name');
+    const roleEl = document.querySelector('.userchip .uc-role');
+    if (nameEl) nameEl.textContent = name;
+    if (roleEl) roleEl.textContent = roleLabel;
   }
 
   bindEvents() {
