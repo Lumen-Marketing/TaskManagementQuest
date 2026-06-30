@@ -5720,7 +5720,7 @@ body.panze-tasks .deck { background: var(--bg); border-right: 1px solid #ebe7e2;
 body.panze-home .deck .side-item,
 body.panze-tasks .deck .side-item { border-radius: 11px; }
 body.panze-home .deck .side-item.active,
-body.panze-tasks .deck .side-item.active { background: var(--amber-bg); color: var(--amber); }
+body.panze-tasks .deck .side-item.active { background: var(--amber-bg); color: var(--amber); box-shadow: none; }
 
 /* ============================================================
    Task comments (migration 053) — discussion thread + composer
