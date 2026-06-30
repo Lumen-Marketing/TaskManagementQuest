@@ -179,7 +179,7 @@ App.HomeView = class HomeView {
       </div>`).join('')
       : `<div class="qhq-empty qhq-empty-lg">
           <span class="qhq-empty-hero tone-amber">${icon('coffee')}</span>
-          <span class="qhq-empty-tx"><b>You're all caught up</b>No open tasks in your queue.</span>
+          <span class="qhq-empty-tx"><b>You're all caught up</b><span>No open tasks in your queue.</span></span>
         </div>`;
 
     const riskRows = atRisk.length ? atRisk.map(r => `
@@ -193,25 +193,35 @@ App.HomeView = class HomeView {
       </div>`).join('')
       : `<div class="qhq-empty qhq-empty-lg">
           <span class="qhq-empty-hero tone-green">${icon('done')}</span>
-          <span class="qhq-empty-tx"><b>Nothing at risk</b>Everything's on track right now.</span>
+          <span class="qhq-empty-tx"><b>Nothing at risk</b><span>Everything's on track right now.</span></span>
         </div>`;
 
-    // Projects-overview donut from the real status mix (conic-gradient bands).
+    // Projects-overview: a progress ring (center = % complete) over per-status
+    // progress bars, sized to fill the whole card.
     const mix = this._statusMix();
     const pct = n => (mix.total ? (n / mix.total) * 100 : 0);
     const a = pct(mix.inProg), b = pct(mix.done);
+    const donePct = mix.total ? Math.round((mix.done / mix.total) * 100) : 0;
     const donutStyle = mix.total
       ? `background: conic-gradient(var(--blue) 0 ${a}%, var(--amber) ${a}% ${a + b}%, var(--bg-3) ${a + b}% 100%);`
       : `background: var(--bg-3);`;
+    const bar = (label, n, color) => `
+      <div class="qhq-pbar">
+        <div class="qhq-pbar-top"><span class="qhq-pbar-l"><span class="d" style="background:${color}"></span>${esc(label)}</span><span class="qhq-pbar-v tnum">${n}</span></div>
+        <div class="qhq-pbar-track"><i style="width:${Math.round(pct(n))}%;background:${color}"></i></div>
+      </div>`;
     const donutHtml = `
       <div class="qhq-card qhq-donut-card">
         ${cardHead('donut', 'tone-blue', 'Projects overview', 'your tasks')}
         <div class="qhq-donut-wrap">
-          <div class="qhq-donut" style="${donutStyle}"><div class="qhq-donut-hole"><div class="qhq-donut-num tnum">${mix.total}</div><div class="qhq-donut-lbl">tasks</div></div></div>
-          <div class="qhq-donut-legend">
-            <div class="qhq-leg"><span class="qhq-leg-v tnum">${mix.inProg}</span><span class="qhq-leg-l"><span class="d" style="background:var(--blue)"></span>In progress</span></div>
-            <div class="qhq-leg"><span class="qhq-leg-v tnum">${mix.done}</span><span class="qhq-leg-l"><span class="d" style="background:var(--amber)"></span>Completed</span></div>
-            <div class="qhq-leg"><span class="qhq-leg-v tnum">${mix.notStarted}</span><span class="qhq-leg-l"><span class="d" style="background:var(--bg-3)"></span>Not started</span></div>
+          <div class="qhq-donut" style="${donutStyle}"><div class="qhq-donut-hole">
+            <div class="qhq-donut-fig"><span class="qhq-donut-num tnum">${donePct}</span><span class="qhq-donut-pct">%</span></div>
+            <div class="qhq-donut-lbl">complete</div>
+          </div></div>
+          <div class="qhq-donut-bars">
+            ${bar('In progress', mix.inProg, 'var(--blue)')}
+            ${bar('Completed', mix.done, 'var(--amber)')}
+            ${bar('Not started', mix.notStarted, '#C7CCD3')}
           </div>
         </div>
       </div>`;
@@ -285,7 +295,7 @@ App.HomeView = class HomeView {
     // background data refresh, and never when the user prefers reduced motion).
     if (enter && !this._reduceMotion()) {
       this.wrap.querySelectorAll('.qhq-stat .sv.tnum').forEach((el, i) => this._countUp(el, stats[i] && stats[i].value));
-      this._countUp(this.wrap.querySelector('.qhq-donut-num'), mix.total);
+      this._countUp(this.wrap.querySelector('.qhq-donut-num'), donePct);
     }
   }
 
