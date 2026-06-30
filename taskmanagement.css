@@ -5878,15 +5878,19 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .list-row .priority-block.priority-medium { background: #e9f0fb; color: #3066b8; }
 #taskViewWrap .list-row .priority-block.priority-low    { background: #f1efeb; color: #8a847c; }
 
-/* Type — colored text. */
-#taskViewWrap .list-row .type-text { font-weight: 500; color: #8f867b; }
-#taskViewWrap .list-row .type-text.type-invoicing { color: #b5701a; }
-#taskViewWrap .list-row .type-text.type-bid       { color: #6a52c4; }
-#taskViewWrap .list-row .type-text.type-admin     { color: #8f867b; }
-#taskViewWrap .list-row .type-text.type-lead      { color: #3a9b6e; }
-#taskViewWrap .list-row .type-text.type-ar        { color: #c2762e; }
-#taskViewWrap .list-row .type-text.type-meeting   { color: #3e7bf2; }
-#taskViewWrap .list-row .type-text.type-web_dev   { color: #8268dc; }
+/* Type — soft-tinted pill, same treatment as Priority. */
+#taskViewWrap .list-row .type-text {
+  display: inline-block; height: 21px; line-height: 21px; padding: 0 9px;
+  border-radius: 6px; font-size: 10.5px; font-weight: 700;
+  background: #f1efeb; color: #8f867b;
+}
+#taskViewWrap .list-row .type-text.type-invoicing { background: #fcefe0; color: #b5701a; }
+#taskViewWrap .list-row .type-text.type-bid       { background: #eceafa; color: #6a52c4; }
+#taskViewWrap .list-row .type-text.type-admin     { background: #f1efeb; color: #8f867b; }
+#taskViewWrap .list-row .type-text.type-lead      { background: #e6f4ee; color: #3a9b6e; }
+#taskViewWrap .list-row .type-text.type-ar        { background: #fcefe0; color: #c2762e; }
+#taskViewWrap .list-row .type-text.type-meeting   { background: #e9f0fb; color: #3e7bf2; }
+#taskViewWrap .list-row .type-text.type-web_dev   { background: #efeafc; color: #8268dc; }
 
 /* Label (company) — colored TEXT (no dot). */
 #taskViewWrap .list-row .co-dot { display: none; }
