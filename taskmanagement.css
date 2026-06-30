@@ -5917,6 +5917,25 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .list-row .due-cell.over,
 #taskViewWrap .list-row .due-cell.overdue { color: #c2641f; }
 
+/* Extend the table's warm palette to the toolbar buttons + page-head widget
+   cards so the whole Tasks page matches (warm hairline #ebe7e2, Hanken Grotesk,
+   orange primary). #listPane-scoped + !important to beat the skin/restyle. */
+#listPane .work-toolbar .btn {
+  background: #fff; border: 1px solid #ebe7e2; color: #56504a; box-shadow: none;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+}
+#listPane .work-toolbar .btn:hover { background: #faf9f7; border-color: #ddd6cf; color: #1c1a18; }
+#listPane .work-toolbar .btn-primary,
+#listPane .work-toolbar .btn-primary:hover { background: #ee5a26; border-color: #ee5a26; color: #fff; }
+#listPane .up-next-card,
+#listPane .focus-widget,
+#listPane .progress-card {
+  border: 1px solid #ebe7e2 !important;
+  box-shadow: none !important;
+  border-radius: 14px;
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+}
+
 /* Leading priority dot — exact mockup colors. */
 #taskViewWrap .list-row .row-dot { width: 9px; height: 9px; }
 #taskViewWrap .list-row .row-dot.priority-critical,
