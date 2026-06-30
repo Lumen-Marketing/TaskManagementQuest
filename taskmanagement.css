@@ -5858,13 +5858,14 @@ body.wallboard-active #mainPane { padding: 0; }
 }
 #taskViewWrap .list-header .col-filter i { display: none; }
 
-/* Status — dot + text. */
-#taskViewWrap .list-row .status-sel { color: #56504a; font-weight: 500; font-size: 12.5px; }
-#taskViewWrap .list-row .status-sel.status-todo    .status-dot { background: #ee5a26; }
-#taskViewWrap .list-row .status-sel.status-pending .status-dot { background: #9a938a; }
-#taskViewWrap .list-row .status-sel.status-hold    .status-dot { background: #e0484d; }
-#taskViewWrap .list-row .status-sel.status-review  .status-dot { background: #7c6bd0; }
-#taskViewWrap .list-row .status-sel.status-done    .status-dot { background: #3a9b6e; }
+/* Status — colored TEXT (no dot). */
+#taskViewWrap .list-row .status-dot { display: none; }
+#taskViewWrap .list-row .status-sel { color: #56504a; font-weight: 600; font-size: 12.5px; }
+#taskViewWrap .list-row .status-sel.status-todo    { color: #ee5a26; }
+#taskViewWrap .list-row .status-sel.status-pending { color: #9a938a; }
+#taskViewWrap .list-row .status-sel.status-hold    { color: #e0484d; }
+#taskViewWrap .list-row .status-sel.status-review  { color: #7c6bd0; }
+#taskViewWrap .list-row .status-sel.status-done    { color: #3a9b6e; }
 
 /* Priority — soft-tinted pill. */
 #taskViewWrap .list-row .priority-block {
@@ -5887,11 +5888,12 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .list-row .type-text.type-meeting   { color: #3e7bf2; }
 #taskViewWrap .list-row .type-text.type-web_dev   { color: #8268dc; }
 
-/* Label (company) — dot + text. */
-#taskViewWrap .list-row .co-chip { color: #56504a; font-weight: 500; }
-#taskViewWrap .list-row .co-chip.co-roofing  .co-dot { background: #e0902a; }
-#taskViewWrap .list-row .co-chip.co-drafting .co-dot { background: #3e7bf2; }
-#taskViewWrap .list-row .co-chip.co-lumen    .co-dot { background: #8268dc; }
+/* Label (company) — colored TEXT (no dot). */
+#taskViewWrap .list-row .co-dot { display: none; }
+#taskViewWrap .list-row .co-chip { color: #56504a; font-weight: 600; }
+#taskViewWrap .list-row .co-chip.co-roofing  { color: #e0902a; }
+#taskViewWrap .list-row .co-chip.co-drafting { color: #3e7bf2; }
+#taskViewWrap .list-row .co-chip.co-lumen    { color: #8268dc; }
 
 /* Assignee avatar + Due (mono). */
 #taskViewWrap .list-row .meta-cell { color: #56504a; font-weight: 500; }
