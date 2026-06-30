@@ -5838,10 +5838,7 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .task-group > .group-head {
   background: #faf9f7;
   border-bottom: 1px solid #ebe7e2;
-  /* Extra right padding offsets the trailing timer/✓ action columns (~66px)
-     so the count + Clear button align with the Due column, not the action
-     column past it. */
-  padding: 9px 82px 9px 14px;
+  padding: 9px 14px;
 }
 /* Group dot (the letter pill becomes a small colored dot) + mono count chip. */
 #taskViewWrap .group-head .group-pill {
