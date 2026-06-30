@@ -1088,7 +1088,9 @@ App.TaskListView = class TaskListView {
             <span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span><i class="status-sel-caret ti ti-chevron-down" aria-hidden="true"></i>
           </button>`
         : `<span class="status-sel status-${t.status || 'todo'}"><span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span></span>`}</div>
-      <div class="priority-cell"><span class="priority-block ${priority.cls}" ${App.can('tasks.write') ? 'data-action="cycle-priority" title="Click to change priority"' : ''}>${priority.label}</span></div>
+      <div class="priority-cell">${App.can('tasks.write')
+        ? `<button class="priority-block ${priority.cls}" data-action="open-priority" data-current="${t.priority || 'medium'}" title="Change priority" aria-haspopup="listbox" aria-expanded="false">${priority.label}<i class="priority-caret ti ti-chevron-down" aria-hidden="true"></i></button>`
+        : `<span class="priority-block ${priority.cls}">${priority.label}</span>`}</div>
       <div class="type-cell"><span class="type-text type-${t.type || 'admin'}">${App.utils.escapeHtml(type.label)}</span></div>
       <div class="label-cell"><span class="co-chip co-${t.company || 'roofing'}"><span class="co-dot"></span>${App.utils.escapeHtml(company.label)}</span></div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
@@ -1111,7 +1113,7 @@ App.TaskListView = class TaskListView {
         const action = target.dataset.action;
         if (action === 'bulk-toggle') this.controller.toggleBulkSelect(t.id);
         else if (action === 'toggle-done') this.controller.toggleTaskDone(t.id);
-        else if (action === 'cycle-priority') this.controller.cycleTaskPriority(t.id);
+        else if (action === 'open-priority') this._openStatusMenu(t.id, target, 'priority');
         else if (action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
         else if (action === 'finish-task') this.controller.completeTask(t.id);
         else if (action === 'toggle-subtasks') this._toggleSubtaskDrawer(t.id, row, target);
@@ -1123,10 +1125,6 @@ App.TaskListView = class TaskListView {
       if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
       this.controller.selectTask(t.id);
     });
-
-    // Priority pill is a click-to-cycle control — make it keyboard-operable.
-    const prioBtn = row.querySelector('[data-action="cycle-priority"]');
-    if (prioBtn) App.utils.makeActivatable(prioBtn, null, `Priority: ${priority.label}. Activate to change.`);
 
     // Swipe-to-reveal actions: wrap the row in a horizontal scroll-snap
     // container with Done/Delete buttons that the user swipes left to expose
@@ -1274,15 +1272,18 @@ App.TaskListView = class TaskListView {
     return el;
   }
 
-  _openStatusMenu(taskId, trigger) {
+  // field is 'status' (default) or 'priority' — the same popover drives both.
+  _openStatusMenu(taskId, trigger, field = 'status') {
     const el = this._ensureStatusMenu();
     // Re-clicking the open trigger toggles it shut.
     if (this._statusMenuTrigger === trigger && !el.classList.contains('hidden')) {
       this._closeStatusMenu();
       return;
     }
-    const current = trigger.dataset.current || 'todo';
-    el.innerHTML = Object.entries(App.STATUSES).map(([k, v]) =>
+    const dict = field === 'priority' ? App.PRIORITIES : App.STATUSES;
+    const current = trigger.dataset.current || (field === 'priority' ? 'medium' : 'todo');
+    el.setAttribute('aria-label', field === 'priority' ? 'Set priority' : 'Set status');
+    el.innerHTML = Object.entries(dict).map(([k, v]) =>
       `<button class="status-menu-item" role="option" data-key="${k}" aria-selected="${k === current}">
         <span class="status-dot ${v.cls}"></span>
         <span class="status-menu-label">${App.utils.escapeHtml(v.label)}</span>
@@ -1292,6 +1293,7 @@ App.TaskListView = class TaskListView {
 
     this._statusMenuTaskId = taskId;
     this._statusMenuTrigger = trigger;
+    this._statusMenuField = field;
     trigger.setAttribute('aria-expanded', 'true');
 
     el.querySelectorAll('.status-menu-item').forEach(item => {
@@ -1344,8 +1346,9 @@ App.TaskListView = class TaskListView {
   }
 
   _applyStatus(taskId, key) {
+    const field = this._statusMenuField || 'status';
     this._closeStatusMenu();
-    this.controller.updateTaskField(taskId, 'status', key);
+    this.controller.updateTaskField(taskId, field, key);
   }
 
   _closeStatusMenu() {

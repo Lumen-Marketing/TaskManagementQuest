@@ -811,6 +811,11 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .status-menu-item .status-dot.status-hold    { background: var(--rust); }
 .status-menu-item .status-dot.status-review  { background: var(--amber); }
 .status-menu-item .status-dot.status-done    { background: var(--green); }
+.status-menu-item .status-dot.priority-critical { background: var(--u-critical); }
+.status-menu-item .status-dot.priority-urgent   { background: var(--u-urgent); }
+.status-menu-item .status-dot.priority-high     { background: var(--u-high); }
+.status-menu-item .status-dot.priority-medium   { background: var(--u-medium); }
+.status-menu-item .status-dot.priority-low      { background: var(--u-low); }
 .status-menu-label { flex: 1; min-width: 0; }
 .status-menu-check { flex: none; font-size: 15px; color: var(--amber); opacity: 0; }
 .status-menu-item[aria-selected="true"] .status-menu-check { opacity: 1; }
@@ -5963,6 +5968,30 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .list-row .priority-block.priority-high   { background: #fcefe0; color: #b5701a; }
 #taskViewWrap .list-row .priority-block.priority-medium { background: #e9f0fb; color: #3066b8; }
 #taskViewWrap .list-row .priority-block.priority-low    { background: #f1efeb; color: #8a847c; }
+
+/* Priority is an editable dropdown, not a click-to-cycle pill — reset the
+   button chrome (keep the tinted background from the rules above) and add a
+   caret + hover/open affordance so it reads as a dropdown. The read-only
+   <span> variant has no caret and stays inert. */
+#taskViewWrap .list-row button.priority-block {
+  display: inline-flex; align-items: center; gap: 3px;
+  border: 1px solid transparent; cursor: pointer; font-family: inherit;
+  -webkit-appearance: none; appearance: none;
+  transition: filter var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+#taskViewWrap .list-row .priority-caret {
+  flex: none; font-size: 11px; opacity: 0.6; margin-right: -3px;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+#taskViewWrap .list-row button.priority-block:hover { filter: brightness(0.95); }
+#taskViewWrap .list-row button.priority-block:hover .priority-caret { opacity: 0.9; }
+#taskViewWrap .list-row button.priority-block:focus-visible {
+  outline: none; box-shadow: 0 0 0 2px var(--accent, #ee5a26);
+}
+#taskViewWrap .list-row button.priority-block[aria-expanded="true"] { filter: brightness(0.93); }
+#taskViewWrap .list-row button.priority-block[aria-expanded="true"] .priority-caret {
+  transform: rotate(180deg); opacity: 0.9;
+}
 
 /* Type — soft-tinted pill, same treatment as Priority. */
 #taskViewWrap .list-row .type-text {
