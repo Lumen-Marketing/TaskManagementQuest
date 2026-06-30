@@ -13,7 +13,10 @@ App.HomeView = class HomeView {
   }
 
   subscribe() {
-    const rerender = () => { if (this.visible()) this.render(); };
+    const rerender = () => {
+      if (this.visible()) this.render();
+      else this._rendered = false; // re-arm the entrance reveal for the next visit
+    };
     App.EventBus.on('view:changed', rerender);
     App.EventBus.on('tasks:changed', rerender);
     App.EventBus.on('company:changed', rerender);
@@ -51,10 +54,10 @@ App.HomeView = class HomeView {
     for (let i = 0; i < 7; i++) wkSet.add(App.utils.todayISO(-i));
     const doneWeek = all.filter(t => t.completedAt && wkSet.has(App.utils.hqDateOf(t.completedAt))).length;
     return [
-      { label: 'Open', value: open.length },
-      { label: 'Due today', value: open.filter(t => t.due === today).length },
-      { label: 'Overdue', value: open.filter(t => t.due && t.due < today).length, warn: true },
-      { label: 'Done this week', value: doneWeek },
+      { label: 'Open', value: open.length, icon: 'ti-inbox', tone: 'tone-blue' },
+      { label: 'Due today', value: open.filter(t => t.due === today).length, icon: 'ti-calendar-due', tone: 'tone-amber' },
+      { label: 'Overdue', value: open.filter(t => t.due && t.due < today).length, warn: true, icon: 'ti-flame', tone: 'tone-rust' },
+      { label: 'Done this week', value: doneWeek, icon: 'ti-circle-check', tone: 'tone-green' },
     ];
   }
 
@@ -122,8 +125,29 @@ App.HomeView = class HomeView {
     const atRisk = this._atRisk();
     const recents = this._recents();
 
-    const statHtml = stats.map(s =>
-      `<div class="qhq-stat"><div class="sv tnum ${s.warn && s.value ? 'warn' : ''}">${s.value}</div><div class="sl">${esc(s.label)}</div></div>`).join('');
+    // Each stat is an icon chip + figure. The overdue tile flips to an alert
+    // wash only when it actually has a count, so it earns the eye.
+    const statHtml = stats.map(s => `
+      <div class="qhq-stat ${s.tone} ${s.warn && s.value ? 'is-alert' : ''}">
+        <span class="qhq-stat-ic"><i class="ti ${s.icon}"></i></span>
+        <div class="qhq-stat-body">
+          <div class="sv tnum ${s.warn && s.value ? 'warn' : ''}">${s.value}</div>
+          <div class="sl">${esc(s.label)}</div>
+        </div>
+      </div>`).join('');
+
+    // A consistent, scannable section heading: tinted glyph + bold title + caption.
+    const cardHead = (icon, tone, title, meta) => `
+      <div class="qhq-card-h">
+        <span class="qhq-hicon ${tone}"><i class="ti ${icon}"></i></span>
+        <span class="qhq-htext"><span class="ct">${esc(title)}</span><span class="meta">${esc(meta)}</span></span>
+      </div>`;
+
+    // Deterministic monogram + tone for the activity feed, so each actor reads
+    // as a person at a glance without pulling avatars over the wire.
+    const TONES = ['tone-amber', 'tone-blue', 'tone-green', 'tone-slate'];
+    const initials = name => (String(name || '?').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('') || '?').toUpperCase();
+    const toneFor = s => TONES[[...String(s || '')].reduce((a, c) => a + c.charCodeAt(0), 0) % TONES.length];
 
     const PRIO = { critical: 'critical', urgent: 'urgent', high: 'high', medium: 'medium', low: 'low' };
     const unHtml = upNext.length ? upNext.map(r => `
@@ -154,7 +178,7 @@ App.HomeView = class HomeView {
       : `background: var(--bg-3);`;
     const donutHtml = `
       <div class="qhq-card qhq-donut-card">
-        <div class="qhq-card-h"><span class="ct">Projects overview</span><span class="meta">· your tasks</span></div>
+        ${cardHead('ti-chart-donut', 'tone-blue', 'Projects overview', 'your tasks')}
         <div class="qhq-donut-wrap">
           <div class="qhq-donut" style="${donutStyle}"><div class="qhq-donut-hole"><div class="qhq-donut-num tnum">${mix.total}</div><div class="qhq-donut-lbl">tasks</div></div></div>
           <div class="qhq-donut-legend">
@@ -167,17 +191,23 @@ App.HomeView = class HomeView {
 
     const recHtml = recents.length ? recents.map(r => `
       <div class="qhq-rec-row" data-id="${esc(r.id)}" role="button" tabindex="0">
+        <span class="qhq-rec-av ${toneFor(r.who)}" aria-hidden="true">${esc(initials(r.who))}</span>
         <span class="qhq-rec-tx"><b>${esc(r.who)}</b> ${esc(r.what)} · <span class="qhq-rec-task">${esc(r.title)}</span></span>
         <span class="qhq-rec-ago">${esc((r.at && App.utils.timeAgo(r.at)) || r.when || 'recently')}</span>
       </div>`).join('')
       : `<div class="qhq-empty">No recent activity yet.</div>`;
 
+    // Animate the entrance only on the first paint after landing on Home, not on
+    // every data-driven re-render (re-armed in subscribe when the view is hidden).
+    const enter = this._rendered ? '' : ' qhq-enter';
+    this._rendered = true;
+
     this.wrap.innerHTML = `
-      <div class="qhq-home">
+      <div class="qhq-home${enter}">
         <div class="qhq-head">
           <div>
             <div class="qhq-greet">${this._greeting()}, <span class="em">${esc(this._firstName())}</span></div>
-            <div class="qhq-dateline">${esc(this._longDate(today))}</div>
+            <div class="qhq-dateline"><i class="ti ti-calendar-event"></i> ${esc(this._longDate(today))}</div>
           </div>
           <div class="qhq-actions">
             <button type="button" class="qhq-act primary" data-act="new"><i class="ti ti-plus"></i> New task</button>
@@ -190,18 +220,18 @@ App.HomeView = class HomeView {
 
         <div class="qhq-home-grid">
           <div class="qhq-card">
-            <div class="qhq-card-h"><span class="ct">Up next</span><span class="meta">· your queue</span></div>
+            ${cardHead('ti-stack-2', 'tone-amber', 'Up next', 'your queue')}
             <div class="qhq-unlist">${unHtml}</div>
           </div>
           ${donutHtml}
           <div class="qhq-card">
-            <div class="qhq-card-h"><span class="ct">At risk</span><span class="meta">· needs attention</span></div>
+            ${cardHead('ti-alert-triangle', 'tone-rust', 'At risk', 'needs attention')}
             <div class="qhq-arlist">${riskRows}</div>
           </div>
         </div>
 
         <div class="qhq-card qhq-recents">
-          <div class="qhq-card-h"><span class="ct">Recents</span><span class="meta">· ${App.can('reports.view') ? 'team activity' : 'your activity'}</span></div>
+          ${cardHead('ti-activity', 'tone-slate', 'Recents', App.can('reports.view') ? 'team activity' : 'your activity')}
           <div class="qhq-reclist">${recHtml}</div>
         </div>
       </div>`;
@@ -211,7 +241,12 @@ App.HomeView = class HomeView {
       const a = b.dataset.act;
       if (a === 'new') this.controller.openNewTaskModal();
       else if (a === 'all') this.controller.setView('all');
-      else if (a === 'calendar') this.controller.setView('calendar');
+      else if (a === 'calendar') {
+        // "Calendar" isn't a view — it's a layout of the task list. Open the
+        // All-tasks view, then switch its layout to the calendar.
+        this.controller.setView('all');
+        this.controller.setLayout('calendar');
+      }
     }));
     const open = el => { const id = el.dataset.id; if (id) this.controller.selectTask(id); };
     this.wrap.querySelectorAll('.qhq-un-row, .qhq-rec-row').forEach(el => {

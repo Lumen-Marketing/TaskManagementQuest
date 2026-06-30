@@ -5032,9 +5032,10 @@ body.ui-command-center .detail-title {
 
 /* ----- Home ----- */
 .qhq-home { padding: 16px 18px 36px; max-width: 1700px; font-family: var(--font-body); }
-.qhq-greet { font-size: 23px; font-weight: 800; letter-spacing: -.024em; color: var(--ink); }
+.qhq-greet { font-size: 25px; font-weight: 800; letter-spacing: -.026em; color: var(--ink); line-height: 1.1; }
 .qhq-greet .em { color: var(--amber); }
-.qhq-dateline { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
+.qhq-dateline { font-size: 12px; color: var(--ink-3); margin-top: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.qhq-dateline i { font-size: 14px; color: var(--ink-4); }
 .qhq-brief { border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(180deg,#FFFCFA,var(--surface)); padding: 16px 18px; margin: 16px 0; box-shadow: var(--shadow-sm); }
 .qhq-brief-h { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
 .qhq-spark { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg,#ED4E0D,#F2902E); display: grid; place-items: center; color: #fff; }
@@ -5043,9 +5044,12 @@ body.ui-command-center .detail-title {
 .qhq-brief-tx { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
 .qhq-home-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 12px; margin-top: 16px; }
 .qhq-card { background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: var(--block-radius, 14px); box-shadow: none; }
-.qhq-card-h { display: flex; align-items: center; gap: 9px; padding: 14px 16px 11px; }
-.qhq-card-h .ct { font-size: 13px; font-weight: 800; }
-.qhq-card-h .meta { font-size: 11px; color: var(--ink-3); }
+.qhq-card-h { display: flex; align-items: center; gap: 11px; padding: 14px 16px 13px; border-bottom: 1px solid var(--border); }
+.qhq-hicon { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 9px; display: grid; place-items: center; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
+.qhq-hicon i { font-size: 17px; }
+.qhq-htext { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.qhq-card-h .ct { font-size: 14.5px; font-weight: 800; letter-spacing: -.012em; color: var(--ink); line-height: 1.15; }
+.qhq-card-h .meta { font-size: 10.5px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
 .qhq-arlist, .qhq-hdlist { padding: 2px 16px 12px; }
 .qhq-ar-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
 .qhq-ar-row:first-child { border-top: none; }
@@ -5239,14 +5243,32 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-act.primary { background: var(--amber); border-color: var(--amber); color: #fff; }
 .qhq-act.primary:hover { filter: brightness(0.95); }
 
-.qhq-statstrip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0 0; }
+.qhq-statstrip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0 0; }
 .qhq-stat {
+  display: flex; align-items: center; gap: 13px;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; box-shadow: var(--shadow-sm); padding: 14px 16px;
+  border-radius: 14px; box-shadow: var(--shadow-sm); padding: 13px 15px;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
-.qhq-stat .sv { font-family: var(--font-display); font-size: 26px; line-height: 1.1; color: var(--ink); }
+.qhq-stat-ic {
+  width: 38px; height: 38px; flex: 0 0 auto; border-radius: 11px;
+  display: grid; place-items: center;
+  background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2));
+}
+.qhq-stat-ic i { font-size: 20px; }
+.qhq-stat-body { min-width: 0; }
+.qhq-stat .sv { font-family: var(--font-display); font-size: 27px; font-weight: 800; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
 .qhq-stat .sv.warn { color: var(--rust); }
-.qhq-stat .sl { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-top: 4px; }
+.qhq-stat .sl { font-size: 10.5px; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-top: 5px; }
+/* The overdue tile only earns an alert wash when it actually has a count. */
+.qhq-stat.is-alert { background: var(--rust-bg); border-color: transparent; }
+
+/* ----- Section-heading + chip tones (size + glyph + contrast = hierarchy) ----- */
+.qhq-home .tone-amber { --tn-bg: var(--amber-bg); --tn-fg: var(--amber); }
+.qhq-home .tone-blue  { --tn-bg: var(--blue-bg);  --tn-fg: var(--blue-ink); }
+.qhq-home .tone-rust  { --tn-bg: var(--rust-bg);  --tn-fg: var(--rust); }
+.qhq-home .tone-green { --tn-bg: var(--green-bg); --tn-fg: var(--green-ink); }
+.qhq-home .tone-slate { --tn-bg: var(--bg-3);     --tn-fg: var(--ink-2); }
 
 .qhq-unlist, .qhq-reclist { padding: 0 16px 14px; }
 .qhq-un-row {
@@ -5267,15 +5289,36 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 
 .qhq-recents { margin-top: 12px; }
 .qhq-rec-row {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  padding: 9px 0; border-top: 1px solid var(--border); cursor: pointer;
+  display: flex; align-items: center; gap: 11px;
+  padding: 8px 0; border-top: 1px solid var(--border); cursor: pointer;
 }
 .qhq-rec-row:first-child { border-top: none; }
-.qhq-rec-tx { font-size: 12.5px; color: var(--ink-2); min-width: 0; line-height: 1.45; }
+.qhq-rec-av {
+  width: 27px; height: 27px; flex: 0 0 auto; border-radius: 50%;
+  display: grid; place-items: center; font-size: 10.5px; font-weight: 800;
+  background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2));
+}
+.qhq-rec-tx { flex: 1; font-size: 12.5px; color: var(--ink-2); min-width: 0; line-height: 1.45; }
 .qhq-rec-tx b { color: var(--ink); font-weight: 700; }
 .qhq-rec-task { color: var(--ink-3); }
 .qhq-rec-row:hover .qhq-rec-task { color: var(--amber); }
 .qhq-rec-ago { font-size: 11px; color: var(--ink-4); white-space: nowrap; flex-shrink: 0; }
+
+/* Gentle warmth on hover so the cards feel alive without resting elevation. */
+.qhq-card { transition: border-color var(--dur-fast) var(--ease-out); }
+.qhq-card:hover { border-color: var(--border-strong); }
+.qhq-stat:hover { border-color: var(--border-strong); }
+
+/* Staggered entrance — one orchestrated reveal on landing, motion-safe only.
+   Re-armed in HomeView.subscribe() each time the view leaves Home. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes qhqRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .qhq-home.qhq-enter > * { opacity: 0; animation: qhqRise 420ms var(--ease-out) both; }
+  .qhq-home.qhq-enter > .qhq-head { animation-delay: 0ms; }
+  .qhq-home.qhq-enter > .qhq-statstrip { animation-delay: 60ms; }
+  .qhq-home.qhq-enter > .qhq-home-grid { animation-delay: 120ms; }
+  .qhq-home.qhq-enter > .qhq-recents { animation-delay: 180ms; }
+}
 
 @media (max-width: 720px) {
   .qhq-statstrip { grid-template-columns: 1fr 1fr; }
