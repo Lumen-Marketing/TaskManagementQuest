@@ -5714,7 +5714,7 @@ html:not([data-theme="dark"]) body.ui-command-center .cards-view .task-card:hove
 
 /* ---- Panze sidebar rail (scoped to the two views) ---- */
 body.panze-home .deck,
-body.panze-tasks .deck { background: var(--bg); border-right: none; }
+body.panze-tasks .deck { background: var(--bg); border-right: 1px solid #ebe7e2; }
 body.panze-home .deck .side-item,
 body.panze-tasks .deck .side-item { border-radius: 11px; }
 body.panze-home .deck .side-item.active,
