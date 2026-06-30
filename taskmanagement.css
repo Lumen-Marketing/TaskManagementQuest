@@ -5931,12 +5931,12 @@ body.panze-home .qhq-donut {
 }
 body.panze-home .qhq-donut-hole {
   position: absolute; inset: 24px; border-radius: 50%; background: var(--surface);
-  display: grid; place-items: center; text-align: center; box-shadow: inset 0 0 0 1px var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; box-shadow: inset 0 0 0 1px var(--border);
 }
 body.panze-home .qhq-donut-fig { display: flex; align-items: baseline; justify-content: center; line-height: 1; }
 body.panze-home .qhq-donut-num { font-size: 37px; font-weight: 800; color: var(--ink); line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 body.panze-home .qhq-donut-pct { font-size: 17px; font-weight: 700; color: var(--ink-3); margin-left: 2px; letter-spacing: 0; }
-body.panze-home .qhq-donut-lbl { font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin-top: 8px; }
+body.panze-home .qhq-donut-lbl { font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin-top: 6px; }
 /* Per-status progress bars. */
 body.panze-home .qhq-donut-bars { display: flex; flex-direction: column; gap: 14px; width: 100%; padding-top: 18px; border-top: 1px solid var(--border); }
 body.panze-home .qhq-pbar-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
