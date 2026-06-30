@@ -5544,10 +5544,12 @@ html:not([data-theme="dark"]) body.ui-command-center .work-toolbar .btn:not(.btn
 /* ---- palette knobs (inherited by the scoped containers) ---- */
 body.panze-home, body.panze-tasks {
   --pz-card: #FFFFFF;
-  --pz-card-2: #F6F8FC;
-  --pz-bg: #F3F6FC;
-  --pz-bg-3: #ECEFF5;
-  --pz-wash: linear-gradient(135deg, #F2F4FC 0%, #F2F4FC 46%, #E7F0FF 100%);
+  --pz-card-2: #FCFBFA;
+  /* Warm neutral to match the other sections (command-center --bg #FBFAF8)
+     instead of the old cool/lavender wash. */
+  --pz-bg: #FBFAF8;
+  --pz-bg-3: #F3F0EB;
+  --pz-wash: #FBFAF8;
   --pz-ink: #1A1F2B;
   --pz-ink-2: #59616F;
   --pz-ink-3: #959EAD;
