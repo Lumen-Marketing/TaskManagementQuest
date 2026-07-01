@@ -62,24 +62,6 @@ App.HomeView = class HomeView {
     return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   }
 
-  // 4 counts over the current user's tasks.
-  _stats() {
-    const me = this.controller.currentUser;
-    const today = App.utils.todayISO(0);
-    const all = this.controller.visibleTasks({ includeDone: true }).filter(t => t.assignee === me);
-    const open = all.filter(t => t.status !== 'done');
-    // Done in the last 7 days (HQ calendar days).
-    const wkSet = new Set();
-    for (let i = 0; i < 7; i++) wkSet.add(App.utils.todayISO(-i));
-    const doneWeek = all.filter(t => t.completedAt && wkSet.has(App.utils.hqDateOf(t.completedAt))).length;
-    return [
-      { label: 'Open', value: open.length, icon: 'inbox', tone: 'tone-blue' },
-      { label: 'Due today', value: open.filter(t => t.due === today).length, icon: 'calendar', tone: 'tone-amber' },
-      { label: 'Overdue', value: open.filter(t => t.due && t.due < today).length, warn: true, icon: 'fire', tone: 'tone-rust' },
-      { label: 'Done this week', value: doneWeek, icon: 'done', tone: 'tone-green' },
-    ];
-  }
-
   // Status mix over the current user's tasks, mapped to the donut's three bands:
   // In progress (pending/review), Completed (done), Not started (todo/hold).
   _statusMix() {

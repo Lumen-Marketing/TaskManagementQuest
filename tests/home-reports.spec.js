@@ -40,19 +40,41 @@ test('admin sees Reports and can open Home + Reports', async ({ page }) => {
   await expect(page.locator('#reportsWrap')).toBeHidden();
 });
 
-test('Home shows the enrichment widgets (stat strip, Up next, Recents)', async ({ page }) => {
+test('Home command center: trend cards, two columns, Up next, Recents', async ({ page }) => {
   await boot(page, 'admin');
   await page.evaluate(() => App.controller.setView('home'));
   await expect(page.locator('#homeWrap')).toBeVisible();
-  // 4-chip stat strip + 3 quick actions.
-  await expect(page.locator('.qhq-stat')).toHaveCount(4);
+  // Trend cards replaced the old flat stat strip; 3 quick actions remain.
+  await expect(page.locator('.qhq-trend')).toHaveCount(3);
+  await expect(page.locator('.qhq-trend svg.qhq-tspark')).toHaveCount(3);
+  await expect(page.locator('.qhq-statstrip')).toHaveCount(0);
   await expect(page.locator('.qhq-act')).toHaveCount(3);
+  // Two-column shell.
+  await expect(page.locator('.qhq-cc-main')).toBeVisible();
+  await expect(page.locator('.qhq-cc-rail')).toBeVisible();
   // Up next renders rows (or its empty state).
   const up = await page.locator('.qhq-un-row').count();
   const upEmpty = await page.locator('.qhq-unlist .qhq-empty').count();
   expect(up + upEmpty).toBeGreaterThan(0);
   // Recents card present.
   await expect(page.locator('.qhq-recents')).toBeVisible();
+});
+
+test('period toggle re-renders; mini-calendar day click opens the calendar on that date', async ({ page }) => {
+  await boot(page, 'admin');
+  await page.evaluate(() => App.controller.setView('home'));
+  // Week/Month toggle keeps 3 trend cards and updates the subtitle.
+  await page.locator('.qhq-period button[data-p="month"]').click();
+  await expect(page.locator('.qhq-trend')).toHaveCount(3);
+  await expect(page.locator('.qhq-cc-rail .qhq-sec-sub')).toContainText('month');
+  // Clicking a calendar day jumps to the calendar layout anchored on that date.
+  await page.evaluate(() => App.controller.setView('home'));
+  const day = page.locator('.qhq-cal-day[data-day]').first();
+  const iso = await day.getAttribute('data-day');
+  await day.click();
+  const state = await page.evaluate(() => ({ layout: App.controller.uiState.layout, anchor: App.controller.uiState.calendarAnchor }));
+  expect(state.layout).toBe('calendar');
+  expect(state.anchor).toBe(iso);
 });
 
 test('Recents is team-wide for managers and own-world for workers', async ({ page }) => {
@@ -77,7 +99,7 @@ test('the AI ops-brief banner is gone from the task list', async ({ page }) => {
   await page.waitForTimeout(300);
   // The static `.ai-brief` banner must not exist on any task surface anymore.
   expect(await page.locator('.ai-brief').count()).toBe(0);
-  // Home still has its own brief.
+  // Home renders its command center (the old `.qhq-brief` morning brief was removed).
   await page.evaluate(() => App.controller.setView('home'));
-  await expect(page.locator('.qhq-brief')).toBeVisible();
+  await expect(page.locator('.qhq-greet')).toBeVisible();
 });
