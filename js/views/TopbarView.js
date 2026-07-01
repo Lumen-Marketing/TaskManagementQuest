@@ -126,6 +126,12 @@ App.TopbarView = class TopbarView {
     const view = this.controller.uiState.view;
     if (this.tbTitle) this.tbTitle.textContent = TITLES[view] || 'Quest HQ';
     if (this.scopeSeg) {
+      // The segment is the scope switch for the full task list, so it only
+      // belongs on those two views. On Home/Projects/Reports/etc. it hides,
+      // leaving just the section title — no toggle sitting there with neither
+      // side selected.
+      const isScope = view === 'all' || view === 'mine';
+      this.scopeSeg.classList.toggle('hidden', !isScope);
       this.scopeSeg.querySelectorAll('button[data-scope]').forEach(btn => {
         btn.classList.toggle('on', btn.dataset.scope === view);
       });

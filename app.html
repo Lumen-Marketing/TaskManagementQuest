@@ -43,7 +43,16 @@
 
   <!-- TOP BAR -->
   <div class="topbar">
-    <div class="topbar-left"></div>
+    <div class="topbar-left">
+      <!-- Section title + scope toggle. Painted by TopbarView: #tbTitle tracks
+           the active view; the segment ("My work" / "Company") maps to the
+           mine / all task views and only shows on those scoped list views. -->
+      <div class="tb-title" id="tbTitle">Quest HQ</div>
+      <div class="seg hidden" id="scopeSeg" role="tablist" aria-label="Task scope">
+        <button type="button" data-scope="mine" title="My work"><i class="ti ti-user"></i><span class="seg-label">My work</span></button>
+        <button type="button" data-scope="all" title="Company"><i class="ti ti-users-group"></i><span class="seg-label">Company</span></button>
+      </div>
+    </div>
     <div class="topbar-right">
       <div class="search">
         <i class="ti ti-search" aria-hidden="true"></i>
@@ -85,17 +94,19 @@
       </div>
 
       <div class="side-scroll">
+      <!-- Personal: Home + Projects, then the "needs attention" filters.
+           "All" and "Mine" were removed here — they're the same task list at two
+           scopes, so they now live in the topbar "My work / Company" toggle.
+           Wallboard (a TV/presentation mode, not a personal view) moved to the
+           footer. -->
       <div class="side-group grp-views">
         <div class="side-label">Personal</div>
         <div class="side-item" data-view="home" title="Home"><i class="ti ti-home"></i><span class="side-item-label">Home</span></div>
-        <div class="side-item active" data-view="all" title="All"><i class="ti ti-list-check"></i><span class="side-item-label">All</span><span class="side-count" id="cnt-all">0</span></div>
         <div class="side-item" data-view="projects" title="Projects"><i class="ti ti-folders"></i><span class="side-item-label">Projects</span></div>
-        <div class="side-item" data-view="mine" title="Mine"><i class="ti ti-user"></i><span class="side-item-label">Mine</span><span class="side-count" id="cnt-mine">0</span></div>
         <div class="side-item" data-view="hot" title="Urgent"><i class="ti ti-bolt" style="color: var(--u-urgent);"></i><span class="side-item-label">Urgent</span><span class="side-count" id="cnt-hot" style="color: var(--u-urgent);">0</span></div>
         <div class="side-item" data-view="today" title="Today"><i class="ti ti-flame" style="color: var(--rust);"></i><span class="side-item-label">Today</span><span class="side-count danger-text" id="cnt-today">0</span></div>
         <div class="side-item" data-view="overdue" title="Overdue"><i class="ti ti-alert-triangle"></i><span class="side-item-label">Overdue</span><span class="side-count" id="cnt-overdue">0</span></div>
         <div class="side-item" data-view="watching" title="Watching"><i class="ti ti-eye"></i><span class="side-item-label">Watching</span><span class="side-count" id="cnt-watching">0</span></div>
-        <div class="side-item" data-view="wallboard" title="Wallboard"><i class="ti ti-device-tv"></i><span class="side-item-label">Wallboard</span></div>
       </div>
 
       <div id="sideExtraGroups">
@@ -112,6 +123,7 @@
       </div>
 
       <div class="side-foot">
+        <div class="side-item side-foot-item" data-view="wallboard" title="Wallboard"><i class="ti ti-device-tv"></i><span class="side-item-label">Wallboard</span></div>
         <button type="button" id="clockWidget" class="clock-widget" aria-label="Clock in / out">
           <i class="ti ti-player-play-filled" aria-hidden="true"></i>
           <span id="clockLabel">Clock in</span>
