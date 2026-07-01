@@ -464,6 +464,14 @@ App.HomeView = class HomeView {
       this.wrap.querySelectorAll('.qhq-trend-v').forEach((el, i) => this._countUp(el, metrics[i] && metrics[i].value));
       this._countUp(this.wrap.querySelector('.qhq-donut-num'), donePct);
     }
+
+    // Make the top row (Up next / At risk) exactly as tall as the calendar so the
+    // three read as one symmetric band — At risk then scrolls internally, and
+    // Up next becomes a bigger box instead of a stub. CSS consumes --tile-h in
+    // the desktop 2-col layout only; on a stacked mobile layout it's ignored.
+    const calEl = this.wrap.querySelector('.qhq-cal');
+    const mainEl = this.wrap.querySelector('.qhq-cc-main');
+    if (calEl && mainEl) mainEl.style.setProperty('--tile-h', calEl.offsetHeight + 'px');
   }
 
   _reduceMotion() {

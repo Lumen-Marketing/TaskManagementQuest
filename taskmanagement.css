@@ -5395,11 +5395,21 @@ body.ui-command-center .detail-title {
 .qhq-cc-main > .qhq-donut-card { grid-column: 1 / -1; }
 .qhq-cc-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .qhq-cc-rail .qhq-recents { margin-top: 0; }
-/* Equalize the columns so Projects overview finishes level with Recents. */
+/* Equalize the columns so Projects overview finishes level with Recents, and
+   pin the top row (Up next / At risk) to the calendar's height (--tile-h, set by
+   HomeView) so the three read as one symmetric band. */
 @media (min-width: 1201px) {
   .qhq-cc-shell { align-items: stretch; }
-  .qhq-cc-main { grid-template-rows: auto 1fr; }
+  .qhq-cc-main { grid-template-rows: var(--tile-h, auto) 1fr; }
   .qhq-cc-rail .qhq-recents { flex: 1 1 auto; }
+  /* When a column overflows its fixed tile, scroll its list instead of growing
+     tall (At risk usually; Up next too if the queue is long). */
+  .qhq-col-up, .qhq-col-risk { overflow: hidden; }
+  .qhq-col-up .qhq-unlist, .qhq-col-risk .qhq-arlist { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .qhq-col-up .qhq-unlist::-webkit-scrollbar, .qhq-col-risk .qhq-arlist::-webkit-scrollbar { width: 7px; }
+  .qhq-col-up .qhq-unlist::-webkit-scrollbar-thumb, .qhq-col-risk .qhq-arlist::-webkit-scrollbar-thumb { background: var(--border-strong, #d9d3ca); border-radius: 4px; }
+  .qhq-col-up .qhq-unlist:hover::-webkit-scrollbar-thumb, .qhq-col-risk .qhq-arlist:hover::-webkit-scrollbar-thumb { background: var(--ink-4, #b0a99f); }
+  .qhq-col-up .qhq-unlist::-webkit-scrollbar-track, .qhq-col-risk .qhq-arlist::-webkit-scrollbar-track { background: transparent; }
 }
 
 /* Team workload — a full-width roster; wide bars read like the reference table. */
