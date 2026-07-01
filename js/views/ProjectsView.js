@@ -12,7 +12,6 @@ App.ProjectsView = class ProjectsView {
     this.taskModel = taskModel;
     this.wrap = document.getElementById('projectsWrap');
     this.showTerminal = false;
-    this.query = '';
     this.sort = 'recent';
     App.EventBus.on('view:changed', (v) => { if (v === 'projects') this.render(); });
     App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); });
@@ -44,10 +43,7 @@ App.ProjectsView = class ProjectsView {
   }
 
   _visibleFolders() {
-    const q = this.query.trim().toLowerCase();
-    let list = this._baseFolders();
-    if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || (p.client || '').toLowerCase().includes(q));
-    return this._sortFolders(list);
+    return this._sortFolders(this._baseFolders());
   }
 
   _companyColor(companyId) {
@@ -126,7 +122,6 @@ App.ProjectsView = class ProjectsView {
       </div>
 
       <div class="pv-tools">
-        <div class="pv-search"><i class="ti ti-search"></i><input type="search" id="proj-search" placeholder="Search folders" value="${esc(this.query)}" aria-label="Search folders"/></div>
         <div class="pv-tools-r">
           <select class="pv-sort" id="proj-sort" aria-label="Sort folders">
             <option value="recent"${this.sort === 'recent' ? ' selected' : ''}>Recently added</option>
@@ -139,8 +134,6 @@ App.ProjectsView = class ProjectsView {
 
       <div class="pv-body"></div>`;
 
-    const search = this.wrap.querySelector('#proj-search');
-    if (search) search.addEventListener('input', () => { this.query = search.value; this._renderBody(); });
     const sort = this.wrap.querySelector('#proj-sort');
     if (sort) sort.addEventListener('change', () => { this.sort = sort.value; this._renderBody(); });
     const toggle = this.wrap.querySelector('#proj-show-terminal');
@@ -157,16 +150,15 @@ App.ProjectsView = class ProjectsView {
     if (!host) return;
     const esc = App.utils.escapeHtml;
     const folders = this._visibleFolders();
-    const q = this.query.trim();
     if (!folders.length) {
-      host.innerHTML = `<div class="pv-blank">${q ? 'No folders match &ldquo;' + esc(q) + '&rdquo;.' : 'No folders yet — create one to group related tasks.'}</div>`;
+      host.innerHTML = `<div class="pv-blank">No folders yet — create one to group related tasks.</div>`;
       return;
     }
-    // Group by company, unless searching or only one company is in view.
+    // Group by company, unless only one company is in view.
     const byCo = {};
     folders.forEach(p => { (byCo[p.companyId] = byCo[p.companyId] || []).push(p); });
     const coIds = Object.keys(byCo);
-    if (q || coIds.length <= 1) {
+    if (coIds.length <= 1) {
       host.innerHTML = `<div class="pv-grid">${folders.map(p => this._card(p)).join('')}</div>`;
     } else {
       host.innerHTML = coIds.map(cid => {
