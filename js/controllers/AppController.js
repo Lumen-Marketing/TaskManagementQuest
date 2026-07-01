@@ -26,7 +26,7 @@ App.AppController = class AppController {
       calendarMode: 'month',
       calendarAnchor: null,
       calendarSelectedDay: null,
-      filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' },
+      filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' },
       filtersOpen: false,
       sortBy: 'priority',
       sortDir: 'asc',
@@ -258,8 +258,8 @@ App.AppController = class AppController {
     if (saved.sortDir === 'asc' || saved.sortDir === 'desc') this.uiState.sortDir = saved.sortDir;
     if (saved.groupBy && App.GROUP_OPTIONS[saved.groupBy]) this.uiState.groupBy = saved.groupBy;
     if (saved.filters && typeof saved.filters === 'object') {
-      const d = { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' };
-      for (const k of ['assignees', 'companies', 'statuses', 'priorities', 'types']) {
+      const d = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' };
+      for (const k of ['assignees', 'companies', 'statuses', 'priorities', 'types', 'projects']) {
         if (Array.isArray(saved.filters[k])) d[k] = saved.filters[k];
       }
       if (typeof saved.filters.dueRange === 'string') d.dueRange = saved.filters.dueRange;
@@ -1572,7 +1572,7 @@ App.AppController = class AppController {
   }
 
   clearFilters() {
-    this.uiState.filters = { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' };
+    this.uiState.filters = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' };
     App.EventBus.emit('filters:changed');
     this._persistUiState();
   }
@@ -1584,6 +1584,7 @@ App.AppController = class AppController {
       + (f.statuses   || []).length
       + (f.priorities || []).length
       + (f.types      || []).length
+      + (f.projects   || []).length
       + ((f.dueRange && f.dueRange !== 'all') ? 1 : 0);
   }
 
