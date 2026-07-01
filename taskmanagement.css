@@ -438,20 +438,19 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-new:hover { filter: brightness(1.07); transform: translateY(-1px); }
 .pv-new i { font-size: 15px; }
 
-/* KPI cards — five separate stat cards (icon chip + label + big number), with
-   an overall completion ring as the fifth. Warm panze surfaces, no borders;
-   they wrap on narrow widths. */
+/* KPI cards — five separate stat cards, each a horizontal composition: a
+   prominent icon (or the completion ring) anchors the left, with the metric
+   value as the hero and its label directly beneath, grouped on the right.
+   Warm panze surfaces, no borders; they wrap on narrow widths. */
 .pv-kpis { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 28px 16px; }
-.pv-kpi { flex: 1 1 155px; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 15px 17px; background: var(--pv-card); border-radius: 16px; }
-.pv-kpi-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.pv-kpi-ic { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px; background: color-mix(in srgb, var(--kc) 15%, var(--pv-card)); color: var(--kc); font-size: 17px; }
-.pv-kpi-lbl { font-size: 12px; font-weight: 600; color: var(--pv-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pv-kpi-num { font-family: 'Hanken Grotesk', var(--font-body); font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: .9; color: var(--pv-ink); font-variant-numeric: tabular-nums; }
-/* Fifth card — overall completion ring beside its label. */
-.pv-kpi-ring { flex-direction: row; align-items: center; gap: 13px; }
-.pv-kpi-ringtext { min-width: 0; }
-.pv-kpi-cmplbl { font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--pv-ink); }
-.pv-ring { width: 46px; height: 46px; flex: none; border-radius: 50%; position: relative; background: conic-gradient(var(--amber) 0 var(--p, 0%), color-mix(in srgb, var(--amber) 16%, var(--pv-wash)) var(--p, 0%) 100%); }
+.pv-kpi { flex: 1 1 168px; min-width: 0; display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 16px 18px; background: var(--pv-card); border-radius: 16px; }
+.pv-kpi-ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 13px; background: color-mix(in srgb, var(--kc) 15%, var(--pv-card)); color: var(--kc); font-size: 22px; }
+.pv-kpi-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pv-kpi-num { font-family: 'Hanken Grotesk', var(--font-body); font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--pv-ink); font-variant-numeric: tabular-nums; }
+.pv-kpi-cmplbl { font-family: 'Hanken Grotesk', var(--font-body); font-size: 17px; font-weight: 800; letter-spacing: -.02em; line-height: 1; color: var(--pv-ink); }
+.pv-kpi-lbl { font-size: 12.5px; font-weight: 600; color: var(--pv-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Fifth card — the overall completion ring anchors the left in place of an icon. */
+.pv-ring { width: 44px; height: 44px; flex: none; border-radius: 50%; position: relative; background: conic-gradient(var(--amber) 0 var(--p, 0%), color-mix(in srgb, var(--amber) 16%, var(--pv-wash)) var(--p, 0%) 100%); }
 .pv-ring::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--pv-card); }
 .pv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Hanken Grotesk', var(--font-body); font-size: 12px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); z-index: 1; }
 
