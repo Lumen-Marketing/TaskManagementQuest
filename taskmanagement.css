@@ -465,26 +465,27 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-table { margin: 0 28px 34px; background: var(--pv-card); border-radius: 18px; overflow: hidden; }
 .pv-rowwrap { --pc: var(--amber); }
 .pv-rowwrap:not(:last-child) { box-shadow: inset 0 -1px 0 var(--pv-divider); }
-.pv-row { display: flex; align-items: center; gap: 14px; padding: 13px 18px; cursor: pointer; transition: background .14s var(--ease-out); }
+.pv-row { display: flex; align-items: center; gap: 12px; padding: 8px 16px; cursor: pointer; transition: background .14s var(--ease-out); }
 .pv-row:hover { background: color-mix(in srgb, var(--pc) 6%, var(--pv-card)); }
-.pv-chev { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border: none; background: transparent; color: var(--pv-ink-3); cursor: pointer; border-radius: 7px; }
-.pv-chev i { font-size: 17px; transition: transform .16s var(--ease-out); }
+.pv-chev { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border: none; background: transparent; color: var(--pv-ink-3); cursor: pointer; border-radius: 6px; }
+.pv-chev i { font-size: 15px; transition: transform .16s var(--ease-out); }
 .pv-chev:hover { background: color-mix(in srgb, var(--pc) 12%, transparent); color: var(--pv-ink); }
 .pv-rowwrap.open .pv-chev i { transform: rotate(90deg); }
-.pv-mono { flex: none; width: 36px; height: 36px; border-radius: 11px; background: var(--pc); color: #fff; font-family: 'Hanken Grotesk', var(--font-body); font-weight: 800; font-size: 16px; letter-spacing: -.02em; display: grid; place-items: center; }
-.pv-id { flex: 1 1 200px; min-width: 0; display: grid; gap: 2px; }
-.pv-name { font-family: 'Hanken Grotesk', var(--font-body); font-size: 14.5px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pv-client { font-size: 11.5px; color: var(--pv-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pv-prog { flex: 1 1 190px; min-width: 130px; display: grid; gap: 6px; }
-.pv-track { height: 7px; border-radius: 99px; background: color-mix(in srgb, var(--pc) 14%, var(--pv-wash)); overflow: hidden; }
+.pv-mono { flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--pc); color: #fff; font-family: 'Hanken Grotesk', var(--font-body); font-weight: 800; font-size: 12.5px; letter-spacing: -.02em; display: grid; place-items: center; }
+.pv-id { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.pv-name { font-family: 'Hanken Grotesk', var(--font-body); font-size: 13.5px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); white-space: nowrap; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.pv-client { font-size: 11px; color: var(--pv-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
+.pv-prog { flex: 0 0 230px; display: flex; align-items: center; gap: 10px; }
+.pv-track { flex: 1; height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--pc) 12%, var(--pv-wash)); overflow: hidden; }
 .pv-fill { display: block; height: 100%; border-radius: 99px; background: var(--pc); }
-.pv-progtxt { font-size: 11.5px; font-weight: 500; color: var(--pv-ink-3); white-space: nowrap; }
+.pv-progtxt { flex: none; font-size: 11px; font-weight: 500; color: var(--pv-ink-3); white-space: nowrap; }
 .pv-progtxt b { font-family: 'Hanken Grotesk', var(--font-body); font-weight: 800; color: var(--pv-ink); margin-right: 1px; }
-.pv-cocol { flex: 0 0 96px; font-size: 12px; font-weight: 600; color: var(--pc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pv-duecol { flex: 0 0 80px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); text-align: right; white-space: nowrap; }
+.pv-progtxt-empty { color: var(--pv-ink-4); }
+.pv-cocol { flex: 0 0 82px; font-size: 11.5px; font-weight: 600; color: var(--pc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-duecol { flex: 0 0 72px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); text-align: right; white-space: nowrap; }
 
 /* Expanded task list under a folder */
-.pv-tasks { padding: 2px 18px 12px 76px; }
+.pv-tasks { padding: 0 16px 8px 60px; }
 .pv-trow { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 9px; cursor: pointer; transition: background .12s var(--ease-out); }
 .pv-trow:hover { background: color-mix(in srgb, var(--pc) 7%, var(--pv-wash)); }
 .pv-tprio { flex: none; width: 9px; height: 9px; border-radius: 50%; }
@@ -498,7 +499,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 
 @media (max-width: 760px) {
   .pv-cocol, .pv-duecol, .pv-tassignee, .pv-tdue { display: none; }
-  .pv-prog { flex-basis: 120px; min-width: 90px; }
+  .pv-prog { flex-basis: 150px; }
 }
 
 /* Project detail header (list scoped to one folder) — borderless, warm accent. */

@@ -95,9 +95,9 @@ App.ProjectsView = class ProjectsView {
     const co = App.COMPANIES[p.companyId] || { label: p.companyId || '' };
     const open = this.expanded.has(p.id);
     const due = p.dueDate ? this._fmtDue(p.dueDate) : '';
-    const progTxt = total
-      ? `<b>${c.open}</b> open · ${c.done} done`
-      : 'No tasks yet';
+    const prog = total
+      ? `<span class="pv-track"><span class="pv-fill" style="width:${pct}%"></span></span><span class="pv-progtxt"><b>${c.open}</b> open · ${c.done} done</span>`
+      : `<span class="pv-progtxt pv-progtxt-empty">No tasks yet</span>`;
     let drawer = '';
     if (open) {
       const tasks = this._folderTasks(p.id);
@@ -110,8 +110,8 @@ App.ProjectsView = class ProjectsView {
         <div class="pv-row" data-project="${esc(p.id)}" role="button" tabindex="0">
           <button class="pv-chev" data-toggle="${esc(p.id)}" aria-label="Toggle tasks" aria-expanded="${open}" type="button"><i class="ti ti-chevron-right"></i></button>
           <span class="pv-mono">${esc(this._monogram(p.name))}</span>
-          <span class="pv-id"><span class="pv-name">${esc(p.name)}</span><span class="pv-client">${esc(p.client || p.address || 'No client')}</span></span>
-          <span class="pv-prog"><span class="pv-track"><span class="pv-fill" style="width:${pct}%"></span></span><span class="pv-progtxt">${progTxt}</span></span>
+          <span class="pv-id"><span class="pv-name">${esc(p.name)}</span>${(p.client || p.address) ? `<span class="pv-client">${esc(p.client || p.address)}</span>` : ''}</span>
+          <span class="pv-prog">${prog}</span>
           <span class="pv-cocol">${esc(co.label)}</span>
           <span class="pv-duecol">${due ? 'Due ' + esc(due) : ''}</span>
         </div>
