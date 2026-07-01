@@ -222,11 +222,11 @@ App.TaskDetailView = class TaskDetailView {
     const commentsCount = (t.comments || []).length;
     const subtaskCount = (t.subtasks || []).length;
     const canDelete = this.controller.canDeleteTask(t);
-    // Read-only project folder chip (made interactive in the filing task).
+    // Project folder chip — a picker trigger for writers, read-only otherwise.
     const proj = t.project && App.projects ? App.projects[t.project] : null;
-    const projectChipHtml = proj
-      ? `<span class="projtag" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</span>`
-      : '<span class="detail-val">—</span>';
+    const projectChipHtml = App.can('tasks.write')
+      ? `<button class="projtag projtag-btn ${proj ? '' : 'projtag-empty'}" data-action="open-project" aria-haspopup="listbox" aria-expanded="false" ${proj ? `style="--pc:${App.utils.escapeHtml(proj.color)}"` : ''}><i class="ti ${proj ? 'ti-folder' : 'ti-folder-plus'}"></i>${proj ? App.utils.escapeHtml(proj.name) : 'Project'}</button>`
+      : (proj ? `<span class="projtag" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</span>` : '<span class="detail-val">—</span>');
     const watcherChipsHtml = watcherIds.map(w => {
       const p = App.PEOPLE[w];
       return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
@@ -481,6 +481,17 @@ App.TaskDetailView = class TaskDetailView {
     // Status chip → quick status menu.
     const statusBtn = q('[data-action="status-menu"]');
     if (statusBtn) statusBtn.addEventListener('click', (e) => { e.stopPropagation(); this._openStatusMenu(t, statusBtn); });
+
+    const projBtn = q('[data-action="open-project"]');
+    if (projBtn) projBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      App.projectPicker.open({
+        anchor: projBtn,
+        companyId: t.company,
+        currentId: t.project || null,
+        onSelect: (projectId) => this.controller.updateTaskField(t.id, 'project', projectId),
+      });
+    });
 
     // Inline per-field editing: click (or Enter/Space on) a Details value to edit it.
     qa('.tdp-editable').forEach(el => {

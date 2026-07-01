@@ -408,6 +408,10 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .projtag i { font-size: 13px; flex: none; }
+.projtag-btn { border: 1px solid transparent; cursor: pointer; font-family: inherit; -webkit-appearance: none; appearance: none; }
+.projtag-btn:hover { filter: brightness(0.96); }
+.projtag-btn.projtag-empty { color: var(--ink-3); background: transparent; border-color: var(--border, #e6e1d9); font-weight: 600; }
+.projtag-btn[aria-expanded="true"] { filter: brightness(0.94); }
 
 /* Dense look: tighter pills/text, and row actions only on hover so the
    resting row ends cleanly at Due (like the picture). */

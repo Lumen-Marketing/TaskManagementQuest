@@ -1082,6 +1082,12 @@ App.TaskListView = class TaskListView {
         ${subCount ? `<button class="subtask-toggle${expanded ? ' expanded' : ''}" data-action="toggle-subtasks" aria-label="Toggle subtasks" title="${subDone}/${subCount} subtasks done"><i class="ti ti-chevron-right"></i></button>` : '<span class="subtask-spacer" aria-hidden="true"></span>'}
         <span class="tt-text">${App.utils.escapeHtml(t.title)}</span>
         ${subCount ? `<span class="subtask-badge">${subDone}/${subCount}</span>` : ''}
+        ${(() => {
+          const proj = t.project && App.projects ? App.projects[t.project] : null;
+          if (proj) return `<button class="projtag projtag-btn" data-action="open-project" data-current="${App.utils.escapeHtml(t.project)}" title="Change project" aria-haspopup="listbox" aria-expanded="false" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</button>`;
+          if (App.can('tasks.write')) return `<button class="projtag projtag-btn projtag-empty" data-action="open-project" data-current="" title="Add to project" aria-haspopup="listbox" aria-expanded="false"><i class="ti ti-folder-plus"></i>Project</button>`;
+          return '';
+        })()}
       </div>
       <div class="status-cell">${App.can('tasks.write')
         ? `<button class="status-sel status-${t.status || 'todo'}" data-action="open-status" data-current="${t.status || 'todo'}" title="Change status" aria-haspopup="listbox" aria-expanded="false">
@@ -1118,6 +1124,7 @@ App.TaskListView = class TaskListView {
         else if (action === 'finish-task') this.controller.completeTask(t.id);
         else if (action === 'toggle-subtasks') this._toggleSubtaskDrawer(t.id, row, target);
         else if (action === 'open-status') this._openStatusMenu(t.id, target);
+        else if (action === 'open-project') this._openProjectMenu(t, target);
         else if (action === 'open-quick') this._openQuickSheet(t.id);
         return;
       }
@@ -1273,6 +1280,15 @@ App.TaskListView = class TaskListView {
   }
 
   // field is 'status' (default) or 'priority' — the same popover drives both.
+  _openProjectMenu(t, trigger) {
+    App.projectPicker.open({
+      anchor: trigger,
+      companyId: t.company,
+      currentId: t.project || null,
+      onSelect: (projectId) => this.controller.updateTaskField(t.id, 'project', projectId),
+    });
+  }
+
   _openStatusMenu(taskId, trigger, field = 'status') {
     const el = this._ensureStatusMenu();
     // Re-clicking the open trigger toggles it shut.
