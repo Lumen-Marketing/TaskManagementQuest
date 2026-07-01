@@ -428,6 +428,12 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pc-meta { font-size: 12px; color: var(--ink-2); font-weight: 600; }
 .proj-empty { padding: 40px 20px; color: var(--ink-3); }
 
+/* Project detail header (list scoped to one folder) */
+.proj-detail-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border, #eee); border-left: 4px solid var(--pc, #8f867b); }
+.pdh-folder { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--pc, #8f867b); }
+.pdh-client { font-size: 12px; color: var(--ink-3); }
+.proj-detail-head .btn-primary { margin-left: auto; }
+
 /* Dense look: tighter pills/text, and row actions only on hover so the
    resting row ends cleanly at Due (like the picture). */
 .list-row .priority-block { font-size: 11px; padding: 2px 8px; }

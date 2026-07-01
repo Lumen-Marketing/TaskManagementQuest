@@ -171,6 +171,7 @@ App.TaskModel = class TaskModel {
       const f = activeFilters;
       if (f.assignees && f.assignees.length) tasks = tasks.filter(t => f.assignees.includes(t.assignee));
       if (f.companies && f.companies.length) tasks = tasks.filter(t => f.companies.includes(t.company));
+      if (f.projectId) tasks = tasks.filter(t => t.project === f.projectId);
       if (f.statuses  && f.statuses.length)  tasks = tasks.filter(t => f.statuses.includes(t.status || 'todo'));
       if (f.priorities && f.priorities.length) tasks = tasks.filter(t => f.priorities.includes(t.priority || 'medium'));
       if (f.types && f.types.length) tasks = tasks.filter(t => f.types.includes(t.type || 'admin'));

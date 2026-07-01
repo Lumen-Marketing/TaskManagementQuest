@@ -719,6 +719,7 @@ App.TaskListView = class TaskListView {
 
     if (tasks.length === 0) {
       this._renderEmpty(this._emptyConfig());
+      this._prependProjectHeader();
       return;
     }
 
@@ -759,6 +760,29 @@ App.TaskListView = class TaskListView {
 
       this.body.appendChild(section);
     });
+    this._prependProjectHeader();
+  }
+
+  /* Prepend the project-detail folder header when the list is scoped to one
+     folder (filters.projectId). Self-wires its own buttons. */
+  _prependProjectHeader() {
+    const pid = this.controller.uiState.filters && this.controller.uiState.filters.projectId;
+    if (!pid) return;
+    const proj = App.projects ? App.projects[pid] : null;
+    if (!proj) return;
+    const esc = App.utils.escapeHtml;
+    const head = document.createElement('div');
+    head.className = 'proj-detail-head';
+    head.style.setProperty('--pc', proj.color);
+    head.innerHTML = `
+      <button class="btn btn-sm" data-action="clear-project" type="button"><i class="ti ti-arrow-left"></i> Projects</button>
+      <span class="pdh-folder"><i class="ti ti-folder"></i>${esc(proj.name)}</span>
+      ${proj.client ? `<span class="pdh-client">${esc(proj.client)}</span>` : ''}
+      ${App.can('tasks.write') ? `<button class="btn btn-primary btn-sm" data-action="new-task-in-project" type="button"><i class="ti ti-plus"></i> New task</button>` : ''}`;
+    head.querySelector('[data-action="clear-project"]').addEventListener('click', () => this.controller.clearProjectScope());
+    const nt = head.querySelector('[data-action="new-task-in-project"]');
+    if (nt) nt.addEventListener('click', () => this.controller.openNewTaskPage({ project: pid, company: proj.companyId }));
+    this.body.insertAdjacentElement('afterbegin', head);
   }
 
   renderKanban() {

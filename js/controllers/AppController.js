@@ -1072,6 +1072,20 @@ App.AppController = class AppController {
     await this.createProject({ name, companyId });
   }
 
+  /* Scope the task list to a single folder (project detail). Sets a single-value
+     projectId filter and switches to the list; the list renders a folder header. */
+  openProject(projectId) {
+    this.uiState.filters = this.uiState.filters || {};
+    this.uiState.filters.projectId = projectId || null;
+    this.setView('all');
+    App.EventBus.emit('filters:changed');
+  }
+
+  clearProjectScope() {
+    if (this.uiState.filters) this.uiState.filters.projectId = null;
+    App.EventBus.emit('filters:changed');
+  }
+
   /* Batch-save every editable detail field from the task detail pane's Edit
      mode (title, description, company, type, bidStatus, status, assignee, due,
      dueTime, priority, watchers, subtasks). The whole set is staged in the view

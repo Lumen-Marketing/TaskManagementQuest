@@ -39,6 +39,12 @@ App.NewTaskPageView = class NewTaskPageView {
     }
 
     this.bindEvents();
+    // Pre-fill company + project when opened from a project detail's "New task".
+    if (prefill && prefill.company) {
+      const cs = document.getElementById('nt-company');
+      if (cs) { cs.value = prefill.company; this._onCompanyChanged(prefill.company); }
+    }
+    if (prefill && prefill.project) this._setProject(prefill.project);
     this.renderWatcherChips();
     this.renderSubtaskChips();
     this.updateBidStatusRow();
