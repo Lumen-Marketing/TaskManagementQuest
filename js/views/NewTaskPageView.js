@@ -39,6 +39,12 @@ App.NewTaskPageView = class NewTaskPageView {
     }
 
     this.bindEvents();
+    // Pre-fill company + project when opened from a project detail's "New task".
+    if (prefill && prefill.company) {
+      const cs = document.getElementById('nt-company');
+      if (cs) { cs.value = prefill.company; this._onCompanyChanged(prefill.company); }
+    }
+    if (prefill && prefill.project) this._setProject(prefill.project);
     this.renderWatcherChips();
     this.renderSubtaskChips();
     this.updateBidStatusRow();
@@ -78,7 +84,22 @@ App.NewTaskPageView = class NewTaskPageView {
       this.watchers.forEach(w => { if (!allowed.has(w)) { this.watchers.delete(w); pruned = true; } });
       if (pruned) this.renderWatcherChips();
     }
+    const pb = document.getElementById('nt-project');
+    if (pb && pb.dataset.current && App.projects[pb.dataset.current] && App.projects[pb.dataset.current].companyId !== companyId) this._setProject(null);
     this.updateDelegationBanner();
+  }
+
+  /* Reflect the chosen (or cleared) project on the picker-trigger button. */
+  _setProject(id) {
+    const btn = document.getElementById('nt-project');
+    if (!btn) return;
+    const p = id && App.projects ? App.projects[id] : null;
+    btn.dataset.current = id || '';
+    btn.classList.toggle('projtag-empty', !p);
+    btn.style.setProperty('--pc', p ? p.color : '');
+    btn.innerHTML = p
+      ? `<i class="ti ti-folder"></i>${App.utils.escapeHtml(p.name)}`
+      : `<i class="ti ti-folder-plus"></i>No project`;
   }
 
   template() {
@@ -111,6 +132,7 @@ App.NewTaskPageView = class NewTaskPageView {
               </div>
               ${row('Label', `<select id="nt-label">${Object.entries(App.TASK_LABELS).map(([k, v]) => `<option value="${k}" ${k === 'roof' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select>`)}
               ${row('Company', `<select id="nt-company">${companyIds.map(id => { const c = App.COMPANIES[id] || { label: id }; return `<option value="${id}" ${id === selectedCompany ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`; }).join('')}</select>`)}
+              ${row('Project', `<button type="button" id="nt-project" class="projtag projtag-btn projtag-empty" data-current="" aria-haspopup="listbox"><i class="ti ti-folder-plus"></i>No project</button>`)}
               ${row('Due', `<input type="date" id="nt-due" class="picker-input" value="${App.utils.todayISO(1)}" />`)}
               ${row('Time', `<input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" />`)}
               ${row('Reminder', `<input type="datetime-local" id="nt-reminderAt" class="picker-input" />`)}
@@ -206,6 +228,16 @@ App.NewTaskPageView = class NewTaskPageView {
     document.getElementById('nt-assignee').addEventListener('change', () => this.updateDelegationBanner());
     document.getElementById('nt-type').addEventListener('change', () => this.updateBidStatusRow());
     document.getElementById('nt-company').addEventListener('change', (e) => this._onCompanyChanged(e.target.value));
+
+    const projBtn = document.getElementById('nt-project');
+    if (projBtn) projBtn.addEventListener('click', () => {
+      App.projectPicker.open({
+        anchor: projBtn,
+        companyId: document.getElementById('nt-company').value,
+        currentId: projBtn.dataset.current || null,
+        onSelect: (id) => this._setProject(id),
+      });
+    });
 
     this.wrap.querySelector('[data-action="add-subtask"]').addEventListener('click', () => this.addSubtask());
     const subtaskInput = document.getElementById('nt-subtask-input');
@@ -417,6 +449,7 @@ App.NewTaskPageView = class NewTaskPageView {
 
     const reminderEl = document.getElementById('nt-reminderAt');
     const payload = Object.assign({}, clean, {
+      project: (document.getElementById('nt-project').dataset.current || null),
       reminderAt: (reminderEl && reminderEl.value) ? reminderEl.value : null,
       notify: {
         email:    document.getElementById('nt-notify-email').checked,

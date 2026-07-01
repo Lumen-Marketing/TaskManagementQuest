@@ -222,6 +222,11 @@ App.TaskDetailView = class TaskDetailView {
     const commentsCount = (t.comments || []).length;
     const subtaskCount = (t.subtasks || []).length;
     const canDelete = this.controller.canDeleteTask(t);
+    // Project folder chip — a picker trigger for writers, read-only otherwise.
+    const proj = t.project && App.projects ? App.projects[t.project] : null;
+    const projectChipHtml = App.can('tasks.write')
+      ? `<button class="projtag projtag-btn ${proj ? '' : 'projtag-empty'}" data-action="open-project" aria-haspopup="listbox" aria-expanded="false" ${proj ? `style="--pc:${App.utils.escapeHtml(proj.color)}"` : ''}><i class="ti ${proj ? 'ti-folder' : 'ti-folder-plus'}"></i>${proj ? App.utils.escapeHtml(proj.name) : 'Project'}</button>`
+      : (proj ? `<span class="projtag" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</span>` : '<span class="detail-val">—</span>');
     const watcherChipsHtml = watcherIds.map(w => {
       const p = App.PEOPLE[w];
       return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
@@ -316,6 +321,7 @@ App.TaskDetailView = class TaskDetailView {
             ${t.type === 'bid' ? `<div class="detail-row"><span class="label">Bid status</span><span ${ev('bidStatus')}>${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
             <div class="detail-row"><span class="label">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
             <div class="detail-row"><span class="label">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
+            <div class="detail-row"><span class="label">Project</span>${projectChipHtml}</div>
             <div class="detail-row"><span class="label">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
           </div>
         </aside>
@@ -475,6 +481,17 @@ App.TaskDetailView = class TaskDetailView {
     // Status chip → quick status menu.
     const statusBtn = q('[data-action="status-menu"]');
     if (statusBtn) statusBtn.addEventListener('click', (e) => { e.stopPropagation(); this._openStatusMenu(t, statusBtn); });
+
+    const projBtn = q('[data-action="open-project"]');
+    if (projBtn) projBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      App.projectPicker.open({
+        anchor: projBtn,
+        companyId: t.company,
+        currentId: t.project || null,
+        onSelect: (projectId) => this.controller.updateTaskField(t.id, 'project', projectId),
+      });
+    });
 
     // Inline per-field editing: click (or Enter/Space on) a Details value to edit it.
     qa('.tdp-editable').forEach(el => {
@@ -760,6 +777,7 @@ App.TaskDetailView = class TaskDetailView {
       title: t.title || '',
       description: t.description || '',
       company: t.company,
+      project: t.project || null,
       type: t.type || 'admin',
       label: t.label || 'roof',
       bidStatus: t.bidStatus || 'queue',
@@ -866,6 +884,13 @@ App.TaskDetailView = class TaskDetailView {
           </select>
         </div>
         <div class="detail-row">
+          <span class="label">Project</span>
+          ${(() => {
+            const p = d.project && App.projects ? App.projects[d.project] : null;
+            return `<button type="button" id="edit-project" class="projtag projtag-btn ${p ? '' : 'projtag-empty'}" data-action="edit-open-project" aria-haspopup="listbox" ${p ? `style="--pc:${App.utils.escapeHtml(p.color)}"` : ''}><i class="ti ${p ? 'ti-folder' : 'ti-folder-plus'}"></i>${p ? App.utils.escapeHtml(p.name) : 'No project'}</button>`;
+          })()}
+        </div>
+        <div class="detail-row">
           <span class="label">Type</span>
           <select id="edit-type" data-action="type-change" style="font-size:12px; padding:4px 8px;">
             ${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}
@@ -956,6 +981,21 @@ App.TaskDetailView = class TaskDetailView {
     // Type toggle re-renders so the Bid-status row appears/disappears.
     const typeSel = this.pane.querySelector('[data-action="type-change"]');
     if (typeSel) typeSel.addEventListener('change', rerender);
+
+    // Project picker in edit mode: stage the choice on the draft, then re-render
+    // so the button reflects it. Scope to the company currently selected.
+    const editProjBtn = this.pane.querySelector('[data-action="edit-open-project"]');
+    if (editProjBtn) editProjBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._syncDraftFromDom();
+      const companyId = (document.getElementById('edit-company') || {}).value || this.editDraft.company;
+      App.projectPicker.open({
+        anchor: editProjBtn,
+        companyId,
+        currentId: this.editDraft.project || null,
+        onSelect: (id) => { this.editDraft.project = id; this.renderEditMode(t); },
+      });
+    });
 
     // Watchers + subtasks mutate the draft in place, then re-render.
     this.pane.querySelectorAll('[data-action="remove-watcher"]').forEach(btn =>

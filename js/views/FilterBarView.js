@@ -61,6 +61,13 @@ App.FilterBarView = class FilterBarView {
       active: f.types.includes(k),
     })).join('');
 
+    const projectChips = Object.values(App.projects || {})
+      .filter(p => ['lead', 'active', 'hold'].includes(p.status))
+      .map(p => this.chip({
+        group: 'projects', value: p.id, label: p.name,
+        swatch: p.color, active: (f.projects || []).includes(p.id),
+      })).join('');
+
     const dueOptions = [
       { value: 'all',      label: 'Any' },
       { value: 'overdue',  label: 'Overdue' },
@@ -110,6 +117,10 @@ App.FilterBarView = class FilterBarView {
         <div class="filter-group">
           <span class="filter-label">Type</span>
           <div class="filter-chips">${typeChips}</div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Project</span>
+          <div class="filter-chips">${projectChips || '<span class="filter-empty" style="font-size:11px;color:var(--ink-3);">No folders</span>'}</div>
         </div>
         <div class="filter-group">
           <span class="filter-label">Due</span>

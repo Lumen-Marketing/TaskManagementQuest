@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const saved = await dataStore.load();
       if (saved.people && Object.keys(saved.people).length) App.PEOPLE = saved.people;
       App.PROFILES = saved.profiles || [];
+      App.projects = saved.projects || {};
       taskModel.hydrate(saved.tasks);
       timeModel.hydrate(saved.timeEntries, saved.activeTimers);
       notifModel.hydrate(saved.notifications);
@@ -175,6 +176,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.SidebarView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   new App.TaskListView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   new App.TaskDetailView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
+  App.projectPicker = new App.ProjectPickerView({ controller });
+  App.projectsView = new App.ProjectsView({ controller, taskModel });
   new App.FilterBarView({ controller });
   new App.BulkActionsView({ controller });
   new App.ResizeHandleView({ controller });

@@ -82,6 +82,7 @@
         <div class="side-label">Personal</div>
         <div class="side-item" data-view="home" title="Home"><i class="ti ti-home"></i><span class="side-item-label">Home</span></div>
         <div class="side-item active" data-view="all" title="All"><i class="ti ti-list-check"></i><span class="side-item-label">All</span><span class="side-count" id="cnt-all">0</span></div>
+        <div class="side-item" data-view="projects" title="Projects"><i class="ti ti-folders"></i><span class="side-item-label">Projects</span></div>
         <div class="side-item" data-view="mine" title="Mine"><i class="ti ti-user"></i><span class="side-item-label">Mine</span><span class="side-count" id="cnt-mine">0</span></div>
         <div class="side-item" data-view="hot" title="Urgent"><i class="ti ti-bolt" style="color: var(--u-urgent);"></i><span class="side-item-label">Urgent</span><span class="side-count" id="cnt-hot" style="color: var(--u-urgent);">0</span></div>
         <div class="side-item" data-view="today" title="Today"><i class="ti ti-flame" style="color: var(--rust);"></i><span class="side-item-label">Today</span><span class="side-count danger-text" id="cnt-today">0</span></div>
@@ -187,6 +188,7 @@
     <!-- Full-page redesigned surfaces (HomeView / ReportsView render into these) -->
     <section id="homeWrap" class="qhq-page hidden" aria-label="Home"></section>
     <section id="reportsWrap" class="qhq-page hidden" aria-label="Reports"></section>
+    <section id="projectsWrap" class="qhq-page hidden" aria-label="Projects"></section>
     <section id="wallboardWrap" class="qhq-page hidden" aria-label="Wallboard"></section>
 
     <!-- Full-page task detail. Clicking a task row relocates #detailPane into
@@ -252,8 +254,10 @@
 <script src="js/views/dragOrder.js"></script>
 <script src="js/views/TopbarView.js"></script>
 <script src="js/views/SidebarView.js"></script>
+<script src="js/views/ProjectPickerView.js"></script>
 <script src="js/views/TaskListView.js"></script>
 <script src="js/views/TaskDetailView.js"></script>
+<script src="js/views/ProjectsView.js"></script>
 <script src="js/views/TimeView.js"></script>
 <script src="js/views/ApprovalView.js"></script>
 <script src="js/views/ClockDashboardView.js"></script>

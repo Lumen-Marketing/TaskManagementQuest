@@ -26,7 +26,7 @@ App.AppController = class AppController {
       calendarMode: 'month',
       calendarAnchor: null,
       calendarSelectedDay: null,
-      filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' },
+      filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' },
       filtersOpen: false,
       sortBy: 'priority',
       sortDir: 'asc',
@@ -258,8 +258,8 @@ App.AppController = class AppController {
     if (saved.sortDir === 'asc' || saved.sortDir === 'desc') this.uiState.sortDir = saved.sortDir;
     if (saved.groupBy && App.GROUP_OPTIONS[saved.groupBy]) this.uiState.groupBy = saved.groupBy;
     if (saved.filters && typeof saved.filters === 'object') {
-      const d = { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' };
-      for (const k of ['assignees', 'companies', 'statuses', 'priorities', 'types']) {
+      const d = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' };
+      for (const k of ['assignees', 'companies', 'statuses', 'priorities', 'types', 'projects']) {
         if (Array.isArray(saved.filters[k])) d[k] = saved.filters[k];
       }
       if (typeof saved.filters.dueRange === 'string') d.dueRange = saved.filters.dueRange;
@@ -505,7 +505,7 @@ App.AppController = class AppController {
     const newTaskWrap = document.getElementById('newTaskWrap');
     if (newTaskWrap) newTaskWrap.classList.toggle('hidden', !this.uiState.creatingTask);
     if (this.uiState.creatingTask) {
-      ['listPane', 'homeWrap', 'reportsWrap', 'wallboardWrap', 'taskDetailWrap', 'timeViewWrap'].forEach(id => {
+      ['listPane', 'homeWrap', 'reportsWrap', 'wallboardWrap', 'taskDetailWrap', 'timeViewWrap', 'projectsWrap'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
@@ -514,7 +514,7 @@ App.AppController = class AppController {
     }
     // Home / Reports are full-page surfaces in their own containers — hide the
     // entire list pane (table + toolbar + page head + ops brief) for them.
-    const isPageView = v === 'home' || v === 'reports' || v === 'wallboard';
+    const isPageView = v === 'home' || v === 'reports' || v === 'wallboard' || v === 'projects';
     const isTimeView = v.startsWith('time:') || v === 'approvals' || v === 'team:hierarchy' || v.startsWith('admin:');
     this._applyPanseSkin();
     const listPane = document.getElementById('listPane');
@@ -523,6 +523,8 @@ App.AppController = class AppController {
     const reportsWrap = document.getElementById('reportsWrap');
     if (homeWrap) homeWrap.classList.toggle('hidden', v !== 'home');
     if (reportsWrap) reportsWrap.classList.toggle('hidden', v !== 'reports');
+    const projectsWrap = document.getElementById('projectsWrap');
+    if (projectsWrap) projectsWrap.classList.toggle('hidden', v !== 'projects');
     const wallboardWrap = document.getElementById('wallboardWrap');
     if (wallboardWrap) wallboardWrap.classList.toggle('hidden', v !== 'wallboard');
     document.body.classList.toggle('wallboard-active', v === 'wallboard');
@@ -1031,6 +1033,59 @@ App.AppController = class AppController {
     }
   }
 
+  /* Create a project folder, refresh App.projects, and notify views. Returns
+     the new id (or null if not permitted). Company must be one the caller can
+     write to; RLS enforces it server-side regardless. */
+  async createProject({ name, companyId, color }) {
+    if (!App.can('tasks.write')) return null;
+    const clean = String(name || '').trim();
+    if (!clean) return null;
+    const id = App.utils.slugId(clean);
+    await this.dataStore.createProject({
+      id,
+      company_id: companyId,
+      name: clean,
+      color: color || '#8f867b',
+      status: 'active',
+    });
+    App.projects = await this.dataStore.loadProjects();
+    App.EventBus.emit('projects:changed');
+    return id;
+  }
+
+  /* Grid "New folder" button. Company defaults to the sidebar's current
+     company; if that's "All"/absent and the user has several, ask which. */
+  async promptNewFolder() {
+    if (!App.can('tasks.write')) return;
+    const name = (window.prompt('New folder name:') || '').trim();
+    if (!name) return;
+    let companyId = this.uiState.currentCompany;
+    if (!companyId || companyId === '*') {
+      const ids = (this.uiState.companies || []).filter(c => c !== '*');
+      companyId = ids[0];
+      if (ids.length > 1) {
+        const pick = (window.prompt(`Company (${ids.join(', ')}):`, ids[0]) || '').trim();
+        if (ids.includes(pick)) companyId = pick;
+      }
+    }
+    if (!companyId) return;
+    await this.createProject({ name, companyId });
+  }
+
+  /* Scope the task list to a single folder (project detail). Sets a single-value
+     projectId filter and switches to the list; the list renders a folder header. */
+  openProject(projectId) {
+    this.uiState.filters = this.uiState.filters || {};
+    this.uiState.filters.projectId = projectId || null;
+    this.setView('all');
+    App.EventBus.emit('filters:changed');
+  }
+
+  clearProjectScope() {
+    if (this.uiState.filters) this.uiState.filters.projectId = null;
+    App.EventBus.emit('filters:changed');
+  }
+
   /* Batch-save every editable detail field from the task detail pane's Edit
      mode (title, description, company, type, bidStatus, status, assignee, due,
      dueTime, priority, watchers, subtasks). The whole set is staged in the view
@@ -1057,6 +1112,8 @@ App.AppController = class AppController {
     // The remaining fields come from constrained <select>s / staged lists; fall
     // back to the task's current value when a field wasn't provided.
     const company = fields.company || task.company;
+    // project may be null (unfiled); only fall back when the field is absent.
+    const project = (fields.project !== undefined) ? fields.project : (task.project || null);
     const type = fields.type || task.type || 'admin';
     const label = fields.label || task.label || 'roof';
     const priority = fields.priority || task.priority || 'medium';
@@ -1076,7 +1133,7 @@ App.AppController = class AppController {
     const prevStatus = task.status, prevPriority = task.priority, prevAssignee = task.assignee;
 
     this.taskModel.update(id, {
-      title, description, company, type, label, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
+      title, description, company, project, type, label, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
       ...(type === 'bid' ? { bidStatus } : {}),
     });
 
@@ -1241,6 +1298,7 @@ App.AppController = class AppController {
       label: payload.label || 'roof',
       bidStatus: payload.type === 'bid' ? (payload.bidStatus || 'queue') : null,
       company: payload.company,
+      project: payload.project || null,
       due: payload.due,
       dueTime: payload.dueTime || null,
       reminderAt: payload.reminderAt || null,
@@ -1514,7 +1572,7 @@ App.AppController = class AppController {
   }
 
   clearFilters() {
-    this.uiState.filters = { assignees: [], companies: [], statuses: [], priorities: [], types: [], dueRange: 'all' };
+    this.uiState.filters = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' };
     App.EventBus.emit('filters:changed');
     this._persistUiState();
   }
@@ -1526,6 +1584,7 @@ App.AppController = class AppController {
       + (f.statuses   || []).length
       + (f.priorities || []).length
       + (f.types      || []).length
+      + (f.projects   || []).length
       + ((f.dueRange && f.dueRange !== 'all') ? 1 : 0);
   }
 
