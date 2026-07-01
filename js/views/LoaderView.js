@@ -22,8 +22,7 @@ App.LoaderView = (function () {
 
   let mountAt = 0;
   let rowEls = [];
-  let onMove = null;
-  let tickerFn = null;
+  let tweens = [];
   let hiding = false;
   let stopped = false;
 
@@ -74,40 +73,27 @@ App.LoaderView = (function () {
   }
 
   function startAnim() {
-    let mouseX = window.innerWidth / 2;
-    const finePointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
-    let drift = 0.5, dir = 1;
+    const grid = document.querySelector('#appLoader .ldr-grid');
 
-    onMove = (e) => { mouseX = e.clientX; };
-    window.addEventListener('mousemove', onMove);
+    // No GSAP (CDN blocked) → fall back to a pure-CSS oscillation so it STILL moves.
+    if (!window.gsap) {
+      if (grid) grid.classList.add('ldr-fallback');
+      return;
+    }
 
-    if (!window.gsap) return; // static grid; still hides on boot
-
+    // Continuous automatic parallax: each row glides back and forth on its own,
+    // alternating direction and speed. No mouse needed — it always moves.
     const gsap = window.gsap;
     gsap.ticker.lagSmoothing(0);
-    const maxMove = 300;
-    const base = 0.8;
-    const inertia = [0.6, 0.4, 0.3, 0.2];
-
-    tickerFn = () => {
-      // No mouse (touch) → gently oscillate so the rows still drift.
-      if (!finePointer) {
-        drift += 0.0025 * dir;
-        if (drift >= 1 || drift <= 0) dir *= -1;
-        mouseX = drift * window.innerWidth;
-      }
-      rowEls.forEach((row, index) => {
-        const direction = index % 2 === 0 ? 1 : -1;
-        const moveAmount = ((mouseX / window.innerWidth) * maxMove - maxMove / 2) * direction;
-        gsap.to(row, {
-          x: moveAmount,
-          duration: base + inertia[index % inertia.length],
-          ease: 'power3.out',
-          overwrite: 'auto',
-        });
-      });
-    };
-    gsap.ticker.add(tickerFn);
+    tweens = rowEls.map((row, index) => {
+      const direction = index % 2 === 0 ? 1 : -1;
+      const amp = 130 * direction;
+      return gsap.fromTo(
+        row,
+        { x: -amp },
+        { x: amp, duration: 2.2 + index * 0.5, ease: 'sine.inOut', repeat: -1, yoyo: true }
+      );
+    });
   }
 
   // Immediate teardown of the animation loop + listeners (no DOM removal). Safe to
@@ -115,8 +101,7 @@ App.LoaderView = (function () {
   function stop() {
     if (stopped) return;
     stopped = true;
-    if (onMove) { window.removeEventListener('mousemove', onMove); onMove = null; }
-    if (window.gsap && tickerFn) { window.gsap.ticker.remove(tickerFn); tickerFn = null; }
+    if (tweens.length) { tweens.forEach(tw => { if (tw && tw.kill) tw.kill(); }); tweens = []; }
   }
 
   // Graceful hide: enforce a minimum on-screen time, fade out, then remove.

@@ -5284,13 +5284,16 @@ body.ui-command-center .detail-title {
 .qhq-cc .qhq-sec-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 22px 2px 12px; }
 .qhq-cc .qhq-sec-title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); line-height: 1.1; }
 .qhq-cc .qhq-sec-sub { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-top: 2px; }
-/* Band 1 — three columns: Up next · At risk · rail (calendar + performance). */
-.qhq-cc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(300px, 340px); gap: 16px; align-items: start; margin-top: 4px; }
+/* Dashboard shell — a 2/3 main region beside a 1/3 rail (calendar, performance,
+   activity). The main region is itself a 2-col grid: Up next + At risk sit side
+   by side, with Projects overview and Team workload spanning both beneath — which
+   fills what would otherwise be dead space under the two short columns. */
+.qhq-cc-shell { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; margin-top: 8px; }
+.qhq-cc-main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; min-width: 0; }
+.qhq-cc-main > .qhq-donut-card, .qhq-cc-main > .qhq-tw-card { grid-column: 1 / -1; }
 .qhq-cc-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .qhq-cc-rail .qhq-sec-h { margin: 6px 0 4px; }
-/* Band 2 — Projects overview (2/3) beside Team workload (1/3). */
-.qhq-cc-grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; margin-top: 16px; }
-.qhq-cc-grid2.solo { grid-template-columns: 1fr; }
+.qhq-cc-rail .qhq-recents { margin-top: 2px; }
 
 .qhq-period { display: inline-flex; background: var(--bg-3); border-radius: 9px; padding: 3px; flex: 0 0 auto; }
 .qhq-period button { height: 27px; padding: 0 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-2); cursor: pointer; transition: color var(--dur-fast) var(--ease-out); }
@@ -5328,9 +5331,11 @@ body.ui-command-center .detail-title {
 .qhq-cal-day.today .qhq-cal-dot { background: #fff; }
 .qhq-cal-day.overdue .qhq-cal-dot { background: var(--rust); }
 
-/* Collapse both bands to a single column on narrow viewports. */
-@media (max-width: 900px) {
-  .qhq-cc-grid, .qhq-cc-grid2 { grid-template-columns: 1fr; }
+/* Collapse the shell + main grid to a single column on narrow viewports; cap the
+   calendar so it doesn't balloon once the rail spans the full width. */
+.qhq-cc-rail .qhq-cal { max-width: 460px; }
+@media (max-width: 1024px) {
+  .qhq-cc-shell, .qhq-cc-main { grid-template-columns: 1fr; }
   .qhq-cc .qhq-sec-title { font-size: 20px; }
 }
 
@@ -5635,17 +5640,18 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
   @keyframes qhqNudge { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-4px) scale(1.06); } }
 
   .qhq-home.qhq-enter > .qhq-head,
-  .qhq-home.qhq-enter .qhq-cc-grid > *,
-  .qhq-home.qhq-enter .qhq-cc-grid2 > *,
-  .qhq-home.qhq-enter > .qhq-recents { opacity: 0; animation: qhqRise 460ms var(--ease-out) both; }
+  .qhq-home.qhq-enter .qhq-cc-main > *,
+  .qhq-home.qhq-enter .qhq-cc-rail > * { opacity: 0; animation: qhqRise 460ms var(--ease-out) both; }
 
   .qhq-home.qhq-enter > .qhq-head { animation-delay: 0ms; }
-  .qhq-home.qhq-enter .qhq-cc-grid > *:nth-child(1) { animation-delay: 70ms; }
-  .qhq-home.qhq-enter .qhq-cc-grid > *:nth-child(2) { animation-delay: 120ms; }
-  .qhq-home.qhq-enter .qhq-cc-grid > *:nth-child(3) { animation-delay: 170ms; }
-  .qhq-home.qhq-enter .qhq-cc-grid2 > *:nth-child(1) { animation-delay: 230ms; }
-  .qhq-home.qhq-enter .qhq-cc-grid2 > *:nth-child(2) { animation-delay: 280ms; }
-  .qhq-home.qhq-enter > .qhq-recents { animation-delay: 340ms; }
+  .qhq-home.qhq-enter .qhq-cc-main > *:nth-child(1) { animation-delay: 70ms; }
+  .qhq-home.qhq-enter .qhq-cc-main > *:nth-child(2) { animation-delay: 110ms; }
+  .qhq-home.qhq-enter .qhq-cc-main > *:nth-child(3) { animation-delay: 160ms; }
+  .qhq-home.qhq-enter .qhq-cc-main > *:nth-child(4) { animation-delay: 210ms; }
+  .qhq-home.qhq-enter .qhq-cc-rail > *:nth-child(1) { animation-delay: 100ms; }
+  .qhq-home.qhq-enter .qhq-cc-rail > *:nth-child(2) { animation-delay: 150ms; }
+  .qhq-home.qhq-enter .qhq-cc-rail > *:nth-child(3) { animation-delay: 200ms; }
+  .qhq-home.qhq-enter .qhq-cc-rail > *:nth-child(4) { animation-delay: 250ms; }
 
   .qhq-home.qhq-enter .qhq-donut { animation: qhqPop 560ms var(--ease-out) both; animation-delay: 360ms; }
 
@@ -6054,12 +6060,12 @@ body.panze-home .qhq-pbar-v { font-size: 15px; font-weight: 800; color: var(--in
 body.panze-home .qhq-pbar-track { height: 8px; border-radius: 5px; background: var(--bg-3); overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); }
 body.panze-home .qhq-pbar-track i { display: block; height: 100%; border-radius: 5px; transition: width var(--dur-mid) var(--ease-out); }
 
-/* In band 2 the Projects-overview card is wide (2/3), so lay the ring beside the
-   bars — the width then reads as deliberate instead of a lonely centered ring. */
-@media (min-width: 901px) {
-  body.panze-home .qhq-cc-grid2:not(.solo) .qhq-donut-wrap { flex-direction: row; align-items: center; justify-content: flex-start; gap: 0; padding: 24px 28px; }
-  body.panze-home .qhq-cc-grid2:not(.solo) .qhq-donut { margin-right: 34px; }
-  body.panze-home .qhq-cc-grid2:not(.solo) .qhq-donut-bars { flex: 1; padding-top: 0; border-top: none; border-left: 1px solid var(--border); padding-left: 34px; }
+/* When the Projects-overview card spans the full (2-col) main region, lay the
+   ring beside the bars — the width then reads as deliberate, not a lonely ring. */
+@media (min-width: 1025px) {
+  body.panze-home .qhq-cc-main .qhq-donut-wrap { flex-direction: row; align-items: center; justify-content: flex-start; gap: 0; padding: 24px 30px; }
+  body.panze-home .qhq-cc-main .qhq-donut { margin-right: 40px; }
+  body.panze-home .qhq-cc-main .qhq-donut-bars { flex: 1; padding-top: 0; border-top: none; border-left: 1px solid var(--border); padding-left: 40px; }
 }
 
 /* ---- All Tasks: Cards view ---- */
@@ -6454,6 +6460,18 @@ body.wallboard-active #mainPane { padding: 0; }
   gap: 1rem;
   grid-template-columns: repeat(7, 1fr);
   will-change: transform;
+}
+/* Fallback motion when GSAP isn't available (CDN blocked). When GSAP is present
+   it drives the rows via inline transforms instead, and this class is only added
+   when it's absent, so the two never fight. */
+.ldr-fallback .ldr-row { animation: ldr-drift 2.8s ease-in-out infinite alternate; }
+.ldr-fallback .ldr-row:nth-child(1) { animation-duration: 2.6s; }
+.ldr-fallback .ldr-row:nth-child(2) { animation-duration: 3.2s; animation-direction: alternate-reverse; }
+.ldr-fallback .ldr-row:nth-child(3) { animation-duration: 2.9s; }
+.ldr-fallback .ldr-row:nth-child(4) { animation-duration: 3.4s; animation-direction: alternate-reverse; }
+@keyframes ldr-drift {
+  from { transform: translateX(-120px); }
+  to   { transform: translateX(120px); }
 }
 .ldr-item { position: relative; }
 .ldr-item-inner {
