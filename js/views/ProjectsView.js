@@ -1,19 +1,21 @@
 window.App = window.App || {};
 
-/* Projects view: a warm, borderless TABLE of folders (panze surface). A boxed
-   summary (stat segments + completion ring) and a toolbar (sort / show-completed)
-   sit above. Each folder is a row with a progress bar; its chevron expands the
-   row to reveal all of that folder's tasks. Clicking a folder row scopes the
-   task list to it (controller.openProject); clicking a task opens it. */
+/* Projects view: each company is its own warm panel (a "box"), clearly
+   separated by the page wash and a company-tinted header — never borders.
+   Inside a box, folders are compact task-list-style rows grouped by due date,
+   with a completion progress bar. A click-to-complete circle on each row marks
+   the folder done, dropping it into that company's collapsed "Completed" group.
+   A folder row's chevron expands it to reveal all of its tasks; clicking the
+   row scopes the task list to it (controller.openProject). */
 App.ProjectsView = class ProjectsView {
   constructor({ controller, taskModel }) {
     this.controller = controller;
     this.taskModel = taskModel;
     this.wrap = document.getElementById('projectsWrap');
-    this.showTerminal = false;
     this.sort = 'recent';
-    this.expanded = new Set();
-    this.collapsed = new Set();
+    this.expanded = new Set();   // folder ids with their task drawer open
+    this.collapsed = new Set();  // due-group keys the user has collapsed
+    this._seenDone = new Set();  // done-group keys already auto-collapsed once
     App.EventBus.on('view:changed', (v) => { if (v === 'projects') this.render(); });
     App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); });
     App.EventBus.on('tasks:changed', () => { if (this._visible()) this.render(); });
@@ -21,6 +23,10 @@ App.ProjectsView = class ProjectsView {
   }
 
   _visible() { return this.wrap && !this.wrap.classList.contains('hidden'); }
+
+  // A folder is "active" while its lifecycle status is open; anything else
+  // (done / archived / lost …) reads as closed and files under Completed.
+  _isActive(p) { return ['lead', 'active', 'hold'].includes(p.status); }
 
   _counts(id) {
     const all = this.taskModel.all().filter(t => t.project === id);
@@ -36,12 +42,12 @@ App.ProjectsView = class ProjectsView {
         String(a.due || '').localeCompare(String(b.due || '')));
   }
 
+  // Every folder in the sidebar-company scope (active + completed). Completed
+  // folders live in a collapsed group rather than behind a toggle.
   _baseFolders() {
-    const active = ['lead', 'active', 'hold'];
     const cur = this.controller.uiState.currentCompany;
     return Object.values(App.projects || {})
-      .filter(p => !cur || cur === '*' || p.companyId === cur)
-      .filter(p => this.showTerminal || active.includes(p.status));
+      .filter(p => !cur || cur === '*' || p.companyId === cur);
   }
 
   _sortFolders(list) {
@@ -62,7 +68,6 @@ App.ProjectsView = class ProjectsView {
   _prioColor(prio) {
     return ({ critical: 'var(--u-critical)', urgent: 'var(--u-urgent)', high: 'var(--u-high)', medium: 'var(--u-medium)', low: 'var(--u-low)' })[prio] || 'var(--u-medium)';
   }
-  _monogram(name) { return (String(name || '').trim()[0] || '?').toUpperCase(); }
   _fmtDue(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
     if (!m) return '';
@@ -93,12 +98,16 @@ App.ProjectsView = class ProjectsView {
     const total = c.open + c.done;
     const pct = total ? Math.round((c.done / total) * 100) : 0;
     const color = this._folderColor(p);
-    const co = App.COMPANIES[p.companyId] || { label: p.companyId || '' };
     const open = this.expanded.has(p.id);
+    const done = !this._isActive(p);
     const due = p.dueDate ? this._fmtDue(p.dueDate) : '';
+    const overdue = !done && this._dueBucket(p) === 'overdue';
     const prog = total
       ? `<span class="pv-track"><span class="pv-fill" style="width:${pct}%"></span></span><span class="pv-progtxt"><b>${c.open}</b> open · ${c.done} done</span>`
       : `<span class="pv-progtxt pv-progtxt-empty">No tasks yet</span>`;
+    const check = App.can('tasks.write')
+      ? `<button class="pv-check${done ? ' done' : ''}" data-done="${esc(p.id)}" type="button" aria-label="${done ? 'Reopen folder' : 'Mark folder complete'}" title="${done ? 'Reopen folder' : 'Mark complete'}"><i class="ti ti-check"></i></button>`
+      : '';
     let drawer = '';
     if (open) {
       const tasks = this._folderTasks(p.id);
@@ -107,14 +116,13 @@ App.ProjectsView = class ProjectsView {
         : '<div class="pv-noTasks">No tasks in this folder yet.</div>'}</div>`;
     }
     return `
-      <div class="pv-rowwrap${open ? ' open' : ''}" style="--pc:${esc(color)}">
+      <div class="pv-rowwrap${open ? ' open' : ''}${done ? ' isdone' : ''}" style="--pc:${esc(color)}">
         <div class="pv-row" data-project="${esc(p.id)}" role="button" tabindex="0">
           <button class="pv-chev" data-toggle="${esc(p.id)}" aria-label="Toggle tasks" aria-expanded="${open}" type="button"><i class="ti ti-chevron-right"></i></button>
-          <span class="pv-mono">${esc(this._monogram(p.name))}</span>
+          ${check}
           <span class="pv-id"><span class="pv-name">${esc(p.name)}</span>${(p.client || p.address) ? `<span class="pv-client">${esc(p.client || p.address)}</span>` : ''}</span>
           <span class="pv-prog">${prog}</span>
-          <span class="pv-cocol">${esc(co.label)}</span>
-          <span class="pv-duecol">${due ? 'Due ' + esc(due) : ''}</span>
+          <span class="pv-duecol${overdue ? ' overdue' : ''}">${due ? 'Due ' + esc(due) : ''}</span>
         </div>
         ${drawer}
       </div>`;
@@ -142,7 +150,6 @@ App.ProjectsView = class ProjectsView {
             <option value="name"${this.sort === 'name' ? ' selected' : ''}>Name (A–Z)</option>
             <option value="active"${this.sort === 'active' ? ' selected' : ''}>Most active</option>
           </select>
-          <label class="pv-toggle"><input type="checkbox" id="proj-show-terminal" ${this.showTerminal ? 'checked' : ''}/> Show completed</label>
           ${App.can('tasks.write') ? `<button class="pv-new" data-action="new-folder" type="button"><i class="ti ti-plus"></i> New folder</button>` : ''}
         </div>
       </div>
@@ -162,8 +169,6 @@ App.ProjectsView = class ProjectsView {
 
     const sort = this.wrap.querySelector('#proj-sort');
     if (sort) sort.addEventListener('change', () => { this.sort = sort.value; this._renderBody(); });
-    const toggle = this.wrap.querySelector('#proj-show-terminal');
-    if (toggle) toggle.addEventListener('change', () => { this.showTerminal = toggle.checked; this.render(); });
     const nf = this.wrap.querySelector('[data-action="new-folder"]');
     if (nf) nf.addEventListener('click', () => this.controller.promptNewFolder());
 
@@ -208,30 +213,32 @@ App.ProjectsView = class ProjectsView {
       { key: 'week',     label: 'This week',   color: 'var(--blue)' },
       { key: 'later',    label: 'Upcoming',    color: 'var(--green)' },
       { key: 'none',     label: 'No due date', color: 'var(--pv-ink-4)' },
+      { key: 'done',     label: 'Completed',   color: 'var(--pv-ink-4)' },
     ];
 
-    // Group by company (appearance order), then by due-date bucket inside.
+    // One box per company (appearance order); inside, folders split into
+    // due-date groups — active folders by due bucket, closed folders under
+    // Completed (auto-collapsed the first time it appears).
     const byCo = {};
     folders.forEach(p => { (byCo[p.companyId] = byCo[p.companyId] || []).push(p); });
-    const coIds = Object.keys(byCo);
-    const showCo = coIds.length > 1;
 
     let html = '';
-    coIds.forEach(cid => {
+    Object.keys(byCo).forEach(cid => {
       const co = App.COMPANIES[cid] || { label: cid };
       const list = byCo[cid];
-      if (showCo) {
-        html += `<div class="pv-cohdr"><span class="pv-codot" style="background:${this._companyColor(cid)}"></span><span class="pv-coname">${esc(co.label)}</span><span class="pv-cocnt">${list.length}</span></div>`;
-      }
       const byBucket = {};
-      list.forEach(p => { const b = this._dueBucket(p); (byBucket[b] = byBucket[b] || []).push(p); });
-      html += `<div class="pv-table">`;
+      list.forEach(p => {
+        const b = this._isActive(p) ? this._dueBucket(p) : 'done';
+        (byBucket[b] = byBucket[b] || []).push(p);
+      });
+      let inner = '';
       BUCKETS.forEach(b => {
         const rows = byBucket[b.key];
         if (!rows || !rows.length) return;
         const gkey = cid + '::' + b.key;
+        if (b.key === 'done' && !this._seenDone.has(gkey)) { this._seenDone.add(gkey); this.collapsed.add(gkey); }
         const collapsed = this.collapsed.has(gkey);
-        html += `<div class="pv-duegroup${collapsed ? ' collapsed' : ''}">
+        inner += `<div class="pv-duegroup${collapsed ? ' collapsed' : ''}">
           <div class="pv-duehdr" data-group="${esc(gkey)}" role="button" tabindex="0">
             <span class="pv-duechev"><i class="ti ti-chevron-down"></i></span>
             <span class="pv-duedot" style="background:${b.color}"></span>
@@ -241,12 +248,27 @@ App.ProjectsView = class ProjectsView {
           ${collapsed ? '' : rows.map(p => this._row(p)).join('')}
         </div>`;
       });
-      html += `</div>`;
+      html += `<section class="pv-cobox" style="--co:${this._companyColor(cid)}">
+        <div class="pv-cohead">
+          <span class="pv-codot"></span>
+          <span class="pv-coname">${esc(co.label)}</span>
+          <span class="pv-cocnt">${list.length}</span>
+        </div>
+        ${inner}
+      </section>`;
     });
     host.innerHTML = html;
 
     host.querySelectorAll('.pv-duehdr').forEach(h =>
       h.addEventListener('click', () => this._toggleGroup(h.dataset.group)));
+    host.querySelectorAll('.pv-check').forEach(btn =>
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.done;
+        const p = (App.projects || {})[id];
+        const reopen = p && !this._isActive(p);
+        this.controller.setProjectStatus(id, reopen ? 'active' : 'done');
+      }));
     host.querySelectorAll('.pv-chev').forEach(btn =>
       btn.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(btn.dataset.toggle); }));
     host.querySelectorAll('.pv-row').forEach(row =>

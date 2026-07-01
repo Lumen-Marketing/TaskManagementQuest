@@ -1053,6 +1053,17 @@ App.AppController = class AppController {
     return id;
   }
 
+  /* Set a folder's lifecycle status — 'done' completes it (files it under the
+     company's Completed group), 'active' reopens it. Refreshes App.projects and
+     notifies views. RLS enforces the company window regardless. */
+  async setProjectStatus(projectId, status) {
+    if (!App.can('tasks.write')) return;
+    if (!projectId || !status) return;
+    await this.dataStore.updateProject(projectId, { status });
+    App.projects = await this.dataStore.loadProjects();
+    App.EventBus.emit('projects:changed');
+  }
+
   /* Grid "New folder" button. Company defaults to the sidebar's current
      company; if that's "All"/absent and the user has several, ask which. */
   async promptNewFolder() {

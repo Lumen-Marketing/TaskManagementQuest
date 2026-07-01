@@ -434,8 +434,6 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--pv-ink-3); }
 .pv-title { font-family: 'Hanken Grotesk', var(--font-body); font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1; margin-top: 7px; color: var(--pv-ink); }
 .pv-head-r { display: flex; align-items: center; gap: 15px; }
-.pv-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: var(--pv-ink-2); cursor: pointer; }
-.pv-toggle input { accent-color: var(--amber); width: 15px; height: 15px; }
 .pv-new { display: inline-flex; align-items: center; gap: 6px; background: var(--amber); color: #fff; font-weight: 600; font-size: 12.5px; padding: 10px 17px; border-radius: 999px; border: none; cursor: pointer; transition: transform .14s var(--ease-out), filter .14s var(--ease-out); }
 .pv-new:hover { filter: brightness(1.07); transform: translateY(-1px); }
 .pv-new i { font-size: 15px; }
@@ -455,39 +453,45 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); z-index: 1; }
 .pv-ring-lbl { font-size: 11px; font-weight: 600; color: var(--pv-ink-3); line-height: 1.4; max-width: 88px; }
 
-/* Header controls: sort + show-completed sit beside the New folder button. */
+/* Header controls: sort sits beside the New folder button. */
 .pv-sort { height: 36px; border: none; border-radius: 999px; background: var(--pv-card); padding: 0 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--pv-ink-2); cursor: pointer; }
 
-/* Table of folder rows — each expands (chevron) to reveal its tasks. Rows share
-   one warm surface panel, split by soft (theme-aware) separators, not borders. */
-.pv-table { margin: 0 28px 18px; background: var(--pv-card); border-radius: 18px; overflow: hidden; }
+/* Company box — each company is its own warm panel. Separation comes from the
+   page-wash gap between boxes + a company-tinted header, never borders. */
+.pv-cobox { margin: 0 28px 16px; background: var(--pv-card); border-radius: 18px; overflow: hidden; }
+.pv-cohead { display: flex; align-items: center; gap: 10px; padding: 13px 18px; background: color-mix(in srgb, var(--co) 9%, var(--pv-card)); }
+.pv-codot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--co); }
+.pv-coname { font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--pv-ink); }
+.pv-cocnt { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); background: color-mix(in srgb, var(--pv-ink) 6%, transparent); border-radius: 20px; padding: 1px 8px; }
+
+/* Folder rows — compact, task-list style. A completion circle marks the folder
+   done; the chevron expands it to reveal its tasks. Rows are split by soft
+   (theme-aware) separators, never borders. */
 .pv-rowwrap { --pc: var(--amber); }
 .pv-rowwrap:not(:last-child) { box-shadow: inset 0 -1px 0 var(--pv-divider); }
-.pv-row { display: flex; align-items: center; gap: 12px; padding: 8px 16px; cursor: pointer; transition: background .14s var(--ease-out); }
+.pv-row { display: flex; align-items: center; gap: 11px; padding: 8px 16px; cursor: pointer; transition: background .14s var(--ease-out); }
 .pv-row:hover { background: color-mix(in srgb, var(--pc) 6%, var(--pv-card)); }
 .pv-chev { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border: none; background: transparent; color: var(--pv-ink-3); cursor: pointer; border-radius: 6px; }
 .pv-chev i { font-size: 15px; transition: transform .16s var(--ease-out); }
 .pv-chev:hover { background: color-mix(in srgb, var(--pc) 12%, transparent); color: var(--pv-ink); }
 .pv-rowwrap.open .pv-chev i { transform: rotate(90deg); }
-.pv-mono { flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--pc); color: #fff; font-family: 'Hanken Grotesk', var(--font-body); font-weight: 800; font-size: 12.5px; letter-spacing: -.02em; display: grid; place-items: center; }
+.pv-check { flex: none; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%; cursor: pointer; background: transparent; color: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pv-ink) 22%, transparent); transition: background .14s var(--ease-out), color .14s var(--ease-out), box-shadow .14s var(--ease-out); }
+.pv-check i { font-size: 12px; }
+.pv-check:hover { box-shadow: inset 0 0 0 1.5px var(--pc); color: var(--pc); background: color-mix(in srgb, var(--pc) 12%, transparent); }
+.pv-check.done { box-shadow: none; background: var(--green); color: #fff; }
+.pv-check.done:hover { background: color-mix(in srgb, var(--green) 86%, #000); color: #fff; }
 .pv-id { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
 .pv-name { font-family: 'Hanken Grotesk', var(--font-body); font-size: 13.5px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); white-space: nowrap; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.pv-rowwrap.isdone .pv-name { color: var(--pv-ink-3); }
 .pv-client { font-size: 11px; color: var(--pv-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
-.pv-prog { flex: 0 0 230px; display: flex; align-items: center; gap: 10px; }
+.pv-prog { flex: 0 0 220px; display: flex; align-items: center; gap: 10px; }
 .pv-track { flex: 1; height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--pc) 12%, var(--pv-wash)); overflow: hidden; }
 .pv-fill { display: block; height: 100%; border-radius: 99px; background: var(--pc); }
 .pv-progtxt { flex: none; font-size: 11px; font-weight: 500; color: var(--pv-ink-3); white-space: nowrap; }
 .pv-progtxt b { font-family: 'Hanken Grotesk', var(--font-body); font-weight: 800; color: var(--pv-ink); margin-right: 1px; }
 .pv-progtxt-empty { color: var(--pv-ink-4); }
-.pv-cocol { flex: 0 0 82px; font-size: 11.5px; font-weight: 600; color: var(--pc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pv-duecol { flex: 0 0 72px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); text-align: right; white-space: nowrap; }
-
-/* Company section label (shown when >1 company is in view). */
-.pv-cohdr { display: flex; align-items: center; gap: 9px; margin: 20px 28px 9px; }
-.pv-cohdr:first-child { margin-top: 4px; }
-.pv-codot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-.pv-coname { font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--pv-ink); }
-.pv-cocnt { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-4); background: color-mix(in srgb, var(--pv-ink) 6%, transparent); border-radius: 20px; padding: 1px 8px; }
+.pv-duecol { flex: 0 0 78px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); text-align: right; white-space: nowrap; }
+.pv-duecol.overdue { color: var(--rust); }
 
 /* Due-date sub-group header inside a company panel (task-list style). */
 .pv-duehdr { display: flex; align-items: center; gap: 9px; padding: 9px 16px; cursor: pointer; user-select: none; background: color-mix(in srgb, var(--pv-ink) 3%, var(--pv-card)); }
@@ -500,7 +504,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-duecnt { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); background: color-mix(in srgb, var(--pv-ink) 6%, transparent); border-radius: 20px; padding: 1px 8px; }
 
 /* Expanded task list under a folder */
-.pv-tasks { padding: 0 16px 8px 60px; }
+.pv-tasks { padding: 0 16px 8px 49px; }
 .pv-trow { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 9px; cursor: pointer; transition: background .12s var(--ease-out); }
 .pv-trow:hover { background: color-mix(in srgb, var(--pc) 7%, var(--pv-wash)); }
 .pv-tprio { flex: none; width: 9px; height: 9px; border-radius: 50%; }
@@ -513,7 +517,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-blank { margin: 0 28px; padding: 50px 24px; background: var(--pv-card); border-radius: 18px; color: var(--pv-ink-3); font-size: 13.5px; }
 
 @media (max-width: 760px) {
-  .pv-cocol, .pv-duecol, .pv-tassignee, .pv-tdue { display: none; }
+  .pv-duecol, .pv-tassignee, .pv-tdue { display: none; }
   .pv-prog { flex-basis: 150px; }
 }
 
