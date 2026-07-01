@@ -237,12 +237,23 @@ App.HomeView = class HomeView {
     const toneFor = s => TONES[[...String(s || '')].reduce((a, c) => a + c.charCodeAt(0), 0) % TONES.length];
 
     const PRIO = { critical: 'critical', urgent: 'urgent', high: 'high', medium: 'medium', low: 'low' };
-    const unHtml = upNext.length ? upNext.map(r => `
+    const shortDue = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+    const cap = s => (s ? s[0].toUpperCase() + s.slice(1) : s);
+    // Up next mirrors the At-risk row: tinted glyph chip + title/subtitle + a
+    // right-aligned due. Chip tone reads urgency (overdue > hot priority > rest).
+    const unHtml = upNext.length ? upNext.map(r => {
+      const prio = PRIO[r.t.priority] || 'medium';
+      const hot = prio === 'critical' || prio === 'urgent' || prio === 'high';
+      const tone = r.overdue ? 'tone-rust' : (hot ? 'tone-amber' : 'tone-blue');
+      return `
       <div class="qhq-un-row" data-id="${esc(r.t.id)}" role="button" tabindex="0">
-        <span class="qhq-un-dot ${PRIO[r.t.priority] || 'medium'}"></span>
-        <span class="qhq-un-t">${esc(r.t.title)}</span>
-        <span class="qhq-un-due ${r.overdue ? 'over' : ''}">${r.t.due ? esc(r.t.due.slice(5)) : '—'}</span>
-      </div>`).join('')
+        <div class="qhq-un-ic ${tone}">${icon(r.overdue ? 'fire' : 'layers')}</div>
+        <div class="qhq-un-b">
+          <div class="qhq-un-t">${esc(r.t.title)}</div>
+          <div class="qhq-un-s">${esc(cap(prio))} priority</div>
+        </div>
+        <span class="qhq-un-due ${r.overdue ? 'over' : ''}">${r.t.due ? esc(shortDue(r.t.due)) : '—'}</span>
+      </div>`; }).join('')
       : `<div class="qhq-empty qhq-empty-lg">
           <span class="qhq-empty-hero tone-amber">${icon('coffee')}</span>
           <span class="qhq-empty-tx"><b>You're all caught up</b><span>No open tasks in your queue.</span></span>
@@ -406,17 +417,22 @@ App.HomeView = class HomeView {
           </div>
           <div class="qhq-cc-rail">
             ${calHtml}
-            <div class="qhq-card qhq-recents">
-              ${cardHead('activity', 'tone-slate', 'Recents', App.can('reports.view') ? 'team activity' : 'your activity')}
-              <div class="qhq-reclist">${recHtml}</div>
-            </div>
+            ${teamLoad.length ? `
+              <div class="qhq-card qhq-tw-card qhq-tw-rail">
+                ${cardHead('people', 'tone-blue', 'Team workload', 'open per person')}
+                <div class="qhq-twlist">${twHtml}</div>
+              </div>` : `
+              <div class="qhq-card qhq-recents">
+                ${cardHead('activity', 'tone-slate', 'Recents', 'your activity')}
+                <div class="qhq-reclist">${recHtml}</div>
+              </div>`}
           </div>
         </div>
 
         ${teamLoad.length ? `
-          <div class="qhq-card qhq-tw-card qhq-tw-full">
-            ${cardHead('people', 'tone-blue', 'Team workload', 'open per person')}
-            <div class="qhq-twlist">${twHtml}</div>
+          <div class="qhq-card qhq-recents qhq-recents-full">
+            ${cardHead('activity', 'tone-slate', 'Recents', 'team activity')}
+            <div class="qhq-reclist">${recHtml}</div>
           </div>` : ''}
       </div>`;
 

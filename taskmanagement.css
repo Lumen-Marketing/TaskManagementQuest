@@ -5401,7 +5401,7 @@ body.ui-command-center .detail-title {
 @media (min-width: 1201px) {
   .qhq-cc-shell { align-items: stretch; }
   .qhq-cc-main { grid-template-rows: var(--tile-h, auto) 1fr; }
-  .qhq-cc-rail .qhq-recents { flex: 1 1 auto; }
+  .qhq-cc-rail .qhq-recents, .qhq-cc-rail .qhq-tw-rail { flex: 1 1 auto; }
   /* When a column overflows its fixed tile, scroll its list instead of growing
      tall (At risk usually; Up next too if the queue is long). */
   .qhq-col-up, .qhq-col-risk { overflow: hidden; }
@@ -5479,14 +5479,14 @@ body.ui-command-center .detail-title {
 .qhq-card-h .ct { font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); line-height: 1.12; }
 .qhq-card-h .meta { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
 .qhq-arlist, .qhq-hdlist { padding: 2px 16px 12px; flex: 1; display: flex; flex-direction: column; }
-.qhq-ar-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+.qhq-ar-row { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-top: 1px solid var(--border); }
 .qhq-ar-row:first-child { border-top: none; }
-.qhq-ar-ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
+.qhq-ar-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
 .qhq-ar-ic.hold { background: #FCEFD7; color: #9A5E08; }
-.qhq-ar-ic .qhq-ic { width: 18px; height: 18px; }
+.qhq-ar-ic .qhq-ic { width: 17px; height: 17px; }
 .qhq-ar-b { flex: 1; min-width: 0; }
-.qhq-ar-t { font-size: 12.8px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qhq-ar-s { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.qhq-ar-t { font-size: 12.8px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qhq-ar-s { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
 
 /* ----- Reports ----- */
 .qhq-rpt { padding: 16px 18px 36px; max-width: 1700px; font-family: var(--font-body); }
@@ -5680,21 +5680,24 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-home .tone-slate { --tn-bg: var(--bg-3);     --tn-fg: var(--ink-2); }
 
 .qhq-unlist, .qhq-reclist { padding: 0 16px 14px; flex: 1; display: flex; flex-direction: column; }
-.qhq-un-row {
-  display: flex; align-items: center; gap: 10px; padding: 10px 0;
-  border-top: 1px solid var(--border); cursor: pointer;
-}
+/* Up next mirrors the At-risk row: tinted glyph chip + title/subtitle + due. */
+.qhq-un-row { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-top: 1px solid var(--border); cursor: pointer; }
 .qhq-un-row:first-child { border-top: none; }
+.qhq-un-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
+.qhq-un-ic .qhq-ic { width: 17px; height: 17px; }
+.qhq-un-b { flex: 1; min-width: 0; }
+.qhq-un-t { font-size: 12.8px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qhq-un-s { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+.qhq-un-due { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.qhq-un-due.over { color: var(--rust); font-weight: 700; }
 .qhq-un-row:hover .qhq-un-t { color: var(--amber); }
+/* Priority dots retained for the Team-workload roster. */
 .qhq-un-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--u-medium); }
 .qhq-un-dot.critical { background: var(--u-critical); }
 .qhq-un-dot.urgent { background: var(--u-urgent); }
 .qhq-un-dot.high { background: var(--u-high); }
 .qhq-un-dot.medium { background: var(--u-medium); }
 .qhq-un-dot.low { background: var(--u-low); }
-.qhq-un-t { flex: 1; min-width: 0; font-size: 12.8px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qhq-un-due { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; flex-shrink: 0; }
-.qhq-un-due.over { color: var(--rust); font-weight: 600; }
 
 .qhq-recents { margin-top: 12px; }
 .qhq-rec-row {
@@ -5741,6 +5744,14 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
   transition: background var(--dur-fast) var(--ease-out);
 }
 .qhq-un-row:hover, .qhq-rec-row:hover, .qhq-tw-row:hover { background: var(--bg-2); }
+
+/* Team workload sitting in the narrow rail: compact single-line roster (avatar
+   + name + open count); the wide bar/dots are dropped to stay clean. */
+.qhq-tw-rail .qhq-tw-row { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; padding: 8px 0; }
+.qhq-tw-rail .qhq-tw-bar, .qhq-tw-rail .qhq-tw-dots { display: none; }
+.qhq-tw-rail .qhq-tw-av { width: 28px; height: 28px; }
+/* Recents as the full-width band at the bottom. */
+.qhq-recents-full { margin-top: 18px; }
 
 /* Hover micro-interactions. The outline restyle keeps the blocks flat (no lift /
    shadow), so the motion lives in the glyphs — chips scale, dots & avatars pop. */
