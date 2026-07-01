@@ -5371,6 +5371,9 @@ body.ui-command-center .detail-title {
 .qhq-cal { background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: 14px; padding: 12px 12px 8px; }
 .qhq-cal-head { font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; margin-bottom: 8px; }
 .qhq-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+/* Pin week rows to the cell height — otherwise rows containing the empty
+   leading/trailing spacer cells auto-stretch tall (Chromium empty grid-item). */
+.qhq-cal-grid:not(.qhq-cal-dow) { grid-auto-rows: 26px; }
 .qhq-cal-dow { margin-bottom: 2px; }
 .qhq-cal-dow span { font-size: 9.5px; font-weight: 700; color: var(--ink-4); text-align: center; text-transform: uppercase; }
 .qhq-cal-day { position: relative; height: 26px; border-radius: 7px; font-size: 11px; font-weight: 600; color: var(--ink-2);

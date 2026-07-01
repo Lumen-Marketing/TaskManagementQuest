@@ -15,6 +15,7 @@ const HOME_ICONS = {
   pause: `<path fill="currentColor" d="M2 6c0-1.886 0-2.828.586-3.414S4.114 2 6 2s2.828 0 3.414.586S10 4.114 10 6v12c0 1.886 0 2.828-.586 3.414S7.886 22 6 22s-2.828 0-3.414-.586S2 19.886 2 18z"/><path fill="currentColor" d="M14 6c0-1.886 0-2.828.586-3.414S16.114 2 18 2s2.828 0 3.414.586S22 4.114 22 6v12c0 1.886 0 2.828-.586 3.414S19.886 22 18 22s-2.828 0-3.414-.586S14 19.886 14 18z" opacity=".5"/>`,
   date: `<path fill="currentColor" d="M6.96 2c.418 0 .756.31.756.692V4.09c.67-.012 1.422-.012 2.268-.012h4.032c.846 0 1.597 0 2.268.012V2.692c0-.382.338-.692.756-.692s.756.31.756.692V4.15c1.45.106 2.403.368 3.103 1.008c.7.641.985 1.513 1.101 2.842v1H2V8c.116-1.329.401-2.2 1.101-2.842c.7-.64 1.652-.902 3.103-1.008V2.692c0-.382.339-.692.756-.692"/><path fill="currentColor" d="M22 14v-2c0-.839-.013-2.335-.026-3H2.006c-.013.665 0 2.161 0 3v2c0 3.771 0 5.657 1.17 6.828C4.349 22 6.234 22 10.004 22h4c3.77 0 5.654 0 6.826-1.172S22 17.771 22 14" opacity=".5"/><path fill="currentColor" fill-rule="evenodd" d="M14 12.25A1.75 1.75 0 0 0 12.25 14v2a1.75 1.75 0 1 0 3.5 0v-2A1.75 1.75 0 0 0 14 12.25m0 1.5a.25.25 0 0 0-.25.25v2a.25.25 0 1 0 .5 0v-2a.25.25 0 0 0-.25-.25" clip-rule="evenodd"/><path fill="currentColor" d="M11.25 13a.75.75 0 0 0-1.28-.53l-1.5 1.5a.75.75 0 0 0 1.06 1.06l.22-.22V17a.75.75 0 0 0 1.5 0z"/>`,
   coffee: `<path fill="currentColor" fill-rule="evenodd" d="M6.977 1.327a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 0 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175m4 0a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 1 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175m4 0a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 1 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175" clip-rule="evenodd" opacity=".5"/><path fill="currentColor" d="M9.613 22h.774c2.66 0 3.991 0 4.856-.81c.67-.626.874-1.564 1.015-3.19H3.742c.14 1.626.344 2.564 1.014 3.19c.865.81 2.196.81 4.856.81" opacity=".5"/><path fill="currentColor" fill-rule="evenodd" d="M3.284 11.266c-.133-2-.2-2.999.393-3.632C4.27 7 5.272 7 7.276 7h5.449c2.003 0 3.005 0 3.598.634c.162.173.275.374.35.616H17a4.75 4.75 0 1 1 0 9.5h-.722l-.02.25H3.742a86 86 0 0 1-.116-1.6zm13.1 4.984H17a3.25 3.25 0 0 0 0-6.5h-.2c-.012.43-.045.93-.084 1.516z" clip-rule="evenodd"/>`,
+  people: `<circle cx="15" cy="6" r="3" fill="currentColor" opacity=".4"/><ellipse cx="16" cy="17" fill="currentColor" opacity=".4" rx="5" ry="3"/><circle cx="9.001" cy="6" r="4" fill="currentColor"/><ellipse cx="9.001" cy="17.001" fill="currentColor" rx="7" ry="4"/>`,
 };
 
 /* HomeView — the personal landing screen (every role). Greeting + quick actions,
@@ -201,7 +202,8 @@ App.HomeView = class HomeView {
       if (y.at) return 1;
       return 0;
     });
-    return feed.slice(0, 12);
+    // Cap the rail feed so it finishes roughly level with the main column.
+    return feed.slice(0, 8);
   }
 
   render() {
@@ -210,6 +212,7 @@ App.HomeView = class HomeView {
     const upNext = this._upNext();
     const atRisk = this._atRisk();
     const recents = this._recents();
+    const teamLoad = this._teamWorkload();
 
     // Inline Solar duotone glyph; colors itself from the chip's currentColor.
     // The ic-<name> class lets each glyph carry its own signature animation.
@@ -332,6 +335,22 @@ App.HomeView = class HomeView {
       </div>`).join('')
       : `<div class="qhq-empty">No recent activity yet.</div>`;
 
+    // Team workload roster (managers only): avatar + name, a proportional load
+    // bar, priority dots, and an open count — the reference "workload" table in
+    // the warm palette. `twLoad` empty ⇒ the whole section is omitted below.
+    const twMax = Math.max(1, ...teamLoad.map(p => p.n));
+    const twHtml = teamLoad.map(p => `
+      <div class="qhq-tw-row" data-uid="${esc(p.id)}" role="button" tabindex="0">
+        <span class="qhq-tw-av ${toneFor(p.name)}" aria-hidden="true">${esc(initials(p.name))}</span>
+        <span class="qhq-tw-name">${esc(p.name)}</span>
+        <span class="qhq-tw-bar"><i style="width:${Math.round((p.n / twMax) * 100)}%"></i></span>
+        <span class="qhq-tw-dots" aria-hidden="true">${p.dots.map(d => `<span class="qhq-un-dot ${PRIO[d] || 'medium'}"></span>`).join('')}</span>
+        <span class="qhq-tw-n">
+          <span class="qhq-tw-open"><b class="tnum">${p.n}</b> open</span>
+          ${p.overdue ? `<span class="qhq-tw-over">${p.overdue} late</span>` : ''}
+        </span>
+      </div>`).join('');
+
     // Animate the entrance only on the first paint after landing on Home, not on
     // every data-driven re-render (re-armed in subscribe when the view is hidden).
     const enter = this._rendered ? '' : ' qhq-enter';
@@ -351,30 +370,37 @@ App.HomeView = class HomeView {
           </div>
         </div>
 
-        <div class="qhq-cc-grid">
+        <div class="qhq-perf">
+          ${sectionHead('Your performance', this.period === 'month' ? 'this month' : 'this week', periodCtl)}
+          <div class="qhq-kpirow">${metrics.map(trendCardHtml).join('')}</div>
+        </div>
+
+        <div class="qhq-cc-shell">
           <div class="qhq-cc-main">
-            ${donutHtml}
-            ${sectionHead('Your work', 'what needs you now')}
-            <div class="qhq-card">
+            <div class="qhq-card qhq-col-up">
               ${cardHead('layers', 'tone-amber', 'Up next', 'your queue')}
               <div class="qhq-unlist">${unHtml}</div>
             </div>
-            <div class="qhq-card">
+            <div class="qhq-card qhq-col-risk">
               ${cardHead('warning', 'tone-rust', 'At risk', 'needs attention')}
               <div class="qhq-arlist">${riskRows}</div>
             </div>
+            ${donutHtml}
           </div>
           <div class="qhq-cc-rail">
-            ${sectionHead('Your performance', this.period === 'month' ? 'this month' : 'this week', periodCtl)}
-            <div class="qhq-trend-list">${metrics.map(trendCardHtml).join('')}</div>
             ${calHtml}
+            <div class="qhq-card qhq-recents">
+              ${cardHead('activity', 'tone-slate', 'Recents', App.can('reports.view') ? 'team activity' : 'your activity')}
+              <div class="qhq-reclist">${recHtml}</div>
+            </div>
           </div>
         </div>
 
-        <div class="qhq-card qhq-recents">
-          ${cardHead('activity', 'tone-slate', 'Recents', App.can('reports.view') ? 'team activity' : 'your activity')}
-          <div class="qhq-reclist">${recHtml}</div>
-        </div>
+        ${teamLoad.length ? `
+          <div class="qhq-card qhq-tw-card qhq-tw-full">
+            ${cardHead('people', 'tone-blue', 'Team workload', 'open per person')}
+            <div class="qhq-twlist">${twHtml}</div>
+          </div>` : ''}
       </div>`;
 
     // Wire interactions.
@@ -400,6 +426,19 @@ App.HomeView = class HomeView {
     this.wrap.querySelectorAll('.qhq-un-row, .qhq-rec-row').forEach(el => {
       el.addEventListener('click', () => open(el));
       el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el); } });
+    });
+    // A Team-workload row drills into that person's open tasks: reset filters,
+    // narrow to the one assignee, and jump to the All-tasks list.
+    const openAssignee = uid => {
+      if (!uid) return;
+      this.controller.clearFilters();
+      this.controller.toggleFilterValue('assignees', uid);
+      this.controller.setView('all');
+    };
+    this.wrap.querySelectorAll('.qhq-tw-row').forEach(el => {
+      const go = () => openAssignee(el.dataset.uid);
+      el.addEventListener('click', go);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     });
 
     // Count the headline figures up on the entrance paint only (never on a
@@ -447,5 +486,29 @@ App.HomeView = class HomeView {
     }
     out.sort((a, b) => (b.overdue - a.overdue) || String(a.t.due).localeCompare(String(b.t.due)));
     return out.slice(0, 6);
+  }
+
+  // Managers only: open-task load per assignee across the company-scoped set.
+  // Each row carries a headcount, an overdue tally, and up to five priority
+  // dots (hottest first) so the roster reads like the reference workload table.
+  _teamWorkload() {
+    if (!App.can('reports.view')) return [];
+    const today = App.utils.todayISO(0);
+    const open = this.controller.visibleTasks({ includeDone: false });
+    const by = {};
+    for (const t of open) {
+      if (!t.assignee) continue;
+      (by[t.assignee] = by[t.assignee] || []).push(t);
+    }
+    const PRIO = { critical: 0, urgent: 1, high: 2, medium: 3, low: 4 };
+    const rows = Object.entries(by).map(([id, ts]) => {
+      const dots = ts.slice()
+        .sort((a, b) => (PRIO[a.priority] ?? 3) - (PRIO[b.priority] ?? 3))
+        .slice(0, 5)
+        .map(t => t.priority || 'medium');
+      const overdue = ts.filter(t => t.due && t.due < today).length;
+      return { id, name: this.controller.getUserName(id), n: ts.length, overdue, dots };
+    }).sort((a, b) => b.n - a.n).slice(0, 6);
+    return rows;
   }
 };

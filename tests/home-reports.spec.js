@@ -49,9 +49,15 @@ test('Home command center: trend cards, two columns, Up next, Recents', async ({
   await expect(page.locator('.qhq-trend svg.qhq-tspark')).toHaveCount(3);
   await expect(page.locator('.qhq-statstrip')).toHaveCount(0);
   await expect(page.locator('.qhq-act')).toHaveCount(3);
-  // Two-column shell.
+  // A 2/3 main region (Up next + At risk, then Projects overview + Team
+  // workload spanning) beside a 1/3 rail (calendar, performance, activity).
   await expect(page.locator('.qhq-cc-main')).toBeVisible();
+  await expect(page.locator('.qhq-col-up')).toBeVisible();
+  await expect(page.locator('.qhq-col-risk')).toBeVisible();
   await expect(page.locator('.qhq-cc-rail')).toBeVisible();
+  // Team workload roster shows for a manager (admin), with at least one person.
+  await expect(page.locator('.qhq-tw-card')).toBeVisible();
+  expect(await page.locator('.qhq-tw-row').count()).toBeGreaterThan(0);
   // Up next renders rows (or its empty state).
   const up = await page.locator('.qhq-un-row').count();
   const upEmpty = await page.locator('.qhq-unlist .qhq-empty').count();
@@ -63,10 +69,10 @@ test('Home command center: trend cards, two columns, Up next, Recents', async ({
 test('period toggle re-renders; mini-calendar day click opens the calendar on that date', async ({ page }) => {
   await boot(page, 'admin');
   await page.evaluate(() => App.controller.setView('home'));
-  // Week/Month toggle keeps 3 trend cards and updates the subtitle.
+  // Week/Month toggle keeps 3 KPI cards and updates the subtitle.
   await page.locator('.qhq-period button[data-p="month"]').click();
   await expect(page.locator('.qhq-trend')).toHaveCount(3);
-  await expect(page.locator('.qhq-cc-rail .qhq-sec-sub')).toContainText('month');
+  await expect(page.locator('.qhq-perf .qhq-sec-sub')).toContainText('month');
   // Clicking a calendar day jumps to the calendar layout anchored on that date.
   await page.evaluate(() => App.controller.setView('home'));
   const day = page.locator('.qhq-cal-day[data-day]').first();
@@ -89,6 +95,8 @@ test('Recents is team-wide for managers and own-world for workers', async ({ pag
   await page.waitForTimeout(200);
   const workerRecents = await page.locator('.qhq-rec-row').count();
   await expect(page.locator('.qhq-recents .meta')).toContainText('your');
+  // Team workload is a manager surface — it must not render for a worker.
+  await expect(page.locator('.qhq-tw-card')).toHaveCount(0);
   // A manager's feed is a superset of (>=) a worker's own-world feed.
   expect(adminRecents).toBeGreaterThanOrEqual(workerRecents);
 });
