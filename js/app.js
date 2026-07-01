@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.TaskListView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   new App.TaskDetailView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   App.projectPicker = new App.ProjectPickerView({ controller });
+  App.projectsView = new App.ProjectsView({ controller, taskModel });
   new App.FilterBarView({ controller });
   new App.BulkActionsView({ controller });
   new App.ResizeHandleView({ controller });

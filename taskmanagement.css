@@ -413,6 +413,21 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .projtag-btn.projtag-empty { color: var(--ink-3); background: transparent; border-color: var(--border, #e6e1d9); font-weight: 600; }
 .projtag-btn[aria-expanded="true"] { filter: brightness(0.94); }
 
+/* Projects grid view */
+.proj-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 8px; }
+.proj-title { font-size: 20px; font-weight: 700; }
+.proj-head-actions { display: flex; align-items: center; gap: 14px; }
+.proj-toggle { font-size: 12px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; padding: 8px 20px 24px; }
+.proj-card { text-align: left; cursor: pointer; border: 1px solid var(--border, #eee); border-left: 4px solid var(--pc, #8f867b); border-radius: 10px; padding: 14px; background: var(--surface, #fff); display: flex; flex-direction: column; gap: 6px; transition: box-shadow .15s; }
+.proj-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.07); }
+.pc-head { display: flex; align-items: center; gap: 8px; }
+.pc-folder { color: var(--pc, #8f867b); font-size: 18px; display: inline-flex; }
+.pc-name { font-weight: 700; font-size: 14px; }
+.pc-sub { font-size: 12px; color: var(--ink-3); }
+.pc-meta { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.proj-empty { padding: 40px 20px; color: var(--ink-3); }
+
 /* Dense look: tighter pills/text, and row actions only on hover so the
    resting row ends cleanly at Due (like the picture). */
 .list-row .priority-block { font-size: 11px; padding: 2px 8px; }

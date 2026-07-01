@@ -505,7 +505,7 @@ App.AppController = class AppController {
     const newTaskWrap = document.getElementById('newTaskWrap');
     if (newTaskWrap) newTaskWrap.classList.toggle('hidden', !this.uiState.creatingTask);
     if (this.uiState.creatingTask) {
-      ['listPane', 'homeWrap', 'reportsWrap', 'wallboardWrap', 'taskDetailWrap', 'timeViewWrap'].forEach(id => {
+      ['listPane', 'homeWrap', 'reportsWrap', 'wallboardWrap', 'taskDetailWrap', 'timeViewWrap', 'projectsWrap'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
@@ -514,7 +514,7 @@ App.AppController = class AppController {
     }
     // Home / Reports are full-page surfaces in their own containers — hide the
     // entire list pane (table + toolbar + page head + ops brief) for them.
-    const isPageView = v === 'home' || v === 'reports' || v === 'wallboard';
+    const isPageView = v === 'home' || v === 'reports' || v === 'wallboard' || v === 'projects';
     const isTimeView = v.startsWith('time:') || v === 'approvals' || v === 'team:hierarchy' || v.startsWith('admin:');
     this._applyPanseSkin();
     const listPane = document.getElementById('listPane');
@@ -523,6 +523,8 @@ App.AppController = class AppController {
     const reportsWrap = document.getElementById('reportsWrap');
     if (homeWrap) homeWrap.classList.toggle('hidden', v !== 'home');
     if (reportsWrap) reportsWrap.classList.toggle('hidden', v !== 'reports');
+    const projectsWrap = document.getElementById('projectsWrap');
+    if (projectsWrap) projectsWrap.classList.toggle('hidden', v !== 'projects');
     const wallboardWrap = document.getElementById('wallboardWrap');
     if (wallboardWrap) wallboardWrap.classList.toggle('hidden', v !== 'wallboard');
     document.body.classList.toggle('wallboard-active', v === 'wallboard');
