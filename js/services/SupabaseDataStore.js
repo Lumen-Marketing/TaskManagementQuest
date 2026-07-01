@@ -81,6 +81,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
       notificationsRes,
       profilesRes,
       projectsRes,
+      taxTypesRes,
+      taxStatusesRes,
+      taxLabelsRes,
     ] = await Promise.all([
       this.supabase.from('team_members').select('*').order('name', { ascending: true }),
       this.supabase.from('tasks').select('*').order('created_at', { ascending: true }),
@@ -91,6 +94,11 @@ App.SupabaseDataStore = class SupabaseDataStore {
         ? this.supabase.from('profiles').select(this._profileColumns).order('created_at', { ascending: false })
         : Promise.resolve({ data: [], error: null }),
       this.supabase.from('projects').select('*').order('created_at', { ascending: true }),
+      // Customizable per-company task taxonomy (migrations 056-058). RLS scopes rows to
+      // the caller's companies. App.taxonomy hydrates from these; constants are the fallback.
+      this.supabase.from('task_types').select('*'),
+      this.supabase.from('task_type_statuses').select('*'),
+      this.supabase.from('task_labels').select('*'),
     ]);
 
     this._throwIfError(peopleRes, 'people');
@@ -100,6 +108,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwIfError(notificationsRes, 'notifications');
     this._throwIfError(profilesRes, 'profiles');
     this._throwIfError(projectsRes, 'projects');
+    this._throwIfError(taxTypesRes, 'task types');
+    this._throwIfError(taxStatusesRes, 'task statuses');
+    this._throwIfError(taxLabelsRes, 'task labels');
 
     this._taskVersions = {};
     const tasks = (tasksRes.data || []).map(row => {
@@ -131,6 +142,11 @@ App.SupabaseDataStore = class SupabaseDataStore {
       ])),
       notifications: (notificationsRes.data || []).map(row => this._mapNotificationRow(row)),
       projects: this._mapProjects(projectsRes.data || []),
+      taxonomy: {
+        types: taxTypesRes.data || [],
+        statuses: taxStatusesRes.data || [],
+        labels: taxLabelsRes.data || [],
+      },
     };
   }
 
