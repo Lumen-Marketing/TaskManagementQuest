@@ -1,15 +1,19 @@
 window.App = window.App || {};
 
 /* Projects grid: warm, borderless folder cards (panze surface) grouped by
-   company. Each folder carries its own color — a solid monogram tile, a
-   completion bar, and live open/done counts from the loaded tasks. Card click
-   scopes the task list to that folder (controller.openProject). */
+   company. A boxed summary component (stat segments split by dividers + an
+   overall completion ring) and a toolbar (search / sort / show-completed) sit
+   above the grid. Each folder carries its own color — a solid monogram tile, a
+   completion bar, and live open/done counts. Card click scopes the task list
+   to that folder (controller.openProject). */
 App.ProjectsView = class ProjectsView {
   constructor({ controller, taskModel }) {
     this.controller = controller;
     this.taskModel = taskModel;
     this.wrap = document.getElementById('projectsWrap');
     this.showTerminal = false;
+    this.query = '';
+    this.sort = 'recent';
     App.EventBus.on('view:changed', (v) => { if (v === 'projects') this.render(); });
     App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); });
     App.EventBus.on('tasks:changed', () => { if (this._visible()) this.render(); });
@@ -23,7 +27,8 @@ App.ProjectsView = class ProjectsView {
     return { open: all.filter(t => t.status !== 'done').length, done: all.filter(t => t.status === 'done').length };
   }
 
-  _folders() {
+  // Folders in scope (sidebar company + show-completed), before search/sort.
+  _baseFolders() {
     const active = ['lead', 'active', 'hold'];
     const cur = this.controller.uiState.currentCompany;
     return Object.values(App.projects || {})
@@ -31,8 +36,20 @@ App.ProjectsView = class ProjectsView {
       .filter(p => this.showTerminal || active.includes(p.status));
   }
 
-  // Company identity color as a theme-aware CSS var; folders may override with
-  // their own stored color (anything other than the neutral default).
+  _sortFolders(list) {
+    const arr = list.slice();
+    if (this.sort === 'name') arr.sort((a, b) => a.name.localeCompare(b.name));
+    else if (this.sort === 'active') arr.sort((a, b) => this._counts(b.id).open - this._counts(a.id).open);
+    return arr; // 'recent' keeps created_at insertion order
+  }
+
+  _visibleFolders() {
+    const q = this.query.trim().toLowerCase();
+    let list = this._baseFolders();
+    if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || (p.client || '').toLowerCase().includes(q));
+    return this._sortFolders(list);
+  }
+
   _companyColor(companyId) {
     return ({ roofing: 'var(--u-high)', drafting: 'var(--blue)', lumen: 'var(--amber)' })[companyId] || 'var(--amber)';
   }
@@ -79,22 +96,80 @@ App.ProjectsView = class ProjectsView {
     if (!this.wrap) this.wrap = document.getElementById('projectsWrap');
     if (!this.wrap) return;
     const esc = App.utils.escapeHtml;
-    const folders = this._folders();
-    const openTotal = folders.reduce((n, p) => n + this._counts(p.id).open, 0);
-    const doneTotal = folders.reduce((n, p) => n + this._counts(p.id).done, 0);
+    const base = this._baseFolders();
+    const openTotal = base.reduce((n, p) => n + this._counts(p.id).open, 0);
+    const doneTotal = base.reduce((n, p) => n + this._counts(p.id).done, 0);
+    const overall = openTotal + doneTotal;
+    const pct = overall ? Math.round((doneTotal / overall) * 100) : 0;
+    const companies = new Set(base.map(p => p.companyId)).size;
 
-    // Group by company; render flat (no section headers) when only one company
-    // is in view, so a single-company workspace doesn't get sparse one-card rows.
+    this.wrap.innerHTML = `
+      <div class="pv-head">
+        <div>
+          <div class="pv-eyebrow">Workspace</div>
+          <h1 class="pv-title">Projects</h1>
+        </div>
+        <div class="pv-head-r">
+          ${App.can('tasks.write') ? `<button class="pv-new" data-action="new-folder" type="button"><i class="ti ti-plus"></i> New folder</button>` : ''}
+        </div>
+      </div>
+
+      <div class="pv-summary">
+        <div class="pv-seg"><div class="pv-seg-num">${base.length}</div><div class="pv-seg-lbl" style="--sc:var(--amber)">Folders</div></div>
+        <div class="pv-seg"><div class="pv-seg-num">${openTotal}</div><div class="pv-seg-lbl" style="--sc:var(--u-high)">Open tasks</div></div>
+        <div class="pv-seg"><div class="pv-seg-num">${doneTotal}</div><div class="pv-seg-lbl" style="--sc:var(--green)">Completed</div></div>
+        <div class="pv-seg"><div class="pv-seg-num">${companies}</div><div class="pv-seg-lbl" style="--sc:var(--blue)">Companies</div></div>
+        <div class="pv-ring-wrap">
+          <div class="pv-ring" style="--p:${pct}%"><b>${overall ? pct + '%' : '—'}</b></div>
+          <div class="pv-ring-lbl">${overall ? 'complete across all folders' : 'no tasks filed yet'}</div>
+        </div>
+      </div>
+
+      <div class="pv-tools">
+        <div class="pv-search"><i class="ti ti-search"></i><input type="search" id="proj-search" placeholder="Search folders" value="${esc(this.query)}" aria-label="Search folders"/></div>
+        <div class="pv-tools-r">
+          <select class="pv-sort" id="proj-sort" aria-label="Sort folders">
+            <option value="recent"${this.sort === 'recent' ? ' selected' : ''}>Recently added</option>
+            <option value="name"${this.sort === 'name' ? ' selected' : ''}>Name (A–Z)</option>
+            <option value="active"${this.sort === 'active' ? ' selected' : ''}>Most active</option>
+          </select>
+          <label class="pv-toggle"><input type="checkbox" id="proj-show-terminal" ${this.showTerminal ? 'checked' : ''}/> Show completed</label>
+        </div>
+      </div>
+
+      <div class="pv-body"></div>`;
+
+    const search = this.wrap.querySelector('#proj-search');
+    if (search) search.addEventListener('input', () => { this.query = search.value; this._renderBody(); });
+    const sort = this.wrap.querySelector('#proj-sort');
+    if (sort) sort.addEventListener('change', () => { this.sort = sort.value; this._renderBody(); });
+    const toggle = this.wrap.querySelector('#proj-show-terminal');
+    if (toggle) toggle.addEventListener('change', () => { this.showTerminal = toggle.checked; this.render(); });
+    const nf = this.wrap.querySelector('[data-action="new-folder"]');
+    if (nf) nf.addEventListener('click', () => this.controller.promptNewFolder());
+
+    this._renderBody();
+  }
+
+  // Grid only — re-run on search/sort so the search field keeps focus.
+  _renderBody() {
+    const host = this.wrap && this.wrap.querySelector('.pv-body');
+    if (!host) return;
+    const esc = App.utils.escapeHtml;
+    const folders = this._visibleFolders();
+    const q = this.query.trim();
+    if (!folders.length) {
+      host.innerHTML = `<div class="pv-blank">${q ? 'No folders match &ldquo;' + esc(q) + '&rdquo;.' : 'No folders yet — create one to group related tasks.'}</div>`;
+      return;
+    }
+    // Group by company, unless searching or only one company is in view.
     const byCo = {};
     folders.forEach(p => { (byCo[p.companyId] = byCo[p.companyId] || []).push(p); });
     const coIds = Object.keys(byCo);
-    let body;
-    if (!folders.length) {
-      body = `<div class="pv-blank">No folders yet — create one to group related tasks.</div>`;
-    } else if (coIds.length <= 1) {
-      body = `<div class="pv-grid">${folders.map(p => this._card(p)).join('')}</div>`;
+    if (q || coIds.length <= 1) {
+      host.innerHTML = `<div class="pv-grid">${folders.map(p => this._card(p)).join('')}</div>`;
     } else {
-      body = coIds.map(cid => {
+      host.innerHTML = coIds.map(cid => {
         const co = App.COMPANIES[cid] || { label: cid };
         const n = byCo[cid].length;
         return `
@@ -108,30 +183,7 @@ App.ProjectsView = class ProjectsView {
           </section>`;
       }).join('');
     }
-
-    this.wrap.innerHTML = `
-      <div class="pv-head">
-        <div>
-          <div class="pv-eyebrow">Workspace</div>
-          <h1 class="pv-title">Projects</h1>
-        </div>
-        <div class="pv-head-r">
-          <label class="pv-toggle"><input type="checkbox" id="proj-show-terminal" ${this.showTerminal ? 'checked' : ''}/> Show completed</label>
-          ${App.can('tasks.write') ? `<button class="pv-new" data-action="new-folder" type="button"><i class="ti ti-plus"></i> New folder</button>` : ''}
-        </div>
-      </div>
-      <div class="pv-stats">
-        <div class="pv-stat"><div class="pv-stat-num">${folders.length}</div><div class="pv-stat-lbl" style="--sc:var(--amber)">Folders</div></div>
-        <div class="pv-stat"><div class="pv-stat-num">${openTotal}</div><div class="pv-stat-lbl" style="--sc:var(--u-high)">Open tasks</div></div>
-        <div class="pv-stat"><div class="pv-stat-num">${doneTotal}</div><div class="pv-stat-lbl" style="--sc:var(--green)">Completed</div></div>
-      </div>
-      ${body}`;
-
-    const toggle = this.wrap.querySelector('#proj-show-terminal');
-    if (toggle) toggle.addEventListener('change', () => { this.showTerminal = toggle.checked; this.render(); });
-    this.wrap.querySelectorAll('.pv-card').forEach(card =>
+    host.querySelectorAll('.pv-card').forEach(card =>
       card.addEventListener('click', () => this.controller.openProject(card.dataset.project)));
-    const nf = this.wrap.querySelector('[data-action="new-folder"]');
-    if (nf) nf.addEventListener('click', () => this.controller.promptNewFolder());
   }
 };

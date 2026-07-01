@@ -421,11 +421,13 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 #projectsWrap {
   --pv-wash: #F3F0EB; --pv-card: #FFFFFF;
   --pv-ink: #1c1a18; --pv-ink-2: #56504a; --pv-ink-3: #908981; --pv-ink-4: #b0a99f;
+  --pv-divider: rgba(28, 26, 24, .10);
   background: var(--pv-wash); overflow-y: auto; font-family: var(--font-body);
 }
 [data-theme="dark"] #projectsWrap {
   --pv-wash: #14171D; --pv-card: #1B1F27;
   --pv-ink: #F2F4F6; --pv-ink-2: #AEB6C2; --pv-ink-3: #7C8696; --pv-ink-4: #5A636F;
+  --pv-divider: rgba(255, 255, 255, .12);
 }
 
 .pv-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding: 28px 28px 20px; }
@@ -438,11 +440,30 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-new:hover { filter: brightness(1.07); transform: translateY(-1px); }
 .pv-new i { font-size: 15px; }
 
-.pv-stats { display: flex; gap: 34px; padding: 0 28px 26px; flex-wrap: wrap; }
-.pv-stat { display: flex; flex-direction: column; gap: 3px; }
-.pv-stat-num { font-family: 'Hanken Grotesk', var(--font-body); font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: .9; color: var(--pv-ink); font-variant-numeric: tabular-nums; }
-.pv-stat-lbl { font-size: 11.5px; font-weight: 600; color: var(--pv-ink-3); display: inline-flex; align-items: center; gap: 6px; }
-.pv-stat-lbl::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sc, var(--amber)); }
+/* Summary box — a bounded component: stat segments split by soft (theme-aware)
+   dividers, with an overall completion ring on the right. */
+.pv-summary { margin: 0 28px 16px; background: var(--pv-card); border-radius: 20px; padding: 20px 26px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pv-seg { display: flex; flex-direction: column; gap: 5px; padding: 2px 30px; position: relative; }
+.pv-seg:first-child { padding-left: 2px; }
+.pv-seg + .pv-seg::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--pv-divider); }
+.pv-seg-num { font-family: 'Hanken Grotesk', var(--font-body); font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: .9; color: var(--pv-ink); font-variant-numeric: tabular-nums; }
+.pv-seg-lbl { font-size: 11.5px; font-weight: 600; color: var(--pv-ink-3); display: inline-flex; align-items: center; gap: 6px; }
+.pv-seg-lbl::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sc, var(--amber)); }
+.pv-ring-wrap { margin-left: auto; display: flex; align-items: center; gap: 14px; padding-left: 20px; }
+.pv-ring { width: 66px; height: 66px; flex: none; border-radius: 50%; position: relative; background: conic-gradient(var(--amber) 0 var(--p, 0%), color-mix(in srgb, var(--amber) 16%, var(--pv-wash)) var(--p, 0%) 100%); }
+.pv-ring::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--pv-card); }
+.pv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); z-index: 1; }
+.pv-ring-lbl { font-size: 11px; font-weight: 600; color: var(--pv-ink-3); line-height: 1.4; max-width: 88px; }
+
+/* Toolbar — search + sort + show-completed */
+.pv-tools { display: flex; align-items: center; gap: 12px; padding: 0 28px 20px; flex-wrap: wrap; }
+.pv-search { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
+.pv-search input { width: 100%; height: 38px; border: none; border-radius: 999px; background: var(--pv-card); padding: 0 14px 0 38px; font: inherit; font-size: 13px; color: var(--pv-ink); }
+.pv-search input::placeholder { color: var(--pv-ink-4); }
+.pv-search input:focus { outline: 2px solid color-mix(in srgb, var(--amber) 55%, transparent); outline-offset: 0; }
+.pv-search .ti { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--pv-ink-4); font-size: 16px; pointer-events: none; }
+.pv-tools-r { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.pv-sort { height: 38px; border: none; border-radius: 999px; background: var(--pv-card); padding: 0 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--pv-ink-2); cursor: pointer; }
 
 .pv-section { padding: 0 28px; }
 .pv-sec-head { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
@@ -5371,6 +5392,9 @@ body.ui-command-center .detail-title {
 .qhq-cal { background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: 14px; padding: 12px 12px 8px; }
 .qhq-cal-head { font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; margin-bottom: 8px; }
 .qhq-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+/* Pin week rows to the cell height — otherwise rows containing the empty
+   leading/trailing spacer cells auto-stretch tall (Chromium empty grid-item). */
+.qhq-cal-grid:not(.qhq-cal-dow) { grid-auto-rows: 26px; }
 .qhq-cal-dow { margin-bottom: 2px; }
 .qhq-cal-dow span { font-size: 9.5px; font-weight: 700; color: var(--ink-4); text-align: center; text-transform: uppercase; }
 .qhq-cal-day { position: relative; height: 26px; border-radius: 7px; font-size: 11px; font-weight: 600; color: var(--ink-2);
