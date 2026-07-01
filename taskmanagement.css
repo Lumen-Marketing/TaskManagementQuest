@@ -5284,9 +5284,13 @@ body.ui-command-center .detail-title {
 .qhq-cc .qhq-sec-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 22px 2px 12px; }
 .qhq-cc .qhq-sec-title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); line-height: 1.1; }
 .qhq-cc .qhq-sec-sub { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-top: 2px; }
-.qhq-cc-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; margin-top: 4px; }
-.qhq-cc-main, .qhq-cc-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.qhq-cc-main .qhq-sec-h, .qhq-cc-rail .qhq-sec-h { margin-top: 0; }
+/* Band 1 — three columns: Up next · At risk · rail (calendar + performance). */
+.qhq-cc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(300px, 340px); gap: 16px; align-items: start; margin-top: 4px; }
+.qhq-cc-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.qhq-cc-rail .qhq-sec-h { margin: 6px 0 4px; }
+/* Band 2 — Projects overview (2/3) beside Team workload (1/3). */
+.qhq-cc-grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; margin-top: 16px; }
+.qhq-cc-grid2.solo { grid-template-columns: 1fr; }
 
 .qhq-period { display: inline-flex; background: var(--bg-3); border-radius: 9px; padding: 3px; flex: 0 0 auto; }
 .qhq-period button { height: 27px; padding: 0 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-2); cursor: pointer; transition: color var(--dur-fast) var(--ease-out); }
@@ -5309,23 +5313,24 @@ body.ui-command-center .detail-title {
 .qhq-trend .qhq-tspark { width: 88px; height: 30px; color: var(--tn-fg, var(--amber)); flex: 0 0 auto; overflow: visible; }
 .qhq-trend .qhq-tspark polyline { vector-effect: non-scaling-stroke; }
 
-/* Mini month calendar */
-.qhq-cal { background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: 14px; padding: 14px 14px 10px; }
-.qhq-cal-head { font-size: 14px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; margin-bottom: 10px; }
+/* Mini month calendar — compact, so it rides at the top of the narrow rail. */
+.qhq-cal { background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: 14px; padding: 12px 12px 8px; }
+.qhq-cal-head { font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; margin-bottom: 8px; }
 .qhq-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .qhq-cal-dow { margin-bottom: 2px; }
-.qhq-cal-dow span { font-size: 10px; font-weight: 700; color: var(--ink-4); text-align: center; text-transform: uppercase; }
-.qhq-cal-day { position: relative; height: 32px; border-radius: 9px; font-size: 12px; font-weight: 600; color: var(--ink-2);
+.qhq-cal-dow span { font-size: 9.5px; font-weight: 700; color: var(--ink-4); text-align: center; text-transform: uppercase; }
+.qhq-cal-day { position: relative; height: 26px; border-radius: 7px; font-size: 11px; font-weight: 600; color: var(--ink-2);
   display: grid; place-items: center; cursor: pointer; background: transparent; transition: background var(--dur-fast) var(--ease-out); }
 .qhq-cal-day:hover:not(.empty) { background: var(--bg-2); }
 .qhq-cal-day.empty { cursor: default; }
 .qhq-cal-day.today { background: var(--amber); color: #fff; }
-.qhq-cal-dot { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--amber); }
+.qhq-cal-dot { position: absolute; bottom: 3.5px; left: 50%; transform: translateX(-50%); width: 3.5px; height: 3.5px; border-radius: 50%; background: var(--amber); }
 .qhq-cal-day.today .qhq-cal-dot { background: #fff; }
 .qhq-cal-day.overdue .qhq-cal-dot { background: var(--rust); }
 
-@media (max-width: 720px) {
-  .qhq-cc-grid { grid-template-columns: 1fr; }
+/* Collapse both bands to a single column on narrow viewports. */
+@media (max-width: 900px) {
+  .qhq-cc-grid, .qhq-cc-grid2 { grid-template-columns: 1fr; }
   .qhq-cc .qhq-sec-title { font-size: 20px; }
 }
 
@@ -5572,15 +5577,45 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-rec-row:hover .qhq-rec-task { color: var(--amber); }
 .qhq-rec-ago { font-size: 11px; color: var(--ink-4); white-space: nowrap; flex-shrink: 0; }
 
+/* ----- Team workload roster (managers) — reference "workload table" look ----- */
+.qhq-twlist { padding: 2px 16px 12px; flex: 1; display: flex; flex-direction: column; }
+.qhq-tw-row {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(70px, 1.2fr) auto auto;
+  align-items: center; gap: 11px; padding: 9px 0; border-top: 1px solid var(--border); cursor: pointer;
+}
+.qhq-tw-row:first-child { border-top: none; }
+.qhq-tw-av {
+  width: 28px; height: 28px; flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center;
+  font-size: 10.5px; font-weight: 800; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2));
+}
+.qhq-tw-name { font-size: 12.8px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qhq-tw-bar { height: 8px; border-radius: 5px; background: var(--bg-3); overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); }
+.qhq-tw-bar i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, #F2902E, var(--amber)); transition: width var(--dur-mid) var(--ease-out); }
+.qhq-tw-dots { display: inline-flex; gap: 4px; }
+.qhq-tw-n { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.25; white-space: nowrap; }
+.qhq-tw-open { font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+.qhq-tw-open b { color: var(--ink); font-size: 14px; font-weight: 800; margin-right: 3px; letter-spacing: -.02em; }
+.qhq-tw-over { font-size: 10px; font-weight: 700; color: var(--rust); margin-top: 1px; }
+.qhq-tw-row:hover .qhq-tw-name { color: var(--amber); }
+
+/* Roster rows read like a clean data table: a soft full-row highlight on hover
+   for the clickable feeds (Up next, Recents, Team workload). */
+.qhq-un-row, .qhq-rec-row, .qhq-tw-row {
+  margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 9px;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.qhq-un-row:hover, .qhq-rec-row:hover, .qhq-tw-row:hover { background: var(--bg-2); }
+
 /* Hover micro-interactions. The outline restyle keeps the blocks flat (no lift /
    shadow), so the motion lives in the glyphs — chips scale, dots & avatars pop. */
 .qhq-card { transition: border-color var(--dur-fast) var(--ease-out); }
 .qhq-card:hover { border-color: var(--border-strong); }
-.qhq-hicon, .qhq-stat-ic, .qhq-un-dot, .qhq-rec-av { transition: transform var(--dur-mid) var(--ease-out); }
+.qhq-hicon, .qhq-stat-ic, .qhq-un-dot, .qhq-rec-av, .qhq-tw-av { transition: transform var(--dur-mid) var(--ease-out); }
 .qhq-card:hover .qhq-hicon { transform: scale(1.08); }
 .qhq-stat:hover .qhq-stat-ic { transform: scale(1.08); }
 .qhq-un-row:hover .qhq-un-dot { transform: scale(1.5); }
 .qhq-rec-row:hover .qhq-rec-av { transform: scale(1.12); }
+.qhq-tw-row:hover .qhq-tw-av { transform: scale(1.12); }
 .qhq-act:active { transform: translateY(1px) scale(.985); }
 
 /* Staggered entrance (a waterfall over head -> stat tiles -> cards -> recents),
@@ -5600,19 +5635,17 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
   @keyframes qhqNudge { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-4px) scale(1.06); } }
 
   .qhq-home.qhq-enter > .qhq-head,
-  .qhq-home.qhq-enter .qhq-cc-main > *,
-  .qhq-home.qhq-enter .qhq-cc-rail > *,
+  .qhq-home.qhq-enter .qhq-cc-grid > *,
+  .qhq-home.qhq-enter .qhq-cc-grid2 > *,
   .qhq-home.qhq-enter > .qhq-recents { opacity: 0; animation: qhqRise 460ms var(--ease-out) both; }
 
   .qhq-home.qhq-enter > .qhq-head { animation-delay: 0ms; }
-  .qhq-home.qhq-enter .qhq-cc-main > *:nth-child(1) { animation-delay: 60ms; }
-  .qhq-home.qhq-enter .qhq-cc-main > *:nth-child(2) { animation-delay: 110ms; }
-  .qhq-home.qhq-enter .qhq-cc-main > *:nth-child(3) { animation-delay: 160ms; }
-  .qhq-home.qhq-enter .qhq-cc-rail > *:nth-child(1) { animation-delay: 90ms; }
-  .qhq-home.qhq-enter .qhq-cc-rail > *:nth-child(2) { animation-delay: 140ms; }
-  .qhq-home.qhq-enter .qhq-cc-rail > *:nth-child(3) { animation-delay: 190ms; }
-  .qhq-home.qhq-enter .qhq-cc-rail > *:nth-child(4) { animation-delay: 240ms; }
-  .qhq-home.qhq-enter > .qhq-recents { animation-delay: 300ms; }
+  .qhq-home.qhq-enter .qhq-cc-grid > *:nth-child(1) { animation-delay: 70ms; }
+  .qhq-home.qhq-enter .qhq-cc-grid > *:nth-child(2) { animation-delay: 120ms; }
+  .qhq-home.qhq-enter .qhq-cc-grid > *:nth-child(3) { animation-delay: 170ms; }
+  .qhq-home.qhq-enter .qhq-cc-grid2 > *:nth-child(1) { animation-delay: 230ms; }
+  .qhq-home.qhq-enter .qhq-cc-grid2 > *:nth-child(2) { animation-delay: 280ms; }
+  .qhq-home.qhq-enter > .qhq-recents { animation-delay: 340ms; }
 
   .qhq-home.qhq-enter .qhq-donut { animation: qhqPop 560ms var(--ease-out) both; animation-delay: 360ms; }
 
@@ -6021,6 +6054,14 @@ body.panze-home .qhq-pbar-v { font-size: 15px; font-weight: 800; color: var(--in
 body.panze-home .qhq-pbar-track { height: 8px; border-radius: 5px; background: var(--bg-3); overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); }
 body.panze-home .qhq-pbar-track i { display: block; height: 100%; border-radius: 5px; transition: width var(--dur-mid) var(--ease-out); }
 
+/* In band 2 the Projects-overview card is wide (2/3), so lay the ring beside the
+   bars — the width then reads as deliberate instead of a lonely centered ring. */
+@media (min-width: 901px) {
+  body.panze-home .qhq-cc-grid2:not(.solo) .qhq-donut-wrap { flex-direction: row; align-items: center; justify-content: flex-start; gap: 0; padding: 24px 28px; }
+  body.panze-home .qhq-cc-grid2:not(.solo) .qhq-donut { margin-right: 34px; }
+  body.panze-home .qhq-cc-grid2:not(.solo) .qhq-donut-bars { flex: 1; padding-top: 0; border-top: none; border-left: 1px solid var(--border); padding-left: 34px; }
+}
+
 /* ---- All Tasks: Cards view ---- */
 .cards-view { padding: 4px 24px 24px; }
 .cards-grid {
@@ -6369,3 +6410,123 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .list-row .row-dot.priority-high   { background: #ee9a3a; }
 #taskViewWrap .list-row .row-dot.priority-medium { background: #3e7bf2; }
 #taskViewWrap .list-row .row-dot.priority-low    { background: #b8b0a6; }
+
+/* ============================================================
+   Boot loading screen — GridMotion port (LoaderView.js). Full-screen
+   overlay shown while app.js loads data; fades out on boot. Classes are
+   ldr-* to avoid clashing with generic app class names.
+   ============================================================ */
+#appLoader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #050505;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+#appLoader.is-hiding { opacity: 0; pointer-events: none; }
+
+.ldr-intro {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.15) 0%, #050505 78%);
+}
+.ldr-grid {
+  position: relative;
+  gap: 1rem;
+  width: 150vw;
+  height: 150vh;
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  grid-template-columns: 100%;
+  transform: rotate(-15deg);
+  transform-origin: center center;
+  z-index: 2;
+}
+.ldr-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(7, 1fr);
+  will-change: transform;
+}
+.ldr-item { position: relative; }
+.ldr-item-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #111;
+}
+.ldr-item-img {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: 50% 50%;
+  opacity: 0.9;
+}
+/* A subtle scrim over the grid so the centered brand mark stays readable. */
+.ldr-intro::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: radial-gradient(circle at 50% 50%, rgba(5, 5, 5, 0.55) 0%, rgba(5, 5, 5, 0.15) 45%, transparent 70%);
+  pointer-events: none;
+}
+.ldr-brand {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
+}
+.ldr-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 15px;
+  background: var(--amber, #ED4E0D);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  color: #fff;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+}
+.ldr-name {
+  font-family: var(--font-display, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.ldr-dots { display: flex; gap: 6px; margin-top: 2px; }
+.ldr-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  animation: ldr-pulse 1s infinite ease-in-out;
+}
+.ldr-dots span:nth-child(2) { animation-delay: 0.15s; }
+.ldr-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes ldr-pulse {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50%      { opacity: 1;   transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ldr-dots span { animation: none; }
+  #appLoader { transition: none; }
+}

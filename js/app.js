@@ -225,6 +225,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     controller.restoreUiState();
   }
 
+  // Data + views are ready and the last view is restored — fade out the boot loader.
+  if (App.hideAppLoader) App.hideAppLoader();
+
   let persistTimer = null;
   // Delta save: only the tasks/time-entries that actually changed are written,
   // via upserts (never delete-and-reinsert). Conflicts (a newer server version)
@@ -547,6 +550,8 @@ function applyRoleChrome(controller) {
 }
 
 function renderRoleGate() {
+  // This replaces document.body below (removing #appLoader); stop the ticker first.
+  if (App.LoaderView) App.LoaderView.stop();
   const profile = App.currentProfile || {};
   const roleLabel = (App.ROLES[profile.role] || { label: 'Member' }).label;
   document.body.innerHTML = `
@@ -563,6 +568,8 @@ function renderRoleGate() {
 }
 
 function renderFatalDataError(err) {
+  // This replaces document.body below (removing #appLoader); stop the ticker first.
+  if (App.LoaderView) App.LoaderView.stop();
   const message = App.utils.escapeHtml((err && err.message) || 'Unable to load Quest HQ data from Supabase.');
   document.body.innerHTML = `
     <div style="min-height:100vh;display:grid;place-items:center;background:#F6F1E8;color:#23180D;font-family:Inter,system-ui,sans-serif;padding:24px;">
