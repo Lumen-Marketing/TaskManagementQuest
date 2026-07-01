@@ -445,6 +445,13 @@ App.utils = {
     return prefix + Date.now() + Math.random().toString(36).slice(2, 6);
   },
 
+  // Stable-ish text id for a new project folder: slug of the name + a short
+  // random suffix so two "Mesa ADU" folders don't collide.
+  slugId(name) {
+    const base = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'folder';
+    return `${base}-${Math.random().toString(36).slice(2, 7)}`;
+  },
+
   /* ---------- CSV export helpers ---------- */
   // One CSV field. Quotes when the value contains a comma/quote/newline, and is
   // injection-safe: a value starting with = + - @ (or a control char) gets a

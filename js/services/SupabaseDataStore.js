@@ -245,6 +245,14 @@ App.SupabaseDataStore = class SupabaseDataStore {
     };
   }
 
+  /* Insert one project folder. RLS gates to the caller's company window
+     (migration 055). Returns { id }. */
+  async createProject(row) {
+    const res = await this.supabase.from('projects').insert(row).select('id').single();
+    this._throwIfError(res, 'creating project');
+    return res.data;
+  }
+
   /* Hard-delete a single task on demand. RLS gates this to the same
      roles allowed by migration 017's "role users can delete tasks"
      policy (admin / construction_supervisor / developer / supervisor /

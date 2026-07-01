@@ -1031,6 +1031,26 @@ App.AppController = class AppController {
     }
   }
 
+  /* Create a project folder, refresh App.projects, and notify views. Returns
+     the new id (or null if not permitted). Company must be one the caller can
+     write to; RLS enforces it server-side regardless. */
+  async createProject({ name, companyId, color }) {
+    if (!App.can('tasks.write')) return null;
+    const clean = String(name || '').trim();
+    if (!clean) return null;
+    const id = App.utils.slugId(clean);
+    await this.dataStore.createProject({
+      id,
+      company_id: companyId,
+      name: clean,
+      color: color || '#8f867b',
+      status: 'active',
+    });
+    App.projects = await this.dataStore.loadProjects();
+    App.EventBus.emit('projects:changed');
+    return id;
+  }
+
   /* Batch-save every editable detail field from the task detail pane's Edit
      mode (title, description, company, type, bidStatus, status, assignee, due,
      dueTime, priority, watchers, subtasks). The whole set is staged in the view
