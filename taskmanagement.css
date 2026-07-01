@@ -457,9 +457,10 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-sort { height: 36px; border: none; border-radius: 999px; background: var(--pv-card); padding: 0 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--pv-ink-2); cursor: pointer; }
 
 /* Company box — each company is its own warm panel. Separation comes from the
-   page-wash gap between boxes + a company-tinted header, never borders. */
+   page-wash gap between boxes + a bold company header (colored dot), never
+   borders or a tinted header strip. */
 .pv-cobox { margin: 0 28px 16px; background: var(--pv-card); border-radius: 18px; overflow: hidden; }
-.pv-cohead { display: flex; align-items: center; gap: 10px; padding: 13px 18px; background: color-mix(in srgb, var(--co) 9%, var(--pv-card)); }
+.pv-cohead { display: flex; align-items: center; gap: 10px; padding: 13px 18px; }
 .pv-codot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--co); }
 .pv-coname { font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--pv-ink); }
 .pv-cocnt { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); background: color-mix(in srgb, var(--pv-ink) 6%, transparent); border-radius: 20px; padding: 1px 8px; }
