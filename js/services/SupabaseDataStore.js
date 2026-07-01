@@ -253,6 +253,15 @@ App.SupabaseDataStore = class SupabaseDataStore {
     return res.data;
   }
 
+  /* Patch one project folder (e.g. status -> 'done' to complete it, or back to
+     'active' to reopen). RLS gates to the caller's company window (migration
+     055 "company members can update projects"). */
+  async updateProject(id, patch) {
+    if (!id) return;
+    const res = await this.supabase.from('projects').update(patch).eq('id', id);
+    this._throwIfError(res, 'updating project');
+  }
+
   /* Hard-delete a single task on demand. RLS gates this to the same
      roles allowed by migration 017's "role users can delete tasks"
      policy (admin / construction_supervisor / developer / supervisor /
