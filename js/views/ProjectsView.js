@@ -136,6 +136,12 @@ App.ProjectsView = class ProjectsView {
           <h1 class="pv-title">Projects</h1>
         </div>
         <div class="pv-head-r">
+          <select class="pv-sort" id="proj-sort" aria-label="Sort folders">
+            <option value="recent"${this.sort === 'recent' ? ' selected' : ''}>Recently added</option>
+            <option value="name"${this.sort === 'name' ? ' selected' : ''}>Name (A–Z)</option>
+            <option value="active"${this.sort === 'active' ? ' selected' : ''}>Most active</option>
+          </select>
+          <label class="pv-toggle"><input type="checkbox" id="proj-show-terminal" ${this.showTerminal ? 'checked' : ''}/> Show completed</label>
           ${App.can('tasks.write') ? `<button class="pv-new" data-action="new-folder" type="button"><i class="ti ti-plus"></i> New folder</button>` : ''}
         </div>
       </div>
@@ -148,17 +154,6 @@ App.ProjectsView = class ProjectsView {
         <div class="pv-ring-wrap">
           <div class="pv-ring" style="--p:${pct}%"><b>${overall ? pct + '%' : '—'}</b></div>
           <div class="pv-ring-lbl">${overall ? 'complete across all folders' : 'no tasks filed yet'}</div>
-        </div>
-      </div>
-
-      <div class="pv-tools">
-        <div class="pv-tools-r">
-          <select class="pv-sort" id="proj-sort" aria-label="Sort folders">
-            <option value="recent"${this.sort === 'recent' ? ' selected' : ''}>Recently added</option>
-            <option value="name"${this.sort === 'name' ? ' selected' : ''}>Name (A–Z)</option>
-            <option value="active"${this.sort === 'active' ? ' selected' : ''}>Most active</option>
-          </select>
-          <label class="pv-toggle"><input type="checkbox" id="proj-show-terminal" ${this.showTerminal ? 'checked' : ''}/> Show completed</label>
         </div>
       </div>
 
