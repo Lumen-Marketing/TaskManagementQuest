@@ -1,11 +1,10 @@
 window.App = window.App || {};
 
-/* Projects grid: warm, borderless folder cards (panze surface) grouped by
-   company. A boxed summary component (stat segments split by dividers + an
-   overall completion ring) and a toolbar (search / sort / show-completed) sit
-   above the grid. Each folder carries its own color — a solid monogram tile, a
-   completion bar, and live open/done counts. Card click scopes the task list
-   to that folder (controller.openProject). */
+/* Projects view: a warm, borderless TABLE of folders (panze surface). A boxed
+   summary (stat segments + completion ring) and a toolbar (sort / show-completed)
+   sit above. Each folder is a row with a progress bar; its chevron expands the
+   row to reveal all of that folder's tasks. Clicking a folder row scopes the
+   task list to it (controller.openProject); clicking a task opens it. */
 App.ProjectsView = class ProjectsView {
   constructor({ controller, taskModel }) {
     this.controller = controller;
@@ -13,6 +12,7 @@ App.ProjectsView = class ProjectsView {
     this.wrap = document.getElementById('projectsWrap');
     this.showTerminal = false;
     this.sort = 'recent';
+    this.expanded = new Set();
     App.EventBus.on('view:changed', (v) => { if (v === 'projects') this.render(); });
     App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); });
     App.EventBus.on('tasks:changed', () => { if (this._visible()) this.render(); });
@@ -26,7 +26,15 @@ App.ProjectsView = class ProjectsView {
     return { open: all.filter(t => t.status !== 'done').length, done: all.filter(t => t.status === 'done').length };
   }
 
-  // Folders in scope (sidebar company + show-completed), before search/sort.
+  _folderTasks(id) {
+    const rank = { critical: 0, urgent: 1, high: 2, medium: 3, low: 4 };
+    return this.taskModel.all().filter(t => t.project === id)
+      .sort((a, b) =>
+        ((a.status === 'done') - (b.status === 'done')) ||
+        ((rank[a.priority] ?? 3) - (rank[b.priority] ?? 3)) ||
+        String(a.due || '').localeCompare(String(b.due || '')));
+  }
+
   _baseFolders() {
     const active = ['lead', 'active', 'hold'];
     const cur = this.controller.uiState.currentCompany;
@@ -42,9 +50,7 @@ App.ProjectsView = class ProjectsView {
     return arr; // 'recent' keeps created_at insertion order
   }
 
-  _visibleFolders() {
-    return this._sortFolders(this._baseFolders());
-  }
+  _visibleFolders() { return this._sortFolders(this._baseFolders()); }
 
   _companyColor(companyId) {
     return ({ roofing: 'var(--u-high)', drafting: 'var(--blue)', lumen: 'var(--amber)' })[companyId] || 'var(--amber)';
@@ -52,46 +58,70 @@ App.ProjectsView = class ProjectsView {
   _folderColor(p) {
     return (p.color && p.color.toLowerCase() !== '#8f867b') ? p.color : this._companyColor(p.companyId);
   }
+  _prioColor(prio) {
+    return ({ critical: 'var(--u-critical)', urgent: 'var(--u-urgent)', high: 'var(--u-high)', medium: 'var(--u-medium)', low: 'var(--u-low)' })[prio] || 'var(--u-medium)';
+  }
   _monogram(name) { return (String(name || '').trim()[0] || '?').toUpperCase(); }
   _fmtDue(iso) {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
     if (!m) return '';
     const d = new Date(+m[1], +m[2] - 1, +m[3]);
-    return isNaN(d.getTime()) ? '' : 'Due ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  _card(p) {
+  _taskRow(t) {
+    const esc = App.utils.escapeHtml;
+    const st = App.STATUSES[t.status] || { label: t.status || '' };
+    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned' };
+    const due = App.utils.formatDue ? (App.utils.formatDue(t.due) || {}) : {};
+    const dueText = (due && due.text) ? due.text : '';
+    const done = t.status === 'done';
+    return `
+      <div class="pv-trow${done ? ' done' : ''}" data-task="${esc(t.id)}" role="button" tabindex="0">
+        <span class="pv-tprio" style="background:${this._prioColor(t.priority)}"></span>
+        <span class="pv-ttitle">${esc(t.title)}</span>
+        <span class="pv-tstatus">${esc(st.label)}</span>
+        <span class="pv-tassignee">${esc(person.name)}</span>
+        <span class="pv-tdue">${esc(dueText)}</span>
+      </div>`;
+  }
+
+  _row(p) {
     const esc = App.utils.escapeHtml;
     const c = this._counts(p.id);
     const total = c.open + c.done;
     const pct = total ? Math.round((c.done / total) * 100) : 0;
     const color = this._folderColor(p);
     const co = App.COMPANIES[p.companyId] || { label: p.companyId || '' };
-    const sub = p.client || p.address || 'No client';
-    const foot = total
-      ? `<span class="pv-counts"><b>${c.open}</b> open&nbsp;&nbsp;·&nbsp;&nbsp;${c.done} done</span>`
-      : `<span class="pv-empty">No tasks yet</span>`;
-    const right = total
-      ? `<span class="pv-pct">${pct}%</span>`
-      : (p.dueDate ? `<span class="pv-due">${esc(this._fmtDue(p.dueDate))}</span>` : '');
+    const open = this.expanded.has(p.id);
+    const due = p.dueDate ? this._fmtDue(p.dueDate) : '';
+    const progTxt = total
+      ? `<b>${c.open}</b> open · ${c.done} done`
+      : 'No tasks yet';
+    let drawer = '';
+    if (open) {
+      const tasks = this._folderTasks(p.id);
+      drawer = `<div class="pv-tasks">${tasks.length
+        ? tasks.map(t => this._taskRow(t)).join('')
+        : '<div class="pv-noTasks">No tasks in this folder yet.</div>'}</div>`;
+    }
     return `
-      <button class="pv-card" data-project="${esc(p.id)}" style="--pc:${esc(color)}" type="button">
-        <span class="pv-card-top">
+      <div class="pv-rowwrap${open ? ' open' : ''}" style="--pc:${esc(color)}">
+        <div class="pv-row" data-project="${esc(p.id)}" role="button" tabindex="0">
+          <button class="pv-chev" data-toggle="${esc(p.id)}" aria-label="Toggle tasks" aria-expanded="${open}" type="button"><i class="ti ti-chevron-right"></i></button>
           <span class="pv-mono">${esc(this._monogram(p.name))}</span>
-          <span class="pv-id"><span class="pv-name">${esc(p.name)}</span><span class="pv-client">${esc(sub)}</span></span>
-          <span class="pv-cochip">${esc(co.label)}</span>
-        </span>
-        <span class="pv-foot">
-          <span class="pv-track"><span class="pv-fill" style="width:${pct}%"></span></span>
-          <span class="pv-meta">${foot}${right}</span>
-        </span>
-      </button>`;
+          <span class="pv-id"><span class="pv-name">${esc(p.name)}</span><span class="pv-client">${esc(p.client || p.address || 'No client')}</span></span>
+          <span class="pv-prog"><span class="pv-track"><span class="pv-fill" style="width:${pct}%"></span></span><span class="pv-progtxt">${progTxt}</span></span>
+          <span class="pv-cocol">${esc(co.label)}</span>
+          <span class="pv-duecol">${due ? 'Due ' + esc(due) : ''}</span>
+        </div>
+        ${drawer}
+      </div>`;
   }
 
   render() {
     if (!this.wrap) this.wrap = document.getElementById('projectsWrap');
     if (!this.wrap) return;
-    const esc = App.utils.escapeHtml;
     const base = this._baseFolders();
     const openTotal = base.reduce((n, p) => n + this._counts(p.id).open, 0);
     const doneTotal = base.reduce((n, p) => n + this._counts(p.id).done, 0);
@@ -144,38 +174,26 @@ App.ProjectsView = class ProjectsView {
     this._renderBody();
   }
 
-  // Grid only — re-run on search/sort so the search field keeps focus.
+  _toggle(id) {
+    if (this.expanded.has(id)) this.expanded.delete(id); else this.expanded.add(id);
+    this._renderBody();
+  }
+
   _renderBody() {
     const host = this.wrap && this.wrap.querySelector('.pv-body');
     if (!host) return;
-    const esc = App.utils.escapeHtml;
     const folders = this._visibleFolders();
     if (!folders.length) {
       host.innerHTML = `<div class="pv-blank">No folders yet — create one to group related tasks.</div>`;
       return;
     }
-    // Group by company, unless only one company is in view.
-    const byCo = {};
-    folders.forEach(p => { (byCo[p.companyId] = byCo[p.companyId] || []).push(p); });
-    const coIds = Object.keys(byCo);
-    if (coIds.length <= 1) {
-      host.innerHTML = `<div class="pv-grid">${folders.map(p => this._card(p)).join('')}</div>`;
-    } else {
-      host.innerHTML = coIds.map(cid => {
-        const co = App.COMPANIES[cid] || { label: cid };
-        const n = byCo[cid].length;
-        return `
-          <section class="pv-section">
-            <div class="pv-sec-head" style="--sc:${this._companyColor(cid)}">
-              <span class="pv-sec-dot"></span>
-              <span class="pv-sec-label">${esc(co.label)}</span>
-              <span class="pv-sec-count">${n} folder${n > 1 ? 's' : ''}</span>
-            </div>
-            <div class="pv-grid">${byCo[cid].map(p => this._card(p)).join('')}</div>
-          </section>`;
-      }).join('');
-    }
-    host.querySelectorAll('.pv-card').forEach(card =>
-      card.addEventListener('click', () => this.controller.openProject(card.dataset.project)));
+    host.innerHTML = `<div class="pv-table">${folders.map(p => this._row(p)).join('')}</div>`;
+
+    host.querySelectorAll('.pv-chev').forEach(btn =>
+      btn.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(btn.dataset.toggle); }));
+    host.querySelectorAll('.pv-row').forEach(row =>
+      row.addEventListener('click', () => this.controller.openProject(row.dataset.project)));
+    host.querySelectorAll('.pv-trow[data-task]').forEach(row =>
+      row.addEventListener('click', (e) => { e.stopPropagation(); this.controller.selectTask(row.dataset.task); }));
   }
 };
