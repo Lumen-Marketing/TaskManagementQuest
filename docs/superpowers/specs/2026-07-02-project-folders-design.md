@@ -73,14 +73,28 @@ Additive + policy rewrite, transaction-wrapped, idempotent. Applied **manually v
 
 1. `alter table public.projects add column if not exists color text not null default '#8f867b';`
 2. `alter table public.projects add column if not exists client text;`
-3. Re-point the FK:
+3. Re-point the FK to `ON DELETE SET NULL`, **name-agnostically** (don't assume the mig-006 auto-name — look it up and drop whatever exists, then add a canonical one). This is idempotent and matches the repo's DO-block style:
    ```sql
-   alter table public.tasks drop constraint if exists tasks_project_id_fkey;
+   do $$
+   declare fk text;
+   begin
+     select conname into fk
+     from pg_constraint
+     where conrelid = 'public.tasks'::regclass
+       and contype = 'f'
+       and conkey = array[(
+         select attnum from pg_attribute
+         where attrelid = 'public.tasks'::regclass and attname = 'project_id'
+       )];
+     if fk is not null then
+       execute format('alter table public.tasks drop constraint %I', fk);
+     end if;
+   end $$;
+
    alter table public.tasks
      add constraint tasks_project_id_fkey
      foreign key (project_id) references public.projects(id) on delete set null;
    ```
-   (Confirm the real constraint name via `list_tables` / `pg_constraint` first; `tasks_project_id_fkey` is the Postgres default for the mig-006 inline reference.)
 4. Drop mig-006's four `"approved users can … projects"` policies and create company-scoped ones using the **existing** `public.current_company_ids()` helper (from mig 028):
    ```sql
    -- pattern for each verb (select/insert/update/delete); update also gets a matching with check
@@ -141,7 +155,7 @@ Filing writes through the existing `updateTaskField(id, 'project', value)` path 
 
 New top-level view, same pattern as `HomeView` / `ReportsView`.
 
-- **Nav:** add a **"Projects"** item to [`SidebarView.js`](../../../js/views/SidebarView.js) and register the view / route in [`AppController.js`](../../../js/controllers/AppController.js).
+- **Nav:** the Primary nav is static markup in [`app.html`](../../../app.html) (Home / All / Mine / Urgent / Today / Overdue / Watching / Wallboard). Add a **"Projects"** `side-item` (`data-view="projects"`, folder icon e.g. `ti-folders`) there, placed **right after "All"** as a peer browse surface. Register the `projects` view in [`AppController.js`](../../../js/controllers/AppController.js) view-switching; `SidebarView`'s existing `[data-view]` active-state wiring picks it up automatically.
 - **Cards:** `.proj-grid` of `.proj-card`, one per company-visible folder: folder icon in the project `color`, `name`, `client` (or "No client"), `N open · M done`, and an optional progress bar + `due_date`.
 - **Default filter:** show non-terminal folders (`status in ('lead','active','hold')`); a toggle reveals `complete` / `cancelled`.
 - **New folder** button (anyone may create): a small create flow (name, **company**, color). Company defaults to the sidebar's currently-selected company; if that is "All companies" and the user belongs to several, show a company select (single-company users get their one company auto-selected). Calls `controller.createProject`.
