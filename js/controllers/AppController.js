@@ -1053,6 +1053,25 @@ App.AppController = class AppController {
     return id;
   }
 
+  /* Grid "New folder" button. Company defaults to the sidebar's current
+     company; if that's "All"/absent and the user has several, ask which. */
+  async promptNewFolder() {
+    if (!App.can('tasks.write')) return;
+    const name = (window.prompt('New folder name:') || '').trim();
+    if (!name) return;
+    let companyId = this.uiState.currentCompany;
+    if (!companyId || companyId === '*') {
+      const ids = (this.uiState.companies || []).filter(c => c !== '*');
+      companyId = ids[0];
+      if (ids.length > 1) {
+        const pick = (window.prompt(`Company (${ids.join(', ')}):`, ids[0]) || '').trim();
+        if (ids.includes(pick)) companyId = pick;
+      }
+    }
+    if (!companyId) return;
+    await this.createProject({ name, companyId });
+  }
+
   /* Batch-save every editable detail field from the task detail pane's Edit
      mode (title, description, company, type, bidStatus, status, assignee, due,
      dueTime, priority, watchers, subtasks). The whole set is staged in the view
