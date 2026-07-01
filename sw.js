@@ -8,7 +8,7 @@
    Not handled here: cross-origin requests (Supabase, Sentry, CDN, fonts) pass
    straight through, and `env.json` is never cached (runtime config must be
    fresh). Bump CACHE_VERSION to invalidate old runtime caches on deploy. */
-const CACHE_VERSION = 'questhq-v1';
+const CACHE_VERSION = 'questhq-v2';
 const OFFLINE_FALLBACK = '/app.html';
 
 self.addEventListener('install', (event) => {

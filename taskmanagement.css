@@ -5374,7 +5374,7 @@ body.ui-command-center .detail-title {
    spanning both) beside a 1/3 rail (calendar + activity). Team workload is a
    full-width band below, so both roles stay balanced with no dead columns. */
 .qhq-cc-shell { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; margin-top: 18px; }
-.qhq-cc-main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; min-width: 0; }
+.qhq-cc-main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; min-width: 0; }
 .qhq-cc-main > .qhq-donut-card { grid-column: 1 / -1; }
 .qhq-cc-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .qhq-cc-rail .qhq-recents { margin-top: 0; }
