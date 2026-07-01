@@ -5233,6 +5233,59 @@ body.ui-command-center .detail-title {
 .qhq-brief-h .b { font-size: 10.5px; font-weight: 800; color: #8A5A00; background: #FCEFD7; border: 1px solid #F2DEB0; border-radius: 6px; padding: 1px 7px; }
 .qhq-brief-tx { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
 .qhq-home-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 12px; margin-top: 16px; }
+
+/* ============================================================
+   Command center — two-column shell, section headers, trend cards,
+   mini month calendar, period toggle. Scoped under .qhq-cc.
+   ============================================================ */
+.qhq-cc .qhq-sec-h { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 22px 2px 12px; }
+.qhq-cc .qhq-sec-title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); line-height: 1.1; }
+.qhq-cc .qhq-sec-sub { font-size: 12px; color: var(--ink-3); font-weight: 600; margin-top: 2px; }
+.qhq-cc-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; margin-top: 4px; }
+.qhq-cc-main, .qhq-cc-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.qhq-cc-main .qhq-sec-h, .qhq-cc-rail .qhq-sec-h { margin-top: 0; }
+
+.qhq-period { display: inline-flex; background: var(--bg-3); border-radius: 9px; padding: 3px; flex: 0 0 auto; }
+.qhq-period button { height: 27px; padding: 0 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-2); cursor: pointer; transition: color var(--dur-fast) var(--ease-out); }
+.qhq-period button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+/* Trend cards — white surface, existing accents only, no fills/gray. */
+.qhq-trend-list { display: flex; flex-direction: column; gap: 10px; }
+.qhq-trend { display: grid; grid-template-columns: 44px 1fr 88px; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: 14px; padding: 12px 14px; }
+.qhq-trend-ic { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
+.qhq-trend-ic .qhq-ic { width: 24px; height: 24px; }
+.qhq-trend-body { min-width: 0; }
+.qhq-trend-top { display: flex; align-items: baseline; gap: 8px; }
+.qhq-trend-v { font-size: 25px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; line-height: 1; }
+.qhq-trend-badge { font-size: 11px; font-weight: 800; white-space: nowrap; }
+.qhq-trend-badge.good { color: var(--green); }
+.qhq-trend-badge.bad { color: var(--rust); }
+.qhq-trend-badge.flat { color: var(--ink-4); }
+.qhq-trend-l { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qhq-trend .qhq-tspark { width: 88px; height: 30px; color: var(--tn-fg, var(--amber)); flex: 0 0 auto; overflow: visible; }
+.qhq-trend .qhq-tspark polyline { vector-effect: non-scaling-stroke; }
+
+/* Mini month calendar */
+.qhq-cal { background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: 14px; padding: 14px 14px 10px; }
+.qhq-cal-head { font-size: 14px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; margin-bottom: 10px; }
+.qhq-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.qhq-cal-dow { margin-bottom: 2px; }
+.qhq-cal-dow span { font-size: 10px; font-weight: 700; color: var(--ink-4); text-align: center; text-transform: uppercase; }
+.qhq-cal-day { position: relative; height: 32px; border-radius: 9px; font-size: 12px; font-weight: 600; color: var(--ink-2);
+  display: grid; place-items: center; cursor: pointer; background: transparent; transition: background var(--dur-fast) var(--ease-out); }
+.qhq-cal-day:hover:not(.empty) { background: var(--bg-2); }
+.qhq-cal-day.empty { cursor: default; }
+.qhq-cal-day.today { background: var(--amber); color: #fff; }
+.qhq-cal-dot { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--amber); }
+.qhq-cal-day.today .qhq-cal-dot { background: #fff; }
+.qhq-cal-day.overdue .qhq-cal-dot { background: var(--rust); }
+
+@media (max-width: 720px) {
+  .qhq-cc-grid { grid-template-columns: 1fr; }
+  .qhq-cc .qhq-sec-title { font-size: 20px; }
+}
+
 /* Cards are flex columns so their body can grow to fill the wasted space. */
 .qhq-card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: var(--block-radius, 14px); box-shadow: none; }
 .qhq-card-h { display: flex; align-items: center; gap: 13px; padding: 16px 18px 15px; border-bottom: 1px solid var(--border); flex: 0 0 auto; }

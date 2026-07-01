@@ -25,6 +25,8 @@ App.HomeView = class HomeView {
   constructor({ controller }) {
     this.controller = controller;
     this.wrap = document.getElementById('homeWrap');
+    this.period = 'week';           // trend-card window: 'week' | 'month'
+    App.homeView = this;            // handy for tests + debugging
     this.subscribe();
     if (this.visible()) this.render();
   }
@@ -89,6 +91,92 @@ App.HomeView = class HomeView {
     return { inProg, done, notStarted, total: all.length };
   }
 
+  // Rolling window for the trend cards. `end` is tomorrow 00:00 so "current"
+  // includes today; current = [curStart, end), previous = [prevStart, curStart).
+  _periodWindow(mode) {
+    const L = mode === 'month' ? 30 : 7;
+    const end = new Date(); end.setHours(0, 0, 0, 0); end.setDate(end.getDate() + 1);
+    const curStart = new Date(end); curStart.setDate(end.getDate() - L);
+    const prevStart = new Date(end); prevStart.setDate(end.getDate() - 2 * L);
+    return { L, end, curStart, prevStart };
+  }
+
+  // 3 viewer-scoped trend cards: value (current period), prev (previous period),
+  // goodWhen (which direction is "good", for the badge color), and an 8-bucket
+  // sparkline series (oldest -> newest).
+  _trendMetrics(mode) {
+    const me = this.controller.currentUser;
+    const all = this.controller.visibleTasks({ includeDone: true }).filter(t => t.assignee === me);
+    const { L, end, curStart, prevStart } = this._periodWindow(mode);
+    const today = App.utils.todayISO(0);
+    const doneMs = t => (t.completedAt ? new Date(t.completedAt).getTime() : null);
+    const createdMs = t => (t.createdAt ? new Date(t.createdAt).getTime() : 0);
+    const completedIn = (a, b) => all.filter(t => { const c = doneMs(t); return c != null && c >= a.getTime() && c < b.getTime(); }).length;
+    const openAt = T => all.filter(t => { const c = doneMs(t); return createdMs(t) <= T && (c == null || c > T); }).length;
+    const openNow = all.filter(t => t.status !== 'done').length;
+    const dueBetween = (fromISO, toISO) => all.filter(t => t.status !== 'done' && t.due && t.due >= fromISO && t.due < toISO).length;
+
+    // 8 buckets of length L days, oldest -> newest.
+    const buckets = fn => {
+      const out = [];
+      for (let i = 7; i >= 0; i--) {
+        const b1 = new Date(end); b1.setDate(end.getDate() - (i + 1) * L);
+        const b2 = new Date(end); b2.setDate(end.getDate() - i * L);
+        out.push(fn(b1, b2));
+      }
+      return out;
+    };
+
+    return [
+      { key: 'completed', label: 'Completed', icon: 'done', tone: 'tone-green', goodWhen: 'up',
+        value: completedIn(curStart, end), prev: completedIn(prevStart, curStart),
+        spark: buckets((a, b) => completedIn(a, b)) },
+      { key: 'openload', label: 'Open workload', icon: 'inbox', tone: 'tone-blue', goodWhen: 'down',
+        value: openNow, prev: openAt(curStart.getTime()),
+        spark: buckets((a, b) => openAt(b.getTime() - 1)) },
+      { key: 'dueweek', label: 'Due this week', icon: 'calendar', tone: 'tone-amber', goodWhen: 'down',
+        value: dueBetween(today, App.utils.todayISO(7)), prev: dueBetween(App.utils.todayISO(-7), today),
+        spark: buckets((a, b) => all.filter(t => t.status !== 'done' && t.due &&
+          t.due >= App.utils.toISODate(a) && t.due < App.utils.toISODate(b)).length) },
+    ];
+  }
+
+  // SVG polyline points for an 8-value sparkline in a 100x28 box.
+  _sparklinePath(series, w = 100, h = 28) {
+    const n = series.length;
+    if (!n) return '';
+    const max = Math.max(1, ...series);
+    const stepX = n > 1 ? w / (n - 1) : 0;
+    return series.map((v, i) => `${(i * stepX).toFixed(1)},${(h - (v / max) * (h - 2) - 1).toFixed(1)}`).join(' ');
+  }
+
+  // Current-month grid (Monday-first) with per-day open-task due counts.
+  _miniCalendar() {
+    const me = this.controller.currentUser;
+    const open = this.controller.visibleTasks({ includeDone: false }).filter(t => t.assignee === me);
+    const today = App.utils.todayISO(0);
+    const dueByDay = {};
+    open.forEach(t => { if (t.due) dueByDay[t.due] = (dueByDay[t.due] || 0) + 1; });
+    // Derive the month from the HQ "today" (not new Date()) so the grid and the
+    // highlighted today-cell stay consistent with the rest of the app's clock.
+    const [ty, tm] = today.split('-').map(Number);
+    const y = ty, mo = tm - 1;
+    const first = new Date(y, mo, 1);
+    const startDow = (first.getDay() + 6) % 7;               // Monday = 0
+    const daysInMonth = new Date(y, mo + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = App.utils.toISODate(new Date(y, mo, d));
+      const due = dueByDay[iso] || 0;
+      cells.push({ d, iso, due, today: iso === today, overdue: due > 0 && iso < today });
+    }
+    while (cells.length % 7) cells.push(null);
+    const weeks = [];
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+    return { label: first.toLocaleDateString('en-US', { month: 'long' }), weeks };
+  }
+
   // My open tasks: Focus order first (focusSeq set), then soonest due. Top 5.
   _upNext() {
     const me = this.controller.currentUser;
@@ -137,7 +225,6 @@ App.HomeView = class HomeView {
   render() {
     const esc = App.utils.escapeHtml;
     const today = App.utils.todayISO(0);
-    const stats = this._stats();
     const upNext = this._upNext();
     const atRisk = this._atRisk();
     const recents = this._recents();
@@ -145,17 +232,6 @@ App.HomeView = class HomeView {
     // Inline Solar duotone glyph; colors itself from the chip's currentColor.
     // The ic-<name> class lets each glyph carry its own signature animation.
     const icon = name => `<svg class="qhq-ic ic-${name}" viewBox="0 0 24 24" aria-hidden="true">${HOME_ICONS[name] || ''}</svg>`;
-
-    // Each stat is an icon chip + figure. The overdue tile flips to an alert
-    // wash only when it actually has a count, so it earns the eye.
-    const statHtml = stats.map(s => `
-      <div class="qhq-stat ${s.tone} ${s.warn && s.value ? 'is-alert' : ''}">
-        <span class="qhq-stat-ic">${icon(s.icon)}</span>
-        <div class="qhq-stat-body">
-          <div class="sv tnum ${s.warn && s.value ? 'warn' : ''}">${s.value}</div>
-          <div class="sl">${esc(s.label)}</div>
-        </div>
-      </div>`).join('');
 
     // A consistent, scannable section heading: tinted glyph + bold title + caption.
     const cardHead = (glyph, tone, title, meta) => `
@@ -226,6 +302,46 @@ App.HomeView = class HomeView {
         </div>
       </div>`;
 
+    // --- Command-center pieces: section header, trend cards, mini calendar, period toggle ---
+    const sectionHead = (title, sub, control = '') => `
+      <div class="qhq-sec-h">
+        <div class="qhq-sec-htext"><div class="qhq-sec-title">${esc(title)}</div><div class="qhq-sec-sub">${esc(sub)}</div></div>
+        ${control}
+      </div>`;
+
+    const metrics = this._trendMetrics(this.period);
+    const trendCardHtml = m => {
+      const up = m.value >= m.prev;
+      const good = (m.goodWhen === 'up') === up;                    // improving?
+      const deltaTxt = m.prev === 0 ? (m.value === 0 ? '—' : '+' + m.value)
+        : (up ? '+' : '−') + Math.round(Math.abs((m.value - m.prev) / m.prev) * 100) + '%';
+      return `
+        <div class="qhq-trend ${m.tone}">
+          <span class="qhq-trend-ic">${icon(m.icon)}</span>
+          <div class="qhq-trend-body">
+            <div class="qhq-trend-top"><span class="qhq-trend-v tnum">${m.value}</span>
+              <span class="qhq-trend-badge ${m.value === m.prev ? 'flat' : good ? 'good' : 'bad'}">${up ? '▲' : '▼'} ${esc(deltaTxt)}</span></div>
+            <div class="qhq-trend-l">${esc(m.label)}</div>
+          </div>
+          <svg class="qhq-tspark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="${this._sparklinePath(m.spark)}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>`;
+    };
+
+    const cal = this._miniCalendar();
+    const calHtml = `
+      <div class="qhq-cal">
+        <div class="qhq-cal-head">${esc(cal.label)}</div>
+        <div class="qhq-cal-grid qhq-cal-dow">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<span>${d}</span>`).join('')}</div>
+        ${cal.weeks.map(w => `<div class="qhq-cal-grid">${w.map(c => c
+          ? `<button type="button" class="qhq-cal-day ${c.today ? 'today' : ''} ${c.due ? 'has-due' : ''} ${c.overdue ? 'overdue' : ''}" data-day="${c.iso}">${c.d}${c.due ? '<span class="qhq-cal-dot"></span>' : ''}</button>`
+          : '<span class="qhq-cal-day empty"></span>').join('')}</div>`).join('')}
+      </div>`;
+
+    const periodCtl = `<div class="qhq-period" role="tablist">${['week', 'month']
+      .map(p => `<button type="button" data-p="${p}" class="${p === this.period ? 'on' : ''}">${p[0].toUpperCase() + p.slice(1)}</button>`).join('')}</div>`;
+
     const recHtml = recents.length ? recents.map(r => `
       <div class="qhq-rec-row" data-id="${esc(r.id)}" role="button" tabindex="0">
         <span class="qhq-rec-av ${toneFor(r.who)}" aria-hidden="true">${esc(initials(r.who))}</span>
@@ -240,7 +356,7 @@ App.HomeView = class HomeView {
     this._rendered = true;
 
     this.wrap.innerHTML = `
-      <div class="qhq-home${enter}">
+      <div class="qhq-home qhq-cc${enter}">
         <div class="qhq-head">
           <div>
             <div class="qhq-greet">${this._greeting()}, <span class="em">${esc(this._firstName())}</span></div>
@@ -253,17 +369,23 @@ App.HomeView = class HomeView {
           </div>
         </div>
 
-        <div class="qhq-statstrip">${statHtml}</div>
-
-        <div class="qhq-home-grid">
-          <div class="qhq-card">
-            ${cardHead('layers', 'tone-amber', 'Up next', 'your queue')}
-            <div class="qhq-unlist">${unHtml}</div>
+        <div class="qhq-cc-grid">
+          <div class="qhq-cc-main">
+            ${sectionHead('Your work', 'what needs you now')}
+            <div class="qhq-card">
+              ${cardHead('layers', 'tone-amber', 'Up next', 'your queue')}
+              <div class="qhq-unlist">${unHtml}</div>
+            </div>
+            <div class="qhq-card">
+              ${cardHead('warning', 'tone-rust', 'At risk', 'needs attention')}
+              <div class="qhq-arlist">${riskRows}</div>
+            </div>
           </div>
-          ${donutHtml}
-          <div class="qhq-card">
-            ${cardHead('warning', 'tone-rust', 'At risk', 'needs attention')}
-            <div class="qhq-arlist">${riskRows}</div>
+          <div class="qhq-cc-rail">
+            ${sectionHead('Your performance', this.period === 'month' ? 'this month' : 'this week', periodCtl)}
+            <div class="qhq-trend-list">${metrics.map(trendCardHtml).join('')}</div>
+            ${calHtml}
+            ${donutHtml}
           </div>
         </div>
 
@@ -285,6 +407,13 @@ App.HomeView = class HomeView {
         this.controller.setLayout('calendar');
       }
     }));
+    this.wrap.querySelectorAll('.qhq-period button').forEach(b => b.addEventListener('click', () => {
+      this.period = b.dataset.p;
+      this.render();
+    }));
+    this.wrap.querySelectorAll('.qhq-cal-day[data-day]').forEach(b => b.addEventListener('click', () => {
+      this.controller.openCalendarOn(b.dataset.day);
+    }));
     const open = el => { const id = el.dataset.id; if (id) this.controller.selectTask(id); };
     this.wrap.querySelectorAll('.qhq-un-row, .qhq-rec-row').forEach(el => {
       el.addEventListener('click', () => open(el));
@@ -294,7 +423,7 @@ App.HomeView = class HomeView {
     // Count the headline figures up on the entrance paint only (never on a
     // background data refresh, and never when the user prefers reduced motion).
     if (enter && !this._reduceMotion()) {
-      this.wrap.querySelectorAll('.qhq-stat .sv.tnum').forEach((el, i) => this._countUp(el, stats[i] && stats[i].value));
+      this.wrap.querySelectorAll('.qhq-trend-v').forEach((el, i) => this._countUp(el, metrics[i] && metrics[i].value));
       this._countUp(this.wrap.querySelector('.qhq-donut-num'), donePct);
     }
   }

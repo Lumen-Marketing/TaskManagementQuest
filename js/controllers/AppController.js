@@ -324,6 +324,17 @@ App.AppController = class AppController {
     App.EventBus.emit('calendar:changed');
   }
 
+  // Jump straight to the All-tasks Calendar, anchored + pre-selected on a date
+  // (used by the Home mini-calendar). The calendar layout already renders from
+  // calendarAnchor and lists the selected day's tasks.
+  openCalendarOn(iso) {
+    this.uiState.calendarAnchor = iso;
+    this.uiState.calendarSelectedDay = iso;
+    this.setView('all');
+    this.setLayout('calendar');
+    App.EventBus.emit('calendar:changed');
+  }
+
   /* ----- The filtered task set the list/calendar/export all share ----- */
   getVisibleTasks() {
     const role = App.effectiveRole();
