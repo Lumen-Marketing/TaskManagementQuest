@@ -156,27 +156,24 @@ App.ProjectsView = class ProjectsView {
 
       <div class="pv-kpis">
         <div class="pv-kpi" style="--kc:var(--amber)">
-          <div class="pv-kpi-top"><span class="pv-kpi-ic"><i class="ti ti-folders"></i></span><span class="pv-kpi-lbl">Folders</span></div>
-          <div class="pv-kpi-num">${base.length}</div>
+          <span class="pv-kpi-ic"><i class="ti ti-folders"></i></span>
+          <div class="pv-kpi-body"><div class="pv-kpi-num">${base.length}</div><div class="pv-kpi-lbl">Folders</div></div>
         </div>
         <div class="pv-kpi" style="--kc:var(--u-high)">
-          <div class="pv-kpi-top"><span class="pv-kpi-ic"><i class="ti ti-list-check"></i></span><span class="pv-kpi-lbl">Open tasks</span></div>
-          <div class="pv-kpi-num">${openTotal}</div>
+          <span class="pv-kpi-ic"><i class="ti ti-list-check"></i></span>
+          <div class="pv-kpi-body"><div class="pv-kpi-num">${openTotal}</div><div class="pv-kpi-lbl">Open tasks</div></div>
         </div>
         <div class="pv-kpi" style="--kc:var(--green)">
-          <div class="pv-kpi-top"><span class="pv-kpi-ic"><i class="ti ti-circle-check"></i></span><span class="pv-kpi-lbl">Completed</span></div>
-          <div class="pv-kpi-num">${doneTotal}</div>
+          <span class="pv-kpi-ic"><i class="ti ti-circle-check"></i></span>
+          <div class="pv-kpi-body"><div class="pv-kpi-num">${doneTotal}</div><div class="pv-kpi-lbl">Completed</div></div>
         </div>
         <div class="pv-kpi" style="--kc:var(--blue)">
-          <div class="pv-kpi-top"><span class="pv-kpi-ic"><i class="ti ti-building"></i></span><span class="pv-kpi-lbl">Companies</span></div>
-          <div class="pv-kpi-num">${companies}</div>
+          <span class="pv-kpi-ic"><i class="ti ti-building"></i></span>
+          <div class="pv-kpi-body"><div class="pv-kpi-num">${companies}</div><div class="pv-kpi-lbl">Companies</div></div>
         </div>
         <div class="pv-kpi pv-kpi-ring">
           <div class="pv-ring" style="--p:${pct}%"><b>${overall ? pct + '%' : '—'}</b></div>
-          <div class="pv-kpi-ringtext">
-            <div class="pv-kpi-cmplbl">Complete</div>
-            <div class="pv-kpi-lbl">${overall ? 'across all folders' : 'no tasks filed yet'}</div>
-          </div>
+          <div class="pv-kpi-body"><div class="pv-kpi-cmplbl">Complete</div><div class="pv-kpi-lbl">${overall ? 'across all folders' : 'no tasks filed yet'}</div></div>
         </div>
       </div>
 
