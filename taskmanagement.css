@@ -455,10 +455,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); z-index: 1; }
 .pv-ring-lbl { font-size: 11px; font-weight: 600; color: var(--pv-ink-3); line-height: 1.4; max-width: 88px; }
 
-/* Toolbar — sort + show-completed (right-aligned filter row) */
-.pv-tools { display: flex; align-items: center; gap: 12px; padding: 0 28px 20px; flex-wrap: wrap; }
-.pv-tools-r { display: flex; align-items: center; gap: 14px; margin-left: auto; }
-.pv-sort { height: 38px; border: none; border-radius: 999px; background: var(--pv-card); padding: 0 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--pv-ink-2); cursor: pointer; }
+/* Header controls: sort + show-completed sit beside the New folder button. */
+.pv-sort { height: 36px; border: none; border-radius: 999px; background: var(--pv-card); padding: 0 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--pv-ink-2); cursor: pointer; }
 
 /* Table of folder rows — each expands (chevron) to reveal its tasks. Rows share
    one warm surface panel, split by soft (theme-aware) separators, not borders. */
