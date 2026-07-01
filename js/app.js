@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const saved = await dataStore.load();
       if (saved.people && Object.keys(saved.people).length) App.PEOPLE = saved.people;
       App.PROFILES = saved.profiles || [];
+      App.projects = saved.projects || {};
       taskModel.hydrate(saved.tasks);
       timeModel.hydrate(saved.timeEntries, saved.activeTimers);
       notifModel.hydrate(saved.notifications);

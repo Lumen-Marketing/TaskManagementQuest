@@ -80,6 +80,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       timersRes,
       notificationsRes,
       profilesRes,
+      projectsRes,
     ] = await Promise.all([
       this.supabase.from('team_members').select('*').order('name', { ascending: true }),
       this.supabase.from('tasks').select('*').order('created_at', { ascending: true }),
@@ -89,6 +90,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       (App.can('roles.manage') || App.can('team.view'))
         ? this.supabase.from('profiles').select(this._profileColumns).order('created_at', { ascending: false })
         : Promise.resolve({ data: [], error: null }),
+      this.supabase.from('projects').select('*').order('created_at', { ascending: true }),
     ]);
 
     this._throwIfError(peopleRes, 'people');
@@ -97,6 +99,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwIfError(timersRes, 'active timers');
     this._throwIfError(notificationsRes, 'notifications');
     this._throwIfError(profilesRes, 'profiles');
+    this._throwIfError(projectsRes, 'projects');
 
     this._taskVersions = {};
     const tasks = (tasksRes.data || []).map(row => {
@@ -127,6 +130,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
         },
       ])),
       notifications: (notificationsRes.data || []).map(row => this._mapNotificationRow(row)),
+      projects: this._mapProjects(projectsRes.data || []),
     };
   }
 
@@ -533,6 +537,33 @@ App.SupabaseDataStore = class SupabaseDataStore {
       };
       return acc;
     }, {});
+  }
+
+  _mapProjects(rows) {
+    return rows.reduce((acc, row) => {
+      acc[row.id] = {
+        id: row.id,
+        name: row.name || row.id,
+        color: row.color || '#8f867b',
+        client: row.client || '',
+        status: row.status || 'active',
+        address: row.address || '',
+        dueDate: row.due_date || null,
+        companyId: row.company_id,
+      };
+      return acc;
+    }, {});
+  }
+
+  /* Projects-only refresh (after create/rename/delete). Mirrors the projects
+     query in load(); RLS scopes rows exactly as on initial load. */
+  async loadProjects() {
+    const res = await this.supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: true });
+    this._throwIfError(res, 'projects');
+    return this._mapProjects(res.data || []);
   }
 
   _throwIfError(result, label) {
