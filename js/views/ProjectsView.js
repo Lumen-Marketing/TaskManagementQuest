@@ -154,14 +154,29 @@ App.ProjectsView = class ProjectsView {
         </div>
       </div>
 
-      <div class="pv-summary">
-        <div class="pv-seg"><div class="pv-seg-num">${base.length}</div><div class="pv-seg-lbl" style="--sc:var(--amber)">Folders</div></div>
-        <div class="pv-seg"><div class="pv-seg-num">${openTotal}</div><div class="pv-seg-lbl" style="--sc:var(--u-high)">Open tasks</div></div>
-        <div class="pv-seg"><div class="pv-seg-num">${doneTotal}</div><div class="pv-seg-lbl" style="--sc:var(--green)">Completed</div></div>
-        <div class="pv-seg"><div class="pv-seg-num">${companies}</div><div class="pv-seg-lbl" style="--sc:var(--blue)">Companies</div></div>
-        <div class="pv-ring-wrap">
+      <div class="pv-kpis">
+        <div class="pv-kpi" style="--kc:var(--amber)">
+          <div class="pv-kpi-top"><span class="pv-kpi-ic"><i class="ti ti-folders"></i></span><span class="pv-kpi-lbl">Folders</span></div>
+          <div class="pv-kpi-num">${base.length}</div>
+        </div>
+        <div class="pv-kpi" style="--kc:var(--u-high)">
+          <div class="pv-kpi-top"><span class="pv-kpi-ic"><i class="ti ti-list-check"></i></span><span class="pv-kpi-lbl">Open tasks</span></div>
+          <div class="pv-kpi-num">${openTotal}</div>
+        </div>
+        <div class="pv-kpi" style="--kc:var(--green)">
+          <div class="pv-kpi-top"><span class="pv-kpi-ic"><i class="ti ti-circle-check"></i></span><span class="pv-kpi-lbl">Completed</span></div>
+          <div class="pv-kpi-num">${doneTotal}</div>
+        </div>
+        <div class="pv-kpi" style="--kc:var(--blue)">
+          <div class="pv-kpi-top"><span class="pv-kpi-ic"><i class="ti ti-building"></i></span><span class="pv-kpi-lbl">Companies</span></div>
+          <div class="pv-kpi-num">${companies}</div>
+        </div>
+        <div class="pv-kpi pv-kpi-ring">
           <div class="pv-ring" style="--p:${pct}%"><b>${overall ? pct + '%' : '—'}</b></div>
-          <div class="pv-ring-lbl">${overall ? 'complete across all folders' : 'no tasks filed yet'}</div>
+          <div class="pv-kpi-ringtext">
+            <div class="pv-kpi-cmplbl">Complete</div>
+            <div class="pv-kpi-lbl">${overall ? 'across all folders' : 'no tasks filed yet'}</div>
+          </div>
         </div>
       </div>
 

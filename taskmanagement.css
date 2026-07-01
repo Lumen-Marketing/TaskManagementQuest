@@ -438,20 +438,22 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-new:hover { filter: brightness(1.07); transform: translateY(-1px); }
 .pv-new i { font-size: 15px; }
 
-/* Summary box — a bounded component: stat segments split by soft (theme-aware)
-   dividers, with an overall completion ring on the right. */
-.pv-summary { margin: 0 28px 16px; background: var(--pv-card); border-radius: 20px; padding: 20px 26px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.pv-seg { display: flex; flex-direction: column; gap: 5px; padding: 2px 30px; position: relative; }
-.pv-seg:first-child { padding-left: 2px; }
-.pv-seg + .pv-seg::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--pv-divider); }
-.pv-seg-num { font-family: 'Hanken Grotesk', var(--font-body); font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: .9; color: var(--pv-ink); font-variant-numeric: tabular-nums; }
-.pv-seg-lbl { font-size: 11.5px; font-weight: 600; color: var(--pv-ink-3); display: inline-flex; align-items: center; gap: 6px; }
-.pv-seg-lbl::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sc, var(--amber)); }
-.pv-ring-wrap { margin-left: auto; display: flex; align-items: center; gap: 14px; padding-left: 20px; }
-.pv-ring { width: 66px; height: 66px; flex: none; border-radius: 50%; position: relative; background: conic-gradient(var(--amber) 0 var(--p, 0%), color-mix(in srgb, var(--amber) 16%, var(--pv-wash)) var(--p, 0%) 100%); }
-.pv-ring::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--pv-card); }
-.pv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); z-index: 1; }
-.pv-ring-lbl { font-size: 11px; font-weight: 600; color: var(--pv-ink-3); line-height: 1.4; max-width: 88px; }
+/* KPI cards — five separate stat cards (icon chip + label + big number), with
+   an overall completion ring as the fifth. Warm panze surfaces, no borders;
+   they wrap on narrow widths. */
+.pv-kpis { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 28px 16px; }
+.pv-kpi { flex: 1 1 155px; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 15px 17px; background: var(--pv-card); border-radius: 16px; }
+.pv-kpi-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.pv-kpi-ic { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px; background: color-mix(in srgb, var(--kc) 15%, var(--pv-card)); color: var(--kc); font-size: 17px; }
+.pv-kpi-lbl { font-size: 12px; font-weight: 600; color: var(--pv-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-kpi-num { font-family: 'Hanken Grotesk', var(--font-body); font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: .9; color: var(--pv-ink); font-variant-numeric: tabular-nums; }
+/* Fifth card — overall completion ring beside its label. */
+.pv-kpi-ring { flex-direction: row; align-items: center; gap: 13px; }
+.pv-kpi-ringtext { min-width: 0; }
+.pv-kpi-cmplbl { font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--pv-ink); }
+.pv-ring { width: 46px; height: 46px; flex: none; border-radius: 50%; position: relative; background: conic-gradient(var(--amber) 0 var(--p, 0%), color-mix(in srgb, var(--amber) 16%, var(--pv-wash)) var(--p, 0%) 100%); }
+.pv-ring::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--pv-card); }
+.pv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Hanken Grotesk', var(--font-body); font-size: 12px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); z-index: 1; }
 
 /* Header controls: sort sits beside the New folder button. */
 .pv-sort { height: 36px; border: none; border-radius: 999px; background: var(--pv-card); padding: 0 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--pv-ink-2); cursor: pointer; }
