@@ -97,8 +97,12 @@ App.ROLE_PERMISSIONS = {
   // Identical to worker — keep these two arrays in sync.
   sales: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write', 'home.view'],
   supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view', 'home.view', 'reports.view'],
-  admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view'],
-  developer: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view', 'debug.access'],
+  admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view', 'task-setup.manage'],
+  developer: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view', 'debug.access', 'task-setup.manage'],
+  // Construction supervisor: supervisor tools + task-taxonomy editing. Mirrors the
+  // DB RLS write policy on task_types/task_type_statuses/task_labels (developer,
+  // admin, construction_supervisor). None may exist yet; harmless until one does.
+  construction_supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view', 'home.view', 'reports.view', 'task-setup.manage'],
 };
 
 App.DEFAULT_CLOCK_TASK_ID = 'general-shift';

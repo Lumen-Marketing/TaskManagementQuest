@@ -90,6 +90,7 @@ App.AppController = class AppController {
     if (view === 'reports') return App.can('reports.view');
     if (view === 'approvals') return App.can('roles.manage');
     if (view === 'admin:clock') return App.can('clock.admin');
+    if (view === 'admin:task-setup') return App.can('task-setup.manage');
     if (view === 'team:hierarchy') return App.can('team.view');
     if (view === 'time:mine') return App.can('time.own') || App.can('clock.use');
     if (view === 'time:analytics') return false; // Reports view retired

@@ -208,6 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.ApprovalView({ controller, dataStore });
   new App.ClockDashboardView({ taskModel, timeModel, controller });
   new App.HierarchyView({ controller });
+  new App.TaskSetupAdminView({ controller });
 
   applyRoleChrome(controller);
 
