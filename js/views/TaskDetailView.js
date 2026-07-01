@@ -777,6 +777,7 @@ App.TaskDetailView = class TaskDetailView {
       title: t.title || '',
       description: t.description || '',
       company: t.company,
+      project: t.project || null,
       type: t.type || 'admin',
       label: t.label || 'roof',
       bidStatus: t.bidStatus || 'queue',
@@ -883,6 +884,13 @@ App.TaskDetailView = class TaskDetailView {
           </select>
         </div>
         <div class="detail-row">
+          <span class="label">Project</span>
+          ${(() => {
+            const p = d.project && App.projects ? App.projects[d.project] : null;
+            return `<button type="button" id="edit-project" class="projtag projtag-btn ${p ? '' : 'projtag-empty'}" data-action="edit-open-project" aria-haspopup="listbox" ${p ? `style="--pc:${App.utils.escapeHtml(p.color)}"` : ''}><i class="ti ${p ? 'ti-folder' : 'ti-folder-plus'}"></i>${p ? App.utils.escapeHtml(p.name) : 'No project'}</button>`;
+          })()}
+        </div>
+        <div class="detail-row">
           <span class="label">Type</span>
           <select id="edit-type" data-action="type-change" style="font-size:12px; padding:4px 8px;">
             ${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}
@@ -973,6 +981,21 @@ App.TaskDetailView = class TaskDetailView {
     // Type toggle re-renders so the Bid-status row appears/disappears.
     const typeSel = this.pane.querySelector('[data-action="type-change"]');
     if (typeSel) typeSel.addEventListener('change', rerender);
+
+    // Project picker in edit mode: stage the choice on the draft, then re-render
+    // so the button reflects it. Scope to the company currently selected.
+    const editProjBtn = this.pane.querySelector('[data-action="edit-open-project"]');
+    if (editProjBtn) editProjBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._syncDraftFromDom();
+      const companyId = (document.getElementById('edit-company') || {}).value || this.editDraft.company;
+      App.projectPicker.open({
+        anchor: editProjBtn,
+        companyId,
+        currentId: this.editDraft.project || null,
+        onSelect: (id) => { this.editDraft.project = id; this.renderEditMode(t); },
+      });
+    });
 
     // Watchers + subtasks mutate the draft in place, then re-render.
     this.pane.querySelectorAll('[data-action="remove-watcher"]').forEach(btn =>

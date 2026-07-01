@@ -1077,6 +1077,8 @@ App.AppController = class AppController {
     // The remaining fields come from constrained <select>s / staged lists; fall
     // back to the task's current value when a field wasn't provided.
     const company = fields.company || task.company;
+    // project may be null (unfiled); only fall back when the field is absent.
+    const project = (fields.project !== undefined) ? fields.project : (task.project || null);
     const type = fields.type || task.type || 'admin';
     const label = fields.label || task.label || 'roof';
     const priority = fields.priority || task.priority || 'medium';
@@ -1096,7 +1098,7 @@ App.AppController = class AppController {
     const prevStatus = task.status, prevPriority = task.priority, prevAssignee = task.assignee;
 
     this.taskModel.update(id, {
-      title, description, company, type, label, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
+      title, description, company, project, type, label, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
       ...(type === 'bid' ? { bidStatus } : {}),
     });
 
@@ -1261,6 +1263,7 @@ App.AppController = class AppController {
       label: payload.label || 'roof',
       bidStatus: payload.type === 'bid' ? (payload.bidStatus || 'queue') : null,
       company: payload.company,
+      project: payload.project || null,
       due: payload.due,
       dueTime: payload.dueTime || null,
       reminderAt: payload.reminderAt || null,
