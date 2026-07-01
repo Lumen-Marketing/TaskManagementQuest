@@ -210,7 +210,7 @@ App.TaskDetailView = class TaskDetailView {
     const priObj = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const labelObj = (t.label && t.label !== 'none') ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' };
     const bidObj = App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' };
-    const isDone = t.status === 'done';
+    const isDone = App.taxonomy.isDone(t);
     const today = App.utils.todayISO(0);
     const overdue = !!(t.due && t.due < today && !isDone);
     let daysOverdue = 0;

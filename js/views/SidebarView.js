@@ -316,7 +316,7 @@ App.SidebarView = class SidebarView {
     const cur = this.controller.uiState.currentCompany;
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
     const clockId = App.DEFAULT_CLOCK_TASK_ID;
-    let base = this.taskModel.all().filter(t => t.status !== 'done' && !t.clearedAt);
+    let base = this.taskModel.all().filter(t => !App.taxonomy.isDone(t) && !t.clearedAt);
     if (cur && cur !== '*') {
       base = base.filter(t => t.company === cur || t.id === clockId);
     }

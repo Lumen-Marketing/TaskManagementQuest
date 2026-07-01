@@ -43,7 +43,7 @@ App.TaskListView = class TaskListView {
     const btn = document.getElementById('clearDoneBtn');
     if (!btn) return;
     const hasDone = App.can('tasks.write') &&
-      this.getFilteredTasks().some(t => t.status === 'done');
+      this.getFilteredTasks().some(t => App.taxonomy.isDone(t));
     btn.hidden = !hasDone;
   }
 
@@ -260,10 +260,10 @@ App.TaskListView = class TaskListView {
     const tasks = this.taskModel.all();
     const today = App.utils.todayISO(0);
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('stat-open', tasks.filter(t => t.status !== 'done').length);
-    set('stat-today', tasks.filter(t => t.due === today && t.status !== 'done').length);
+    set('stat-open', tasks.filter(t => !App.taxonomy.isDone(t)).length);
+    set('stat-today', tasks.filter(t => t.due === today && !App.taxonomy.isDone(t)).length);
     set('stat-review', tasks.filter(t => t.status === 'review').length);
-    set('stat-done', tasks.filter(t => t.status === 'done').length);
+    set('stat-done', tasks.filter(t => App.taxonomy.isDone(t)).length);
   }
 
   // The filtered task set, shared with the calendar + CSV export so all three
@@ -345,7 +345,7 @@ App.TaskListView = class TaskListView {
     const me = this.currentUser;
     const cur = this.controller.uiState.currentCompany;
     let watched = this.taskModel.all().filter(t =>
-      !t.clearedAt && t.status !== 'done' && (t.watchers || []).includes(me));
+      !t.clearedAt && !App.taxonomy.isDone(t) && (t.watchers || []).includes(me));
     if (cur && cur !== '*') watched = watched.filter(t => t.company === cur);
 
     const sec = document.createElement('div');
@@ -388,7 +388,7 @@ App.TaskListView = class TaskListView {
       const memberId = p.member_id;
       const person = App.PEOPLE[memberId] || { name: p.full_name || memberId, full: p.full_name || memberId, color: '#888' };
       const tasks = this.taskModel.all().filter(t => t.assignee === memberId);
-      const open = tasks.filter(t => t.status !== 'done');
+      const open = tasks.filter(t => !App.taxonomy.isDone(t));
       const overdue = open.filter(t => t.due && t.due < today);
       const dueToday = open.filter(t => t.due === today);
       const completedRecent = tasks.filter(t => t.completedAt && App.utils.hqDateOf(t.completedAt) >= threeDaysAgo);
@@ -476,7 +476,7 @@ App.TaskListView = class TaskListView {
     const ordered = this.taskModel.focusList();
     const orderedIds = new Set(ordered.map(t => t.id));
     const unordered = this.controller.getVisibleTasks()
-      .filter(t => !orderedIds.has(t.id) && t.status !== 'done' && !t.clearedAt)
+      .filter(t => !orderedIds.has(t.id) && !App.taxonomy.isDone(t) && !t.clearedAt)
       .sort((a, b) => this._execTailCompare(a, b));
     const canEdit = App.can('tasks.write');
 
@@ -672,7 +672,7 @@ App.TaskListView = class TaskListView {
   }
 
   renderWorkerRow(t) {
-    const isDone = t.status === 'done';
+    const isDone = App.taxonomy.isDone(t);
     const myActive = this.timeModel.activeFor(this.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
     const selected = this.controller.uiState.selectedTaskId === t.id;
@@ -828,7 +828,7 @@ App.TaskListView = class TaskListView {
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
-    const isDone = t.status === 'done';
+    const isDone = App.taxonomy.isDone(t);
     const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
     const subDone = subs.filter(s => s.d).length;
 
@@ -881,7 +881,7 @@ App.TaskListView = class TaskListView {
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
-    const isDone = t.status === 'done';
+    const isDone = App.taxonomy.isDone(t);
     const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
     const subDone = subs.filter(s => s.d).length;
 
@@ -1042,7 +1042,7 @@ App.TaskListView = class TaskListView {
   }
 
   _calChip(t) {
-    const done = t.status === 'done';
+    const done = App.taxonomy.isDone(t);
     const prio = t.priority || 'medium';
     return `<button type="button" class="cal-chip${done ? ' done' : ''}" data-cal-task="${App.utils.escapeHtml(t.id)}" title="${App.utils.escapeHtml(t.title)}">`
       + `<span class="cal-chip-dot" style="background:var(--u-${App.utils.escapeHtml(prio)});"></span>`
@@ -1083,7 +1083,7 @@ App.TaskListView = class TaskListView {
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
-    const isDone = t.status === 'done';
+    const isDone = App.taxonomy.isDone(t);
     const myActive = this.timeModel.activeFor(this.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
 
@@ -1195,7 +1195,7 @@ App.TaskListView = class TaskListView {
   _wrapSwipe(row, t) {
     if (!App.can('tasks.write')) return row;
     const canDelete = this.controller.canDeleteTask(t);
-    const isDone = t.status === 'done';
+    const isDone = App.taxonomy.isDone(t);
     const wrap = document.createElement('div');
     wrap.className = 'swipe-wrap';
     const actions = document.createElement('div');
@@ -1453,7 +1453,7 @@ App.TaskListView = class TaskListView {
     if (!t) return this._closeQuickSheet();
     const myActive = this.timeModel.activeFor(this.currentUser);
     const onThis = myActive && myActive.taskId === t.id;
-    const isDone = t.status === 'done';
+    const isDone = App.taxonomy.isDone(t);
     const el = this._quickSheetEl;
     el.innerHTML = `
       <div class="quick-sheet-title">${App.utils.escapeHtml(t.title)}</div>

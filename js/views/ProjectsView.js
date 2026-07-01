@@ -24,14 +24,14 @@ App.ProjectsView = class ProjectsView {
 
   _counts(id) {
     const all = this.taskModel.all().filter(t => t.project === id);
-    return { open: all.filter(t => t.status !== 'done').length, done: all.filter(t => t.status === 'done').length };
+    return { open: all.filter(t => !App.taxonomy.isDone(t)).length, done: all.filter(t => App.taxonomy.isDone(t)).length };
   }
 
   _folderTasks(id) {
     const rank = { critical: 0, urgent: 1, high: 2, medium: 3, low: 4 };
     return this.taskModel.all().filter(t => t.project === id)
       .sort((a, b) =>
-        ((a.status === 'done') - (b.status === 'done')) ||
+        ((App.taxonomy.isDone(a)) - (App.taxonomy.isDone(b))) ||
         ((rank[a.priority] ?? 3) - (rank[b.priority] ?? 3)) ||
         String(a.due || '').localeCompare(String(b.due || '')));
   }
@@ -76,7 +76,7 @@ App.ProjectsView = class ProjectsView {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned' };
     const due = App.utils.formatDue ? (App.utils.formatDue(t.due) || {}) : {};
     const dueText = (due && due.text) ? due.text : '';
-    const done = t.status === 'done';
+    const done = App.taxonomy.isDone(t);
     return `
       <div class="pv-trow${done ? ' done' : ''}" data-task="${esc(t.id)}" role="button" tabindex="0">
         <span class="pv-tprio" style="background:${this._prioColor(t.priority)}"></span>

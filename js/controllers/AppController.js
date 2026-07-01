@@ -71,7 +71,7 @@ App.AppController = class AppController {
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
     const clockId = App.DEFAULT_CLOCK_TASK_ID;
     let base = this.taskModel.all().filter(t => !t.clearedAt && t.id !== clockId);
-    if (!includeDone) base = base.filter(t => t.status !== 'done');
+    if (!includeDone) base = base.filter(t => !App.taxonomy.isDone(t));
     if (cur && cur !== '*') base = base.filter(t => t.company === cur);
     if (role === 'worker') {
       base = base.filter(t => t.assignee === this.currentUser || t.creator === this.currentUser);
@@ -900,7 +900,7 @@ App.AppController = class AppController {
     if (!App.can('tasks.write')) return;
     const ids = this._bulkIds().filter(id => {
       const t = this.taskModel.find(id);
-      return t && t.status !== 'done';
+      return t && !App.taxonomy.isDone(t);
     });
     if (!ids.length) { this.exitBulkMode(); return; }
     ids.forEach(id => {
@@ -1004,7 +1004,7 @@ App.AppController = class AppController {
      delete), so a fat-finger is recoverable by SQL update. */
   clearDoneTasks() {
     if (!App.can('tasks.write')) return;
-    const doneCount = this.taskModel.all().filter(t => t.status === 'done' && !t.clearedAt).length;
+    const doneCount = this.taskModel.all().filter(t => App.taxonomy.isDone(t) && !t.clearedAt).length;
     if (!doneCount) return;
     const msg = `Clear ${doneCount} done task${doneCount > 1 ? 's' : ''}? They'll be hidden everywhere and permanently deleted in 30 days.`;
     if (!window.confirm(msg)) return;
@@ -1526,7 +1526,7 @@ App.AppController = class AppController {
     }
     let target = App.can('tasks.view') && this.uiState.selectedTaskId
       ? this.taskModel.find(this.uiState.selectedTaskId)
-      : this.taskModel.all().find(t => t.assignee === this.currentUser && t.status !== 'done');
+      : this.taskModel.all().find(t => t.assignee === this.currentUser && !App.taxonomy.isDone(t));
     if (!target) target = this.taskModel.find(App.DEFAULT_CLOCK_TASK_ID);
     if (!target) {
       this.toastView.show({ title: 'Clock task missing', sub: 'Ask an admin to restore the General shift task.' });

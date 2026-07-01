@@ -39,7 +39,7 @@ App.ReportsView = class ReportsView {
 
   _metrics() {
     const all = this.controller.visibleTasks({ includeDone: true });
-    const open = all.filter(t => t.status !== 'done');
+    const open = all.filter(t => !App.taxonomy.isDone(t));
     const today = App.utils.todayISO(0);
     const start = this._rangeStart();
     const done = all.filter(t => t.completedAt && new Date(t.completedAt) >= start);
