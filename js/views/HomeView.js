@@ -97,6 +97,7 @@ App.HomeView = class HomeView {
     const completedIn = (a, b) => all.filter(t => { const c = doneMs(t); return c != null && c >= a.getTime() && c < b.getTime(); }).length;
     const openAt = T => all.filter(t => { const c = doneMs(t); return createdMs(t) <= T && (c == null || c > T); }).length;
     const openNow = all.filter(t => t.status !== 'done').length;
+    const blockedNow = all.filter(t => t.status === 'hold').length;
     const dueBetween = (fromISO, toISO) => all.filter(t => t.status !== 'done' && t.due && t.due >= fromISO && t.due < toISO).length;
 
     // 8 buckets of length L days, oldest -> newest.
@@ -121,6 +122,10 @@ App.HomeView = class HomeView {
         value: dueBetween(today, App.utils.todayISO(7)), prev: dueBetween(App.utils.todayISO(-7), today),
         spark: buckets((a, b) => all.filter(t => t.status !== 'done' && t.due &&
           t.due >= App.utils.toISODate(a) && t.due < App.utils.toISODate(b)).length) },
+      // Blocked is a point-in-time count (status 'hold'), so no trend line —
+      // rendered as the plain KPI variant with a "waiting on someone" caption.
+      { key: 'blocked', label: 'Blocked', sub: 'waiting on someone', icon: 'pause', tone: 'tone-rust',
+        goodWhen: 'down', value: blockedNow, prev: blockedNow, spark: null },
     ];
   }
 
@@ -296,6 +301,18 @@ App.HomeView = class HomeView {
 
     const metrics = this._trendMetrics(this.period);
     const trendCardHtml = m => {
+      if (!m.spark) {
+        // Point-in-time KPI (Blocked): icon + count + label/caption, no trend line.
+        return `
+        <div class="qhq-trend ${m.tone} no-spark">
+          <span class="qhq-trend-ic">${icon(m.icon)}</span>
+          <div class="qhq-trend-body">
+            <div class="qhq-trend-top"><span class="qhq-trend-v tnum">${m.value}</span></div>
+            <div class="qhq-trend-l">${esc(m.label)}</div>
+            ${m.sub ? `<div class="qhq-trend-sub">${esc(m.sub)}</div>` : ''}
+          </div>
+        </div>`;
+      }
       const up = m.value >= m.prev;
       const good = (m.goodWhen === 'up') === up;                    // improving?
       const deltaTxt = m.prev === 0 ? (m.value === 0 ? '—' : '+' + m.value)

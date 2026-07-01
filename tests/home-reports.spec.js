@@ -44,9 +44,11 @@ test('Home command center: trend cards, two columns, Up next, Recents', async ({
   await boot(page, 'admin');
   await page.evaluate(() => App.controller.setView('home'));
   await expect(page.locator('#homeWrap')).toBeVisible();
-  // Trend cards replaced the old flat stat strip; 3 quick actions remain.
-  await expect(page.locator('.qhq-trend')).toHaveCount(3);
+  // KPI band has 4 cards (Completed / Open workload / Due this week + Blocked);
+  // only the 3 trend cards carry a sparkline, Blocked is a point-in-time count.
+  await expect(page.locator('.qhq-trend')).toHaveCount(4);
   await expect(page.locator('.qhq-trend svg.qhq-tspark')).toHaveCount(3);
+  await expect(page.locator('.qhq-trend.no-spark')).toHaveCount(1);
   await expect(page.locator('.qhq-statstrip')).toHaveCount(0);
   await expect(page.locator('.qhq-act')).toHaveCount(3);
   // A 2/3 main region (Up next + At risk, then Projects overview + Team
@@ -69,9 +71,9 @@ test('Home command center: trend cards, two columns, Up next, Recents', async ({
 test('period toggle re-renders; mini-calendar day click opens the calendar on that date', async ({ page }) => {
   await boot(page, 'admin');
   await page.evaluate(() => App.controller.setView('home'));
-  // Week/Month toggle keeps 3 KPI cards and updates the subtitle.
+  // Week/Month toggle keeps the 4 KPI cards and updates the subtitle.
   await page.locator('.qhq-period button[data-p="month"]').click();
-  await expect(page.locator('.qhq-trend')).toHaveCount(3);
+  await expect(page.locator('.qhq-trend')).toHaveCount(4);
   await expect(page.locator('.qhq-perf .qhq-sec-sub')).toContainText('month');
   // Clicking a calendar day jumps to the calendar layout anchored on that date.
   await page.evaluate(() => App.controller.setView('home'));

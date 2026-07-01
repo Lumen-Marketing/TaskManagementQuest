@@ -5353,7 +5353,15 @@ body.ui-command-center .detail-title {
    · Due this week) with the Week/Month toggle in the header. */
 .qhq-perf { margin-top: 6px; }
 .qhq-perf .qhq-sec-h { margin: 10px 2px 12px; }
-.qhq-kpirow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.qhq-kpirow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+@media (max-width: 1200px) { .qhq-kpirow { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px)  { .qhq-kpirow { grid-template-columns: 1fr; } }
+/* Narrower desktop: shrink the sparkline so 4 KPI labels do not truncate. */
+@media (min-width: 1201px) and (max-width: 1440px) {
+  .qhq-kpirow .qhq-trend:not(.no-spark) { grid-template-columns: 38px 1fr 44px; gap: 9px; }
+  .qhq-kpirow .qhq-trend:not(.no-spark) .qhq-tspark { width: 44px; }
+  .qhq-kpirow .qhq-trend-l { letter-spacing: .02em; }
+}
 
 /* Dashboard shell — a 2/3 main region (Up next + At risk, then Projects overview
    spanning both) beside a 1/3 rail (calendar + activity). Team workload is a
@@ -5363,6 +5371,12 @@ body.ui-command-center .detail-title {
 .qhq-cc-main > .qhq-donut-card { grid-column: 1 / -1; }
 .qhq-cc-rail { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .qhq-cc-rail .qhq-recents { margin-top: 0; }
+/* Equalize the columns so Projects overview finishes level with Recents. */
+@media (min-width: 1201px) {
+  .qhq-cc-shell { align-items: stretch; }
+  .qhq-cc-main { grid-template-rows: auto 1fr; }
+  .qhq-cc-rail .qhq-recents { flex: 1 1 auto; }
+}
 
 /* Team workload — a full-width roster; wide bars read like the reference table. */
 .qhq-tw-full { margin-top: 18px; }
@@ -5387,6 +5401,10 @@ body.ui-command-center .detail-title {
 .qhq-trend-l { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qhq-trend .qhq-tspark { width: 88px; height: 30px; color: var(--tn-fg, var(--amber)); flex: 0 0 auto; overflow: visible; }
 .qhq-trend .qhq-tspark polyline { vector-effect: non-scaling-stroke; }
+/* Blocked KPI - point-in-time count, no sparkline column; tint number + caption. */
+.qhq-trend.no-spark { grid-template-columns: 44px 1fr; }
+.qhq-trend.no-spark .qhq-trend-v { color: var(--tn-fg, var(--ink)); }
+.qhq-trend-sub { font-size: 11px; font-weight: 600; color: var(--ink-3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Mini month calendar — compact, so it rides at the top of the narrow rail. */
 .qhq-cal { background: var(--surface); border: 1px solid var(--block-line, var(--border)); border-radius: 14px; padding: 12px 12px 8px; }
@@ -5409,12 +5427,11 @@ body.ui-command-center .detail-title {
 /* Collapse the shell + main grid to a single column on narrow viewports; cap the
    calendar so it doesn't balloon once the rail spans the full width. */
 .qhq-cc-rail .qhq-cal { max-width: 460px; }
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .qhq-cc-shell, .qhq-cc-main { grid-template-columns: 1fr; }
   .qhq-cc .qhq-sec-title { font-size: 20px; }
 }
 @media (max-width: 720px) {
-  .qhq-kpirow { grid-template-columns: 1fr; }
   .qhq-tw-row { grid-template-columns: 30px minmax(0, 1fr) auto; }
   .qhq-tw-bar, .qhq-tw-dots { display: none; }
 }
@@ -6143,7 +6160,7 @@ body.panze-home .qhq-pbar-track i { display: block; height: 100%; border-radius:
 
 /* When the Projects-overview card spans the full (2-col) main region, lay the
    ring beside the bars — the width then reads as deliberate, not a lonely ring. */
-@media (min-width: 1025px) {
+@media (min-width: 1201px) {
   body.panze-home .qhq-cc-main .qhq-donut-wrap { flex-direction: row; align-items: center; justify-content: flex-start; gap: 0; padding: 24px 30px; }
   body.panze-home .qhq-cc-main .qhq-donut { margin-right: 40px; }
   body.panze-home .qhq-cc-main .qhq-donut-bars { flex: 1; padding-top: 0; border-top: none; border-left: 1px solid var(--border); padding-left: 40px; }
