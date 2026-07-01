@@ -65,7 +65,7 @@ Greeting (`Good {morning|afternoon|evening}, {firstName}`) + date line, quick ac
 | Open workload | open tasks (`status != done`) assigned to me, **now** | vs open count reconstructed at period start | down = good (green) |
 | Due this week | open tasks with `due` in the next 7 days | vs tasks that were due in the previous 7 days | down = good (green) |
 
-**Mini month calendar.** A compact month grid for the current month: weekday header, day cells, **today highlighted** (brand accent), days with tasks due marked with a **dot** (rust dot if any overdue that day, else accent). Clicking a day opens the existing full **Calendar** layout focused on that date (`setView('all')` → `setLayout('calendar')`, seeded to the clicked date if the calendar supports a focus date; otherwise open calendar and scroll to the month). Prev/next month arrows are in scope only if cheap; default is current month.
+**Mini month calendar.** A compact month grid for the current month: weekday header, day cells, **today highlighted** (brand accent), days with tasks due marked with a **dot** (rust dot if any overdue that day, else accent). **Clicking a day opens the full All-tasks Calendar anchored *and pre-selected on that exact date*** (required, not a stretch goal). Implemented with a small new controller helper `openCalendarOn(iso)` that sets `uiState.calendarAnchor = iso` and `uiState.calendarSelectedDay = iso`, then `setView('all')` + `setLayout('calendar')` and emits `calendar:changed`. The existing Calendar layout already renders the month from `calendarAnchor` and shows the selected day's tasks (see `TaskListView.renderCalendar`, `AppController.selectCalendarDay`), so no calendar-layout changes are needed beyond the helper. Prev/next month arrows on the *mini* calendar are in scope only if cheap; default view is the current month.
 
 **Projects ring.** The existing `% complete` progress ring + per-status progress bars, compact, unchanged in behavior (already polished).
 
@@ -93,7 +93,7 @@ Scope: `controller.currentUser`; `controller.visibleTasks({ includeDone: true })
 
 ## Component boundaries
 
-`HomeView.render()` stays the single entry point but is decomposed into focused section builders so it doesn't grow unwieldy: `_periodWindow()`, `_trendMetrics()` (returns the 3 cards' {value, prev, spark[]}), `_miniCalendar()` (returns weeks/day cells), plus the existing `_upNext`/`_atRisk`/`_recents`/`_statusMix`. Markup helpers: `sectionHead(title, subtitle, controlHtml)`, `trendCard(metric)`, `sparkline(series, tone)`. A small `_sparklinePath(series, w, h)` returns an SVG polyline points string. Interaction wiring (period toggle, calendar day click, existing row/action handlers) is attached after render, following the current pattern.
+`HomeView.render()` stays the single entry point but is decomposed into focused section builders so it doesn't grow unwieldy: `_periodWindow()`, `_trendMetrics()` (returns the 3 cards' {value, prev, spark[]}), `_miniCalendar()` (returns weeks/day cells), plus the existing `_upNext`/`_atRisk`/`_recents`/`_statusMix`. Markup helpers: `sectionHead(title, subtitle, controlHtml)`, `trendCard(metric)`, `sparkline(series, tone)`. A small `_sparklinePath(series, w, h)` returns an SVG polyline points string. Interaction wiring (period toggle, calendar day click, existing row/action handlers) is attached after render, following the current pattern. One new controller method — `AppController.openCalendarOn(iso)` — handles the calendar handoff.
 
 ## Motion
 
