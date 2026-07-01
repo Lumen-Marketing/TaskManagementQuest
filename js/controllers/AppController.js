@@ -1023,7 +1023,8 @@ App.AppController = class AppController {
     if (!task) return;
     const prev = task[field];
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser));
-    if (field === 'status' && value === 'done' && prev !== 'done') {
+    const doneKey = App.taxonomy.doneStatus(task.company, task.type);
+    if (field === 'status' && value === doneKey && prev !== doneKey) {
       this._revertToGeneralShiftIfOnTask(id);
     }
     if ((field === 'status' || field === 'priority') && prev !== value) {
@@ -1139,7 +1140,8 @@ App.AppController = class AppController {
 
     // Done has a side effect the inline path also applies: drop a running timer
     // on this task back to General shift rather than clocking fully out.
-    if (status === 'done' && prevStatus !== 'done') this._revertToGeneralShiftIfOnTask(id);
+    const doneKey = App.taxonomy.doneStatus(company, type);
+    if (status === doneKey && prevStatus !== doneKey) this._revertToGeneralShiftIfOnTask(id);
 
     // Notify watchers of the meaningful changes (mirrors updateTaskField/reassign).
     if (status !== prevStatus) {

@@ -338,8 +338,10 @@ App.TaskModel = class TaskModel {
   toggleDone(id, userName) {
     const t = this.find(id);
     if (!t) return;
-    const becomingDone = t.status !== 'done';
-    t.status = becomingDone ? 'done' : 'todo';
+    const becomingDone = !App.taxonomy.isDone(t);
+    t.status = becomingDone
+      ? App.taxonomy.doneStatus(t.company, t.type)
+      : App.taxonomy.defaultStatus(t.company, t.type);
     // Persisted completion timestamp (column completed_at) powers Reports history.
     if (becomingDone) t.completedAt = new Date().toISOString();
     else delete t.completedAt;
