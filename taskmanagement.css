@@ -803,6 +803,14 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   animation: statusMenuIn var(--dur-fast) var(--ease-out);
 }
 .status-menu.hidden { display: none; }
+
+/* Project picker popover (search + create-inline). Reuses .status-menu chrome. */
+.proj-picker { max-height: 320px; overflow-y: auto; padding-top: 0; }
+.proj-picker-searchwrap { position: sticky; top: 0; background: var(--surface, #fff); padding: 8px; border-bottom: 1px solid var(--border, #eee); }
+.proj-picker-search { width: 100%; border: 1px solid var(--border, #ddd); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; }
+.proj-picker-search:focus { outline: none; border-color: var(--accent, #ee5a26); }
+.proj-picker-create { color: var(--accent, #ee5a26); font-weight: 600; }
+.proj-picker-create i { font-size: 15px; }
 @keyframes statusMenuIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
 .status-menu-item {
   display: flex; align-items: center; gap: 9px;
