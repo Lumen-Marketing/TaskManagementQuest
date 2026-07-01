@@ -353,6 +353,7 @@ App.HomeView = class HomeView {
 
         <div class="qhq-cc-grid">
           <div class="qhq-cc-main">
+            ${donutHtml}
             ${sectionHead('Your work', 'what needs you now')}
             <div class="qhq-card">
               ${cardHead('layers', 'tone-amber', 'Up next', 'your queue')}
@@ -367,7 +368,6 @@ App.HomeView = class HomeView {
             ${sectionHead('Your performance', this.period === 'month' ? 'this month' : 'this week', periodCtl)}
             <div class="qhq-trend-list">${metrics.map(trendCardHtml).join('')}</div>
             ${calHtml}
-            ${donutHtml}
           </div>
         </div>
 
