@@ -308,21 +308,20 @@ App.TaskDetailView = class TaskDetailView {
             </button>
           </div>
 
-          <div class="tdp-card">
-            <div class="tdp-card-title"><i class="ti ti-info-circle"></i> Details</div>
-            <div class="detail-row"><span class="label">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Assignee</span><span ${ev('assignee', 'detail-val detail-person')}>${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
-            <div class="detail-row"><span class="label">Created by</span><span class="detail-val detail-person">${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}</span></div>
-            <div class="detail-row"><span class="label">Due</span><span ${ev('due', `detail-val ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
-            <div class="detail-row"><span class="label">Time</span><span ${ev('dueTime')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
-            <div class="detail-row"><span class="label">Reminder</span><span ${ev('reminderAt')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
-            <div class="detail-row"><span class="label">Type</span><span ${ev('type')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
-            ${t.type === 'bid' ? `<div class="detail-row"><span class="label">Bid status</span><span ${ev('bidStatus')}>${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
-            <div class="detail-row"><span class="label">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
-            <div class="detail-row"><span class="label">Project</span>${projectChipHtml}</div>
-            <div class="detail-row"><span class="label">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
+          <div class="taf-meta taf-meta-detail">
+            <div class="taf-field"><span class="taf-field-lbl">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Assignee</span><span ${ev('assignee', 'detail-val detail-person')}>${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Created by</span><span class="detail-val detail-person">${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Due</span><span ${ev('due', `detail-val ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Time</span><span ${ev('dueTime')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Reminder</span><span ${ev('reminderAt')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Type</span><span ${ev('type')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
+            ${t.type === 'bid' ? `<div class="taf-field"><span class="taf-field-lbl">Bid status</span><span ${ev('bidStatus')}>${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
+            <div class="taf-field"><span class="taf-field-lbl">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Project</span>${projectChipHtml}</div>
+            <div class="taf-field"><span class="taf-field-lbl">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
           </div>
         </aside>
 
