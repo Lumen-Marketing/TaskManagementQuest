@@ -228,6 +228,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Data + views are ready and the last view is restored — fade out the boot loader.
   if (App.hideAppLoader) App.hideAppLoader();
 
+  // Watch for a new deploy (env.json `release` change) and reload the tab when
+  // one lands, holding off while the user is mid-edit so input isn't lost.
+  if (App.UpdateWatcher) App.UpdateWatcher.start();
+
   let persistTimer = null;
   // Delta save: only the tasks/time-entries that actually changed are written,
   // via upserts (never delete-and-reinsert). Conflicts (a newer server version)
