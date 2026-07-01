@@ -13,6 +13,7 @@ App.ProjectsView = class ProjectsView {
     this.showTerminal = false;
     this.sort = 'recent';
     this.expanded = new Set();
+    this.collapsed = new Set();
     App.EventBus.on('view:changed', (v) => { if (v === 'projects') this.render(); });
     App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); });
     App.EventBus.on('tasks:changed', () => { if (this._visible()) this.render(); });
@@ -174,16 +175,78 @@ App.ProjectsView = class ProjectsView {
     this._renderBody();
   }
 
+  _toggleGroup(key) {
+    if (this.collapsed.has(key)) this.collapsed.delete(key); else this.collapsed.add(key);
+    this._renderBody();
+  }
+
+  // Due-date bucket for a folder, mirroring TaskModel.groupByDue.
+  _dueBucket(p) {
+    if (!p.dueDate) return 'none';
+    const t0 = App.utils.todayISO(0), t1 = App.utils.todayISO(1), t7 = App.utils.todayISO(7);
+    const d = p.dueDate;
+    if (d < t0) return 'overdue';
+    if (d === t0) return 'today';
+    if (d === t1) return 'tomorrow';
+    if (d <= t7) return 'week';
+    return 'later';
+  }
+
   _renderBody() {
     const host = this.wrap && this.wrap.querySelector('.pv-body');
     if (!host) return;
+    const esc = App.utils.escapeHtml;
     const folders = this._visibleFolders();
     if (!folders.length) {
       host.innerHTML = `<div class="pv-blank">No folders yet — create one to group related tasks.</div>`;
       return;
     }
-    host.innerHTML = `<div class="pv-table">${folders.map(p => this._row(p)).join('')}</div>`;
+    const BUCKETS = [
+      { key: 'overdue',  label: 'Overdue',     color: 'var(--rust)' },
+      { key: 'today',    label: 'Today',       color: 'var(--u-high)' },
+      { key: 'tomorrow', label: 'Tomorrow',    color: 'var(--u-high)' },
+      { key: 'week',     label: 'This week',   color: 'var(--blue)' },
+      { key: 'later',    label: 'Upcoming',    color: 'var(--green)' },
+      { key: 'none',     label: 'No due date', color: 'var(--pv-ink-4)' },
+    ];
 
+    // Group by company (appearance order), then by due-date bucket inside.
+    const byCo = {};
+    folders.forEach(p => { (byCo[p.companyId] = byCo[p.companyId] || []).push(p); });
+    const coIds = Object.keys(byCo);
+    const showCo = coIds.length > 1;
+
+    let html = '';
+    coIds.forEach(cid => {
+      const co = App.COMPANIES[cid] || { label: cid };
+      const list = byCo[cid];
+      if (showCo) {
+        html += `<div class="pv-cohdr"><span class="pv-codot" style="background:${this._companyColor(cid)}"></span><span class="pv-coname">${esc(co.label)}</span><span class="pv-cocnt">${list.length}</span></div>`;
+      }
+      const byBucket = {};
+      list.forEach(p => { const b = this._dueBucket(p); (byBucket[b] = byBucket[b] || []).push(p); });
+      html += `<div class="pv-table">`;
+      BUCKETS.forEach(b => {
+        const rows = byBucket[b.key];
+        if (!rows || !rows.length) return;
+        const gkey = cid + '::' + b.key;
+        const collapsed = this.collapsed.has(gkey);
+        html += `<div class="pv-duegroup${collapsed ? ' collapsed' : ''}">
+          <div class="pv-duehdr" data-group="${esc(gkey)}" role="button" tabindex="0">
+            <span class="pv-duechev"><i class="ti ti-chevron-down"></i></span>
+            <span class="pv-duedot" style="background:${b.color}"></span>
+            <span class="pv-duename">${b.label}</span>
+            <span class="pv-duecnt">${rows.length}</span>
+          </div>
+          ${collapsed ? '' : rows.map(p => this._row(p)).join('')}
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    host.innerHTML = html;
+
+    host.querySelectorAll('.pv-duehdr').forEach(h =>
+      h.addEventListener('click', () => this._toggleGroup(h.dataset.group)));
     host.querySelectorAll('.pv-chev').forEach(btn =>
       btn.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(btn.dataset.toggle); }));
     host.querySelectorAll('.pv-row').forEach(row =>
