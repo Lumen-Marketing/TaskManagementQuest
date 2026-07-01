@@ -159,7 +159,8 @@ App.TaskModel = class TaskModel {
           (person.full || '').toLowerCase().includes(q) ||
           (person.email || '').toLowerCase().includes(q)
         )) return true;
-        if ((t.project || '').toLowerCase().includes(q)) return true;
+        const projName = (App.projects && App.projects[t.project] && App.projects[t.project].name) || '';
+        if (projName.toLowerCase().includes(q)) return true;
         const company = App.COMPANIES[t.company];
         if (company && (company.label || '').toLowerCase().includes(q)) return true;
         return false;

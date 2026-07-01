@@ -399,6 +399,16 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .list-row .co-chip.co-drafting .co-dot { background: var(--blue); }
 .list-row .co-chip.co-lumen    .co-dot { background: var(--amber); }
 
+/* Project folder chip — color-tinted, used read-only and as a picker trigger. */
+.projtag {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600;
+  color: var(--pc, #8f867b);
+  background: color-mix(in srgb, var(--pc, #8f867b) 12%, var(--surface, #fff));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.projtag i { font-size: 13px; flex: none; }
+
 /* Dense look: tighter pills/text, and row actions only on hover so the
    resting row ends cleanly at Due (like the picture). */
 .list-row .priority-block { font-size: 11px; padding: 2px 8px; }

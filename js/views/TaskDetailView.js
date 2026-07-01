@@ -222,6 +222,11 @@ App.TaskDetailView = class TaskDetailView {
     const commentsCount = (t.comments || []).length;
     const subtaskCount = (t.subtasks || []).length;
     const canDelete = this.controller.canDeleteTask(t);
+    // Read-only project folder chip (made interactive in the filing task).
+    const proj = t.project && App.projects ? App.projects[t.project] : null;
+    const projectChipHtml = proj
+      ? `<span class="projtag" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</span>`
+      : '<span class="detail-val">—</span>';
     const watcherChipsHtml = watcherIds.map(w => {
       const p = App.PEOPLE[w];
       return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
@@ -316,6 +321,7 @@ App.TaskDetailView = class TaskDetailView {
             ${t.type === 'bid' ? `<div class="detail-row"><span class="label">Bid status</span><span ${ev('bidStatus')}>${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
             <div class="detail-row"><span class="label">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
             <div class="detail-row"><span class="label">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
+            <div class="detail-row"><span class="label">Project</span>${projectChipHtml}</div>
             <div class="detail-row"><span class="label">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
           </div>
         </aside>
