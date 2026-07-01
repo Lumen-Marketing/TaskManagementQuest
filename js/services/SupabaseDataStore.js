@@ -269,6 +269,57 @@ App.SupabaseDataStore = class SupabaseDataStore {
     return res.data;
   }
 
+  /* ---------- Task taxonomy CRUD (Settings → Task setup) ----------
+     All writes are RLS-gated to developer/admin/construction_supervisor of the
+     row's company (migration 056). Soft-delete = update {active:false}; rows are
+     never hard-deleted so historical tasks keep resolving their type/status/label.
+     Reads come back through loadTaxonomy() in the exact shape App.taxonomy.hydrate
+     expects (same as load()'s `taxonomy` block). */
+  async loadTaxonomy() {
+    const [t, s, l] = await Promise.all([
+      this.supabase.from('task_types').select('*'),
+      this.supabase.from('task_type_statuses').select('*'),
+      this.supabase.from('task_labels').select('*'),
+    ]);
+    this._throwIfError(t, 'task types');
+    this._throwIfError(s, 'task statuses');
+    this._throwIfError(l, 'task labels');
+    return { types: t.data || [], statuses: s.data || [], labels: l.data || [] };
+  }
+
+  async createTaskType(row) {
+    const res = await this.supabase.from('task_types').insert(row).select('*').single();
+    this._throwIfError(res, 'creating task type');
+    return res.data;
+  }
+  async updateTaskType(id, patch) {
+    const res = await this.supabase.from('task_types').update(patch).eq('id', id).select('*').single();
+    this._throwIfError(res, 'updating task type');
+    return res.data;
+  }
+
+  async createTaskStatus(row) {
+    const res = await this.supabase.from('task_type_statuses').insert(row).select('*').single();
+    this._throwIfError(res, 'creating status');
+    return res.data;
+  }
+  async updateTaskStatus(id, patch) {
+    const res = await this.supabase.from('task_type_statuses').update(patch).eq('id', id).select('*').single();
+    this._throwIfError(res, 'updating status');
+    return res.data;
+  }
+
+  async createTaskLabel(row) {
+    const res = await this.supabase.from('task_labels').insert(row).select('*').single();
+    this._throwIfError(res, 'creating label');
+    return res.data;
+  }
+  async updateTaskLabel(id, patch) {
+    const res = await this.supabase.from('task_labels').update(patch).eq('id', id).select('*').single();
+    this._throwIfError(res, 'updating label');
+    return res.data;
+  }
+
   /* Hard-delete a single task on demand. RLS gates this to the same
      roles allowed by migration 017's "role users can delete tasks"
      policy (admin / construction_supervisor / developer / supervisor /
