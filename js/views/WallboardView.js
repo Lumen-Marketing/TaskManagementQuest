@@ -128,7 +128,7 @@ App.WallboardView = class WallboardView {
 
   _personCard(person, tasks, today) {
     const esc = App.utils.escapeHtml;
-    const open = this._sortTasks(tasks.filter(t => t.status !== 'done'), today);
+    const open = this._sortTasks(tasks.filter(t => !App.taxonomy.isDone(t)), today);
     const sub = this._roleSub(person.id);
     const shown = open.slice(0, 4).map(t => this._taskRow(t, today)).join('');
     const moreCount = open.length - Math.min(open.length, 4);
@@ -154,8 +154,8 @@ App.WallboardView = class WallboardView {
     const esc = App.utils.escapeHtml;
     const today = App.utils.todayISO(0);
     const all = this._scopedTasks();
-    const open = all.filter(t => t.status !== 'done');
-    const done = all.filter(t => t.status === 'done');
+    const open = all.filter(t => !App.taxonomy.isDone(t));
+    const done = all.filter(t => App.taxonomy.isDone(t));
     const blocked = all.filter(t => t.status === 'hold');
 
     const people = App.utils.activePeople();

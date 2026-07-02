@@ -71,7 +71,7 @@ App.AppController = class AppController {
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
     const clockId = App.DEFAULT_CLOCK_TASK_ID;
     let base = this.taskModel.all().filter(t => !t.clearedAt && t.id !== clockId);
-    if (!includeDone) base = base.filter(t => t.status !== 'done');
+    if (!includeDone) base = base.filter(t => !App.taxonomy.isDone(t));
     if (cur && cur !== '*') base = base.filter(t => t.company === cur);
     if (role === 'worker') {
       base = base.filter(t => t.assignee === this.currentUser || t.creator === this.currentUser);
@@ -90,6 +90,7 @@ App.AppController = class AppController {
     if (view === 'reports') return App.can('reports.view');
     if (view === 'approvals') return App.can('roles.manage');
     if (view === 'admin:clock') return App.can('clock.admin');
+    if (view === 'admin:task-setup') return App.can('task-setup.manage');
     if (view === 'team:hierarchy') return App.can('team.view');
     if (view === 'time:mine') return App.can('time.own') || App.can('clock.use');
     if (view === 'time:analytics') return false; // Reports view retired
@@ -540,6 +541,205 @@ App.AppController = class AppController {
     });
   }
 
+  /* ---------- Task taxonomy admin (Settings → Task setup) ----------
+     Each op re-fetches the raw rows (which carry the DB `id`s that App.taxonomy's
+     stripped index doesn't) so it's self-contained, does its writes RLS-gated, then
+     re-hydrates App.taxonomy — which re-applies the global constant maps and emits
+     'taxonomy:changed'. Soft-delete = {active:false}. Reorder renumbers active
+     siblings 0..n so it's robust even when seeded sort_order values tie. */
+  _assertTaxonomyAllowed() {
+    if (!App.can('task-setup.manage')) throw new Error('You do not have permission to edit task setup.');
+  }
+  _slugify(s) {
+    return String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+  }
+  _uniqueKey(base, existingKeys) {
+    const root = this._slugify(base) || 'item';
+    if (!existingKeys.includes(root)) return root;
+    let n = 2;
+    while (existingKeys.includes(`${root}_${n}`)) n++;
+    return `${root}_${n}`;
+  }
+  async _reloadTaxonomy() {
+    const raw = await this.dataStore.loadTaxonomy();
+    App.taxonomy.hydrate(raw);          // re-applies globals + emits 'taxonomy:changed'
+    App.EventBus.emit('tasks:changed'); // lists/counts recompute against the new labels
+  }
+  async _renumber(list, updateFn) {
+    // list already in the desired order; write sequential sort_order to any that moved.
+    for (let k = 0; k < list.length; k++) {
+      if ((list[k].sort_order || 0) !== k) await updateFn(list[k].id, { sort_order: k });
+    }
+  }
+
+  // --- Types ---
+  async addType(company, label, color) {
+    this._assertTaxonomyAllowed();
+    const name = String(label || '').trim();
+    if (!name) throw new Error('Type name is required.');
+    const raw = await this.dataStore.loadTaxonomy();
+    const mine = raw.types.filter(t => t.company_id === company);
+    const key = this._uniqueKey(name, mine.map(t => t.key));
+    const sort = mine.length ? Math.max(...mine.map(t => t.sort_order || 0)) + 1 : 0;
+    await this.dataStore.createTaskType({ company_id: company, key, label: name, color: color || '#8f867b', sort_order: sort, active: true });
+    // Seed a minimal usable pipeline so the invariants (>=1 status, one default, one done) hold at once.
+    await this.dataStore.createTaskStatus({ company_id: company, type_key: key, key: 'todo', label: 'To do', color: '#8f867b', sort_order: 0, is_default: true, is_done: false, active: true });
+    await this.dataStore.createTaskStatus({ company_id: company, type_key: key, key: 'done', label: 'Done', color: '#3f9d5a', sort_order: 1, is_default: false, is_done: true, active: true });
+    await this._reloadTaxonomy();
+  }
+  async renameType(id, label) {
+    this._assertTaxonomyAllowed();
+    const name = String(label || '').trim();
+    if (!name) throw new Error('Type name is required.');
+    await this.dataStore.updateTaskType(id, { label: name });
+    await this._reloadTaxonomy();
+  }
+  async recolorType(id, color) {
+    this._assertTaxonomyAllowed();
+    await this.dataStore.updateTaskType(id, { color });
+    await this._reloadTaxonomy();
+  }
+  async removeType(id) {
+    this._assertTaxonomyAllowed();
+    const raw = await this.dataStore.loadTaxonomy();
+    const row = raw.types.find(t => t.id === id);
+    if (!row) return;
+    const active = raw.types.filter(t => t.company_id === row.company_id && t.active !== false);
+    if (active.length <= 1) throw new Error('Keep at least one task type.');
+    await this.dataStore.updateTaskType(id, { active: false });
+    await this._reloadTaxonomy();
+  }
+  async moveType(id, dir) {
+    this._assertTaxonomyAllowed();
+    const raw = await this.dataStore.loadTaxonomy();
+    const row = raw.types.find(t => t.id === id);
+    if (!row) return;
+    const sibs = raw.types.filter(t => t.company_id === row.company_id && t.active !== false)
+      .sort((a, b) => (a.sort_order - b.sort_order) || String(a.label).localeCompare(String(b.label)));
+    const i = sibs.findIndex(t => t.id === id);
+    const j = i + (dir < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= sibs.length) return;
+    [sibs[i], sibs[j]] = [sibs[j], sibs[i]];
+    await this._renumber(sibs, (rid, patch) => this.dataStore.updateTaskType(rid, patch));
+    await this._reloadTaxonomy();
+  }
+
+  // --- Statuses (per type) ---
+  async addStatus(company, typeKey, label, color) {
+    this._assertTaxonomyAllowed();
+    const name = String(label || '').trim();
+    if (!name) throw new Error('Status name is required.');
+    const raw = await this.dataStore.loadTaxonomy();
+    const mine = raw.statuses.filter(s => s.company_id === company && s.type_key === typeKey);
+    const key = this._uniqueKey(name, mine.map(s => s.key));
+    const sort = mine.length ? Math.max(...mine.map(s => s.sort_order || 0)) + 1 : 0;
+    await this.dataStore.createTaskStatus({ company_id: company, type_key: typeKey, key, label: name, color: color || '#8f867b', sort_order: sort, is_default: false, is_done: false, active: true });
+    await this._reloadTaxonomy();
+  }
+  async renameStatus(id, label) {
+    this._assertTaxonomyAllowed();
+    const name = String(label || '').trim();
+    if (!name) throw new Error('Status name is required.');
+    await this.dataStore.updateTaskStatus(id, { label: name });
+    await this._reloadTaxonomy();
+  }
+  async recolorStatus(id, color) {
+    this._assertTaxonomyAllowed();
+    await this.dataStore.updateTaskStatus(id, { color });
+    await this._reloadTaxonomy();
+  }
+  async removeStatus(id) {
+    this._assertTaxonomyAllowed();
+    const raw = await this.dataStore.loadTaxonomy();
+    const row = raw.statuses.find(s => s.id === id);
+    if (!row) return;
+    const sibs = raw.statuses.filter(s => s.company_id === row.company_id && s.type_key === row.type_key && s.active !== false);
+    if (sibs.length <= 1) throw new Error('A type must keep at least one status.');
+    if (row.is_done) throw new Error('Set another status as “done” before removing this one.');
+    if (row.is_default) throw new Error('Set another status as the default before removing this one.');
+    await this.dataStore.updateTaskStatus(id, { active: false });
+    await this._reloadTaxonomy();
+  }
+  async moveStatus(id, dir) {
+    this._assertTaxonomyAllowed();
+    const raw = await this.dataStore.loadTaxonomy();
+    const row = raw.statuses.find(s => s.id === id);
+    if (!row) return;
+    const sibs = raw.statuses.filter(s => s.company_id === row.company_id && s.type_key === row.type_key && s.active !== false)
+      .sort((a, b) => (a.sort_order - b.sort_order) || String(a.label).localeCompare(String(b.label)));
+    const i = sibs.findIndex(s => s.id === id);
+    const j = i + (dir < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= sibs.length) return;
+    [sibs[i], sibs[j]] = [sibs[j], sibs[i]];
+    await this._renumber(sibs, (rid, patch) => this.dataStore.updateTaskStatus(rid, patch));
+    await this._reloadTaxonomy();
+  }
+  async setDoneStatus(id) {
+    this._assertTaxonomyAllowed();
+    const raw = await this.dataStore.loadTaxonomy();
+    const row = raw.statuses.find(s => s.id === id);
+    if (!row) return;
+    // Clear the current done first — the one-done partial unique index forbids two trues.
+    const current = raw.statuses.find(s => s.company_id === row.company_id && s.type_key === row.type_key && s.is_done && s.id !== id);
+    if (current) await this.dataStore.updateTaskStatus(current.id, { is_done: false });
+    await this.dataStore.updateTaskStatus(id, { is_done: true });
+    await this._reloadTaxonomy();
+  }
+  async setDefaultStatus(id) {
+    this._assertTaxonomyAllowed();
+    const raw = await this.dataStore.loadTaxonomy();
+    const row = raw.statuses.find(s => s.id === id);
+    if (!row) return;
+    const current = raw.statuses.find(s => s.company_id === row.company_id && s.type_key === row.type_key && s.is_default && s.id !== id);
+    if (current) await this.dataStore.updateTaskStatus(current.id, { is_default: false });
+    await this.dataStore.updateTaskStatus(id, { is_default: true });
+    await this._reloadTaxonomy();
+  }
+
+  // --- Labels ---
+  async addLabel(company, label, color) {
+    this._assertTaxonomyAllowed();
+    const name = String(label || '').trim();
+    if (!name) throw new Error('Label name is required.');
+    const raw = await this.dataStore.loadTaxonomy();
+    const mine = raw.labels.filter(l => l.company_id === company);
+    const key = this._uniqueKey(name, mine.map(l => l.key));
+    const sort = mine.length ? Math.max(...mine.map(l => l.sort_order || 0)) + 1 : 0;
+    await this.dataStore.createTaskLabel({ company_id: company, key, label: name, color: color || '#8f867b', sort_order: sort, active: true });
+    await this._reloadTaxonomy();
+  }
+  async renameLabel(id, label) {
+    this._assertTaxonomyAllowed();
+    const name = String(label || '').trim();
+    if (!name) throw new Error('Label name is required.');
+    await this.dataStore.updateTaskLabel(id, { label: name });
+    await this._reloadTaxonomy();
+  }
+  async recolorLabel(id, color) {
+    this._assertTaxonomyAllowed();
+    await this.dataStore.updateTaskLabel(id, { color });
+    await this._reloadTaxonomy();
+  }
+  async removeLabel(id) {
+    this._assertTaxonomyAllowed();
+    await this.dataStore.updateTaskLabel(id, { active: false });
+    await this._reloadTaxonomy();
+  }
+  async moveLabel(id, dir) {
+    this._assertTaxonomyAllowed();
+    const raw = await this.dataStore.loadTaxonomy();
+    const row = raw.labels.find(l => l.id === id);
+    if (!row) return;
+    const sibs = raw.labels.filter(l => l.company_id === row.company_id && l.active !== false)
+      .sort((a, b) => (a.sort_order - b.sort_order) || String(a.label).localeCompare(String(b.label)));
+    const i = sibs.findIndex(l => l.id === id);
+    const j = i + (dir < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= sibs.length) return;
+    [sibs[i], sibs[j]] = [sibs[j], sibs[i]];
+    await this._renumber(sibs, (rid, patch) => this.dataStore.updateTaskLabel(rid, patch));
+    await this._reloadTaxonomy();
+  }
+
   /* ---------- task actions ---------- */
   toggleTaskDone(id) {
     if (!App.can('tasks.write')) return;
@@ -900,7 +1100,7 @@ App.AppController = class AppController {
     if (!App.can('tasks.write')) return;
     const ids = this._bulkIds().filter(id => {
       const t = this.taskModel.find(id);
-      return t && t.status !== 'done';
+      return t && !App.taxonomy.isDone(t);
     });
     if (!ids.length) { this.exitBulkMode(); return; }
     ids.forEach(id => {
@@ -1004,7 +1204,7 @@ App.AppController = class AppController {
      delete), so a fat-finger is recoverable by SQL update. */
   clearDoneTasks() {
     if (!App.can('tasks.write')) return;
-    const doneCount = this.taskModel.all().filter(t => t.status === 'done' && !t.clearedAt).length;
+    const doneCount = this.taskModel.all().filter(t => App.taxonomy.isDone(t) && !t.clearedAt).length;
     if (!doneCount) return;
     const msg = `Clear ${doneCount} done task${doneCount > 1 ? 's' : ''}? They'll be hidden everywhere and permanently deleted in 30 days.`;
     if (!window.confirm(msg)) return;
@@ -1023,7 +1223,8 @@ App.AppController = class AppController {
     if (!task) return;
     const prev = task[field];
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser));
-    if (field === 'status' && value === 'done' && prev !== 'done') {
+    const doneKey = App.taxonomy.doneStatus(task.company, task.type);
+    if (field === 'status' && value === doneKey && prev !== doneKey) {
       this._revertToGeneralShiftIfOnTask(id);
     }
     if ((field === 'status' || field === 'priority') && prev !== value) {
@@ -1150,7 +1351,8 @@ App.AppController = class AppController {
 
     // Done has a side effect the inline path also applies: drop a running timer
     // on this task back to General shift rather than clocking fully out.
-    if (status === 'done' && prevStatus !== 'done') this._revertToGeneralShiftIfOnTask(id);
+    const doneKey = App.taxonomy.doneStatus(company, type);
+    if (status === doneKey && prevStatus !== doneKey) this._revertToGeneralShiftIfOnTask(id);
 
     // Notify watchers of the meaningful changes (mirrors updateTaskField/reassign).
     if (status !== prevStatus) {
@@ -1535,7 +1737,7 @@ App.AppController = class AppController {
     }
     let target = App.can('tasks.view') && this.uiState.selectedTaskId
       ? this.taskModel.find(this.uiState.selectedTaskId)
-      : this.taskModel.all().find(t => t.assignee === this.currentUser && t.status !== 'done');
+      : this.taskModel.all().find(t => t.assignee === this.currentUser && !App.taxonomy.isDone(t));
     if (!target) target = this.taskModel.find(App.DEFAULT_CLOCK_TASK_ID);
     if (!target) {
       this.toastView.show({ title: 'Clock task missing', sub: 'Ask an admin to restore the General shift task.' });

@@ -97,6 +97,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (mineCfg && !App.currentProfile.company_ids) {
       App.currentProfile.company_ids = Array.isArray(mineCfg.company_ids) ? mineCfg.company_ids : [];
     }
+    // Preview/offline: no Supabase — build the taxonomy from the constants.
+    App.taxonomy.hydrate(null);
   } else {
     try {
       const saved = await dataStore.load();
@@ -106,6 +108,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       taskModel.hydrate(saved.tasks);
       timeModel.hydrate(saved.timeEntries, saved.activeTimers);
       notifModel.hydrate(saved.notifications);
+      // Per-company task taxonomy (types/statuses/labels). Falls back to the
+      // hardcoded constants if the DB returned nothing.
+      App.taxonomy.hydrate(saved.taxonomy);
     } catch (err) {
       console.error('[app] Supabase load failed', err);
       renderFatalDataError(err);
@@ -203,6 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.ApprovalView({ controller, dataStore });
   new App.ClockDashboardView({ taskModel, timeModel, controller });
   new App.HierarchyView({ controller });
+  new App.TaskSetupAdminView({ controller });
 
   applyRoleChrome(controller);
 

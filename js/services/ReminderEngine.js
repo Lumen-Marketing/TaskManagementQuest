@@ -43,7 +43,7 @@ App.ReminderEngine = class ReminderEngine {
     const now = Date.now();
     let added = 0;
     this.taskModel.all().forEach(t => {
-      if (!this._isMyTask(t) || t.status === 'done') return;
+      if (!this._isMyTask(t) || App.taxonomy.isDone(t)) return;
 
       const windows = this._windowsFor(t);
       windows.forEach(w => {

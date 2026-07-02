@@ -1241,6 +1241,12 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   position: static;
   inset: auto;
   z-index: auto;
+  /* Normal block flow (NOT the legacy side-panel flex column): the read-mode
+     blocks below use `max-width + margin:auto` to center. Inside a flex column
+     those auto margins would instead shrink each block to its content width and
+     center it (stat strip collapses narrow, body grid balloons), so the header
+     and body wouldn't share a width. Block flow makes max-width the shared cap. */
+  display: block;
   width: 100%;
   max-width: 1180px;
   margin: 0 auto;
@@ -6998,4 +7004,195 @@ body.ui-command-center .controls-card .btn {
      centered caps line up exactly at EVERY width (not only past the 1720 cap).
      The 32px side gutter now comes from the shared calc() formula instead. */
   body.ui-command-center #taskViewWrap { padding-left: 0; padding-right: 0; }
+}
+
+/* ============================================================================
+   Settings → Task setup (Phase 3, taxonomy admin). Warm-flat "panze" surface:
+   borderless columns separated by spacing + warm hover fills, orange accents on
+   the selected type + active default/done pills. Collapses to one column on mobile.
+   Renders inside the shared #timeViewWrap.
+   ========================================================================== */
+#timeViewWrap .tsetup { padding: 4px 2px 40px; color: var(--ink); }
+.tsetup-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.tsetup-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); margin: 0; }
+.tsetup-sub { font-size: 13px; color: var(--ink-3); margin: 3px 0 0; }
+.tsetup-company-wrap { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.tsetup-company { appearance: none; -webkit-appearance: none; background: var(--bg-2); color: var(--ink); border: none; border-radius: var(--radius-pill); padding: 8px 30px 8px 13px; font-size: 13px; font-weight: 600; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23929AA3' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; }
+
+.tsetup-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 26px; }
+.tsetup-col { min-width: 0; }
+.tsetup-col-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.tsetup-col-head > span { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tsetup-add { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--amber); font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 8px; cursor: pointer; flex: 0 0 auto; }
+.tsetup-add:hover { background: var(--amber-bg); color: var(--amber-ink); }
+.tsetup-add i { font-size: 14px; }
+
+.tsetup-list { display: flex; flex-direction: column; gap: 2px; }
+.tsetup-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 10px; transition: background var(--dur-fast, .12s) var(--ease-out, ease); }
+.tsetup-row:hover { background: var(--bg-2); }
+.tsetup-row.is-selected { background: var(--amber-bg); }
+.tsetup-row.is-selected .tsetup-lbl { color: var(--amber-ink); font-weight: 600; }
+.tsetup-row-name { display: flex; align-items: center; gap: 9px; flex: 1 1 auto; min-width: 0; background: none; border: none; padding: 0; margin: 0; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+.tsetup-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+.tsetup-lbl { font-size: 14px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+.tsetup-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; flex: 0 0 auto; }
+.tsetup-iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; background: none; border: none; border-radius: 7px; color: var(--ink-3); cursor: pointer; padding: 0; }
+.tsetup-iconbtn i { font-size: 15px; }
+.tsetup-iconbtn:hover { background: var(--bg-3); color: var(--ink); }
+.tsetup-iconbtn.tsetup-danger:hover { background: var(--rust-bg); color: var(--rust); }
+
+.tsetup-pill { background: var(--bg-2); color: var(--ink-3); border: none; border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; padding: 3px 9px; cursor: pointer; letter-spacing: .01em; }
+.tsetup-pill:hover { color: var(--ink); }
+.tsetup-pill.is-on { background: var(--amber-bg); color: var(--amber-ink); }
+.tsetup-pill.is-on.is-done { background: var(--green-bg); color: var(--green-ink); }
+
+.tsetup-swatch { width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: none; cursor: pointer; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.tsetup-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.tsetup-swatch::-webkit-color-swatch { border: none; border-radius: 6px; }
+.tsetup-swatch::-moz-color-swatch { border: none; border-radius: 6px; }
+
+.tsetup-labels { margin-top: 22px; }
+.tsetup-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tsetup-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--bg-2); border-radius: var(--radius-pill); padding: 5px 8px 5px 11px; }
+.tsetup-chip .tsetup-lbl { font-size: 13px; }
+.tsetup-chip .tsetup-iconbtn { width: 22px; height: 22px; }
+.tsetup-chip .tsetup-iconbtn i { font-size: 13px; }
+.tsetup-empty { font-size: 13px; color: var(--ink-3); padding: 8px 4px; margin: 0; }
+
+/* Editor / confirm modals */
+.tsetup-modal { max-width: 380px; }
+.tsetup-modal-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--ink); margin: 0 0 4px; }
+.tsetup-modal-sub { font-size: 13px; color: var(--ink-3); margin: 6px 0 16px; line-height: 1.45; }
+.tsetup-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 14px 0 0; }
+.tsetup-field-color { flex-direction: row; align-items: center; gap: 12px; }
+.tsetup-field-color input[type="color"] { width: 40px; height: 28px; padding: 0; border: none; border-radius: 8px; background: none; cursor: pointer; }
+.tsetup-input { background: var(--bg-2); border: none; border-radius: 10px; padding: 10px 12px; color: var(--ink); font-size: 14px; font-family: var(--font-body); }
+.tsetup-input:focus { outline: 2px solid var(--amber); outline-offset: 0; }
+.tsetup-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.tsetup-remove-btn { background: var(--rust); color: #fff; border-color: var(--rust); }
+.tsetup-remove-btn:hover { filter: brightness(.95); }
+
+@media (max-width: 720px) {
+  .tsetup-grid { grid-template-columns: 1fr; gap: 22px; }
+  .tsetup-head { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .tsetup-row { padding: 9px; }
+  .tsetup-iconbtn { width: 30px; height: 30px; }
+}
+
+/* ============================================================================
+   Anchored single-column task forms (.taf) — new-task page + task detail.
+   Phase 4a redesign: a centered ~760px column with a big Title anchor, a compact
+   warm meta-bar of fields, then description / subtasks / watchers, sticky footer.
+   Warm-flat panze: no hairline borders — grouping is spacing + faint warm fills.
+   ========================================================================== */
+#newTaskWrap .taf { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; padding: 4px 2px 48px; }
+/* New-task form reuses the detail page's content + rail layout: main column
+   (properties card + Description + Subtasks) and a rail (Watchers + Notify). */
+#newTaskWrap .tdp-body {
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start;
+}
+#newTaskWrap .tdp-body .tdp-col-main { grid-column: 1; min-width: 0; }
+#newTaskWrap .tdp-body .tdp-col-right { grid-column: 2; }
+@media (max-width: 900px) {
+  #newTaskWrap .tdp-body { grid-template-columns: 1fr; gap: 16px; }
+  #newTaskWrap .tdp-body .tdp-col-main,
+  #newTaskWrap .tdp-body .tdp-col-right { grid-column: 1; }
+}
+
+.taf-head { display: flex; align-items: center; gap: 12px; }
+.taf-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.taf-createdby { margin-left: auto; font-size: 12px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px; }
+
+/* The Title anchor — big, borderless, transparent. */
+.taf-title-input { width: 100%; font-family: var(--font-display); font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); background: transparent; border: none; padding: 2px 0; }
+.taf-title-input::placeholder { color: var(--ink-4); }
+.taf-title-input:focus { outline: none; }
+
+/* The meta-bar: one connected warm band that wraps to ~2 lines. */
+.taf-meta { display: flex; flex-wrap: wrap; gap: 12px 16px; background: var(--bg-2); border-radius: 14px; padding: 14px 16px; }
+.taf-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 150px; }
+.taf-field-lbl { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3); }
+.taf-field .field-optional { text-transform: none; letter-spacing: 0; color: var(--ink-4); font-weight: 500; }
+.taf-meta select, .taf-meta input, .taf-meta .projtag {
+  background: var(--surface); border: none; border-radius: 8px; padding: 7px 10px;
+  font-size: 13px; color: var(--ink); font-family: var(--font-body); width: 100%;
+}
+.taf-meta select { appearance: none; -webkit-appearance: none; padding-right: 26px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23929AA3' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
+.taf-meta select:focus, .taf-meta input:focus { outline: 2px solid var(--amber); outline-offset: 0; }
+
+/* Sections (description / subtasks / watchers / notify). */
+.taf-section { display: flex; flex-direction: column; gap: 8px; }
+.taf-section-lbl { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+.taf-desc { width: 100%; background: var(--bg-2); border: none; border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.5; color: var(--ink); font-family: var(--font-body); resize: vertical; }
+.taf-desc:focus { outline: 2px solid var(--amber); outline-offset: 0; }
+
+/* Sticky footer — separated by a soft warm gradient, not a border. */
+.taf-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; margin-top: 8px; }
+.taf-foot-btns { display: flex; gap: 8px; }
+.taf-hint { font-size: 12px; color: var(--ink-3); }
+.taf-create-btn { background: var(--amber); border-color: var(--amber); color: #fff; }
+
+/* --- Task detail: full-width header/stats/properties (pic 1) over a content+rail body --- */
+#taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats,
+#taskDetailWrap .tdp-top, #taskDetailWrap .tdp-body { max-width: 1040px; margin-left: auto; margin-right: auto; }
+/* Full-width top: delegation/timer banners + clock-in + the wide properties band. */
+#taskDetailWrap .tdp-top { display: flex; flex-direction: column; gap: 14px; margin: 14px auto 18px; align-items: stretch; }
+/* Delegation/timer banners + clock-in span the full section width (same as the
+   stat strip and the body below), not narrow centered pills. */
+#taskDetailWrap .tdp-top > .delegation-banner,
+#taskDetailWrap .tdp-top > .timer-banner,
+#taskDetailWrap .tdp-top > .detail-actions-row { width: 100%; margin: 0; align-self: stretch; }
+#taskDetailWrap .tdp-top > .detail-actions-row > .btn { flex: 1 1 auto; }
+#taskDetailWrap .tdp-col-left, #taskDetailWrap .tdp-col-main, #taskDetailWrap .tdp-col-right { width: auto; min-width: 0; }
+
+/* Detail meta-bar values are click-to-edit spans (not form controls). */
+.taf-meta-detail .taf-field { flex: 1 1 160px; }
+.taf-meta-detail .taf-field > .detail-val,
+.taf-meta-detail .taf-field > span:last-child { font-size: 14px; color: var(--ink); min-width: 0; }
+.taf-meta-detail .tdp-editable { border-radius: 6px; }
+
+@media (max-width: 720px) {
+  #newTaskWrap .taf { max-width: none; }
+  #taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats,
+  #taskDetailWrap .tdp-top, #taskDetailWrap .tdp-body { max-width: none; }
+  .taf-field, .taf-meta-detail .taf-field { flex-basis: 100%; }
+  .taf-title-input { font-size: 22px; }
+  .taf-foot { padding: 12px 0; }
+}
+
+/* ============================================================================
+   Task detail — content + rail body (below the kept full-width header, stat
+   strip and wide properties band = pic 1). The lower content is a DOMINANT
+   column (Description / Subtasks / Comments) with a quiet rail beside it (Quick
+   actions / Watchers / Activity) — so those read as a supporting rail, not a
+   lone stack. Warm-flat panze, no hairline borders. Collapses to one column
+   ≤900px (main first, then the rail).
+   ========================================================================== */
+#taskDetailWrap .tdp-body {
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px;
+  align-items: start; margin-top: 18px;
+}
+#taskDetailWrap .tdp-body .tdp-col-main { grid-column: 1; min-width: 0; }
+#taskDetailWrap .tdp-body .tdp-col-right { grid-column: 2; }
+
+/* Rail tabbed card (Comments / Activity / History): fixed height so a long thread
+   or feed scrolls INSIDE the card instead of stretching it — the card stays a
+   constant size, which lets the Watchers card below it line up with Subtasks.
+   The comment composer stays pinned; only the list / feed scrolls. */
+#taskDetailWrap .tdp-tabs .tdp-tabpanel.active {
+  display: flex; flex-direction: column; height: 230px; min-height: 0;
+}
+#taskDetailWrap .tdp-tabs .cm-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+#taskDetailWrap .tdp-tabs .cm-composer { flex: 0 0 auto; }
+#taskDetailWrap .tdp-tabs .tdp-tabpanel[data-panel="activity"],
+#taskDetailWrap .tdp-tabs .tdp-tabpanel[data-panel="history"] { overflow-y: auto; }
+#taskDetailWrap .tdp-tabs .tdp-activity { max-height: none; overflow: visible; }
+
+@media (max-width: 900px) {
+  #taskDetailWrap .tdp-body { grid-template-columns: 1fr; gap: 16px; }
+  #taskDetailWrap .tdp-body .tdp-col-main,
+  #taskDetailWrap .tdp-body .tdp-col-right { grid-column: 1; }
 }

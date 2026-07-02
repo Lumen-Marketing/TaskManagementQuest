@@ -253,6 +253,7 @@ App.SidebarView = class SidebarView {
     }
     if (App.can('roles.manage')) teamItems.push({ view: 'approvals',   label: 'Approvals',       icon: 'ti-user-check' });
     if (App.can('clock.admin'))  teamItems.push({ view: 'admin:clock', label: 'Clock dashboard', icon: 'ti-clock-play', count: this.timeModel.allActive().length });
+    if (App.can('task-setup.manage')) teamItems.push({ view: 'admin:task-setup', label: 'Task setup', icon: 'ti-adjustments' });
     if (teamItems.length) sections.push({ key: 'team', label: 'Team', items: teamItems });
 
     // Company context lives in the sidebar: a single-select list of the
@@ -338,7 +339,7 @@ App.SidebarView = class SidebarView {
     const cur = this.controller.uiState.currentCompany;
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
     const clockId = App.DEFAULT_CLOCK_TASK_ID;
-    let base = this.taskModel.all().filter(t => t.status !== 'done' && !t.clearedAt);
+    let base = this.taskModel.all().filter(t => !App.taxonomy.isDone(t) && !t.clearedAt);
     if (cur && cur !== '*') {
       base = base.filter(t => t.company === cur || t.id === clockId);
     }

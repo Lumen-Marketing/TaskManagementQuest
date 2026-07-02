@@ -69,7 +69,7 @@ App.HomeView = class HomeView {
     const me = this.controller.currentUser;
     const all = this.controller.visibleTasks({ includeDone: true }).filter(t => t.assignee === me);
     const inProg = all.filter(t => t.status === 'pending' || t.status === 'review').length;
-    const done = all.filter(t => t.status === 'done').length;
+    const done = all.filter(t => App.taxonomy.isDone(t)).length;
     const notStarted = all.length - inProg - done; // todo / hold / unset
     return { inProg, done, notStarted, total: all.length };
   }
@@ -96,9 +96,9 @@ App.HomeView = class HomeView {
     const createdMs = t => (t.createdAt ? new Date(t.createdAt).getTime() : 0);
     const completedIn = (a, b) => all.filter(t => { const c = doneMs(t); return c != null && c >= a.getTime() && c < b.getTime(); }).length;
     const openAt = T => all.filter(t => { const c = doneMs(t); return createdMs(t) <= T && (c == null || c > T); }).length;
-    const openNow = all.filter(t => t.status !== 'done').length;
+    const openNow = all.filter(t => !App.taxonomy.isDone(t)).length;
     const blockedNow = all.filter(t => t.status === 'hold').length;
-    const dueBetween = (fromISO, toISO) => all.filter(t => t.status !== 'done' && t.due && t.due >= fromISO && t.due < toISO).length;
+    const dueBetween = (fromISO, toISO) => all.filter(t => !App.taxonomy.isDone(t) && t.due && t.due >= fromISO && t.due < toISO).length;
 
     // 8 buckets of length L days, oldest -> newest.
     const buckets = fn => {
@@ -120,7 +120,7 @@ App.HomeView = class HomeView {
         spark: buckets((a, b) => openAt(b.getTime() - 1)) },
       { key: 'dueweek', label: 'Due this week', icon: 'calendar', tone: 'tone-amber', goodWhen: 'down',
         value: dueBetween(today, App.utils.todayISO(7)), prev: dueBetween(App.utils.todayISO(-7), today),
-        spark: buckets((a, b) => all.filter(t => t.status !== 'done' && t.due &&
+        spark: buckets((a, b) => all.filter(t => !App.taxonomy.isDone(t) && t.due &&
           t.due >= App.utils.toISODate(a) && t.due < App.utils.toISODate(b)).length) },
       // Blocked is a point-in-time count (status 'hold'), so no trend line —
       // rendered as the plain KPI variant with a "waiting on someone" caption.
