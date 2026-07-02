@@ -96,9 +96,12 @@ Request flow:
    more than 5 → 429.
 4. **Insert** the report with the service key, snapshotting the caller's
    profile name/email. Insert failure → error response (user retries).
-5. **Email:** recipients = emails of all `role = 'developer'` profiles,
-   intersected with `team_members` emails (same allowlist idea as
-   `notify-email`). One Resend send: subject
+5. **Email:** recipients = emails of all approved `role = 'developer'`
+   profiles, taken directly from `profiles`. (Amended during planning: the
+   originally-specified `team_members` intersection was dropped — recipients
+   are server-derived, never client input, so it adds no security, and the
+   developer account is not reliably on `team_members`, which would silently
+   kill delivery.) One Resend send: subject
    `[Quest HQ] <Type> report from <name>`, HTML-escaped description plus a
    context table.
 6. Email failure → still `200 { ok: true, emailed: false }`; the report is
@@ -139,7 +142,10 @@ wraps `supabase.functions.invoke('report-problem', …)`.
   the existing "worker invoking notify-email gets a 403" test); anonymous
   caller gets 401.
 - **E2E happy path:** open account menu → Report a problem → type description
-  → submit → success confirmation.
+  → counter updates → close; plus an empty-description inline-error case.
+  (Amended during planning: the real submit lives in the role-gate spec's
+  worker test — one submission per suite run — because submitting from every
+  UI spec would trip the 5/hour rate limit and flake CI.)
 - **Manual checklist rows:** submit as worker; verify developer email
   arrives; toggle a report to Resolved in the developer view.
 
