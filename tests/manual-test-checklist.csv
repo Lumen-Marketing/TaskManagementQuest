@@ -64,3 +64,6 @@ ID,Area,Feature / Test Case,Role,Steps,Expected Result,Type,Spec File,Priority,S
 63,Projects,Detail scope + New task pre-select,Admin,Open a folder card → click 'New task',Create form opens with that project + company pre-selected,Manual,,Medium,,
 64,Projects,Filter tasks by project,Admin,Open the filter bar → toggle a Project chip,List narrows to that folder's tasks,Manual,,Low,,
 65,Projects,Cross-company folders NOT visible (RLS),Worker,Sign in as a roofing-only user then open Projects + the picker,No other-company folders appear (RLS company scope),Manual,,High,,
+66,Report,Worker submits a problem report,Worker,Account menu → Report a problem → describe → Send report,Success message; row appears in bug_reports; developer email arrives,Manual,,High,,
+67,Report,Rate limit after 5 reports in an hour,Any,Submit 6 reports quickly,6th shows the friendly wait message (429); first 5 stored,Manual,,Medium,,
+68,Report,Developer triages a report,Developer,Open Team → Problem reports → Mark resolved,Report moves out of Open tab; resolved_at set; Reopen works,Manual,,High,,
