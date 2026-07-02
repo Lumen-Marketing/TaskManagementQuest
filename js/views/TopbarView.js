@@ -6,6 +6,7 @@ const TITLES = {
   overdue: 'Overdue', watching: 'Watching',
   'time:mine': 'My time', 'time:resource': 'Team workload',
   'team:hierarchy': 'Team chart', approvals: 'Approvals', 'admin:clock': 'Clock dashboard',
+  'admin:task-setup': 'Task setup',
   home: 'Home', reports: 'Reports',
 };
 

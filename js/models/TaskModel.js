@@ -100,7 +100,7 @@ App.TaskModel = class TaskModel {
      this.tasks only holds rows the viewer is allowed to see.) */
   focusList() {
     return this.tasks
-      .filter(t => t.focusSeq != null && t.status !== 'done' && !t.clearedAt)
+      .filter(t => t.focusSeq != null && !App.taxonomy.isDone(t) && !t.clearedAt)
       .sort((a, b) => a.focusSeq - b.focusSeq);
   }
 
@@ -136,9 +136,9 @@ App.TaskModel = class TaskModel {
     }
 
     if (view === 'mine') tasks = tasks.filter(t => t.assignee === currentUser);
-    else if (view === 'hot') tasks = tasks.filter(t => (t.priority === 'critical' || t.priority === 'urgent') && t.status !== 'done');
-    else if (view === 'today') tasks = tasks.filter(t => t.due === t0 && t.status !== 'done');
-    else if (view === 'overdue') tasks = tasks.filter(t => t.due < t0 && t.status !== 'done');
+    else if (view === 'hot') tasks = tasks.filter(t => (t.priority === 'critical' || t.priority === 'urgent') && !App.taxonomy.isDone(t));
+    else if (view === 'today') tasks = tasks.filter(t => t.due === t0 && !App.taxonomy.isDone(t));
+    else if (view === 'overdue') tasks = tasks.filter(t => t.due < t0 && !App.taxonomy.isDone(t));
     else if (view === 'watching') tasks = tasks.filter(t => (t.watchers || []).includes(currentUser));
     else if (view.startsWith('company:')) {
       const c = view.split(':')[1];
@@ -182,7 +182,7 @@ App.TaskModel = class TaskModel {
         const t30 = App.utils.todayISO(30);
         tasks = tasks.filter(t => {
           if (!t.due) return false;
-          if (f.dueRange === 'overdue') return t.due < t0 && t.status !== 'done';
+          if (f.dueRange === 'overdue') return t.due < t0 && !App.taxonomy.isDone(t);
           if (f.dueRange === 'today')   return t.due === t0;
           if (f.dueRange === 'tomorrow')return t.due === t1;
           if (f.dueRange === 'week')    return t.due >= t0 && t.due <= t7;
@@ -222,7 +222,7 @@ App.TaskModel = class TaskModel {
 
     tasks.forEach(t => {
       if (groupBy === 'due') {
-        if (t.status === 'done') ensure('done', 'Done', colorFor('done'), 6).items.push(t);
+        if (App.taxonomy.isDone(t)) ensure('done', 'Done', colorFor('done'), 6).items.push(t);
         else if (!t.due)         ensure('later', 'No due date', colorFor('later'), 5).items.push(t);
         else if (t.due < t0)     ensure('overdue', 'Overdue', colorFor('overdue'), 0).items.push(t);
         else if (t.due === t0)   ensure('today', 'Due today', colorFor('today'), 1).items.push(t);
@@ -294,7 +294,7 @@ App.TaskModel = class TaskModel {
     const t1 = App.utils.todayISO(1);
     const t7 = App.utils.todayISO(7);
     tasks.forEach(t => {
-      if (t.status === 'done') groups.done.push(t);
+      if (App.taxonomy.isDone(t)) groups.done.push(t);
       else if (t.due < t0) groups.overdue.push(t);
       else if (t.due === t0) groups.today.push(t);
       else if (t.due === t1) groups.tomorrow.push(t);
@@ -338,8 +338,10 @@ App.TaskModel = class TaskModel {
   toggleDone(id, userName) {
     const t = this.find(id);
     if (!t) return;
-    const becomingDone = t.status !== 'done';
-    t.status = becomingDone ? 'done' : 'todo';
+    const becomingDone = !App.taxonomy.isDone(t);
+    t.status = becomingDone
+      ? App.taxonomy.doneStatus(t.company, t.type)
+      : App.taxonomy.defaultStatus(t.company, t.type);
     // Persisted completion timestamp (column completed_at) powers Reports history.
     if (becomingDone) t.completedAt = new Date().toISOString();
     else delete t.completedAt;
@@ -355,7 +357,7 @@ App.TaskModel = class TaskModel {
      Returns the count of tasks cleared (0 if there were none).  */
   clearDoneTasks(userName) {
     const now = new Date().toISOString();
-    const done = this.tasks.filter(t => t.status === 'done' && !t.clearedAt);
+    const done = this.tasks.filter(t => App.taxonomy.isDone(t) && !t.clearedAt);
     if (!done.length) return 0;
     done.forEach(t => {
       t.clearedAt = now;

@@ -81,6 +81,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
       notificationsRes,
       profilesRes,
       projectsRes,
+      taxTypesRes,
+      taxStatusesRes,
+      taxLabelsRes,
     ] = await Promise.all([
       this.supabase.from('team_members').select('*').order('name', { ascending: true }),
       this.supabase.from('tasks').select('*').order('created_at', { ascending: true }),
@@ -91,6 +94,11 @@ App.SupabaseDataStore = class SupabaseDataStore {
         ? this.supabase.from('profiles').select(this._profileColumns).order('created_at', { ascending: false })
         : Promise.resolve({ data: [], error: null }),
       this.supabase.from('projects').select('*').order('created_at', { ascending: true }),
+      // Customizable per-company task taxonomy (migrations 056-058). RLS scopes rows to
+      // the caller's companies. App.taxonomy hydrates from these; constants are the fallback.
+      this.supabase.from('task_types').select('*'),
+      this.supabase.from('task_type_statuses').select('*'),
+      this.supabase.from('task_labels').select('*'),
     ]);
 
     this._throwIfError(peopleRes, 'people');
@@ -100,6 +108,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwIfError(notificationsRes, 'notifications');
     this._throwIfError(profilesRes, 'profiles');
     this._throwIfError(projectsRes, 'projects');
+    this._throwIfError(taxTypesRes, 'task types');
+    this._throwIfError(taxStatusesRes, 'task statuses');
+    this._throwIfError(taxLabelsRes, 'task labels');
 
     this._taskVersions = {};
     const tasks = (tasksRes.data || []).map(row => {
@@ -131,6 +142,11 @@ App.SupabaseDataStore = class SupabaseDataStore {
       ])),
       notifications: (notificationsRes.data || []).map(row => this._mapNotificationRow(row)),
       projects: this._mapProjects(projectsRes.data || []),
+      taxonomy: {
+        types: taxTypesRes.data || [],
+        statuses: taxStatusesRes.data || [],
+        labels: taxLabelsRes.data || [],
+      },
     };
   }
 
@@ -260,6 +276,57 @@ App.SupabaseDataStore = class SupabaseDataStore {
     if (!id) return;
     const res = await this.supabase.from('projects').update(patch).eq('id', id);
     this._throwIfError(res, 'updating project');
+  }
+
+  /* ---------- Task taxonomy CRUD (Settings → Task setup) ----------
+     All writes are RLS-gated to developer/admin/construction_supervisor of the
+     row's company (migration 056). Soft-delete = update {active:false}; rows are
+     never hard-deleted so historical tasks keep resolving their type/status/label.
+     Reads come back through loadTaxonomy() in the exact shape App.taxonomy.hydrate
+     expects (same as load()'s `taxonomy` block). */
+  async loadTaxonomy() {
+    const [t, s, l] = await Promise.all([
+      this.supabase.from('task_types').select('*'),
+      this.supabase.from('task_type_statuses').select('*'),
+      this.supabase.from('task_labels').select('*'),
+    ]);
+    this._throwIfError(t, 'task types');
+    this._throwIfError(s, 'task statuses');
+    this._throwIfError(l, 'task labels');
+    return { types: t.data || [], statuses: s.data || [], labels: l.data || [] };
+  }
+
+  async createTaskType(row) {
+    const res = await this.supabase.from('task_types').insert(row).select('*').single();
+    this._throwIfError(res, 'creating task type');
+    return res.data;
+  }
+  async updateTaskType(id, patch) {
+    const res = await this.supabase.from('task_types').update(patch).eq('id', id).select('*').single();
+    this._throwIfError(res, 'updating task type');
+    return res.data;
+  }
+
+  async createTaskStatus(row) {
+    const res = await this.supabase.from('task_type_statuses').insert(row).select('*').single();
+    this._throwIfError(res, 'creating status');
+    return res.data;
+  }
+  async updateTaskStatus(id, patch) {
+    const res = await this.supabase.from('task_type_statuses').update(patch).eq('id', id).select('*').single();
+    this._throwIfError(res, 'updating status');
+    return res.data;
+  }
+
+  async createTaskLabel(row) {
+    const res = await this.supabase.from('task_labels').insert(row).select('*').single();
+    this._throwIfError(res, 'creating label');
+    return res.data;
+  }
+  async updateTaskLabel(id, patch) {
+    const res = await this.supabase.from('task_labels').update(patch).eq('id', id).select('*').single();
+    this._throwIfError(res, 'updating label');
+    return res.data;
   }
 
   /* Hard-delete a single task on demand. RLS gates this to the same

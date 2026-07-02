@@ -210,7 +210,7 @@ App.TaskDetailView = class TaskDetailView {
     const priObj = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const labelObj = (t.label && t.label !== 'none') ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' };
     const bidObj = App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' };
-    const isDone = t.status === 'done';
+    const isDone = App.taxonomy.isDone(t);
     const today = App.utils.todayISO(0);
     const overdue = !!(t.due && t.due < today && !isDone);
     let daysOverdue = 0;
@@ -308,21 +308,20 @@ App.TaskDetailView = class TaskDetailView {
             </button>
           </div>
 
-          <div class="tdp-card">
-            <div class="tdp-card-title"><i class="ti ti-info-circle"></i> Details</div>
-            <div class="detail-row"><span class="label">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Assignee</span><span ${ev('assignee', 'detail-val detail-person')}>${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
-            <div class="detail-row"><span class="label">Created by</span><span class="detail-val detail-person">${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}</span></div>
-            <div class="detail-row"><span class="label">Due</span><span ${ev('due', `detail-val ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
-            <div class="detail-row"><span class="label">Time</span><span ${ev('dueTime')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
-            <div class="detail-row"><span class="label">Reminder</span><span ${ev('reminderAt')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
-            <div class="detail-row"><span class="label">Type</span><span ${ev('type')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
-            ${t.type === 'bid' ? `<div class="detail-row"><span class="label">Bid status</span><span ${ev('bidStatus')}>${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
-            <div class="detail-row"><span class="label">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
-            <div class="detail-row"><span class="label">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
-            <div class="detail-row"><span class="label">Project</span>${projectChipHtml}</div>
-            <div class="detail-row"><span class="label">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
+          <div class="taf-meta taf-meta-detail">
+            <div class="taf-field"><span class="taf-field-lbl">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Assignee</span><span ${ev('assignee', 'detail-val detail-person')}>${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Created by</span><span class="detail-val detail-person">${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Due</span><span ${ev('due', `detail-val ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Time</span><span ${ev('dueTime')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Reminder</span><span ${ev('reminderAt')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Type</span><span ${ev('type')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
+            ${t.type === 'bid' ? `<div class="taf-field"><span class="taf-field-lbl">Bid status</span><span ${ev('bidStatus')}>${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
+            <div class="taf-field"><span class="taf-field-lbl">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
+            <div class="taf-field"><span class="taf-field-lbl">Project</span>${projectChipHtml}</div>
+            <div class="taf-field"><span class="taf-field-lbl">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
           </div>
         </aside>
 
@@ -867,85 +866,40 @@ App.TaskDetailView = class TaskDetailView {
         </div>
         <div class="detail-title">Edit task</div>
       </div>
-      <div class="detail-body">
-        <div class="field">
-          <label class="field-label" for="edit-title">Title</label>
-          <input type="text" id="edit-title" value="${App.utils.escapeHtml(d.title)}" maxlength="200" style="width:100%; font-size:13px; padding:6px 8px;" />
-        </div>
-        <div class="field" style="margin-top:12px;">
-          <label class="field-label" for="edit-desc">Description</label>
-          <textarea id="edit-desc" rows="5" maxlength="5000" placeholder="Add a description…" style="width:100%; font-size:12.5px; padding:6px 8px; resize:vertical;">${App.utils.escapeHtml(d.description)}</textarea>
+      <div class="detail-body taf-edit">
+        <div class="field field-title">
+          <input type="text" id="edit-title" class="taf-title-input" value="${App.utils.escapeHtml(d.title)}" maxlength="200" placeholder="Task title" aria-label="Task title" />
         </div>
 
-        <div class="detail-row" style="margin-top:14px;">
-          <span class="label">Company</span>
-          <select id="edit-company" style="font-size:12px; padding:4px 8px;">
-            ${opts(Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}
-          </select>
-        </div>
-        <div class="detail-row">
-          <span class="label">Project</span>
-          ${(() => {
+        <div class="taf-meta">
+          <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="edit-company">${opts(Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}</select></label>
+          <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="edit-type" data-action="type-change">${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}</select></label>
+          ${d.type === 'bid' ? `<label class="taf-field"><span class="taf-field-lbl">Bid status</span><select id="edit-bidStatus">${opts(Object.entries(App.BID_STATUSES).map(([k, v]) => [k, v.label]), d.bidStatus)}</select></label>` : ''}
+          <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="edit-status">${opts(Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]), d.status)}</select></label>
+          <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="edit-label">${opts(Object.entries(App.TASK_LABELS).map(([k, v]) => [k, v.label]), d.label)}</select></label>
+          <label class="taf-field"><span class="taf-field-lbl">Priority</span><select id="edit-priority">${opts(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), d.priority)}</select></label>
+          <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="edit-assignee">${App.utils.peopleInCompany(d.company, d.assignee).map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('')}</select></label>
+          <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="edit-due" value="${App.utils.escapeHtml(d.due)}" class="picker-input" /></label>
+          <label class="taf-field"><span class="taf-field-lbl">Time <span class="field-optional">Optional</span></span><input type="time" id="edit-dueTime" value="${App.utils.escapeHtml(d.dueTime)}" class="picker-input" /></label>
+          <label class="taf-field"><span class="taf-field-lbl">Reminder <span class="field-optional">Optional</span></span><input type="datetime-local" id="edit-reminderAt" value="${App.utils.escapeHtml(d.reminderAt)}" class="picker-input" /></label>
+          <div class="taf-field"><span class="taf-field-lbl">Project</span>${(() => {
             const p = d.project && App.projects ? App.projects[d.project] : null;
             return `<button type="button" id="edit-project" class="projtag projtag-btn ${p ? '' : 'projtag-empty'}" data-action="edit-open-project" aria-haspopup="listbox" ${p ? `style="--pc:${App.utils.escapeHtml(p.color)}"` : ''}><i class="ti ${p ? 'ti-folder' : 'ti-folder-plus'}"></i>${p ? App.utils.escapeHtml(p.name) : 'No project'}</button>`;
-          })()}
+          })()}</div>
         </div>
-        <div class="detail-row">
-          <span class="label">Type</span>
-          <select id="edit-type" data-action="type-change" style="font-size:12px; padding:4px 8px;">
-            ${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}
-          </select>
+
+        <div class="taf-section">
+          <div class="taf-section-lbl">Description</div>
+          <textarea id="edit-desc" class="taf-desc" rows="5" maxlength="5000" placeholder="Add a description…">${App.utils.escapeHtml(d.description)}</textarea>
         </div>
-        <div class="detail-row">
-          <span class="label">Label</span>
-          <select id="edit-label" style="font-size:12px; padding:4px 8px;">
-            ${opts(Object.entries(App.TASK_LABELS).map(([k, v]) => [k, v.label]), d.label)}
-          </select>
-        </div>
-        ${d.type === 'bid' ? `
-        <div class="detail-row">
-          <span class="label">Bid status</span>
-          <select id="edit-bidStatus" style="font-size:12px; padding:4px 8px;">
-            ${opts(Object.entries(App.BID_STATUSES).map(([k, v]) => [k, v.label]), d.bidStatus)}
-          </select>
-        </div>` : ''}
-        <div class="detail-row">
-          <span class="label">Status</span>
-          <select id="edit-status" style="font-size:12px; padding:4px 8px;">
-            ${opts(Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]), d.status)}
-          </select>
-        </div>
-        <div class="detail-row">
-          <span class="label">Assignee</span>
-          <select id="edit-assignee" style="font-size:12px; padding:4px 8px;">
-            ${App.utils.peopleInCompany(d.company, d.assignee).map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="detail-row">
-          <span class="label">Due</span>
-          <input type="date" id="edit-due" value="${App.utils.escapeHtml(d.due)}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
-        </div>
-        <div class="detail-row">
-          <span class="label">Time <span class="field-optional">Optional</span></span>
-          <input type="time" id="edit-dueTime" value="${App.utils.escapeHtml(d.dueTime)}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
-        </div>
-        <div class="detail-row">
-          <span class="label">Reminder <span class="field-optional">Optional</span></span>
-          <input type="datetime-local" id="edit-reminderAt" value="${App.utils.escapeHtml(d.reminderAt)}" class="picker-input" style="font-size:12px; padding:4px 8px;" />
-        </div>
-        <div class="detail-row">
-          <span class="label">Priority</span>
-          <select id="edit-priority" style="font-size:12px; padding:4px 8px;">
-            ${opts(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), d.priority)}
-          </select>
-        </div>
-        <div class="detail-row">
-          <span class="label">Watchers</span>
+
+        <div class="taf-section">
+          <div class="taf-section-lbl">Watchers</div>
           <div class="watchers-cell">${watcherChips}${watcherAdd}</div>
         </div>
 
-        <div class="detail-section">
-          <div class="detail-section-title">Subtasks</div>
+        <div class="taf-section">
+          <div class="taf-section-lbl">Subtasks</div>
           ${subtaskRows}
           <div class="subtask-add-row" style="margin-top:8px;">
             <input type="text" id="edit-subtask-input" maxlength="200" placeholder="Add a step and press Enter" />
