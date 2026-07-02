@@ -1078,12 +1078,24 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .time-card-value { font-family: var(--font-display); font-size: 28px; margin-top: 2px; }
 .time-card-sub { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
 
-.time-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-.time-table th, .time-table td { padding: 9px 14px; text-align: left; font-size: 12px; border-bottom: 1px solid var(--border); }
-.time-table th { background: var(--bg-2); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.07em; font-size: 10px; font-weight: 600; font-family: var(--font-mono); }
+.time-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--block-radius, var(--radius-sm)); overflow: hidden; }
+/* Fixed layout so columns land on a predictable grid — stacked tables on the
+   same page (Active right now / This team) keep their first columns aligned
+   instead of each auto-sizing to its own content. The 7-column approvals
+   table is exempt: its selects/pill groups need content-driven sizing and it
+   scrolls horizontally below 1200px instead. */
+.time-table:not(.approval-table) { table-layout: fixed; }
+.time-table:not(.approval-table) th:first-child { width: 24%; }
+.time-table:not(.approval-table) th:last-child:empty { width: 110px; }
+.time-table th, .time-table td { padding: 11px 16px; text-align: left; font-size: 12.5px; border-bottom: 1px solid var(--border-strong, var(--border)); }
+.time-table th { background: var(--bg-3, var(--bg-2)); color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.07em; font-size: 10px; font-weight: 700; font-family: var(--font-mono); }
 .time-table tr:last-child td { border-bottom: none; }
+.time-table tbody tr:not(.live):hover td { background: var(--bg-2); }
 .time-table tr.live td { background: color-mix(in oklch, var(--green) 8%, transparent); }
 .time-table .mono { font-family: var(--font-mono); font-size: 11.5px; }
+/* Empty states ("Nobody is clocked in") sit in the same card the table would
+   occupy, instead of floating unframed on the canvas. */
+.time-section .empty { background: var(--surface); border: 1px solid var(--border); border-radius: var(--block-radius, var(--radius-sm)); }
 .approval-table select { min-width: 140px; }
 .approval-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); }
 .approval-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
@@ -1154,15 +1166,15 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .org-node {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--block-radius, var(--radius-sm));
   overflow: hidden;
 }
 .org-node-pool { border-style: dashed; }
 .org-super {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 14px;
-  background: var(--bg-2);
-  border-bottom: 1px solid var(--border);
+  background: var(--bg-3, var(--bg-2));
+  border-bottom: 1px solid var(--border-strong, var(--border));
 }
 .org-super-meta { flex: 1; min-width: 0; }
 .org-super-name { font-weight: 600; font-size: 13px; }
@@ -5622,7 +5634,7 @@ body.ui-command-center .kanban-card:hover {
    ============================================================ */
 body.ui-command-center .time-table,
 body.ui-command-center .approval-scroll .time-table {
-  border-radius: var(--radius-md);
+  border-radius: var(--block-radius, var(--radius-md));
   box-shadow: var(--shadow-sm);
 }
 body.ui-command-center .time-card { border-radius: var(--radius-md); }
