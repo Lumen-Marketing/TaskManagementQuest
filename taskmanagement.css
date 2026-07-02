@@ -6828,7 +6828,13 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats,
 #taskDetailWrap .tdp-top, #taskDetailWrap .tdp-body { max-width: 1040px; margin-left: auto; margin-right: auto; }
 /* Full-width top: delegation/timer banners + clock-in + the wide properties band. */
-#taskDetailWrap .tdp-top { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+#taskDetailWrap .tdp-top { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; align-items: stretch; }
+/* Delegation/timer banners + clock-in span the full section width (same as the
+   stat strip and the body below), not narrow centered pills. */
+#taskDetailWrap .tdp-top > .delegation-banner,
+#taskDetailWrap .tdp-top > .timer-banner,
+#taskDetailWrap .tdp-top > .detail-actions-row { width: 100%; margin: 0; align-self: stretch; }
+#taskDetailWrap .tdp-top > .detail-actions-row > .btn { flex: 1 1 auto; }
 #taskDetailWrap .tdp-col-left, #taskDetailWrap .tdp-col-main, #taskDetailWrap .tdp-col-right { width: auto; min-width: 0; }
 
 /* Detail meta-bar values are click-to-edit spans (not form controls). */
