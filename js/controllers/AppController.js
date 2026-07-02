@@ -51,14 +51,19 @@ App.AppController = class AppController {
     this.newTaskPage = null;
   }
 
-  attachViews({ toastView, newTaskPage, profileView }) {
+  attachViews({ toastView, newTaskPage, profileView, reportProblemView }) {
     this.toastView = toastView;
     this.newTaskPage = newTaskPage;
     this.profileView = profileView;
+    this.reportProblemView = reportProblemView;
   }
 
   openProfile() {
     if (this.profileView) this.profileView.open();
+  }
+
+  openReportProblem() {
+    if (this.reportProblemView) this.reportProblemView.open();
   }
 
   /* ---------- helpers ---------- */

@@ -457,6 +457,7 @@ App.TopbarView = class TopbarView {
       <div class="user-menu-item" data-action="scale"><i class="ti ti-zoom-scan"></i>Display size</div>
       <div class="user-menu-item" data-action="edit-profile"><i class="ti ti-user-edit"></i>Edit profile</div>
       <div class="user-menu-item" data-action="show-tour"><i class="ti ti-help"></i>Show tour again</div>
+      <div class="user-menu-item" data-action="report-problem"><i class="ti ti-bug"></i>Report a problem</div>
       <div class="user-menu-item" data-action="sign-out"><i class="ti ti-logout"></i>Sign out</div>
     `;
     document.body.appendChild(menu);
@@ -480,6 +481,10 @@ App.TopbarView = class TopbarView {
     menu.querySelector('[data-action="show-tour"]').addEventListener('click', () => {
       this.closeUserMenu();
       if (App.startTour) App.startTour();
+    });
+    menu.querySelector('[data-action="report-problem"]').addEventListener('click', () => {
+      this.closeUserMenu();
+      if (this.controller && this.controller.openReportProblem) this.controller.openReportProblem();
     });
     menu.querySelector('[data-action="sign-out"]').addEventListener('click', () => {
       this.closeUserMenu();
