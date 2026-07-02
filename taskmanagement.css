@@ -419,7 +419,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
    Separation comes from surface contrast + color, never hairline borders.
    ========================================================================= */
 #projectsWrap {
-  --pv-wash: #F3F0EB; --pv-card: #FFFFFF;
+  /* Same canvas as All tasks (#FBFAF8); cards separate via the shared warm
+     hairline instead of a darker wash. */
+  --pv-wash: #FBFAF8; --pv-card: #FFFFFF;
   --pv-ink: #1c1a18; --pv-ink-2: #56504a; --pv-ink-3: #908981; --pv-ink-4: #b0a99f;
   --pv-divider: rgba(28, 26, 24, .10);
   background: var(--pv-wash); overflow-y: auto; font-family: var(--font-body);
@@ -434,8 +436,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--pv-ink-3); }
 .pv-title { font-family: 'Hanken Grotesk', var(--font-body); font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1; margin-top: 7px; color: var(--pv-ink); }
 .pv-head-r { display: flex; align-items: center; gap: 15px; }
-.pv-new { display: inline-flex; align-items: center; gap: 6px; background: var(--amber); color: #fff; font-weight: 600; font-size: 12.5px; padding: 10px 17px; border-radius: 999px; border: none; cursor: pointer; transition: transform .14s var(--ease-out), filter .14s var(--ease-out); }
-.pv-new:hover { filter: brightness(1.07); transform: translateY(-1px); }
+.pv-new { display: inline-flex; align-items: center; gap: 6px; background: var(--accent, var(--amber)); color: #fff; font-weight: 600; font-size: 12.5px; padding: 10px 17px; border-radius: 8px; border: none; cursor: pointer; transition: background .14s var(--ease-out); }
+.pv-new:hover { background: var(--amber-ink); }
 .pv-new i { font-size: 15px; }
 
 /* KPI cards — five separate stat cards, each a horizontal composition: a
@@ -443,7 +445,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
    value as the hero and its label directly beneath, grouped on the right.
    Warm panze surfaces, no borders; they wrap on narrow widths. */
 .pv-kpis { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 28px 16px; }
-.pv-kpi { flex: 1 1 168px; min-width: 0; display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 16px 18px; background: var(--pv-card); border-radius: 16px; }
+.pv-kpi { flex: 1 1 168px; min-width: 0; display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 16px 18px; background: var(--pv-card); border: 1px solid var(--border); border-radius: 14px; }
 .pv-kpi-ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 13px; background: color-mix(in srgb, var(--kc) 15%, var(--pv-card)); color: var(--kc); font-size: 22px; }
 .pv-kpi-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .pv-kpi-num { font-family: 'Hanken Grotesk', var(--font-body); font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--pv-ink); font-variant-numeric: tabular-nums; }
@@ -455,12 +457,13 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Hanken Grotesk', var(--font-body); font-size: 12px; font-weight: 800; letter-spacing: -.02em; color: var(--pv-ink); z-index: 1; }
 
 /* Header controls: sort sits beside the New folder button. */
-.pv-sort { height: 36px; border: none; border-radius: 999px; background: var(--pv-card); padding: 0 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--pv-ink-2); cursor: pointer; }
+.pv-sort { height: 32px; border: 1px solid var(--border); border-radius: 8px; background: var(--pv-card); padding: 0 14px; font: inherit; font-size: 12px; font-weight: 700; color: var(--pv-ink-2); cursor: pointer; }
+.pv-sort:hover { background: var(--bg-2); border-color: var(--border-strong); color: var(--pv-ink); }
 
 /* Company box — each company is its own warm panel. Separation comes from the
    page-wash gap between boxes + a bold company header (colored dot), never
    borders or a tinted header strip. */
-.pv-cobox { margin: 0 28px 16px; background: var(--pv-card); border-radius: 18px; overflow: hidden; }
+.pv-cobox { margin: 0 28px 16px; background: var(--pv-card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
 .pv-cohead { display: flex; align-items: center; gap: 10px; padding: 13px 18px; }
 .pv-codot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--co); }
 .pv-coname { font-family: 'Hanken Grotesk', var(--font-body); font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--pv-ink); }
@@ -516,7 +519,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .pv-tassignee { flex: 0 0 auto; font-size: 12px; color: var(--pv-ink-3); }
 .pv-tdue { flex: 0 0 62px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); text-align: right; white-space: nowrap; }
 .pv-noTasks { padding: 4px 10px 6px; font-size: 12.5px; color: var(--pv-ink-4); }
-.pv-blank { margin: 0 28px; padding: 50px 24px; background: var(--pv-card); border-radius: 18px; color: var(--pv-ink-3); font-size: 13.5px; }
+.pv-blank { margin: 0 28px; padding: 50px 24px; background: var(--pv-card); border: 1px solid var(--border); border-radius: 14px; color: var(--pv-ink-3); font-size: 13.5px; }
 
 @media (max-width: 760px) {
   .pv-duecol, .pv-tassignee, .pv-tdue { display: none; }
@@ -4741,18 +4744,19 @@ body.ui-command-center {
      orange accent. Mono is kept for timers + tabular figures only. */
   --font-body: 'Hanken Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: var(--font-body);
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --bg: #FBFAF8;       /* clean Notion-style near-white canvas */
-  --bg-2: #FCFBFA;     /* near-white for hovers/section fills */
-  --bg-3: #FDFDFB;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bg: #FBFAF8;       /* warm near-white — the approved All-tasks canvas */
+  --bg-2: #FAF9F7;     /* warm hover / section fill (boss-table row hover) */
+  --bg-3: #F3F0EB;     /* warm well — segmented controls, deep fills */
   --surface: #FFFFFF;
-  --ink: #16191D;
-  --ink-2: #5A626B;
-  --ink-3: #929AA3;
-  --ink-4: #B6BCC4;
-  --border: #EAECF0;
-  --border-strong: #E2E5EA;
+  --ink: #1C1A18;
+  --ink-2: #56504A;
+  --ink-3: #908981;
+  --ink-4: #A59E96;
+  --border: #EBE7E2;        /* warm hairline (boss-table reskin) */
+  --border-strong: #DDD6CF;
   --amber: #ED4E0D;       /* bold, saturated brand orange (was terracotta #E0552B) */
+  --accent: var(--amber); /* single accent alias — tracks each theme's amber */
   --amber-bg: #FDEEE6;
   --amber-ink: #C2410C;
   --rust: #E0484D;
@@ -4825,7 +4829,7 @@ body.ui-command-center .tb-title {
 }
 body.ui-command-center .seg {
   display: inline-flex;
-  background: #EDEFF2;
+  background: var(--bg-3);
   border-radius: 8px;
   padding: 3px;
 }
@@ -4933,7 +4937,7 @@ body.ui-command-center .side-minimize-btn,
 body.ui-command-center .deck .side-group-head { color: var(--ink-3); }
 body.ui-command-center .deck .side-label,
 body.ui-command-center .deck .side-group-title {
-  color: #aeb7c3;
+  color: var(--ink-4);
   font-size: 11px;
   letter-spacing: 0.04em;
   font-weight: 800;
@@ -4948,7 +4952,7 @@ body.ui-command-center .deck .side-item {
 }
 body.ui-command-center .deck .side-item i { color: var(--ink-3) !important; }
 body.ui-command-center .deck .side-item:hover {
-  background: #f6f7f9;
+  background: var(--bg-3);
   color: var(--ink);
 }
 body.ui-command-center .deck .side-item.active {
@@ -5032,7 +5036,7 @@ body.ui-command-center .btn {
   font-weight: 700;
 }
 body.ui-command-center .btn:hover {
-  background: #f8fafc;
+  background: var(--bg-2);
   border-color: var(--border-strong);
   color: var(--ink);
 }
@@ -5127,7 +5131,7 @@ body.ui-command-center .ai-brief {
   padding: 16px 18px;
   background:
     linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(90deg, #94a3b8, #64748b) border-box;
+    linear-gradient(90deg, #EBD9CE, #DDD6CF) border-box;
   border: 1px solid transparent;
   border-radius: 14px;
   box-shadow: var(--shadow-sm);
@@ -5216,7 +5220,7 @@ body.ui-command-center .task-group {
 }
 body.ui-command-center .task-group > .group-head {
   padding: 10px 16px;
-  background: #fbfcfe;
+  background: var(--bg-2);
   border-bottom: 1px solid var(--border);
 }
 body.ui-command-center .group-title {
@@ -5254,7 +5258,7 @@ body.ui-command-center .list-row:has(.prio-low)::before { background: var(--u-lo
    (var(--u-medium)) on every row, so the hover wash is a faint tint of that
    SAME blue — hovering never introduces a different color than the bar shows. */
 body.ui-command-center .list-row:hover { background: color-mix(in srgb, var(--group-color, var(--u-medium)) 8%, var(--surface)); }
-body.ui-command-center .list-row.selected { background: #fbfcfe; }
+body.ui-command-center .list-row.selected { background: var(--bg-2); }
 body.ui-command-center .task-title-cell {
   font-size: 14px;
   font-weight: 800;
@@ -5374,7 +5378,7 @@ body.ui-command-center .detail-title {
 }
 .qhq-chip { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px; white-space: nowrap; }
 .qhq-chip.risk { color: var(--rust); background: var(--rust-bg); }
-.qhq-chip.hold { color: #9A5E08; background: #FCEFD7; }
+.qhq-chip.hold { color: #B5701A; background: #FCEFE0; }
 
 /* ----- Home ----- */
 .qhq-home { padding: 16px 18px 36px; max-width: 1700px; font-family: var(--font-body); }
@@ -5386,7 +5390,7 @@ body.ui-command-center .detail-title {
 .qhq-brief-h { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
 .qhq-spark { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg,#ED4E0D,#F2902E); display: grid; place-items: center; color: #fff; }
 .qhq-brief-h .t { font-size: 13.5px; font-weight: 800; }
-.qhq-brief-h .b { font-size: 10.5px; font-weight: 800; color: #8A5A00; background: #FCEFD7; border: 1px solid #F2DEB0; border-radius: 6px; padding: 1px 7px; }
+.qhq-brief-h .b { font-size: 10.5px; font-weight: 800; color: #B5701A; background: #FCEFE0; border: 1px solid #F5E2C8; border-radius: 6px; padding: 1px 7px; }
 .qhq-brief-tx { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
 .qhq-home-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 12px; margin-top: 16px; }
 
@@ -5506,7 +5510,7 @@ body.ui-command-center .detail-title {
 .qhq-ar-row { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-top: 1px solid var(--border); }
 .qhq-ar-row:first-child { border-top: none; }
 .qhq-ar-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
-.qhq-ar-ic.hold { background: #FCEFD7; color: #9A5E08; }
+.qhq-ar-ic.hold { background: #FCEFE0; color: #B5701A; }
 .qhq-ar-ic .qhq-ic { width: 17px; height: 17px; }
 .qhq-ar-b { flex: 1; min-width: 0; }
 .qhq-ar-t { font-size: 12.8px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5517,7 +5521,7 @@ body.ui-command-center .detail-title {
 .qhq-rpt-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .qhq-rpt-top .h { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
 .qhq-rpt-top .sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
-.qhq-range { margin-left: auto; display: inline-flex; background: #EDEFF2; border-radius: 8px; padding: 3px; }
+.qhq-range { margin-left: auto; display: inline-flex; background: var(--bg-3); border-radius: 8px; padding: 3px; }
 .qhq-range button { height: 26px; padding: 0 11px; border-radius: 6px; font-size: 11.5px; font-weight: 700; color: var(--ink-2); }
 .qhq-range button.on { background: #fff; color: var(--ink); box-shadow: var(--shadow-sm); }
 .qhq-kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 14px; }
@@ -5534,11 +5538,11 @@ body.ui-command-center .detail-title {
 .qhq-bars { padding: 8px 16px 2px; }
 .qhq-bh-row { display: grid; grid-template-columns: 90px 1fr 34px; align-items: center; gap: 10px; padding: 7px 0; }
 .qhq-bh-row .nm { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qhq-bh-track { height: 9px; border-radius: 5px; background: #EEF0F3; overflow: hidden; }
+.qhq-bh-track { height: 9px; border-radius: 5px; background: var(--bg-3); overflow: hidden; }
 .qhq-bh-track i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg,#F2902E,#ED4E0D); }
 .qhq-bh-row .v { font-size: 12px; font-weight: 700; text-align: right; color: var(--ink-2); }
 .qhq-statmix { padding: 12px 16px 2px; }
-.qhq-mixbar { height: 13px; border-radius: 7px; overflow: hidden; display: flex; gap: 2px; background: #EEF0F3; }
+.qhq-mixbar { height: 13px; border-radius: 7px; overflow: hidden; display: flex; gap: 2px; background: var(--bg-3); }
 .qhq-mixbar i { height: 100%; }
 .qhq-mixlegend { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 16px; margin-top: 13px; }
 .qhq-mixlegend div { font-size: 11.5px; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
@@ -5550,7 +5554,9 @@ body.ui-command-center .detail-title {
 .qhq-cl-row .pf { width: 3px; height: 15px; border-radius: 2px; }
 .qhq-cl-row .pf.critical { background: var(--rust); }
 .qhq-cl-row .pf.high { background: #E08A0B; }
-.qhq-cl-row .ti { font-size: 12.5px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* !important because tabler-icons.min.css claims the bare `.ti` class with an
+   !important icon font — without this the Reports task titles render serif. */
+.qhq-cl-row .ti { font-family: var(--font-body) !important; font-size: 12.5px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qhq-cl-row .who { font-size: 11px; color: var(--ink-3); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qhq-cl-row .pill { font-size: 11px; font-weight: 600; border-radius: 6px; padding: 2px 8px; text-align: center; background: var(--bg-3); color: var(--ink-2); }
 .qhq-cl-row .due { font-size: 11.5px; color: var(--ink-2); text-align: right; }
@@ -5980,16 +5986,18 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
    ============================================================ */
 :root { --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif; }
 html:not([data-theme="dark"]) body.ui-command-center {
-  --bg: #F3F3F5;          /* soft gray — shared by sidebar + topbar + canvas */
-  --bg-2: #FFFFFF;
-  --bg-3: #ECECEE;
-  --surface: #FFFFFF;     /* white cards float on the gray */
-  --ink: #18181B;         /* near-black */
-  --ink-2: #46464B;
-  --ink-3: #6E6E76;
-  --ink-4: #A1A1AA;
-  --border: #E4E4E7;      /* hairline for chrome */
-  --border-strong: #18181B;
+  /* One canvas for every section — the warm near-white the All-tasks page uses
+     (boss-table reskin palette). White cards + warm hairlines float on it. */
+  --bg: #FBFAF8;          /* warm near-white — sidebar + topbar + canvas */
+  --bg-2: #FAF9F7;        /* warm hover / group-head fill */
+  --bg-3: #F3F0EB;        /* warm well (segmented controls, tracks) */
+  --surface: #FFFFFF;     /* white cards float on the warm canvas */
+  --ink: #1C1A18;         /* warm near-black */
+  --ink-2: #56504A;
+  --ink-3: #908981;
+  --ink-4: #A59E96;
+  --border: #EBE7E2;      /* warm hairline for chrome + cards */
+  --border-strong: #DDD6CF;
 }
 /* Headlines share the app typeface (Hanken Grotesk), heavy — matching the
    Home greeting so titles across Tasks/Reports read as one family. */
@@ -6077,19 +6085,19 @@ html:not([data-theme="dark"]) body.ui-command-center .deck .side-item {
   transition: background var(--dropdown-open-dur) var(--resize-ease),
               color var(--dropdown-open-dur) var(--resize-ease);
 }
-/* Toolbar buttons as outlined pills (Panze) — same outline language as the
-   cards; invert to a dark fill on hover. New task stays terracotta-filled. */
+/* Toolbar buttons everywhere share the Tasks-page language: white rounded-rect,
+   warm hairline, warm hover (the base body.ui-command-center .btn rules).
+   The old near-black outlined-pill variant is retired for cohesion. */
 html:not([data-theme="dark"]) body.ui-command-center .work-toolbar .btn:not(.btn-primary):not(#newTaskBtn) {
-  border-radius: 9999px;
-  border: 1px solid #1B1B1F;
-  background: transparent;
-  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
   box-shadow: none;
 }
 html:not([data-theme="dark"]) body.ui-command-center .work-toolbar .btn:not(.btn-primary):not(#newTaskBtn):hover {
-  background: #18181B;
-  border-color: #18181B;
-  color: #fff;
+  background: var(--bg-2);
+  border-color: var(--border-strong);
+  color: var(--ink);
 }
 
 /* Saved-views menu rows: delete button pushed to the right. */
@@ -6460,7 +6468,7 @@ body.wallboard-active #mainPane { padding: 0; }
 /* Status — colored TEXT (no dot). */
 #taskViewWrap .list-row .status-dot { display: none; }
 #taskViewWrap .list-row .status-sel { color: #56504a; font-weight: 600; font-size: 12.5px; }
-#taskViewWrap .list-row .status-sel.status-todo    { color: #ee5a26; }
+#taskViewWrap .list-row .status-sel.status-todo    { color: var(--accent, #ee5a26); }
 #taskViewWrap .list-row .status-sel.status-pending { color: #9a938a; }
 #taskViewWrap .list-row .status-sel.status-hold    { color: #e0484d; }
 #taskViewWrap .list-row .status-sel.status-review  { color: #7c6bd0; }
@@ -6570,9 +6578,9 @@ body.wallboard-active #mainPane { padding: 0; }
    widget buttons (base .btn) — no pill, no separate warm palette. New task keeps
    its terracotta fill. */
 #listPane .work-toolbar .btn-primary,
+#listPane .head-card-actions .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 #listPane .work-toolbar .btn-primary:hover,
-#listPane .head-card-actions .btn-primary,
-#listPane .head-card-actions .btn-primary:hover { background: #ee5a26; border-color: #ee5a26; color: #fff; }
+#listPane .head-card-actions .btn-primary:hover { background: var(--amber-ink); border-color: var(--amber-ink); color: #fff; }
 #listPane .up-next-card,
 #listPane .focus-widget,
 #listPane .progress-card {
@@ -7196,3 +7204,62 @@ body.ui-command-center .controls-card .btn {
   #taskDetailWrap .tdp-body .tdp-col-main,
   #taskDetailWrap .tdp-body .tdp-col-right { grid-column: 1; }
 }
+
+/* ============================================================================
+   UNIFIED CHIP TINTS (2026-07-03) — one chip color story app-wide.
+   The approved Tasks-table reskin gave Status / Priority / Type their soft
+   warm tints, but only inside #taskViewWrap; kanban cards, the task detail
+   page and legacy pills elsewhere still wore the old intelly pastels, so the
+   same task read differently per section. These light-scoped rules restyle
+   the SHARED chip classes everywhere to the approved tints (colors + chip
+   shape only — no layout changes). Dark theme keeps its Linear tokens.
+   ============================================================================ */
+
+/* Priority pills (kanban cards, cards view, task detail) — table tints. */
+html:not([data-theme="dark"]) body.ui-command-center .priority-block { border-radius: 6px; font-size: 11.5px; }
+html:not([data-theme="dark"]) body.ui-command-center .priority-block.priority-critical,
+html:not([data-theme="dark"]) body.ui-command-center .priority-block.priority-urgent { background: #fce8e6; color: #c43c2f; }
+html:not([data-theme="dark"]) body.ui-command-center .priority-block.priority-high   { background: #fcefe0; color: #b5701a; }
+html:not([data-theme="dark"]) body.ui-command-center .priority-block.priority-medium { background: #e9f0fb; color: #3066b8; }
+html:not([data-theme="dark"]) body.ui-command-center .priority-block.priority-low    { background: #f1efeb; color: #8a847c; }
+
+/* Status pills — accent orange for "working on it", quiet warm gray for
+   pending, matching the table's colored-text ladder. */
+html:not([data-theme="dark"]) body.ui-command-center .pill-status { border-radius: 6px; }
+html:not([data-theme="dark"]) body.ui-command-center .pill-status.status-todo,
+html:not([data-theme="dark"]) body.ui-command-center .pill-status.status-doing   { background: var(--amber-bg); color: var(--amber-ink); }
+html:not([data-theme="dark"]) body.ui-command-center .pill-status.status-pending { background: #f1efeb; color: #8a847c; }
+html:not([data-theme="dark"]) body.ui-command-center .pill-status.status-review  { background: #eceafa; color: #6a52c4; }
+html:not([data-theme="dark"]) body.ui-command-center .pill-status.status-hold    { background: #fce8e6; color: #c43c2f; }
+html:not([data-theme="dark"]) body.ui-command-center .pill-status.status-done    { background: #e6f4ee; color: #3a9b6e; }
+
+/* Status shown as colored TEXT (shared row renderer) — same ladder as the
+   table so rows outside #taskViewWrap read identically. */
+html:not([data-theme="dark"]) body.ui-command-center .status-sel.status-todo    { color: var(--accent, #ee5a26); }
+html:not([data-theme="dark"]) body.ui-command-center .status-sel.status-pending { color: #9a938a; }
+html:not([data-theme="dark"]) body.ui-command-center .status-sel.status-hold    { color: #e0484d; }
+html:not([data-theme="dark"]) body.ui-command-center .status-sel.status-review  { color: #7c6bd0; }
+html:not([data-theme="dark"]) body.ui-command-center .status-sel.status-done    { color: #3a9b6e; }
+
+/* Type chips — same tints as the table's Type column, wherever they appear. */
+html:not([data-theme="dark"]) body.ui-command-center .type-text[class*="type-"],
+html:not([data-theme="dark"]) body.ui-command-center .pill-type {
+  display: inline-flex; align-items: center; padding: 2px 9px;
+  border-radius: 6px; font-size: 11.5px; font-weight: 700;
+  background: #f1efeb; color: #8f867b;
+}
+html:not([data-theme="dark"]) body.ui-command-center .type-text.type-invoicing,
+html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-invoicing { background: #fcefe0; color: #b5701a; }
+html:not([data-theme="dark"]) body.ui-command-center .type-text.type-bid,
+html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-bid       { background: #eceafa; color: #6a52c4; }
+html:not([data-theme="dark"]) body.ui-command-center .type-text.type-admin,
+html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-admin     { background: #f1efeb; color: #8f867b; }
+html:not([data-theme="dark"]) body.ui-command-center .type-text.type-lead,
+html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-lead      { background: #e6f4ee; color: #3a9b6e; }
+html:not([data-theme="dark"]) body.ui-command-center .type-text.type-ar,
+html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-ar        { background: #fcefe0; color: #c2762e; }
+html:not([data-theme="dark"]) body.ui-command-center .type-text.type-meeting,
+html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-meeting   { background: #e9f0fb; color: #3e7bf2; }
+html:not([data-theme="dark"]) body.ui-command-center .type-text.type-web_dev,
+html:not([data-theme="dark"]) body.ui-command-center .type-text.type-web-dev,
+html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-web-dev   { background: #efeafc; color: #8268dc; }
