@@ -202,6 +202,7 @@ App.TaskListView = class TaskListView {
     App.EventBus.on('company:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('role:changed', () => { if (this.visible()) this.render(); });
     App.EventBus.on('filters:changed', () => { if (this.visible()) this.renderList(); });
+    App.EventBus.on('scope:changed',   () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('sort:changed',    () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('group:changed',   () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('group:collapsed-changed', () => { if (this.visible()) this.renderList(); });

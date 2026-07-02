@@ -18,16 +18,24 @@ async function boot(page) {
   await page.waitForTimeout(200);
 }
 
-test('scope segment switches view and updates the title', async ({ page }) => {
+test('scope segment filters in place instead of navigating', async ({ page }) => {
   await boot(page);
 
+  // Company is the default scope; flipping to My work must NOT change views.
   await page.locator('#scopeSeg button[data-scope="mine"]').click();
   await expect(page.locator('.seg button[data-scope="mine"]')).toHaveClass(/\bon\b/);
-  await expect(page.locator('#tbTitle')).toHaveText('My tasks');
+  await expect(page.locator('#tbTitle')).toHaveText('All tasks');
+
+  // The scope survives switching to a quick-filter view (Urgent) — that's the
+  // whole point: "my urgent tasks" without leaving Urgent.
+  await page.locator('.pnav-item[data-nav="tasks"]').click();
+  await page.locator('.pnav-menu-item[data-view="hot"]').click();
+  await expect(page.locator('#tbTitle')).toHaveText('Urgent');
+  await expect(page.locator('.seg button[data-scope="mine"]')).toHaveClass(/\bon\b/);
 
   await page.locator('#scopeSeg button[data-scope="all"]').click();
   await expect(page.locator('.seg button[data-scope="all"]')).toHaveClass(/\bon\b/);
-  await expect(page.locator('#tbTitle')).toHaveText('All tasks');
+  await expect(page.locator('#tbTitle')).toHaveText('Urgent');
 });
 
 test('Ask Quest focuses the search input', async ({ page }) => {

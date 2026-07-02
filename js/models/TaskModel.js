@@ -104,7 +104,7 @@ App.TaskModel = class TaskModel {
       .sort((a, b) => a.focusSeq - b.focusSeq);
   }
 
-  getFiltered({ view, searchQuery, currentUser, activeFilters, currentCompany, role, reportMemberIds }) {
+  getFiltered({ view, scope, searchQuery, currentUser, activeFilters, currentCompany, role, reportMemberIds }) {
     // Soft-cleared rows (Clear-done-group action) stay in memory so the
     // optimistic-lock save still works, but they never appear in any
     // view — boot-time purge hard-deletes them after the 30-day grace.
@@ -147,6 +147,10 @@ App.TaskModel = class TaskModel {
       const p = view.split(':')[1];
       tasks = tasks.filter(t => t.assignee === p);
     }
+
+    // Scope segment ("My work"): narrows the active view to the viewer's own
+    // assignments without leaving it — Urgent stays Urgent, just mine.
+    if (scope === 'mine') tasks = tasks.filter(t => t.assignee === currentUser);
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();

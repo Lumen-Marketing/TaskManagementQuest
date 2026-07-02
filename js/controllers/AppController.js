@@ -14,6 +14,10 @@ App.AppController = class AppController {
 
     this.uiState = {
       view: App.can('tasks.view') ? 'all' : 'time:mine',
+      // Scope segment ("My work" / "Company"): an orthogonal narrowing applied
+      // on top of whatever task view is active, so Urgent/Today/etc. can flip
+      // between the viewer's own slice and the whole company's in place.
+      scope: 'all',
       searchQuery: '',
       selectedTaskId: null,
       // Transient: true while the full-page New task form is open. Not a real
@@ -204,6 +208,16 @@ App.AppController = class AppController {
     App.EventBus.emit('selection:changed');
   }
 
+  // The head-card "My work" / "Company" segment. Unlike setView this never
+  // navigates — it narrows the current task view to the viewer's own tasks.
+  setScope(scope) {
+    if (scope !== 'mine' && scope !== 'all') return;
+    if (this.uiState.scope === scope) return;
+    this.uiState.scope = scope;
+    this._persistUiState();
+    App.EventBus.emit('scope:changed', scope);
+  }
+
   /* The Panze re-skin (Home + All Tasks only) is gated by a body class so its
      CSS never leaks into Reports / People / detail panels. Toggled from
      _togglePanes() so it also runs on the initial boot / role-change paths,
@@ -230,6 +244,7 @@ App.AppController = class AppController {
       localStorage.setItem(this._uiStateKey(), JSON.stringify({
         v: 1,
         view: this.uiState.view,
+        scope: this.uiState.scope,
         layout: this.uiState.layout,
         calendarMode: this.uiState.calendarMode,
         sortBy: this.uiState.sortBy,
@@ -266,12 +281,17 @@ App.AppController = class AppController {
       if (typeof saved.filters.dueRange === 'string') d.dueRange = saved.filters.dueRange;
       this.uiState.filters = d;
     }
+    if (saved.scope === 'mine' || saved.scope === 'all') this.uiState.scope = saved.scope;
     // Don't restore transient person:/company: filters. Re-opening onto a narrow
     // filtered view that happens to be empty reads as "my tasks vanished" (a real
     // support issue). Only stable workspace views are remembered; narrow filters
     // reset to the default All list on reload.
     const isNarrowFilter = saved.view && (saved.view.startsWith('person:') || saved.view.startsWith('company:'));
-    if (typeof saved.view === 'string' && !isNarrowFilter && this.canView(saved.view)) this.setView(saved.view);
+    // 'mine' stopped being a navigable view when the scope segment became an
+    // in-place filter — carry an old session's My-tasks view over as All+mine.
+    const savedView = saved.view === 'mine' ? 'all' : saved.view;
+    if (saved.view === 'mine') this.uiState.scope = 'mine';
+    if (typeof savedView === 'string' && !isNarrowFilter && this.canView(savedView)) this.setView(savedView);
   }
 
   setSearchQuery(q) {
@@ -345,6 +365,7 @@ App.AppController = class AppController {
       : null;
     return this.taskModel.getFiltered({
       view: this.uiState.view,
+      scope: this.uiState.scope,
       searchQuery: this.uiState.searchQuery,
       currentUser: this.currentUser,
       activeFilters: this.uiState.filters,

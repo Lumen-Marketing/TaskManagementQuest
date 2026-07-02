@@ -119,12 +119,14 @@ App.TopbarView = class TopbarView {
       this.controller.setSearchQuery(e.target.value);
     });
 
-    // Scope segment: "My work" / "Company" map to the existing Mine / All views.
+    // Scope segment: "My work" / "Company" narrow the CURRENT task view in
+    // place (Urgent stays Urgent, just mine) instead of navigating to the
+    // old Mine / All views.
     if (this.scopeSeg) {
       this.scopeSeg.querySelectorAll('button[data-scope]').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
-          this.controller.setView(btn.dataset.scope);
+          this.controller.setScope(btn.dataset.scope);
         });
       });
     }
@@ -137,10 +139,11 @@ App.TopbarView = class TopbarView {
     if (!this.scopeSeg) return;
     // The scope toggle now lives in the task page-head, which is only rendered on
     // task-list views — so it appears exactly when there are tasks to scope and
-    // never has to be hidden mid-session. Here we just reflect the active scope.
-    const view = this.controller.uiState.view;
+    // never has to be hidden mid-session. Here we just reflect the active scope
+    // (its own uiState field — it no longer tracks the view).
+    const scope = this.controller.uiState.scope || 'all';
     this.scopeSeg.querySelectorAll('button[data-scope]').forEach(btn => {
-      btn.classList.toggle('on', btn.dataset.scope === view);
+      btn.classList.toggle('on', btn.dataset.scope === scope);
     });
   }
 
@@ -280,6 +283,7 @@ App.TopbarView = class TopbarView {
     App.EventBus.on('clock:tick', () => this.tickLive());
     App.EventBus.on('role:changed', () => { this.renderPrimaryNav(); this.renderTopbarViews(); this.renderCompanySwitcher(); });
     App.EventBus.on('view:changed', () => { this._closeTeamMenu(); this.renderTopbarTitleAndScope(); this.renderPrimaryNav(); this.renderTopbarViews(); });
+    App.EventBus.on('scope:changed', () => this.renderTopbarTitleAndScope());
     App.EventBus.on('company:changed', () => this.renderCompanySwitcher());
   }
 
