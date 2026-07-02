@@ -1241,6 +1241,12 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
   position: static;
   inset: auto;
   z-index: auto;
+  /* Normal block flow (NOT the legacy side-panel flex column): the read-mode
+     blocks below use `max-width + margin:auto` to center. Inside a flex column
+     those auto margins would instead shrink each block to its content width and
+     center it (stat strip collapses narrow, body grid balloons), so the header
+     and body wouldn't share a width. Block flow makes max-width the shared cap. */
+  display: block;
   width: 100%;
   max-width: 1180px;
   margin: 0 auto;
