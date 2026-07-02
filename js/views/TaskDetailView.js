@@ -306,7 +306,10 @@ App.TaskDetailView = class TaskDetailView {
               ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
             </button>
           </div>
+      </div>
 
+      <div class="tdp-body">
+        <div class="tdp-col-main">
           <div class="taf-meta taf-meta-detail">
             <div class="taf-field"><span class="taf-field-lbl">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
@@ -322,10 +325,7 @@ App.TaskDetailView = class TaskDetailView {
             <div class="taf-field"><span class="taf-field-lbl">Project</span>${projectChipHtml}</div>
             <div class="taf-field"><span class="taf-field-lbl">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
           </div>
-      </div>
 
-      <div class="tdp-body">
-        <div class="tdp-col-main">
           <div class="tdp-card">
             <div class="tdp-card-title">Description</div>
             <div class="detail-desc">${App.utils.escapeHtml(t.description || 'No description yet.')}</div>
@@ -336,15 +336,6 @@ App.TaskDetailView = class TaskDetailView {
             <div class="tdp-card-title">Subtasks</div>
             ${subtasksHtml}
           </div>` : ''}
-
-          <div class="tdp-card tdp-tabs">
-            <div class="tdp-tablist" role="tablist">
-              <button class="tdp-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments</button>
-              <button class="tdp-tab${tabActive('history')}" data-tab="history" type="button"><i class="ti ti-history"></i>History</button>
-            </div>
-            <div class="tdp-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
-            <div class="tdp-tabpanel${tabActive('history')}" data-panel="history">${entriesHtml}</div>
-          </div>
         </div>
 
         <aside class="tdp-col-right">
@@ -358,6 +349,15 @@ App.TaskDetailView = class TaskDetailView {
               <button class="tdp-qa" data-action="qa-logcall" type="button"><i class="ti ti-phone"></i>Log call</button>
               <button class="tdp-qa" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
             </div>
+          </div>
+
+          <div class="tdp-card tdp-tabs">
+            <div class="tdp-tablist" role="tablist">
+              <button class="tdp-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments</button>
+              <button class="tdp-tab${tabActive('history')}" data-tab="history" type="button"><i class="ti ti-history"></i>History</button>
+            </div>
+            <div class="tdp-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
+            <div class="tdp-tabpanel${tabActive('history')}" data-panel="history">${entriesHtml}</div>
           </div>
 
           <div class="tdp-card">

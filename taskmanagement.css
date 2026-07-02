@@ -6855,7 +6855,7 @@ body.wallboard-active #mainPane { padding: 0; }
    ≤900px (main first, then the rail).
    ========================================================================== */
 #taskDetailWrap .tdp-body {
-  display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px;
   align-items: start; margin-top: 18px;
 }
 #taskDetailWrap .tdp-body .tdp-col-main { grid-column: 1; min-width: 0; }
