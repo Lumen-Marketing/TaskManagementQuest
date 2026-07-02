@@ -284,8 +284,7 @@ App.TaskDetailView = class TaskDetailView {
         ${App.can('tasks.write') ? `<button class="btn btn-primary tdp-complete ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
       </div>
 
-      <div class="tdp-grid">
-        <aside class="tdp-col-left">
+      <div class="tdp-top">
           ${delegated ? `
             <div class="delegation-banner">
               <i class="ti ti-send"></i>
@@ -323,8 +322,9 @@ App.TaskDetailView = class TaskDetailView {
             <div class="taf-field"><span class="taf-field-lbl">Project</span>${projectChipHtml}</div>
             <div class="taf-field"><span class="taf-field-lbl">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
           </div>
-        </aside>
+      </div>
 
+      <div class="tdp-body">
         <div class="tdp-col-main">
           <div class="tdp-card">
             <div class="tdp-card-title">Description</div>
