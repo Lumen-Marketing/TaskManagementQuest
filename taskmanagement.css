@@ -6834,7 +6834,7 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats,
 #taskDetailWrap .tdp-top, #taskDetailWrap .tdp-body { max-width: 1040px; margin-left: auto; margin-right: auto; }
 /* Full-width top: delegation/timer banners + clock-in + the wide properties band. */
-#taskDetailWrap .tdp-top { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; align-items: stretch; }
+#taskDetailWrap .tdp-top { display: flex; flex-direction: column; gap: 14px; margin: 14px 0 18px; align-items: stretch; }
 /* Delegation/timer banners + clock-in span the full section width (same as the
    stat strip and the body below), not narrow centered pills. */
 #taskDetailWrap .tdp-top > .delegation-banner,
