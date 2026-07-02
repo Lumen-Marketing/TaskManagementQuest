@@ -6837,7 +6837,7 @@ body.wallboard-active #mainPane { padding: 0; }
 .taf-desc:focus { outline: 2px solid var(--amber); outline-offset: 0; }
 
 /* Sticky footer — separated by a soft warm gradient, not a border. */
-.taf-foot { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; margin-top: 4px; background: linear-gradient(to bottom, transparent, var(--bg) 45%); }
+.taf-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; margin-top: 8px; }
 .taf-foot-btns { display: flex; gap: 8px; }
 .taf-hint { font-size: 12px; color: var(--ink-3); }
 .taf-create-btn { background: var(--amber); border-color: var(--amber); color: #fff; }
