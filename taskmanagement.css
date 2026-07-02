@@ -6824,9 +6824,11 @@ body.wallboard-active #mainPane { padding: 0; }
 .taf-hint { font-size: 12px; color: var(--ink-3); }
 .taf-create-btn { background: var(--amber); border-color: var(--amber); color: #fff; }
 
-/* --- Task detail: collapse the old 3-column grid into one centered column --- */
-#taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats, #taskDetailWrap .tdp-grid { max-width: 760px; margin-left: auto; margin-right: auto; }
-#taskDetailWrap .tdp-grid { display: flex; flex-direction: column; gap: 16px; grid-template-columns: none; }
+/* --- Task detail: full-width header/stats/properties (pic 1) over a content+rail body --- */
+#taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats,
+#taskDetailWrap .tdp-top, #taskDetailWrap .tdp-body { max-width: 1040px; margin-left: auto; margin-right: auto; }
+/* Full-width top: delegation/timer banners + clock-in + the wide properties band. */
+#taskDetailWrap .tdp-top { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
 #taskDetailWrap .tdp-col-left, #taskDetailWrap .tdp-col-main, #taskDetailWrap .tdp-col-right { width: auto; min-width: 0; }
 
 /* Detail meta-bar values are click-to-edit spans (not form controls). */
@@ -6837,8 +6839,30 @@ body.wallboard-active #mainPane { padding: 0; }
 
 @media (max-width: 720px) {
   #newTaskWrap .taf { max-width: none; }
-  #taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats, #taskDetailWrap .tdp-grid { max-width: none; }
+  #taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats,
+  #taskDetailWrap .tdp-top, #taskDetailWrap .tdp-body { max-width: none; }
   .taf-field, .taf-meta-detail .taf-field { flex-basis: 100%; }
   .taf-title-input { font-size: 22px; }
   .taf-foot { padding: 12px 0; }
+}
+
+/* ============================================================================
+   Task detail — content + rail body (below the kept full-width header, stat
+   strip and wide properties band = pic 1). The lower content is a DOMINANT
+   column (Description / Subtasks / Comments) with a quiet rail beside it (Quick
+   actions / Watchers / Activity) — so those read as a supporting rail, not a
+   lone stack. Warm-flat panze, no hairline borders. Collapses to one column
+   ≤900px (main first, then the rail).
+   ========================================================================== */
+#taskDetailWrap .tdp-body {
+  display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px;
+  align-items: start; margin-top: 18px;
+}
+#taskDetailWrap .tdp-body .tdp-col-main { grid-column: 1; min-width: 0; }
+#taskDetailWrap .tdp-body .tdp-col-right { grid-column: 2; }
+
+@media (max-width: 900px) {
+  #taskDetailWrap .tdp-body { grid-template-columns: 1fr; gap: 16px; }
+  #taskDetailWrap .tdp-body .tdp-col-main,
+  #taskDetailWrap .tdp-body .tdp-col-right { grid-column: 1; }
 }
