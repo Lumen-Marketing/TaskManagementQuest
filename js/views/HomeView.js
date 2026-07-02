@@ -35,7 +35,10 @@ App.HomeView = class HomeView {
   subscribe() {
     const rerender = () => {
       if (this.visible()) this.render();
-      else this._rendered = false; // re-arm the entrance reveal for the next visit
+      else {
+        this._rendered = false;  // re-arm the entrance reveal for the next visit
+        this._cmFetched = false; // refresh the comments feed on the next visit
+      }
     };
     App.EventBus.on('view:changed', rerender);
     App.EventBus.on('tasks:changed', rerender);
@@ -363,6 +366,35 @@ App.HomeView = class HomeView {
       </div>`).join('')
       : `<div class="qhq-empty">No recent activity yet.</div>`;
 
+    // Comments & mentions — comments by OTHERS on my tasks, plus any comment
+    // that @mentions me, newest first. Lazy-fetched once per Home visit (see
+    // the end of render()); renders as a sub-section of the Team workload card.
+    const me = this.controller.currentUser;
+    const taskById = new Map(this.controller.visibleTasks({ includeDone: true }).map(t => [t.id, t]));
+    const cmFeed = (this._recentComments || [])
+      .filter(c => c.authorId !== me)
+      .map(c => ({ c, t: taskById.get(c.taskId), mention: (c.mentions || []).includes(me) }))
+      .filter(x => x.t && (x.mention || x.t.assignee === me || x.t.creator === me))
+      .slice(0, 5);
+    const snippet = s => { const t = String(s || '').replace(/\s+/g, ' ').trim(); return t.length > 90 ? t.slice(0, 87) + '…' : t; };
+    const cmRows = cmFeed.map(({ c, t, mention }) => {
+      const who = this.controller.getUserName(c.authorId);
+      return `
+      <div class="qhq-cm-row" data-id="${esc(t.id)}" role="button" tabindex="0">
+        <span class="qhq-rec-av ${toneFor(who)}" aria-hidden="true">${esc(initials(who))}</span>
+        <span class="qhq-cm-b">
+          <span class="qhq-cm-top"><b>${esc(who)}</b>${mention ? ' <span class="qhq-cm-badge">mentioned you</span>' : ''} · <span class="qhq-rec-task">${esc(t.title)}</span></span>
+          <span class="qhq-cm-tx">${esc(snippet(c.body))}</span>
+        </span>
+        <span class="qhq-rec-ago">${esc((c.createdAt && App.utils.timeAgo(c.createdAt)) || 'just now')}</span>
+      </div>`;
+    }).join('');
+    const cmHtml = `
+      <div class="qhq-cmfeed">
+        <div class="qhq-cmfeed-h">Comments &amp; mentions</div>
+        ${cmRows || '<div class="qhq-empty">No comments on your tasks yet.</div>'}
+      </div>`;
+
     // Team workload roster (managers only): avatar + name, a proportional load
     // bar, priority dots, and an open count — the reference "workload" table in
     // the warm palette. `twLoad` empty ⇒ the whole section is omitted below.
@@ -421,10 +453,12 @@ App.HomeView = class HomeView {
               <div class="qhq-card qhq-tw-card qhq-tw-rail">
                 ${cardHead('people', 'tone-blue', 'Team workload', 'open per person')}
                 <div class="qhq-twlist">${twHtml}</div>
+                ${cmHtml}
               </div>` : `
               <div class="qhq-card qhq-recents">
                 ${cardHead('activity', 'tone-slate', 'Recents', 'your activity')}
                 <div class="qhq-reclist">${recHtml}</div>
+                ${cmHtml}
               </div>`}
           </div>
         </div>
@@ -456,7 +490,7 @@ App.HomeView = class HomeView {
       this.controller.openCalendarOn(b.dataset.day);
     }));
     const open = el => { const id = el.dataset.id; if (id) this.controller.selectTask(id); };
-    this.wrap.querySelectorAll('.qhq-un-row, .qhq-rec-row').forEach(el => {
+    this.wrap.querySelectorAll('.qhq-un-row, .qhq-rec-row, .qhq-cm-row').forEach(el => {
       el.addEventListener('click', () => open(el));
       el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el); } });
     });
@@ -488,6 +522,16 @@ App.HomeView = class HomeView {
     const calEl = this.wrap.querySelector('.qhq-cal');
     const mainEl = this.wrap.querySelector('.qhq-cc-main');
     if (calEl && mainEl) mainEl.style.setProperty('--tile-h', calEl.offsetHeight + 'px');
+
+    // Lazy-load the Comments & mentions feed once per Home visit — the guard
+    // stops a fetch→render→fetch loop; subscribe() re-arms it on leaving Home.
+    if (!this._cmFetched) {
+      this._cmFetched = true;
+      this.controller.loadRecentComments().then(list => {
+        this._recentComments = list;
+        if (this.visible()) this.render();
+      });
+    }
   }
 
   _reduceMotion() {

@@ -440,6 +440,24 @@ App.AppController = class AppController {
   }
 
   /* ---------- comments (migration 053) ---------- */
+  // Recent comments across visible tasks — powers Home's "Comments & mentions"
+  // feed. Cached for 60s so Home re-renders don't re-query; errors degrade to
+  // an empty feed (e.g. the table not existing yet) instead of breaking Home.
+  async loadRecentComments() {
+    const now = Date.now();
+    if (this._recentComments && now - this._recentCommentsAt < 60000) return this._recentComments;
+    try {
+      this._recentComments = this.dataStore.loadRecentComments
+        ? await this.dataStore.loadRecentComments(40)
+        : [];
+    } catch (e) {
+      console.warn('[comments] recent load failed:', e);
+      this._recentComments = this._recentComments || [];
+    }
+    this._recentCommentsAt = now;
+    return this._recentComments;
+  }
+
   // Lazy-load a task's comments into task.comments, then re-render the detail.
   async loadTaskComments(taskId) {
     const t = this.taskModel.find(taskId);

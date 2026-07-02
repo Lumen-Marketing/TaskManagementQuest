@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadNotifications: async () => [],
         // Comments live in-memory in preview/offline mode (no Supabase table).
         loadComments: async (taskId) => (App._previewComments && App._previewComments[taskId]) || [],
+        loadRecentComments: async (limit = 40) => Object.values(App._previewComments || {})
+          .flat()
+          .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+          .slice(0, limit),
         addComment: async (taskId, { body, mentions }) => {
           App._previewComments = App._previewComments || {};
           const list = App._previewComments[taskId] || (App._previewComments[taskId] = []);

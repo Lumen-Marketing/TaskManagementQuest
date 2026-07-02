@@ -49,6 +49,26 @@ App.SupabaseDataStore = class SupabaseDataStore {
     }));
   }
 
+  // Latest comments across every task the viewer can see (RLS-scoped). The
+  // Home "Comments & mentions" feed filters these down to my-tasks + mentions
+  // client-side, so one small query serves the whole feed.
+  async loadRecentComments(limit = 40) {
+    const res = await this.supabase
+      .from('task_comments')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    this._throwIfError(res, 'task_comments recent');
+    return (res.data || []).map(r => ({
+      id: r.id,
+      taskId: r.task_id,
+      authorId: r.author_id,
+      body: r.body || '',
+      mentions: Array.isArray(r.mentions) ? r.mentions : [],
+      createdAt: r.created_at,
+    }));
+  }
+
   async addComment(taskId, { body, mentions }) {
     const res = await this.supabase
       .from('task_comments')
