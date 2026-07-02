@@ -6755,3 +6755,64 @@ body.wallboard-active #mainPane { padding: 0; }
   .tsetup-row { padding: 9px; }
   .tsetup-iconbtn { width: 30px; height: 30px; }
 }
+
+/* ============================================================================
+   Anchored single-column task forms (.taf) — new-task page + task detail.
+   Phase 4a redesign: a centered ~760px column with a big Title anchor, a compact
+   warm meta-bar of fields, then description / subtasks / watchers, sticky footer.
+   Warm-flat panze: no hairline borders — grouping is spacing + faint warm fills.
+   ========================================================================== */
+#newTaskWrap .taf { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; padding: 4px 2px 48px; }
+
+.taf-head { display: flex; align-items: center; gap: 12px; }
+.taf-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.taf-createdby { margin-left: auto; font-size: 12px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px; }
+
+/* The Title anchor — big, borderless, transparent. */
+.taf-title-input { width: 100%; font-family: var(--font-display); font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); background: transparent; border: none; padding: 2px 0; }
+.taf-title-input::placeholder { color: var(--ink-4); }
+.taf-title-input:focus { outline: none; }
+
+/* The meta-bar: one connected warm band that wraps to ~2 lines. */
+.taf-meta { display: flex; flex-wrap: wrap; gap: 12px 16px; background: var(--bg-2); border-radius: 14px; padding: 14px 16px; }
+.taf-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 150px; }
+.taf-field-lbl { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3); }
+.taf-field .field-optional { text-transform: none; letter-spacing: 0; color: var(--ink-4); font-weight: 500; }
+.taf-meta select, .taf-meta input, .taf-meta .projtag {
+  background: var(--surface); border: none; border-radius: 8px; padding: 7px 10px;
+  font-size: 13px; color: var(--ink); font-family: var(--font-body); width: 100%;
+}
+.taf-meta select { appearance: none; -webkit-appearance: none; padding-right: 26px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23929AA3' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
+.taf-meta select:focus, .taf-meta input:focus { outline: 2px solid var(--amber); outline-offset: 0; }
+
+/* Sections (description / subtasks / watchers / notify). */
+.taf-section { display: flex; flex-direction: column; gap: 8px; }
+.taf-section-lbl { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+.taf-desc { width: 100%; background: var(--bg-2); border: none; border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.5; color: var(--ink); font-family: var(--font-body); resize: vertical; }
+.taf-desc:focus { outline: 2px solid var(--amber); outline-offset: 0; }
+
+/* Sticky footer — separated by a soft warm gradient, not a border. */
+.taf-foot { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; margin-top: 4px; background: linear-gradient(to bottom, transparent, var(--bg) 45%); }
+.taf-foot-btns { display: flex; gap: 8px; }
+.taf-hint { font-size: 12px; color: var(--ink-3); }
+.taf-create-btn { background: var(--amber); border-color: var(--amber); color: #fff; }
+
+/* --- Task detail: collapse the old 3-column grid into one centered column --- */
+#taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats, #taskDetailWrap .tdp-grid { max-width: 760px; margin-left: auto; margin-right: auto; }
+#taskDetailWrap .tdp-grid { display: flex; flex-direction: column; gap: 16px; grid-template-columns: none; }
+#taskDetailWrap .tdp-col-left, #taskDetailWrap .tdp-col-main, #taskDetailWrap .tdp-col-right { width: auto; min-width: 0; }
+
+/* Detail meta-bar values are click-to-edit spans (not form controls). */
+.taf-meta-detail .taf-field { flex: 1 1 160px; }
+.taf-meta-detail .taf-field > .detail-val,
+.taf-meta-detail .taf-field > span:last-child { font-size: 14px; color: var(--ink); min-width: 0; }
+.taf-meta-detail .tdp-editable { border-radius: 6px; }
+
+@media (max-width: 720px) {
+  #newTaskWrap .taf { max-width: none; }
+  #taskDetailWrap .tdp-head, #taskDetailWrap .tdp-stats, #taskDetailWrap .tdp-grid { max-width: none; }
+  .taf-field, .taf-meta-detail .taf-field { flex-basis: 100%; }
+  .taf-title-input { font-size: 22px; }
+  .taf-foot { padding: 12px 0; }
+}
