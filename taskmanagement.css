@@ -5516,7 +5516,9 @@ body.ui-command-center .detail-title {
 .qhq-arlist, .qhq-hdlist { padding: 2px 18px 12px; flex: 1; display: flex; flex-direction: column; }
 .qhq-ar-row { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-top: 1px solid var(--border); }
 .qhq-ar-row:first-child { border-top: none; }
-.qhq-ar-ic { width: 28px; height: 28px; margin-right: 14px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
+/* Glyphs CENTER under the 40px head icon (6px + 28px + 8px + 11px gap = the
+   53px column) — edge-aligned small chips read as misaligned. */
+.qhq-ar-ic { width: 28px; height: 28px; margin: 0 8px 0 6px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
 .qhq-ar-ic.hold { background: #FCEFE0; color: #B5701A; }
 .qhq-ar-ic .qhq-ic { width: 17px; height: 17px; }
 .qhq-ar-b { flex: 1; min-width: 0; }
@@ -5720,7 +5722,7 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 /* Up next mirrors the At-risk row: tinted glyph chip + title/subtitle + due. */
 .qhq-un-row { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-top: 1px solid var(--border); cursor: pointer; }
 .qhq-un-row:first-child { border-top: none; }
-.qhq-un-ic { width: 28px; height: 28px; margin-right: 14px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
+.qhq-un-ic { width: 28px; height: 28px; margin: 0 8px 0 6px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
 .qhq-un-ic .qhq-ic { width: 17px; height: 17px; }
 .qhq-un-b { flex: 1; min-width: 0; }
 .qhq-un-t { font-size: 12.8px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5744,7 +5746,7 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-rec-row:first-child { border-top: none; }
 .qhq-rec-av {
   width: 27px; height: 27px; flex: 0 0 auto; border-radius: 50%;
-  margin-right: 15px;  /* 27 + 15 + 11 gap = the 53px glyph column */
+  margin: 0 8.5px 0 6.5px;  /* centered in the 53px glyph column */
   display: grid; place-items: center; font-size: 10.5px; font-weight: 800;
   background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2));
 }
@@ -5763,6 +5765,7 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-tw-row:first-child { border-top: none; }
 .qhq-tw-av {
   width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center;
+  justify-self: center;  /* centered in the 40px grid column, under the head icon */
   font-size: 11px; font-weight: 800; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2));
 }
 .qhq-tw-name { font-size: 12.8px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5804,9 +5807,10 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
   align-items: flex-start; padding: 8px; margin: 0 -8px; border-radius: 9px;
   cursor: pointer; transition: background var(--dur-fast) var(--ease-out);
 }
+.qhq-cm-row + .qhq-cm-row { border-top: 1px solid var(--border); }
 .qhq-cm-row:hover { background: var(--bg-2); }
 .qhq-cm-row:hover .qhq-rec-av { transform: scale(1.12); }
-.qhq-cm-row .qhq-rec-av { width: 26px; height: 26px; margin-top: 1px; }
+.qhq-cm-row .qhq-rec-av { width: 26px; height: 26px; justify-self: center; margin: 1px 0 0; }
 .qhq-cm-b { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .qhq-cm-top { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .qhq-cm-top b { color: var(--ink); font-weight: 700; }
