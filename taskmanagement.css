@@ -5884,16 +5884,20 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
    as the single accent (in place of Linear's acid-lime). Status uses Linear's
    indigo/emerald/crimson. */
 [data-theme="dark"] body.ui-command-center {
-  --bg: #08090A;          /* onyx canvas */
-  --bg-2: #0F1011;        /* charcoal — hovers / raised */
-  --bg-3: #161718;        /* obsidian — deep */
-  --surface: #0F1011;     /* charcoal — cards, topbar, nav, menus */
-  --ink: #F7F8F8;         /* snow */
-  --ink-2: #8A8F98;       /* fog */
-  --ink-3: #62666D;       /* slate */
-  --ink-4: #4A4D52;
-  --border: #23252A;      /* graphite hairline */
-  --border-strong: #383B3F; /* steel */
+  /* One dark canvas for every section — the Projects-page dark palette
+     (boss-picked): deep blue-charcoal canvas, raised charcoal cards. */
+  --bg: #14171D;          /* canvas */
+  --bg-2: #20252E;        /* hovers / raised fills */
+  --bg-3: #262B33;        /* wells (segmented controls, tracks) */
+  --surface: #1B1F27;     /* cards, topbar chrome, menus */
+  --ink: #F2F4F6;         /* snow */
+  --ink-2: #AEB6C2;       /* fog */
+  --ink-3: #7C8696;       /* slate */
+  --ink-4: #5A636F;
+  --border: #2A2F39;      /* graphite hairline */
+  --border-strong: #353B46; /* steel */
+  --block-line: var(--border); /* card outlines follow the dark hairline (the
+                                  base #ebe7e2 was bleeding white into dark) */
   --amber: #E0552B;       /* terracotta — the single accent */
   --amber-bg: #2A1710;
   --amber-ink: #F0A582;
@@ -5917,8 +5921,8 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 }
 
 /* Segment wells + their raised "on" chip (were #EDEFF2 / #fff). */
-[data-theme="dark"] body.ui-command-center .seg { background: #0F1216; }
-[data-theme="dark"] body.ui-command-center .seg button.on { background: #2A3038; color: var(--ink); }
+[data-theme="dark"] body.ui-command-center .seg { background: var(--bg); }
+[data-theme="dark"] body.ui-command-center .seg button.on { background: var(--bg-3); color: var(--ink); }
 
 /* Controls that hard-coded a white fill. */
 [data-theme="dark"] body.ui-command-center .search input,
@@ -5960,10 +5964,10 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 [data-theme="dark"] .qhq-chip.hold,
 [data-theme="dark"] .qhq-ar-ic.hold { color: #E3B36F; background: #352A12; }
 [data-theme="dark"] .qhq-brief-h .b { color: #E3B36F; background: #352A12; border-color: #4A3A1A; }
-[data-theme="dark"] .qhq-range { background: #0F1216; }
-[data-theme="dark"] .qhq-range button.on { background: #2A3038; color: var(--ink); }
+[data-theme="dark"] .qhq-range { background: var(--bg); }
+[data-theme="dark"] .qhq-range button.on { background: var(--bg-3); color: var(--ink); }
 [data-theme="dark"] .qhq-bh-track,
-[data-theme="dark"] .qhq-mixbar { background: #262B32; }
+[data-theme="dark"] .qhq-mixbar { background: var(--bg-3); }
 
 /* transitions-dev — semantic motion tokens (hover lifts, menus, modals). */
 :root {
@@ -6148,7 +6152,8 @@ body.panze-home, body.panze-tasks {
   --pz-card-2: #20252E;
   --pz-bg: #14171D;
   --pz-bg-3: #262B33;
-  --pz-wash: linear-gradient(135deg, #221912 0%, #14171d 46%, #0F131C 100%);
+  /* Flat canvas, matching the Projects dark page (was a warm gradient wash). */
+  --pz-wash: #14171D;
   --pz-ink: #F2F4F6;
   --pz-ink-2: #AEB6C2;
   --pz-ink-3: #7C8696;
@@ -6754,10 +6759,12 @@ body.ui-command-center .pnav-item {
   transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 body.ui-command-center .pnav-item:hover { background: var(--bg-3); color: var(--ink); }
+/* Inverted pill: ink fill, canvas-colored text — works in BOTH themes (in dark
+   the ink is near-white, so #fff text would vanish). */
 body.ui-command-center .pnav-item.active,
-body.ui-command-center .pnav-item.open { background: var(--ink); color: #fff; }
+body.ui-command-center .pnav-item.open { background: var(--ink); color: var(--bg); }
 body.ui-command-center .pnav-item.active .pnav-caret,
-body.ui-command-center .pnav-item.open .pnav-caret { color: #fff; }
+body.ui-command-center .pnav-item.open .pnav-caret { color: var(--bg); }
 body.ui-command-center .pnav-caret { font-size: 14px; opacity: .75; }
 
 /* Team dropdown menu */
@@ -6873,7 +6880,7 @@ body.ui-command-center .tb-icon .tb-badge:empty { display: none; }
 body.ui-command-center .tb-icon {
   height: 32px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
 }
 body.ui-command-center .tb-icon:hover { background: var(--bg-2); border-color: var(--border-strong); }
@@ -7279,9 +7286,13 @@ body.ui-command-center .qhq-rpt-top {
   padding: 10px 14px 10px 18px;
   align-items: center;
 }
-/* Home: the greeting IS the section name — shared 20px title scale. */
-body.ui-command-center .qhq-head .qhq-greet { font-size: 20px; line-height: 1.1; }
-body.ui-command-center .qhq-head .qhq-dateline { margin-top: 2px; }
+/* Home: the greeting IS the section name — bigger than the shared scale, with
+   the dateline riding BESIDE it (not stacked) so the card stays slim. */
+body.ui-command-center .qhq-head > div:first-child {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-width: 0;
+}
+body.ui-command-center .qhq-head .qhq-greet { font-size: 26px; line-height: 1.1; }
+body.ui-command-center .qhq-head .qhq-dateline { margin-top: 0; }
 body.ui-command-center .qhq-home .qhq-head { margin-bottom: 4px; }
 /* Projects: page gutter spacing; drop the mono eyebrow so the name reads like
    the All-tasks card; title down from 30px to the shared 20px. */
@@ -7291,3 +7302,80 @@ body.ui-command-center .pv-eyebrow { display: none; }
 body.ui-command-center .pv-title { font-size: 20px; margin: 0; letter-spacing: -0.02em; }
 /* Reports: title up to the shared 20px. */
 body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
+
+/* ============================================================================
+   DARK MODE for the boss-table reskin (2026-07-03). The #taskViewWrap reskin
+   hard-codes light-paper values (white cards, warm hairlines, near-black ink),
+   which bled into dark mode as unreadable text and bright white outlines.
+   These [data-theme="dark"] rules out-rank it and re-tint via the dark tokens.
+   ============================================================================ */
+[data-theme="dark"] #taskViewWrap .task-group {
+  background: var(--surface);
+  border-color: var(--border);
+}
+[data-theme="dark"] #taskViewWrap .task-group > .group-head {
+  background: var(--bg-2);
+  border-bottom-color: var(--border);
+}
+[data-theme="dark"] #taskViewWrap .group-head .group-title { color: var(--ink); }
+[data-theme="dark"] #taskViewWrap .group-head .group-count { background: var(--bg-3); color: var(--ink-3); }
+[data-theme="dark"] #taskViewWrap .task-group .list-row { border-bottom-color: var(--border); }
+[data-theme="dark"] #taskViewWrap .list-row:hover { background: var(--bg-2); }
+[data-theme="dark"] #taskViewWrap .list-row .task-title-cell { color: var(--ink); }
+[data-theme="dark"] #taskViewWrap .list-header,
+[data-theme="dark"] #taskViewWrap .list-header .col-filter,
+[data-theme="dark"] #taskViewWrap .list-header > span { color: var(--ink-2); }
+[data-theme="dark"] #taskViewWrap .list-header .col-filter:hover { color: var(--ink); }
+
+/* Status — colored text readable on charcoal. */
+[data-theme="dark"] #taskViewWrap .list-row .status-sel { color: var(--ink-2); }
+[data-theme="dark"] #taskViewWrap .list-row .status-sel.status-todo    { color: var(--amber-ink); }
+[data-theme="dark"] #taskViewWrap .list-row .status-sel.status-pending { color: var(--ink-3); }
+[data-theme="dark"] #taskViewWrap .list-row .status-sel.status-hold    { color: var(--rust-ink); }
+[data-theme="dark"] #taskViewWrap .list-row .status-sel.status-review  { color: #B4A5EE; }
+[data-theme="dark"] #taskViewWrap .list-row .status-sel.status-done    { color: var(--green-ink); }
+[data-theme="dark"] #taskViewWrap .list-row button.status-sel:hover,
+[data-theme="dark"] #taskViewWrap .list-row button.status-sel[aria-expanded="true"] {
+  background: var(--bg-3);
+  border-color: var(--border-strong);
+}
+
+/* Priority pills — dark tints from the token families. */
+[data-theme="dark"] #taskViewWrap .list-row .priority-block.priority-critical,
+[data-theme="dark"] #taskViewWrap .list-row .priority-block.priority-urgent { background: var(--rust-bg); color: var(--rust-ink); }
+[data-theme="dark"] #taskViewWrap .list-row .priority-block.priority-high   { background: var(--amber-bg); color: var(--amber-ink); }
+[data-theme="dark"] #taskViewWrap .list-row .priority-block.priority-medium { background: var(--blue-bg); color: var(--blue-ink); }
+[data-theme="dark"] #taskViewWrap .list-row .priority-block.priority-low    { background: var(--bg-3); color: var(--ink-3); }
+
+/* Type chips — same tint logic, dark. */
+[data-theme="dark"] #taskViewWrap .list-row .type-text { background: var(--bg-3); color: var(--ink-2); }
+[data-theme="dark"] #taskViewWrap .list-row .type-text.type-invoicing { background: var(--amber-bg); color: var(--amber-ink); }
+[data-theme="dark"] #taskViewWrap .list-row .type-text.type-bid       { background: #272138; color: #B4A5EE; }
+[data-theme="dark"] #taskViewWrap .list-row .type-text.type-admin     { background: var(--bg-3); color: var(--ink-2); }
+[data-theme="dark"] #taskViewWrap .list-row .type-text.type-lead      { background: var(--green-bg); color: var(--green-ink); }
+[data-theme="dark"] #taskViewWrap .list-row .type-text.type-ar        { background: var(--amber-bg); color: #E3B36F; }
+[data-theme="dark"] #taskViewWrap .list-row .type-text.type-meeting   { background: var(--blue-bg); color: var(--blue-ink); }
+[data-theme="dark"] #taskViewWrap .list-row .type-text.type-web_dev   { background: #272138; color: #B4A5EE; }
+
+/* Label + due — brightened for charcoal. */
+[data-theme="dark"] #taskViewWrap .list-row .co-chip { color: var(--ink-2); }
+[data-theme="dark"] #taskViewWrap .list-row .co-chip.co-roofing  { color: #E8A54C; }
+[data-theme="dark"] #taskViewWrap .list-row .co-chip.co-drafting { color: #7FA9F7; }
+[data-theme="dark"] #taskViewWrap .list-row .co-chip.co-lumen    { color: #A791EC; }
+[data-theme="dark"] #taskViewWrap .list-row .meta-cell { color: var(--ink-2); }
+[data-theme="dark"] #taskViewWrap .list-row .due-cell { color: var(--ink); }
+[data-theme="dark"] #taskViewWrap .list-row .due-cell.over,
+[data-theme="dark"] #taskViewWrap .list-row .due-cell.overdue { color: var(--amber-ink); }
+
+/* Tasks-page chrome: toolbar buttons + widget cards hard-coded light values. */
+[data-theme="dark"] #listPane .work-toolbar .btn {
+  background: var(--surface); border-color: var(--border); color: var(--ink-2);
+}
+[data-theme="dark"] #listPane .work-toolbar .btn:hover {
+  background: var(--bg-3); border-color: var(--border-strong); color: var(--ink);
+}
+[data-theme="dark"] #listPane .up-next-card,
+[data-theme="dark"] #listPane .focus-widget,
+[data-theme="dark"] #listPane .progress-card {
+  border: 1px solid var(--border) !important;
+}
