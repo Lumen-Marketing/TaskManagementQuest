@@ -16,6 +16,7 @@ const HOME_ICONS = {
   date: `<path fill="currentColor" d="M6.96 2c.418 0 .756.31.756.692V4.09c.67-.012 1.422-.012 2.268-.012h4.032c.846 0 1.597 0 2.268.012V2.692c0-.382.338-.692.756-.692s.756.31.756.692V4.15c1.45.106 2.403.368 3.103 1.008c.7.641.985 1.513 1.101 2.842v1H2V8c.116-1.329.401-2.2 1.101-2.842c.7-.64 1.652-.902 3.103-1.008V2.692c0-.382.339-.692.756-.692"/><path fill="currentColor" d="M22 14v-2c0-.839-.013-2.335-.026-3H2.006c-.013.665 0 2.161 0 3v2c0 3.771 0 5.657 1.17 6.828C4.349 22 6.234 22 10.004 22h4c3.77 0 5.654 0 6.826-1.172S22 17.771 22 14" opacity=".5"/><path fill="currentColor" fill-rule="evenodd" d="M14 12.25A1.75 1.75 0 0 0 12.25 14v2a1.75 1.75 0 1 0 3.5 0v-2A1.75 1.75 0 0 0 14 12.25m0 1.5a.25.25 0 0 0-.25.25v2a.25.25 0 1 0 .5 0v-2a.25.25 0 0 0-.25-.25" clip-rule="evenodd"/><path fill="currentColor" d="M11.25 13a.75.75 0 0 0-1.28-.53l-1.5 1.5a.75.75 0 0 0 1.06 1.06l.22-.22V17a.75.75 0 0 0 1.5 0z"/>`,
   coffee: `<path fill="currentColor" fill-rule="evenodd" d="M6.977 1.327a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 0 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175m4 0a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 1 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175m4 0a.75.75 0 0 1 .175 1.046l-.386.541c.626.474.765 1.364.306 2.007l-.41.576a.75.75 0 1 1-1.222-.871l.386-.542a1.457 1.457 0 0 1-.306-2.007l.411-.575a.75.75 0 0 1 1.046-.175" clip-rule="evenodd" opacity=".5"/><path fill="currentColor" d="M9.613 22h.774c2.66 0 3.991 0 4.856-.81c.67-.626.874-1.564 1.015-3.19H3.742c.14 1.626.344 2.564 1.014 3.19c.865.81 2.196.81 4.856.81" opacity=".5"/><path fill="currentColor" fill-rule="evenodd" d="M3.284 11.266c-.133-2-.2-2.999.393-3.632C4.27 7 5.272 7 7.276 7h5.449c2.003 0 3.005 0 3.598.634c.162.173.275.374.35.616H17a4.75 4.75 0 1 1 0 9.5h-.722l-.02.25H3.742a86 86 0 0 1-.116-1.6zm13.1 4.984H17a3.25 3.25 0 0 0 0-6.5h-.2c-.012.43-.045.93-.084 1.516z" clip-rule="evenodd"/>`,
   people: `<circle cx="15" cy="6" r="3" fill="currentColor" opacity=".4"/><ellipse cx="16" cy="17" fill="currentColor" opacity=".4" rx="5" ry="3"/><circle cx="9.001" cy="6" r="4" fill="currentColor"/><ellipse cx="9.001" cy="17.001" fill="currentColor" rx="7" ry="4"/>`,
+  chat: `<path fill="currentColor" d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2S2 6.477 2 12c0 1.6.376 3.112 1.043 4.453c.178.356.237.763.134 1.148l-.595 2.226a1.3 1.3 0 0 0 1.591 1.592l2.226-.596a1.63 1.63 0 0 1 1.149.133A9.96 9.96 0 0 0 12 22" opacity=".5"/><path fill="currentColor" d="M8.5 13.25a1.25 1.25 0 1 0 0-2.5a1.25 1.25 0 0 0 0 2.5m3.5 0a1.25 1.25 0 1 0 0-2.5a1.25 1.25 0 0 0 0 2.5m4.75-1.25a1.25 1.25 0 1 1-2.5 0a1.25 1.25 0 0 1 2.5 0"/>`,
 };
 
 /* HomeView — the personal landing screen (every role). Greeting + quick actions,
@@ -368,7 +369,8 @@ App.HomeView = class HomeView {
 
     // Comments & mentions — comments by OTHERS on my tasks, plus any comment
     // that @mentions me, newest first. Lazy-fetched once per Home visit (see
-    // the end of render()); renders as a sub-section of the Team workload card.
+    // the end of render()); its own card beside Projects overview so neither
+    // that card spans the full main region nor the Team workload card grows.
     const me = this.controller.currentUser;
     const taskById = new Map(this.controller.visibleTasks({ includeDone: true }).map(t => [t.id, t]));
     const cmFeed = (this._recentComments || [])
@@ -390,9 +392,9 @@ App.HomeView = class HomeView {
       </div>`;
     }).join('');
     const cmHtml = `
-      <div class="qhq-cmfeed">
-        <div class="qhq-cmfeed-h">Comments &amp; mentions</div>
-        ${cmRows || '<div class="qhq-empty">No comments on your tasks yet.</div>'}
+      <div class="qhq-card qhq-cm-card">
+        ${cardHead('chat', 'tone-amber', 'Comments & mentions', 'on your tasks')}
+        <div class="qhq-cmlist">${cmRows || '<div class="qhq-empty">No comments on your tasks yet.</div>'}</div>
       </div>`;
 
     // Team workload roster (managers only): avatar + name, a proportional load
@@ -446,6 +448,7 @@ App.HomeView = class HomeView {
               <div class="qhq-arlist">${riskRows}</div>
             </div>
             ${donutHtml}
+            ${cmHtml}
           </div>
           <div class="qhq-cc-rail">
             ${calHtml}
@@ -453,12 +456,10 @@ App.HomeView = class HomeView {
               <div class="qhq-card qhq-tw-card qhq-tw-rail">
                 ${cardHead('people', 'tone-blue', 'Team workload', 'open per person')}
                 <div class="qhq-twlist">${twHtml}</div>
-                ${cmHtml}
               </div>` : `
               <div class="qhq-card qhq-recents">
                 ${cardHead('activity', 'tone-slate', 'Recents', 'your activity')}
                 <div class="qhq-reclist">${recHtml}</div>
-                ${cmHtml}
               </div>`}
           </div>
         </div>
