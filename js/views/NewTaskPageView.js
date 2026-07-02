@@ -106,7 +106,7 @@ App.NewTaskPageView = class NewTaskPageView {
     const me = App.PEOPLE[this.currentUser];
     const { ids: companyIds, selected: selectedCompany } = this._companyChoices();
     return `
-      <div class="taf">
+      <div class="taf ntf">
         <div class="taf-head">
           <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
           <span class="taf-eyebrow">New task</span>
@@ -115,68 +115,75 @@ App.NewTaskPageView = class NewTaskPageView {
 
         <input type="text" id="nt-title" class="taf-title-input" placeholder="Lead Name / Task" aria-label="Task title" required autofocus />
 
-        <div class="taf-meta">
-          <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="nt-company">${companyIds.map(id => { const c = App.COMPANIES[id] || { label: id }; return `<option value="${id}" ${id === selectedCompany ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`; }).join('')}</select></label>
-          <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="nt-type">${Object.entries(App.TASK_TYPES).map(([k, v]) => `<option value="${k}" ${k === 'admin' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
-          <label class="taf-field hidden" id="nt-bid-status-row"><span class="taf-field-lbl">Bid status</span><select id="nt-bid-status">${Object.entries(App.BID_STATUSES).map(([k, v]) => `<option value="${k}" ${k === 'queue' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
-          <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="nt-status"><option value="todo" selected>Active</option><option value="pending">Pending</option><option value="hold">On hold</option></select></label>
-          <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="nt-label">${Object.entries(App.TASK_LABELS).map(([k, v]) => `<option value="${k}" ${k === 'roof' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
-          <label class="taf-field"><span class="taf-field-lbl">Priority</span><select id="nt-priority">${Object.entries(App.PRIORITIES).map(([k, v]) => `<option value="${k}" ${k === 'medium' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
-          <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="nt-assignee">${this._assigneeOptionsHtml(selectedCompany, this.currentUser)}</select></label>
-          <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="nt-due" class="picker-input" value="${App.utils.todayISO(1)}" /></label>
-          <label class="taf-field"><span class="taf-field-lbl">Time</span><input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" /></label>
-          <label class="taf-field"><span class="taf-field-lbl">Reminder</span><input type="datetime-local" id="nt-reminderAt" class="picker-input" /></label>
-          <div class="taf-field"><span class="taf-field-lbl">Project</span><button type="button" id="nt-project" class="projtag projtag-btn projtag-empty" data-current="" aria-haspopup="listbox"><i class="ti ti-folder-plus"></i>No project</button></div>
-        </div>
+        <div id="nt-delegation-banner" class="delegation-banner hidden"><i class="ti ti-send"></i><span id="nt-delegation-text"></span></div>
 
-        <div class="taf-section">
-          <div class="taf-section-lbl">Description</div>
-          <textarea id="nt-desc" class="taf-desc" placeholder="Add details, links, context…" aria-label="Description" rows="4"></textarea>
-          <div id="nt-delegation-banner" class="delegation-banner hidden"><i class="ti ti-send"></i><span id="nt-delegation-text"></span></div>
-        </div>
+        <div class="tdp-body">
+          <div class="tdp-col-main">
+            <div class="taf-meta">
+              <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="nt-company">${companyIds.map(id => { const c = App.COMPANIES[id] || { label: id }; return `<option value="${id}" ${id === selectedCompany ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`; }).join('')}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="nt-type">${Object.entries(App.TASK_TYPES).map(([k, v]) => `<option value="${k}" ${k === 'admin' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
+              <label class="taf-field hidden" id="nt-bid-status-row"><span class="taf-field-lbl">Bid status</span><select id="nt-bid-status">${Object.entries(App.BID_STATUSES).map(([k, v]) => `<option value="${k}" ${k === 'queue' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="nt-status"><option value="todo" selected>Active</option><option value="pending">Pending</option><option value="hold">On hold</option></select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="nt-label">${Object.entries(App.TASK_LABELS).map(([k, v]) => `<option value="${k}" ${k === 'roof' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Priority</span><select id="nt-priority">${Object.entries(App.PRIORITIES).map(([k, v]) => `<option value="${k}" ${k === 'medium' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="nt-assignee">${this._assigneeOptionsHtml(selectedCompany, this.currentUser)}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="nt-due" class="picker-input" value="${App.utils.todayISO(1)}" /></label>
+              <label class="taf-field"><span class="taf-field-lbl">Time</span><input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" /></label>
+              <label class="taf-field"><span class="taf-field-lbl">Reminder</span><input type="datetime-local" id="nt-reminderAt" class="picker-input" /></label>
+              <div class="taf-field"><span class="taf-field-lbl">Project</span><button type="button" id="nt-project" class="projtag projtag-btn projtag-empty" data-current="" aria-haspopup="listbox"><i class="ti ti-folder-plus"></i>No project</button></div>
+            </div>
 
-        <div class="taf-section">
-          <div class="taf-section-lbl">Subtasks <span class="field-optional">Optional</span></div>
-          <div class="subtask-add-row">
-            <input type="text" id="nt-subtask-input" maxlength="200" placeholder="Add a step and press Enter" />
-            <button class="btn btn-sm" type="button" data-action="add-subtask">Add</button>
+            <div class="tdp-card">
+              <div class="tdp-card-title">Description</div>
+              <textarea id="nt-desc" class="taf-desc" placeholder="Add details, links, context…" aria-label="Description" rows="4"></textarea>
+            </div>
+
+            <div class="tdp-card">
+              <div class="tdp-card-title">Subtasks <span class="field-optional">Optional</span></div>
+              <div class="subtask-add-row">
+                <input type="text" id="nt-subtask-input" maxlength="200" placeholder="Add a step and press Enter" />
+                <button class="btn btn-sm" type="button" data-action="add-subtask">Add</button>
+              </div>
+              <div class="subtask-chip-list" id="nt-subtasks"></div>
+            </div>
           </div>
-          <div class="subtask-chip-list" id="nt-subtasks"></div>
-        </div>
 
-        <div class="taf-section">
-          <div class="taf-section-lbl"><i class="ti ti-users"></i> Watchers</div>
-          <div class="watcher-picker">
-            <div class="watcher-tags" id="nt-watchers"></div>
-            <div class="watcher-dropdown hidden" id="nt-watcher-dropdown"></div>
-          </div>
-        </div>
+          <aside class="tdp-col-right">
+            <div class="tdp-card">
+              <div class="tdp-card-title"><i class="ti ti-users"></i> Watchers</div>
+              <div class="watcher-picker">
+                <div class="watcher-tags" id="nt-watchers"></div>
+                <div class="watcher-dropdown hidden" id="nt-watcher-dropdown"></div>
+              </div>
+            </div>
 
-        <div class="taf-section">
-          <div class="taf-section-lbl"><i class="ti ti-bell"></i> Notify on create</div>
-          <div class="notify-box">
-            <label class="notify-option">
-              <input type="checkbox" id="nt-notify-email" checked />
-              <i class="ti ti-mail"></i>
-              <span id="nt-notify-email-label">Email assignee</span>
-              <span class="email-hint" id="nt-notify-email-addr"></span>
-            </label>
-            <label class="notify-option">
-              <input type="checkbox" id="nt-notify-inapp" checked />
-              <i class="ti ti-app-window"></i>
-              <span>In-app notification</span>
-            </label>
-            <label class="notify-option">
-              <input type="checkbox" id="nt-notify-watchers" checked />
-              <i class="ti ti-users"></i>
-              <span>Also email watchers</span>
-            </label>
-            <label class="notify-option">
-              <input type="checkbox" id="nt-notify-whatsapp" />
-              <i class="ti ti-brand-whatsapp"></i>
-              <span>WhatsApp ping (urgent only)</span>
-            </label>
-          </div>
+            <div class="tdp-card">
+              <div class="tdp-card-title"><i class="ti ti-bell"></i> Notify on create</div>
+              <div class="notify-box">
+                <label class="notify-option">
+                  <input type="checkbox" id="nt-notify-email" checked />
+                  <i class="ti ti-mail"></i>
+                  <span id="nt-notify-email-label">Email assignee</span>
+                  <span class="email-hint" id="nt-notify-email-addr"></span>
+                </label>
+                <label class="notify-option">
+                  <input type="checkbox" id="nt-notify-inapp" checked />
+                  <i class="ti ti-app-window"></i>
+                  <span>In-app notification</span>
+                </label>
+                <label class="notify-option">
+                  <input type="checkbox" id="nt-notify-watchers" checked />
+                  <i class="ti ti-users"></i>
+                  <span>Also email watchers</span>
+                </label>
+                <label class="notify-option">
+                  <input type="checkbox" id="nt-notify-whatsapp" />
+                  <i class="ti ti-brand-whatsapp"></i>
+                  <span>WhatsApp ping (urgent only)</span>
+                </label>
+              </div>
+            </div>
+          </aside>
         </div>
 
         <div class="taf-foot">
