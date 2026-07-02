@@ -273,14 +273,7 @@ App.TaskDetailView = class TaskDetailView {
         </div>
       </div>
 
-      <div class="tdp-stats">
-        <div class="tdp-stat"><b>${commentsCount}</b><span>Comments</span></div>
-        <div class="tdp-stat"><b>${watcherIds.length}</b><span>Watchers</span></div>
-        <div class="tdp-stat"><b>${subtaskCount}</b><span>Subtasks</span></div>
-        <div class="tdp-stats-spacer"></div>
-        ${App.can('tasks.write') ? `<button class="btn btn-primary tdp-complete ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
-      </div>
-
+      ${(delegated || myTimerOnThis) ? `
       <div class="tdp-top">
           ${delegated ? `
             <div class="delegation-banner">
@@ -296,13 +289,15 @@ App.TaskDetailView = class TaskDetailView {
               <span class="live-time" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
             </div>
           ` : ''}
+      </div>` : ''}
 
-          <div class="detail-actions-row">
-            <button class="btn ${myTimerOnThis ? '' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
-              <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>
-              ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
-            </button>
-          </div>
+      <div class="tdp-stats">
+        <div class="tdp-stat"><b>${commentsCount}</b><span>Comments</span></div>
+        <div class="tdp-stat"><b>${watcherIds.length}</b><span>Watchers</span></div>
+        <div class="tdp-stat"><b>${subtaskCount}</b><span>Subtasks</span></div>
+        <div class="tdp-stats-spacer"></div>
+        <button class="btn tdp-clockin" data-action="toggle-timer" type="button"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}</button>
+        ${App.can('tasks.write') ? `<button class="btn btn-primary tdp-complete ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
       </div>
 
       <div class="tdp-body">
