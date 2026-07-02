@@ -26,7 +26,7 @@ export default defineConfig({
   projects: [
     {
       name: 'local',
-      testMatch: ['auth.spec.js', 'tasks.spec.js', 'role-gate.spec.js', 'preview-bypass-dead.spec.js', 'add-person.spec.js', 'responsive.spec.js', 'focus-model.spec.js', 'focus-dragorder.spec.js', 'focus-e2e.spec.js', 'hq-time.spec.js', 'redesign-topbar.spec.js', 'home-reports.spec.js', 'mobile-quick-actions.spec.js', 'wallboard.spec.js', 'restyle-blocks.spec.js'],
+      testMatch: ['auth.spec.js', 'tasks.spec.js', 'role-gate.spec.js', 'preview-bypass-dead.spec.js', 'add-person.spec.js', 'responsive.spec.js', 'focus-model.spec.js', 'focus-dragorder.spec.js', 'focus-e2e.spec.js', 'hq-time.spec.js', 'redesign-topbar.spec.js', 'home-reports.spec.js', 'mobile-quick-actions.spec.js', 'wallboard.spec.js', 'restyle-blocks.spec.js', 'report-problem.spec.js'],
       use: {
         baseURL: LOCAL_BASE,
         ...devices['Desktop Chrome'],
