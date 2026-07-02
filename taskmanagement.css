@@ -1065,7 +1065,9 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 /* Time-tracking pages */
 .time-page { padding: 0 24px 32px; }
 .time-section { margin-top: 18px; }
-.time-section-title { font-family: var(--font-display); font-size: 22px; letter-spacing: -0.01em; margin-bottom: 10px; }
+/* 17px left inset (16px cell padding + 1px card border) so section titles
+   share a left edge with the text inside the table cards below them. */
+.time-section-title { font-family: var(--font-display); font-size: 22px; letter-spacing: -0.01em; margin-bottom: 10px; padding-left: 17px; }
 
 .time-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .time-card {
@@ -1087,8 +1089,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .time-table:not(.approval-table) { table-layout: fixed; }
 .time-table:not(.approval-table) th:first-child { width: 24%; }
 .time-table:not(.approval-table) th:last-child:empty { width: 110px; }
-.time-table th, .time-table td { padding: 11px 16px; text-align: left; font-size: 12.5px; border-bottom: 1px solid var(--border-strong, var(--border)); }
-.time-table th { background: var(--bg-3, var(--bg-2)); color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.07em; font-size: 10px; font-weight: 700; font-family: var(--font-mono); }
+.time-table th, .time-table td { padding: 11px 16px; text-align: left; font-size: 12.5px; border-bottom: 1px solid var(--border); }
+.time-table th { color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.07em; font-size: 10px; font-weight: 700; font-family: var(--font-mono); }
 .time-table tr:last-child td { border-bottom: none; }
 .time-table tbody tr:not(.live):hover td { background: var(--bg-2); }
 .time-table tr.live td { background: color-mix(in oklch, var(--green) 8%, transparent); }
@@ -1161,7 +1163,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 }
 
 /* Team hierarchy / org chart */
-.org-sub { font-size: 12px; color: var(--ink-3); margin: -4px 0 14px; }
+.org-sub { font-size: 12px; color: var(--ink-3); margin: -4px 0 14px; padding-left: 17px; }
 .org-chart { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
 .org-node {
   background: var(--surface);
@@ -1173,8 +1175,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .org-super {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 14px;
-  background: var(--bg-3, var(--bg-2));
-  border-bottom: 1px solid var(--border-strong, var(--border));
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
 }
 .org-super-meta { flex: 1; min-width: 0; }
 .org-super-name { font-weight: 600; font-size: 13px; }

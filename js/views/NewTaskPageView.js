@@ -119,7 +119,9 @@ App.NewTaskPageView = class NewTaskPageView {
 
         <div class="tdp-body">
           <div class="tdp-col-main">
-            <div class="taf-meta">
+            <div class="tdp-card">
+              <div class="tdp-card-title">Details</div>
+              <div class="taf-meta" style="background:transparent; padding:0; border-radius:0;">
               <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="nt-company">${companyIds.map(id => { const c = App.COMPANIES[id] || { label: id }; return `<option value="${id}" ${id === selectedCompany ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`; }).join('')}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="nt-type">${Object.entries(App.TASK_TYPES).map(([k, v]) => `<option value="${k}" ${k === 'admin' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
               <label class="taf-field hidden" id="nt-bid-status-row"><span class="taf-field-lbl">Bid status</span><select id="nt-bid-status">${Object.entries(App.BID_STATUSES).map(([k, v]) => `<option value="${k}" ${k === 'queue' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
@@ -131,6 +133,7 @@ App.NewTaskPageView = class NewTaskPageView {
               <label class="taf-field"><span class="taf-field-lbl">Time</span><input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" /></label>
               <label class="taf-field"><span class="taf-field-lbl">Reminder</span><input type="datetime-local" id="nt-reminderAt" class="picker-input" /></label>
               <div class="taf-field"><span class="taf-field-lbl">Project</span><button type="button" id="nt-project" class="projtag projtag-btn projtag-empty" data-current="" aria-haspopup="listbox"><i class="ti ti-folder-plus"></i>No project</button></div>
+              </div>
             </div>
 
             <div class="tdp-card">
