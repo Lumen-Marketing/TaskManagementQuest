@@ -7263,3 +7263,30 @@ html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-meeting   {
 html:not([data-theme="dark"]) body.ui-command-center .type-text.type-web_dev,
 html:not([data-theme="dark"]) body.ui-command-center .type-text.type-web-dev,
 html:not([data-theme="dark"]) body.ui-command-center .pill-type.type-web-dev   { background: #efeafc; color: #8268dc; }
+
+/* ============================================================================
+   SECTION HEAD-CARDS (2026-07-03) — every section name rides in the same slim
+   white header card as the All-tasks page (name left, actions right). Home /
+   Projects / Reports previously floated bare titles straight on the canvas.
+   Team/Time/Approvals already use the shared .head-card markup.
+   ============================================================================ */
+body.ui-command-center .qhq-head,
+body.ui-command-center .pv-head,
+body.ui-command-center .qhq-rpt-top {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 14px 10px 18px;
+  align-items: center;
+}
+/* Home: the greeting IS the section name — shared 20px title scale. */
+body.ui-command-center .qhq-head .qhq-greet { font-size: 20px; line-height: 1.1; }
+body.ui-command-center .qhq-head .qhq-dateline { margin-top: 2px; }
+body.ui-command-center .qhq-home .qhq-head { margin-bottom: 4px; }
+/* Projects: page gutter spacing; drop the mono eyebrow so the name reads like
+   the All-tasks card; title down from 30px to the shared 20px. */
+body.ui-command-center .pv-head { margin: 16px 28px 14px; }
+body.ui-command-center .pv-eyebrow { display: none; }
+body.ui-command-center .pv-title { font-size: 20px; margin-top: 0; letter-spacing: -0.02em; }
+/* Reports: title up to the shared 20px. */
+body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
