@@ -232,10 +232,9 @@ App.TaskDetailView = class TaskDetailView {
       return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
     }).join('');
     // Remember which tab the user is on so a background re-render (a posted
-    // comment, a sync poll) doesn't yank them off it. Activity now lives in its
-    // own right-column card, so default to Comments and migrate any stale
-    // 'activity' value left over from before.
-    if (!this._activeTab || this._activeTab === 'activity') this._activeTab = 'comments';
+    // comment, a sync poll) doesn't yank them off it. Tabs are
+    // Comments / Activity / History; default to Comments.
+    if (!this._activeTab) this._activeTab = 'comments';
     const tabActive = (name) => this._activeTab === name ? ' active' : '';
 
     // Inline per-field editing: Details-card values are click-to-edit for users
@@ -354,9 +353,11 @@ App.TaskDetailView = class TaskDetailView {
           <div class="tdp-card tdp-tabs">
             <div class="tdp-tablist" role="tablist">
               <button class="tdp-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments</button>
+              <button class="tdp-tab${tabActive('activity')}" data-tab="activity" type="button"><i class="ti ti-bolt"></i>Activity</button>
               <button class="tdp-tab${tabActive('history')}" data-tab="history" type="button"><i class="ti ti-history"></i>History</button>
             </div>
             <div class="tdp-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
+            <div class="tdp-tabpanel${tabActive('activity')}" data-panel="activity"><div class="tdp-activity">${activityHtml}</div></div>
             <div class="tdp-tabpanel${tabActive('history')}" data-panel="history">${entriesHtml}</div>
           </div>
 
@@ -366,11 +367,6 @@ App.TaskDetailView = class TaskDetailView {
               ${watcherChipsHtml || '<span class="tdp-empty">No watchers</span>'}
               <button class="tdp-watch-add" data-action="toggle-watch" title="${isWatching ? 'Stop watching' : 'Watch this task'}" aria-label="Toggle watch" type="button"><i class="ti ${isWatching ? 'ti-eye-off' : 'ti-plus'}"></i></button>
             </div>
-          </div>
-
-          <div class="tdp-card">
-            <div class="tdp-card-title"><i class="ti ti-bolt"></i> Activity</div>
-            <div class="tdp-activity">${activityHtml}</div>
           </div>
         </aside>
       </div>
