@@ -302,7 +302,9 @@ App.TaskDetailView = class TaskDetailView {
 
       <div class="tdp-body">
         <div class="tdp-col-main">
-          <div class="taf-meta taf-meta-detail">
+          <div class="tdp-card">
+            <div class="tdp-card-title">Details</div>
+            <div class="taf-meta taf-meta-detail" style="background:transparent; padding:0; border-radius:0;">
             <div class="taf-field"><span class="taf-field-lbl">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Assignee</span><span ${ev('assignee', 'detail-val detail-person')}>${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
@@ -316,6 +318,7 @@ App.TaskDetailView = class TaskDetailView {
             <div class="taf-field"><span class="taf-field-lbl">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Project</span>${projectChipHtml}</div>
             <div class="taf-field"><span class="taf-field-lbl">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
+            </div>
           </div>
 
           <div class="tdp-card">
@@ -862,7 +865,9 @@ App.TaskDetailView = class TaskDetailView {
 
         <div class="tdp-body">
           <div class="tdp-col-main">
-            <div class="taf-meta">
+            <div class="tdp-card">
+              <div class="tdp-card-title">Details</div>
+              <div class="taf-meta" style="background:transparent; padding:0; border-radius:0;">
               <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="edit-company">${opts(Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="edit-type" data-action="type-change">${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}</select></label>
               ${d.type === 'bid' ? `<label class="taf-field"><span class="taf-field-lbl">Bid status</span><select id="edit-bidStatus">${opts(Object.entries(App.BID_STATUSES).map(([k, v]) => [k, v.label]), d.bidStatus)}</select></label>` : ''}
@@ -877,6 +882,7 @@ App.TaskDetailView = class TaskDetailView {
                 const p = d.project && App.projects ? App.projects[d.project] : null;
                 return `<button type="button" id="edit-project" class="projtag projtag-btn ${p ? '' : 'projtag-empty'}" data-action="edit-open-project" aria-haspopup="listbox" ${p ? `style="--pc:${App.utils.escapeHtml(p.color)}"` : ''}><i class="ti ${p ? 'ti-folder' : 'ti-folder-plus'}"></i>${p ? App.utils.escapeHtml(p.name) : 'No project'}</button>`;
               })()}</div>
+              </div>
             </div>
 
             <div class="tdp-card">
