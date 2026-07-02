@@ -274,11 +274,9 @@ App.TaskDetailView = class TaskDetailView {
       </div>
 
       <div class="tdp-stats">
-        <span class="pill ${statusObj.cls}">${App.utils.escapeHtml(statusObj.label)}</span>
         <div class="tdp-stat"><b>${commentsCount}</b><span>Comments</span></div>
         <div class="tdp-stat"><b>${watcherIds.length}</b><span>Watchers</span></div>
         <div class="tdp-stat"><b>${subtaskCount}</b><span>Subtasks</span></div>
-        ${overdue ? `<div class="tdp-stat over"><b>${daysOverdue}d</b><span>Overdue</span></div>` : ''}
         <div class="tdp-stats-spacer"></div>
         ${App.can('tasks.write') ? `<button class="btn btn-primary tdp-complete ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
       </div>
