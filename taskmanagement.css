@@ -6861,6 +6861,19 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskDetailWrap .tdp-body .tdp-col-main { grid-column: 1; min-width: 0; }
 #taskDetailWrap .tdp-body .tdp-col-right { grid-column: 2; }
 
+/* Rail tabbed card (Comments / Activity / History): fixed height so a long thread
+   or feed scrolls INSIDE the card instead of stretching it — the card stays a
+   constant size, which lets the Watchers card below it line up with Subtasks.
+   The comment composer stays pinned; only the list / feed scrolls. */
+#taskDetailWrap .tdp-tabs .tdp-tabpanel.active {
+  display: flex; flex-direction: column; height: 230px; min-height: 0;
+}
+#taskDetailWrap .tdp-tabs .cm-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+#taskDetailWrap .tdp-tabs .cm-composer { flex: 0 0 auto; }
+#taskDetailWrap .tdp-tabs .tdp-tabpanel[data-panel="activity"],
+#taskDetailWrap .tdp-tabs .tdp-tabpanel[data-panel="history"] { overflow-y: auto; }
+#taskDetailWrap .tdp-tabs .tdp-activity { max-height: none; overflow: visible; }
+
 @media (max-width: 900px) {
   #taskDetailWrap .tdp-body { grid-template-columns: 1fr; gap: 16px; }
   #taskDetailWrap .tdp-body .tdp-col-main,
