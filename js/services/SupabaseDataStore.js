@@ -489,6 +489,52 @@ App.SupabaseDataStore = class SupabaseDataStore {
     }
   }
 
+  /* "Report a problem" — submit via the report-problem Edge Function (the
+     only write path to bug_reports). Returns { ok, emailed?, status?, error? }
+     and never throws: the modal turns failures into inline errors. */
+  async submitBugReport({ type, description, context }) {
+    try {
+      const { data, error } = await this.supabase.functions.invoke('report-problem', {
+        body: { type, description, context },
+      });
+      if (error) {
+        // Supabase wraps non-2xx as `error` with a `.context.status`.
+        const status = (error.context && error.context.status) || null;
+        let msg = (error && error.message) || 'Could not send the report.';
+        try {
+          const body = await error.context.json();
+          if (body && body.error) msg = body.error;
+        } catch (e) { /* body already consumed or not JSON */ }
+        return { ok: false, status, error: msg };
+      }
+      return { ok: true, emailed: !!(data && data.emailed) };
+    } catch (err) {
+      return { ok: false, status: null, error: (err && err.message) || String(err) };
+    }
+  }
+
+  /* Developer-only (RLS): every submitted report, newest first. */
+  async listBugReports() {
+    const res = await this.supabase
+      .from('bug_reports')
+      .select('*')
+      .order('created_at', { ascending: false });
+    this._throwIfError(res, 'loading bug reports');
+    return res.data || [];
+  }
+
+  /* Developer-only (RLS): triage toggle. status is 'open' | 'resolved'. */
+  async setBugReportStatus(id, status) {
+    const res = await this.supabase
+      .from('bug_reports')
+      .update({ status, resolved_at: status === 'resolved' ? new Date().toISOString() : null })
+      .eq('id', id)
+      .select('*')
+      .single();
+    this._throwIfError(res, 'updating bug report');
+    return res.data;
+  }
+
   async updateProfileAccess(profileId, updates) {
     const patch = {
       role: updates.role,
