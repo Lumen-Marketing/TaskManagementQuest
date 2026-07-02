@@ -6,7 +6,7 @@ const TITLES = {
   overdue: 'Overdue', watching: 'Watching',
   'time:mine': 'My time', 'time:resource': 'Team workload',
   'team:hierarchy': 'Team chart', approvals: 'Approvals', 'admin:clock': 'Clock dashboard',
-  'admin:task-setup': 'Task setup',
+  'admin:task-setup': 'Task setup', 'admin:reports': 'Problem reports',
   home: 'Home', reports: 'Reports',
 };
 
@@ -158,6 +158,7 @@ App.TopbarView = class TopbarView {
     if (App.can('team.view'))   teamItems.push({ view: 'team:hierarchy', label: 'Team chart',    icon: 'ti-sitemap' });
     if (App.can('roles.manage'))teamItems.push({ view: 'approvals',      label: 'Approvals',      icon: 'ti-user-check' });
     if (App.can('clock.admin')) teamItems.push({ view: 'admin:clock',    label: 'Clock dashboard',icon: 'ti-clock-play' });
+    if (App.can('bug-reports.manage')) teamItems.push({ view: 'admin:reports', label: 'Problem reports', icon: 'ti-bug' });
 
     const items = [];
     if (canView('home')) items.push({ key: 'home', label: 'Home', view: 'home' });

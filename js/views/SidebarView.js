@@ -254,6 +254,7 @@ App.SidebarView = class SidebarView {
     if (App.can('roles.manage')) teamItems.push({ view: 'approvals',   label: 'Approvals',       icon: 'ti-user-check' });
     if (App.can('clock.admin'))  teamItems.push({ view: 'admin:clock', label: 'Clock dashboard', icon: 'ti-clock-play', count: this.timeModel.allActive().length });
     if (App.can('task-setup.manage')) teamItems.push({ view: 'admin:task-setup', label: 'Task setup', icon: 'ti-adjustments' });
+    if (App.can('bug-reports.manage')) teamItems.push({ view: 'admin:reports', label: 'Problem reports', icon: 'ti-bug' });
     if (teamItems.length) sections.push({ key: 'team', label: 'Team', items: teamItems });
 
     // Company context lives in the sidebar: a single-select list of the

@@ -4309,6 +4309,17 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 .rp-thanks i { font-size: 34px; color: var(--amber); }
 .rp-thanks-title { font-weight: 600; }
 
+/* ---------- Problem reports (developer triage) ---------- */
+.breports { display: flex; flex-direction: column; gap: 10px; max-width: 860px; padding: 4px; }
+.breports-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 92px)); gap: 6px; margin-bottom: 8px; }
+.breport-card { background: var(--surface); border-radius: 12px; padding: 14px 16px; }
+.breport-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.breport-type { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; color: var(--amber); }
+.breport-name { font-weight: 600; }
+.breport-meta { font-size: 11px; color: var(--ink-3); overflow-wrap: anywhere; }
+.breport-desc { margin-top: 8px; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.breport-actions { margin-top: 10px; display: flex; gap: 8px; }
+
 @media (max-width: 480px) {
   .profile-avatar-row { flex-direction: column; align-items: center; text-align: center; }
   .profile-avatar-actions { align-items: center; }

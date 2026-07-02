@@ -224,6 +224,7 @@ App.TaskListView = class TaskListView {
       'time:resource':  { eyebrow: 'Time tracking', title: 'Team workload' },
       'approvals':      { eyebrow: 'Admin', title: 'Approvals' },
       'admin:clock':    { eyebrow: 'Admin', title: 'Clock dashboard' },
+      'admin:reports':  { eyebrow: 'Admin', title: 'Problem reports' },
       'team:hierarchy': { eyebrow: 'Org', title: 'Team hierarchy' },
     };
     let t = titles[view];
