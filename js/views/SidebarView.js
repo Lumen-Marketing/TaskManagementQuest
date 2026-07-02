@@ -9,8 +9,12 @@ App.SidebarView = class SidebarView {
 
     this.deck = document.querySelector('.deck');
     this.extraMount = document.getElementById('sideExtraGroups');
-    // The dedicated minimize button was removed; the brand logo is the toggle.
-    this.brandLogo = document.querySelector('.side-brand .logo');
+    // Primary sections + workspaces are shown only inside the mobile nav drawer
+    // (on desktop they live in the top bar). Rendered by renderMobileNav.
+    this.mobileNav = document.getElementById('railMobileNav');
+    // The brand mark now lives in the top bar and doubles as the mobile
+    // drawer toggle.
+    this.brandLogo = document.getElementById('brandLogo');
 
     this.SECTION_KEY  = 'questhq:sidebar-collapsed-sections';
     this.MINIMIZE_KEY = 'questhq:sidebar-minimized';
@@ -20,9 +24,9 @@ App.SidebarView = class SidebarView {
     this.bindStaticItems();
     this.bindAskQuest();
     this.bindMinimize();
-    this.applyStoredMinimize();
     this.subscribe();
     this.renderExtraGroups();
+    this.renderMobileNav();
     this.renderCounts();
   }
 
@@ -82,35 +86,21 @@ App.SidebarView = class SidebarView {
     this.applyRoleVisibility();
     this.applyStaticVisibility();
     this.renderExtraGroups();
+    this.renderMobileNav();
     this.renderCounts();
   }
 
   /* ---------- Minimize / expand ---------- */
 
   bindMinimize() {
-    // Minimize/expand is triggered by clicking the brand logo (the separate
-    // toggle button was removed). Desktop only — on mobile the sidebar is a
-    // slide-in drawer, so the logo opens/closes that instead (handled below).
+    // The top-bar brand mark is the mobile nav-drawer toggle. On desktop the
+    // icon rail is always shown (there's no minimized state), so on desktop the
+    // logo click does nothing — it only opens/closes the drawer on phones.
     if (this.brandLogo) {
       this.brandLogo.style.cursor = 'pointer';
       this._makeActivatable(this.brandLogo, () => {
         if (this._isMobile()) this._toggleMobileDrawer();
-        else this.toggleMinimize();
       });
-    }
-    // The brand now lives in the sidebar (with its own minimize button), so the
-    // topbar-left holds the title + scope segment. Tapping it only opens the
-    // mobile drawer; on desktop it does nothing (clicking the title/segment must
-    // not collapse the sidebar).
-    const topLeft = document.querySelector('.topbar-left');
-    if (topLeft) {
-      topLeft.addEventListener('click', (e) => {
-        if (!this._isMobile()) return;
-        // Don't hijack taps on the interactive segment buttons.
-        if (e.target.closest('.seg')) return;
-        this._toggleMobileDrawer();
-      });
-      this._injectMobileMenuHint(topLeft);
     }
     this._setupMobileDrawer();
   }
@@ -145,16 +135,10 @@ App.SidebarView = class SidebarView {
         this._closeMobileDrawer();
       }
     });
-    // Crossing the mobile breakpoint: reset minimize state and close drawer.
+    // Crossing the mobile breakpoint just closes the drawer (the desktop rail
+    // has no minimized state to restore).
     const mq = window.matchMedia('(max-width: 720px)');
-    mq.addEventListener('change', (e) => {
-      this._closeMobileDrawer();
-      if (e.matches) {
-        this._setMinimized(false);
-      } else {
-        this._setMinimized(localStorage.getItem(this.MINIMIZE_KEY) === '1');
-      }
-    });
+    mq.addEventListener('change', () => this._closeMobileDrawer());
   }
 
   _toggleMobileDrawer() {
@@ -211,24 +195,62 @@ App.SidebarView = class SidebarView {
     });
   }
 
+  // Mobile-only: render the primary sections (top-bar nav on desktop) + Team +
+  // Workspaces into the slide-in drawer, so phones reach the full navigation.
+  // Hidden on desktop via CSS (.rail-mobile-nav).
+  renderMobileNav() {
+    if (!this.mobileNav) return;
+    const canView = (v) => this.controller.canView(v);
+    const primary = [];
+    if (canView('home')) primary.push({ view: 'home', label: 'Home', icon: 'ti-home' });
+    if (App.can('tasks.view')) primary.push({ view: 'all', label: 'All tasks', icon: 'ti-list-check' });
+    if (canView('projects')) primary.push({ view: 'projects', label: 'Projects', icon: 'ti-folders' });
+    if (App.can('reports.view')) primary.push({ view: 'reports', label: 'Reports', icon: 'ti-chart-bar' });
+
+    // Views = the task quick-filters + My time + Wallboard (the top-bar icons on
+    // desktop), with live counts so the drawer matches the badges.
+    const c = this._computeCounts();
+    const views = [];
+    if (canView('hot'))       views.push({ view: 'hot',       label: 'Urgent',   icon: 'ti-bolt',           count: c.hot || null });
+    if (canView('today'))     views.push({ view: 'today',     label: 'Today',    icon: 'ti-flame',          count: c.today || null });
+    if (canView('overdue'))   views.push({ view: 'overdue',   label: 'Overdue',  icon: 'ti-alert-triangle', count: c.overdue || null });
+    if (canView('watching'))  views.push({ view: 'watching',  label: 'Watching', icon: 'ti-eye',            count: c.watching || null });
+    if (canView('time:mine')) views.push({ view: 'time:mine', label: 'My time',  icon: 'ti-clock' });
+    if (canView('wallboard')) views.push({ view: 'wallboard', label: 'Wallboard',icon: 'ti-device-tv' });
+
+    const sections = [
+      { key: 'go', label: 'Go to', items: primary },
+      ...this._buildSections(),
+      { key: 'views', label: 'Views', items: views },
+    ];
+    this.mobileNav.innerHTML = sections
+      .filter(sec => sec.items.length)
+      .map(sec => this._renderSection(sec)).join('');
+
+    this.mobileNav.querySelectorAll('.side-group-head').forEach(head => {
+      head.addEventListener('click', () => this._toggleSection(head.dataset.section));
+    });
+    this.mobileNav.querySelectorAll('.side-item[data-view]').forEach(el => {
+      this._makeActivatable(el, () => this.controller.setView(el.dataset.view));
+    });
+    this.mobileNav.querySelectorAll('.side-item[data-company]').forEach(el => {
+      this._makeActivatable(el, () => this.controller.setCompany(el.dataset.company));
+    });
+  }
+
   _buildSections() {
     const sections = [];
 
-    // "Team" groups personal time + the supervisory/admin tools under one header
-    // to match the redesigned sidebar (Personal / Team / Workspaces). Each item
-    // keeps its own permission gate, so the section collapses to whatever the
-    // role can actually see (workers get just "My time").
+    // "Team" = the supervisory/admin tools (the top-bar "Team ▾" dropdown on
+    // desktop). My time + Reports are reached elsewhere now (the rail and the
+    // top-nav Reports item), so they're not repeated here.
     const teamItems = [];
-    if (App.can('time.own') || App.can('clock.use')) {
-      teamItems.push({ view: 'time:mine', label: 'My time', icon: 'ti-clock', count: App.utils.formatHours(this.timeModel.totalForUser(this.currentUser)) });
-    }
     if (App.can('time.team')) {
       teamItems.push({ view: 'time:resource', label: 'Team workload', icon: 'ti-users', count: this.timeModel.allActive().length });
     }
     if (App.can('team.view')) {
       teamItems.push({ view: 'team:hierarchy', label: 'Team chart', icon: 'ti-sitemap' });
     }
-    if (App.can('reports.view')) teamItems.push({ view: 'reports', label: 'Reports', icon: 'ti-chart-bar' });
     if (App.can('roles.manage')) teamItems.push({ view: 'approvals',   label: 'Approvals',       icon: 'ti-user-check' });
     if (App.can('clock.admin'))  teamItems.push({ view: 'admin:clock', label: 'Clock dashboard', icon: 'ti-clock-play', count: this.timeModel.allActive().length });
     if (teamItems.length) sections.push({ key: 'team', label: 'Team', items: teamItems });
@@ -335,10 +357,10 @@ App.SidebarView = class SidebarView {
   }
 
   subscribe() {
-    App.EventBus.on('tasks:changed', () => { this.renderCounts(); this.renderExtraGroups(); });
-    App.EventBus.on('time:changed',  () => { this.renderCounts(); this.renderExtraGroups(); });
+    App.EventBus.on('tasks:changed', () => { this.renderCounts(); this.renderMobileNav(); });
+    App.EventBus.on('time:changed',  () => { this.renderCounts(); this.renderMobileNav(); });
     App.EventBus.on('view:changed',  (view) => this.updateActive(view));
-    App.EventBus.on('company:changed', () => { this.renderCounts(); this.renderExtraGroups(); });
+    App.EventBus.on('company:changed', () => { this.renderCounts(); this.renderMobileNav(); });
     App.EventBus.on('role:changed', () => this.refreshForRole());
   }
 
@@ -350,21 +372,36 @@ App.SidebarView = class SidebarView {
     });
   }
 
-  renderCounts() {
+  // Shared count computation for the top-bar badges + the mobile drawer.
+  _computeCounts() {
     const all = this._scopedActiveTasks();
     const today = App.utils.todayISO(0);
-
-    const set = (id, value) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = value;
+    return {
+      all: App.can('tasks.view') ? all.length : 0,
+      mine: all.filter(t => t.assignee === this.currentUser).length,
+      hot: all.filter(t => t.priority === 'critical' || t.priority === 'urgent').length,
+      today: all.filter(t => t.due === today).length,
+      overdue: all.filter(t => t.due < today).length,
+      watching: all.filter(t => (t.watchers || []).includes(this.currentUser)).length,
     };
+  }
 
-    set('cnt-all', App.can('tasks.view') ? all.length : 0);
-    set('cnt-mine', all.filter(t => t.assignee === this.currentUser).length);
-    set('cnt-hot', all.filter(t => t.priority === 'critical' || t.priority === 'urgent').length);
-    set('cnt-today', all.filter(t => t.due === today).length);
-    set('cnt-overdue', all.filter(t => t.due < today).length);
-    set('cnt-watching', all.filter(t => (t.watchers || []).includes(this.currentUser)).length);
-    set('cnt-clock-live', this.timeModel.allActive().length);
+  renderCounts() {
+    const c = this._computeCounts();
+    // Publish for the top-bar "Tasks" dropdown (TopbarView reads App.viewCounts).
+    App.viewCounts = c;
+    // Top-bar filter badges: blank at zero so the empty badge hides (CSS :empty).
+    const badge = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value > 0 ? value : '';
+    };
+    badge('cnt-all', c.all);
+    badge('cnt-mine', c.mine);
+    badge('cnt-hot', c.hot);
+    badge('cnt-today', c.today);
+    badge('cnt-overdue', c.overdue);
+    badge('cnt-watching', c.watching);
+    const live = document.getElementById('cnt-clock-live');
+    if (live) live.textContent = this.timeModel.allActive().length;
   }
 };

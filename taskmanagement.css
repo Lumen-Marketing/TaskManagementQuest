@@ -3411,16 +3411,19 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
    `body.ui-command-center .task-group { margin: 0 0 12px }`, which otherwise
    pins it left. Narrower tiers keep the flexible 1fr layout. */
 @media (min-width: 1366px) {
+  /* The Task column flexes (minmax 380px→1fr) so the table GROWS to fill the
+     widened content column instead of leaving a dead band on the right. The
+     data columns stay fixed-width; the title track absorbs the extra space. */
   #taskViewWrap .list-row,
   #taskViewWrap .list-header {
-    grid-template-columns: 12px 380px 104px 76px 92px 96px 116px 64px 22px 28px;
+    grid-template-columns: 12px minmax(380px, 1fr) 104px 76px 92px 96px 116px 64px 22px 28px;
   }
   #taskViewWrap .list-header,
   #taskViewWrap .task-group {
-    /* Snug to the fixed column width (~1094px) so there's no empty band on the
-       right — keeps the group-head "Clear" button + count aligned with the
-       columns instead of floating past them. */
-    max-width: 1100px;
+    /* Fill the available width (leaving a 32px gutter each side) up to a wide
+       cap that keeps rows readable on ultra-wide monitors. Same formula as the
+       toolbar/header/widgets bands so every edge still lines up. */
+    max-width: min(1720px, calc(100% - 64px));
     margin-left: auto !important;
     margin-right: auto !important;
   }
@@ -4774,13 +4777,14 @@ body.ui-command-center {
 
 /* Full-height left sidebar with the topbar only over the main pane (mockup). */
 body.ui-command-center .app {
-  grid-template-rows: 54px 1fr;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-rows: 56px 1fr;
+  grid-template-columns: minmax(0, 1fr);   /* no sidebar — everything is in the top bar */
   background: var(--bg);
 }
-body.ui-command-center .app > .deck   { grid-column: 1; grid-row: 1 / -1; }
-body.ui-command-center .app > .topbar { grid-column: 2; grid-row: 1; }
-body.ui-command-center .app > .main   { grid-column: 2; grid-row: 2; }
+/* Full-width top bar on row 1; full-width work surface on row 2. */
+body.ui-command-center .app > .topbar { grid-column: 1; grid-row: 1; }
+body.ui-command-center .app > .main   { grid-column: 1; grid-row: 2; }
+body.ui-command-center .app > .deck   { display: none; }   /* mobile-only drawer (shown at ≤720px) */
 
 body.ui-command-center .topbar {
   padding: 0 18px;
@@ -6556,8 +6560,13 @@ body.wallboard-active #mainPane { padding: 0; }
   font-family: 'Hanken Grotesk', system-ui, sans-serif;
 }
 #listPane .work-toolbar .btn:hover { background: #faf9f7; border-color: #ddd6cf; color: #1c1a18; }
+/* View / ⋯ in the header card share the SAME rounded-rect look as the Controls
+   widget buttons (base .btn) — no pill, no separate warm palette. New task keeps
+   its terracotta fill. */
 #listPane .work-toolbar .btn-primary,
-#listPane .work-toolbar .btn-primary:hover { background: #ee5a26; border-color: #ee5a26; color: #fff; }
+#listPane .work-toolbar .btn-primary:hover,
+#listPane .head-card-actions .btn-primary,
+#listPane .head-card-actions .btn-primary:hover { background: #ee5a26; border-color: #ee5a26; color: #fff; }
 #listPane .up-next-card,
 #listPane .focus-widget,
 #listPane .progress-card {
@@ -6705,4 +6714,288 @@ body.wallboard-active #mainPane { padding: 0; }
 @media (prefers-reduced-motion: reduce) {
   .ldr-dots span { animation: none; }
   #appLoader { transition: none; }
+}
+
+/* ============================================================
+   TOP NAV + ICON RAIL (Finexy-style navigation restructure)
+   Full-width top bar carries the primary sections; a thin left
+   icon rail carries task quick-filters + utility.
+   ============================================================ */
+
+/* --- top bar: logo + primary nav on the left --- */
+body.ui-command-center .topbar-left { gap: 14px; flex: 1 1 auto; min-width: 0; }
+body.ui-command-center .tb-logo {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px;
+  background: var(--amber); display: inline-flex; align-items: center; justify-content: center;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+body.ui-command-center .tb-logo i { color: #fff; font-size: 19px; }
+body.ui-command-center .tb-logo:active { transform: scale(0.94); }
+
+body.ui-command-center .primary-nav { display: flex; align-items: center; gap: 3px; min-width: 0; }
+body.ui-command-center .pnav-item {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 34px; padding: 0 14px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+body.ui-command-center .pnav-item:hover { background: var(--bg-3); color: var(--ink); }
+body.ui-command-center .pnav-item.active,
+body.ui-command-center .pnav-item.open { background: var(--ink); color: #fff; }
+body.ui-command-center .pnav-item.active .pnav-caret,
+body.ui-command-center .pnav-item.open .pnav-caret { color: #fff; }
+body.ui-command-center .pnav-caret { font-size: 14px; opacity: .75; }
+
+/* Team dropdown menu */
+body.ui-command-center .pnav-menu {
+  min-width: 194px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px;
+}
+body.ui-command-center .pnav-menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2);
+  text-align: left; transition: background var(--dur-fast) var(--ease-out);
+}
+body.ui-command-center .pnav-menu-item:hover { background: var(--bg-3); color: var(--ink); }
+body.ui-command-center .pnav-menu-item i { font-size: 16px; color: var(--ink-3); flex: 0 0 auto; }
+body.ui-command-center .pnav-menu-label { flex: 1 1 auto; }
+body.ui-command-center .pnav-menu-count {
+  margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 800;
+  color: var(--ink-3); font-variant-numeric: tabular-nums;
+  min-width: 20px; text-align: right;
+}
+
+/* --- account chip in the top bar (moved up from the sidebar) --- */
+body.ui-command-center .topbar-right .userchip {
+  display: flex; align-items: center; gap: 8px; padding: 3px 10px 3px 4px;
+  border-radius: 999px; cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface); transition: background var(--dur-fast) var(--ease-out);
+}
+body.ui-command-center .topbar-right .userchip:hover { background: var(--bg-3); }
+body.ui-command-center .topbar-right .userchip .uc-meta { min-width: 0; line-height: 1.12; text-align: left; }
+body.ui-command-center .topbar-right .userchip .uc-name { font-size: 12.5px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+body.ui-command-center .topbar-right .userchip .uc-role { font-size: 10.5px; color: var(--ink-3); }
+body.ui-command-center .topbar-right .userchip .uc-gear { color: var(--ink-4); font-size: 14px; margin-left: 2px; }
+
+/* --- task-list header: a slim card (section name + scope toggle) over the
+       widget strip --- */
+body.ui-command-center .page-head {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 12px;
+}
+body.ui-command-center .head-card {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 14px 10px 18px;
+}
+body.ui-command-center .head-card .page-title,
+body.ui-command-center .head-card .head-card-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  flex: 0 0 auto;
+}
+/* Scope toggle sits right beside the section name (left group). */
+body.ui-command-center .head-card #scopeSeg { margin: 0; flex: 0 0 auto; align-self: center; }
+
+/* View / overflow / create actions, merged into the header card from the old
+   work-toolbar. Pushed to the far right; the title + scope toggle stay left. */
+body.ui-command-center .head-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+/* Secondary actions (Views/Select/Clear done/Export) are reached via ⋯ More. */
+body.ui-command-center .head-card-actions .tb-secondary { display: none; }
+/* Compact icon-only More button. */
+body.ui-command-center .head-card-actions .btn-more { padding: 0; width: 36px; justify-content: center; }
+body.ui-command-center .head-card-actions .btn-more i { margin: 0; font-size: 18px; }
+
+/* Phones: the title + scope + actions can't share one row, so let the card wrap
+   — section name + scope toggle on top, the actions on their own full-width row
+   below with New task growing to fill the remaining space. */
+@media (max-width: 720px) {
+  body.ui-command-center .head-card { flex-wrap: wrap; }
+  body.ui-command-center .head-card-actions {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  body.ui-command-center .head-card-actions #newTaskBtn { flex: 1 1 auto; justify-content: center; }
+}
+
+/* --- top-bar quick-view icon buttons (filters + My time + Wallboard) --- */
+body.ui-command-center .tb-views { display: flex; align-items: center; gap: 1px; min-width: 0; }
+body.ui-command-center .tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 7px; flex: 0 0 auto; }
+body.ui-command-center .tb-icon {
+  position: relative; width: 36px; height: 36px; flex: 0 0 auto; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2);
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+body.ui-command-center .tb-icon:hover { background: var(--bg-3); }
+body.ui-command-center .tb-icon:active { transform: scale(0.94); }
+body.ui-command-center .tb-icon.active { background: var(--amber-bg); }
+body.ui-command-center .tb-icon.active i { color: var(--amber) !important; }
+body.ui-command-center .tb-icon i { font-size: 18px; }
+body.ui-command-center .tb-icon .tb-badge {
+  position: absolute; top: 1px; right: 1px; min-width: 15px; height: 15px; padding: 0 3px; box-sizing: border-box;
+  font-size: 9px; font-weight: 800; line-height: 15px; text-align: center;
+  color: #fff; background: var(--rust); border: 1.5px solid var(--bg); border-radius: 999px;
+}
+body.ui-command-center .tb-icon .tb-badge:empty { display: none; }
+/* Wallboard (tv) icon copies the notification button's boxed look — a white
+   rounded-rect with a border — rather than the plain borderless icon. */
+body.ui-command-center .tb-icon {
+  height: 32px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+}
+body.ui-command-center .tb-icon:hover { background: var(--bg-2); border-color: var(--border-strong); }
+/* Workspace / company switching moved into the account menu (a "Workspace"
+   select), so the top-bar switcher is retired. */
+body.ui-command-center #companySwitcher { display: none; }
+
+/* --- clock widget lives in the top bar now --- */
+body.ui-command-center .topbar-right .clock-widget { height: 36px; flex: 0 0 auto; }
+
+/* Search can shrink so the fuller bar never overflows. */
+body.ui-command-center .search input { width: clamp(150px, 16vw, 230px); }
+
+/* --- account menu: View-as select + Display size row --- */
+body.ui-command-center .user-menu-select {
+  width: 100%; height: 34px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+
+/* --- mobile: collapse the top-bar nav + filters; the deck becomes a drawer --- */
+@media (max-width: 720px) {
+  body.ui-command-center .app > .deck { display: block; }        /* re-enable the drawer overlay */
+  body.ui-command-center .primary-nav,
+  body.ui-command-center .tb-views { display: none; }
+  body.ui-command-center .topbar-left { flex: 0 1 auto; }
+  body.ui-command-center .topbar-right .userchip { padding: 3px; border-color: transparent; background: transparent; }
+  body.ui-command-center .topbar-right .userchip .uc-meta,
+  body.ui-command-center .topbar-right .userchip .uc-gear { display: none; }
+  body.ui-command-center #companySwitcher { display: none; }
+  /* Clock shrinks to an icon-only control on phones. */
+  body.ui-command-center .topbar-right .clock-widget { min-width: 36px; width: 36px; padding: 0; justify-content: center; }
+  body.ui-command-center .topbar-right .clock-widget #clockLabel,
+  body.ui-command-center .topbar-right .clock-widget .clock-timer { display: none; }
+  /* The drawer holds the full nav (rendered into #railMobileNav). */
+  body.ui-command-center .deck.drawer .sidebar { background: var(--bg-2); padding: 14px 10px; height: 100%; overflow-y: auto; display: block; }
+  body.ui-command-center .deck.drawer .rail-mobile-nav { display: block; }
+}
+
+/* ============================================================
+   TASK-LIST HEADER CLEANUP — toolbar overflow + slimmer widgets
+   ============================================================ */
+/* Secondary toolbar buttons live in the "⋯ More" menu now. */
+body.ui-command-center .work-toolbar .tb-secondary { display: none; }
+/* Compact icon-only "More" button. */
+body.ui-command-center .work-toolbar .btn-more { padding: 0; width: 36px; justify-content: center; }
+body.ui-command-center .work-toolbar .btn-more i { margin: 0; font-size: 18px; }
+
+/* Slimmer, lighter widget strip below the header card — the three widgets
+   (Up next · Focus · Today's progress) share the width as flat cards. */
+body.ui-command-center .page-head-widgets { gap: 10px; width: 100%; }
+body.ui-command-center .page-head-widgets > * > .up-next-card,
+body.ui-command-center .page-head-widgets > * > .progress-card,
+body.ui-command-center .page-head-widgets .focus-widget {
+  width: 100%;
+  height: 72px;
+  box-shadow: none;
+}
+body.ui-command-center .page-head-widgets .up-next-card { padding: 10px 14px; gap: 10px; }
+
+/* ------------------------------------------------------------------
+   Controls widget — the Filter / Sort / Group by buttons, relocated
+   from the work-toolbar into the 4th card of the widget strip. Card
+   matches its siblings (surface, 1px border, 12px radius, 72px tall);
+   the three buttons share its width in one flat row. The card is
+   content-sized (the grid gives it an `auto` track) so the dynamic
+   "Sort: Priority ↑" / "Group: Due date" labels never truncate.
+   ------------------------------------------------------------------ */
+body.ui-command-center .controls-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 72px;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+body.ui-command-center .controls-card .btn {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* Desktop/tablet: three EQUAL metric columns + a content-sized controls
+   column, filling the row exactly. */
+@media (min-width: 721px) {
+  body.ui-command-center .page-head-widgets {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  }
+  body.ui-command-center .page-head-widgets > .up-next-mount,
+  body.ui-command-center .page-head-widgets > .focus-widget-mount,
+  body.ui-command-center .page-head-widgets > .progress-widget-mount,
+  body.ui-command-center .page-head-widgets > .controls-widget-mount { width: auto; min-width: 0; }
+}
+
+/* Phones (≤720px): the widget strip stacks vertically. Keep the controls
+   at the TOP of that stack (right under the header) so Filter/Sort/Group stay
+   reachable without scrolling past the metric cards. The three full-label
+   buttons don't fit one phone-width row, so let the card grow and the buttons
+   wrap — each grows to fill its row but never shrinks below its label. */
+@media (max-width: 720px) {
+  body.ui-command-center .page-head-widgets > .controls-widget-mount {
+    order: -1;
+    width: 100%;
+    min-width: 0;
+  }
+  body.ui-command-center .controls-card {
+    height: auto;
+    min-height: 72px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+  body.ui-command-center .controls-card .btn {
+    flex: 1 1 auto;
+    min-width: auto;
+    justify-content: center;
+  }
+}
+
+/* Symmetry: on wide screens the whole Tasks page fills the width up to a wide
+   cap (leaving a 32px gutter each side). The header card + widget strip use the
+   SAME max-width formula as the task list (see the ≥1366px rule near the list
+   grid) so every band lines up edge-to-edge at any viewport width. */
+@media (min-width: 1366px) {
+  body.ui-command-center .page-head {
+    max-width: min(1720px, calc(100% - 64px));
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  /* The table lives in #taskViewWrap, which adds 24px side padding — drop it on
+     wide screens so the list bands share the header's containing box, and the
+     centered caps line up exactly at EVERY width (not only past the 1720 cap).
+     The 32px side gutter now comes from the shared calc() formula instead. */
+  body.ui-command-center #taskViewWrap { padding-left: 0; padding-right: 0; }
 }

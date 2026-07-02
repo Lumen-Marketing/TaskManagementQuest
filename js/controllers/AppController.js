@@ -509,7 +509,7 @@ App.AppController = class AppController {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
-      document.querySelectorAll('.work-toolbar, .page-head-widgets').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.work-toolbar, .head-card-actions, .page-head-widgets').forEach(el => el.classList.add('hidden'));
       return;
     }
     // Home / Reports are full-page surfaces in their own containers — hide the
@@ -535,7 +535,7 @@ App.AppController = class AppController {
     // for any non-task surface: Time, Approvals, Hierarchy, Admin, AND the
     // Watching view (which is now a team-supervision dashboard, not a table).
     const hideChrome = isTimeView || v === 'watching';
-    document.querySelectorAll('.work-toolbar, .page-head-widgets').forEach(el => {
+    document.querySelectorAll('.work-toolbar, .head-card-actions, .page-head-widgets').forEach(el => {
       el.classList.toggle('hidden', hideChrome);
     });
   }

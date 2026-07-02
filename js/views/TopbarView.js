@@ -34,8 +34,14 @@ App.TopbarView = class TopbarView {
 
     this.tbTitle = document.getElementById('tbTitle');
     this.scopeSeg = document.getElementById('scopeSeg');
+    this.primaryNav = document.getElementById('primaryNav');
+    this.tbViews = document.getElementById('tbViews');
+    this.companySwitcher = document.getElementById('companySwitcher');
+    this.userChip = document.getElementById('userChip');
+    this.teamMenu = null;
 
     this.bindEvents();
+    this.bindTopbarViews();
     this.subscribe();
     this.render();
     this.paintAccountChip();
@@ -60,13 +66,15 @@ App.TopbarView = class TopbarView {
   bindEvents() {
     this.clockWidget.addEventListener('click', () => this.controller.toggleGlobalClock());
 
-    if (this.avatar) {
-      this.avatar.addEventListener('click', (e) => {
+    // The whole account chip (avatar + name) opens the menu, not just the avatar.
+    const chipTrigger = this.userChip || this.avatar;
+    if (chipTrigger) {
+      chipTrigger.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleUserMenu();
       });
       document.addEventListener('click', (e) => {
-        if (this.userMenu && !this.userMenu.contains(e.target) && e.target !== this.avatar) {
+        if (this.userMenu && !this.userMenu.contains(e.target) && !chipTrigger.contains(e.target)) {
           this.closeUserMenu();
         }
       });
@@ -97,6 +105,7 @@ App.TopbarView = class TopbarView {
     // Esc closes whichever topbar popover is open and returns focus to its trigger.
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
+      if (this.teamMenu) this._closeTeamMenu();
       if (this.userMenu) { this.closeUserMenu(); if (this.avatar) this.avatar.focus(); }
       if (!this.notifPanel.classList.contains('hidden')) {
         this.notifPanel.classList.add('hidden');
@@ -123,19 +132,143 @@ App.TopbarView = class TopbarView {
   // The redesigned topbar shows the active section's title and a Mine/Company
   // scope segment. Both reflect the current view (no new routing concepts).
   renderTopbarTitleAndScope() {
+    if (this.tbTitle) this.tbTitle.textContent = TITLES[this.controller.uiState.view] || 'Quest HQ';
+    if (!this.scopeSeg) return;
+    // The scope toggle now lives in the task page-head, which is only rendered on
+    // task-list views — so it appears exactly when there are tasks to scope and
+    // never has to be hidden mid-session. Here we just reflect the active scope.
     const view = this.controller.uiState.view;
-    if (this.tbTitle) this.tbTitle.textContent = TITLES[view] || 'Quest HQ';
-    if (this.scopeSeg) {
-      // The segment is the scope switch for the full task list, so it only
-      // belongs on those two views. On Home/Projects/Reports/etc. it hides,
-      // leaving just the section title — no toggle sitting there with neither
-      // side selected.
-      const isScope = view === 'all' || view === 'mine';
-      this.scopeSeg.classList.toggle('hidden', !isScope);
-      this.scopeSeg.querySelectorAll('button[data-scope]').forEach(btn => {
-        btn.classList.toggle('on', btn.dataset.scope === view);
-      });
+    this.scopeSeg.querySelectorAll('button[data-scope]').forEach(btn => {
+      btn.classList.toggle('on', btn.dataset.scope === view);
+    });
+  }
+
+  /* ---------- Primary section nav (top bar) ---------- */
+
+  // Role-gated section list. Leaf items navigate; "Team" is a dropdown of the
+  // supervisory/admin views. Mirrors the gates the sidebar used before.
+  _navModel() {
+    const canView = (v) => this.controller.canView(v);
+    const teamItems = [];
+    if (App.can('time.team'))   teamItems.push({ view: 'time:resource', label: 'Team workload', icon: 'ti-users' });
+    if (App.can('team.view'))   teamItems.push({ view: 'team:hierarchy', label: 'Team chart',    icon: 'ti-sitemap' });
+    if (App.can('roles.manage'))teamItems.push({ view: 'approvals',      label: 'Approvals',      icon: 'ti-user-check' });
+    if (App.can('clock.admin')) teamItems.push({ view: 'admin:clock',    label: 'Clock dashboard',icon: 'ti-clock-play' });
+
+    const items = [];
+    if (canView('home')) items.push({ key: 'home', label: 'Home', view: 'home' });
+    if (App.can('tasks.view')) {
+      // "Tasks" is a dropdown: the full list plus the quick-filters, each with
+      // its live count (counts are published by SidebarView.renderCounts).
+      const vc = App.viewCounts || {};
+      const taskItems = [
+        { view: 'all',      label: 'All tasks', icon: 'ti-list-check' },
+        { view: 'hot',      label: 'Urgent',    icon: 'ti-bolt',           count: vc.hot },
+        { view: 'today',    label: 'Today',     icon: 'ti-flame',          count: vc.today },
+        { view: 'overdue',  label: 'Overdue',   icon: 'ti-alert-triangle', count: vc.overdue },
+        { view: 'watching', label: 'Watching',  icon: 'ti-eye',            count: vc.watching },
+      ].filter(it => canView(it.view));
+      items.push({ key: 'tasks', label: 'Tasks', dropdown: taskItems, matches: ['all', 'mine', 'hot', 'today', 'overdue', 'watching'] });
     }
+    if (canView('projects')) items.push({ key: 'projects', label: 'Projects', view: 'projects' });
+    if (teamItems.length) items.push({ key: 'team', label: 'Team', dropdown: teamItems, matches: teamItems.map(t => t.view) });
+    if (App.can('reports.view')) items.push({ key: 'reports', label: 'Reports', view: 'reports' });
+    return items;
+  }
+
+  renderPrimaryNav() {
+    const mount = this.primaryNav;
+    if (!mount) return;
+    const items = this._navModel();
+    const view = this.controller.uiState.view;
+    const isActive = (it) => it.view === view || (it.matches && it.matches.includes(view));
+    mount.innerHTML = items.map(it => {
+      const active = isActive(it) ? ' active' : '';
+      const caret = it.dropdown ? '<i class="ti ti-chevron-down pnav-caret" aria-hidden="true"></i>' : '';
+      return `<button type="button" class="pnav-item${active}" data-nav="${App.utils.escapeHtml(it.key)}"${it.view ? ` data-view="${App.utils.escapeHtml(it.view)}"` : ''}>${App.utils.escapeHtml(it.label)}${caret}</button>`;
+    }).join('');
+    mount.querySelectorAll('.pnav-item').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        // Re-read the model at click time so dropdown counts are current.
+        const item = this._navModel().find(i => i.key === btn.dataset.nav);
+        if (!item) return;
+        if (item.dropdown) { e.stopPropagation(); this._toggleTeamMenu(btn, item.dropdown); }
+        else this.controller.setView(item.view);
+      });
+    });
+  }
+
+  _toggleTeamMenu(anchor, subItems) {
+    if (this.teamMenu) { this._closeTeamMenu(); return; }
+    const menu = document.createElement('div');
+    menu.className = 'pnav-menu';
+    menu.setAttribute('role', 'menu');
+    menu.innerHTML = subItems.map(it => {
+      const count = (it.count != null && it.count > 0)
+        ? `<span class="pnav-menu-count">${App.utils.escapeHtml(String(it.count))}</span>` : '';
+      return `<button type="button" class="pnav-menu-item" role="menuitem" data-view="${App.utils.escapeHtml(it.view)}"><i class="ti ${it.icon}"></i><span class="pnav-menu-label">${App.utils.escapeHtml(it.label)}</span>${count}</button>`;
+    }).join('');
+    document.body.appendChild(menu);
+    const rect = anchor.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = (rect.bottom + 6) + 'px';
+    menu.style.left = rect.left + 'px';
+    this.teamMenu = menu;
+    anchor.classList.add('open');
+    menu.querySelectorAll('.pnav-menu-item').forEach(mi => {
+      mi.addEventListener('click', () => { this._closeTeamMenu(); this.controller.setView(mi.dataset.view); });
+    });
+    this._teamMenuOutside = (e) => { if (!menu.contains(e.target) && e.target !== anchor) this._closeTeamMenu(); };
+    setTimeout(() => document.addEventListener('click', this._teamMenuOutside), 0);
+    this._teamMenuAnchor = anchor;
+  }
+
+  _closeTeamMenu() {
+    if (!this.teamMenu) return;
+    this.teamMenu.remove();
+    this.teamMenu = null;
+    if (this._teamMenuAnchor) this._teamMenuAnchor.classList.remove('open');
+    document.removeEventListener('click', this._teamMenuOutside);
+  }
+
+  /* ---------- Top-bar quick-view icons (filters + My time + Wallboard) ---------- */
+
+  bindTopbarViews() {
+    if (!this.tbViews) return;
+    this.tbViews.querySelectorAll('.tb-icon[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => this.controller.setView(btn.dataset.view));
+    });
+  }
+
+  // Gate each icon by permission and reflect the active view. Rebuilt on
+  // view/role change (icons are static markup, only classes change).
+  renderTopbarViews() {
+    if (!this.tbViews) return;
+    const view = this.controller.uiState.view;
+    this.tbViews.querySelectorAll('.tb-icon[data-view]').forEach(btn => {
+      btn.classList.toggle('hidden', !this.controller.canView(btn.dataset.view));
+      btn.classList.toggle('active', btn.dataset.view === view);
+    });
+  }
+
+  /* ---------- Workspace / company switcher ---------- */
+
+  renderCompanySwitcher() {
+    const mount = this.companySwitcher;
+    if (!mount) return;
+    const companies = (this.controller.uiState.companies || []);
+    if (companies.length <= 1) { mount.classList.add('hidden'); mount.innerHTML = ''; return; }
+    const cur = this.controller.uiState.currentCompany;
+    mount.classList.remove('hidden');
+    mount.innerHTML = `
+      <i class="ti ti-building" aria-hidden="true"></i>
+      <select id="companySelect" aria-label="Workspace">
+        ${companies.map(id => {
+          const label = id === '*' ? 'All companies' : (App.COMPANIES[id] || { label: id }).label;
+          return `<option value="${App.utils.escapeHtml(id)}" ${id === cur ? 'selected' : ''}>${App.utils.escapeHtml(label)}</option>`;
+        }).join('')}
+      </select>`;
+    mount.querySelector('#companySelect').addEventListener('change', (e) => this.controller.setCompany(e.target.value));
   }
 
   subscribe() {
@@ -144,14 +277,17 @@ App.TopbarView = class TopbarView {
     App.EventBus.on('notifs:changed', () => this.renderNotifs());
     App.EventBus.on('notifs:refreshed', () => this.renderNotifs());
     App.EventBus.on('clock:tick', () => this.tickLive());
-    App.EventBus.on('role:changed', () => this.renderViewAsSwitcher());
-    App.EventBus.on('view:changed', () => this.renderTopbarTitleAndScope());
+    App.EventBus.on('role:changed', () => { this.renderPrimaryNav(); this.renderTopbarViews(); this.renderCompanySwitcher(); });
+    App.EventBus.on('view:changed', () => { this._closeTeamMenu(); this.renderTopbarTitleAndScope(); this.renderPrimaryNav(); this.renderTopbarViews(); });
+    App.EventBus.on('company:changed', () => this.renderCompanySwitcher());
   }
 
   render() {
     this.renderClockWidget();
     this.renderNotifs();
-    this.renderViewAsSwitcher();
+    this.renderPrimaryNav();
+    this.renderTopbarViews();
+    this.renderCompanySwitcher();
     this.renderTopbarTitleAndScope();
   }
 
@@ -266,6 +402,36 @@ App.TopbarView = class TopbarView {
 
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
 
+    // Developer-only "View as" role preview, relocated here from the top bar.
+    const isDev = App.realRole() === 'developer';
+    const viewAsHtml = isDev ? `
+      <div class="user-menu-section">
+        <div class="field-label" style="margin-bottom:6px;">View as</div>
+        <select id="menuViewAs" class="user-menu-select" aria-label="Preview as role">
+          ${[['developer', 'Developer (you)'], ['admin', 'Admin'], ['supervisor', 'Supervisor'], ['worker', 'Worker']]
+            .map(([v, l]) => `<option value="${v}" ${(App.viewAsRole || 'developer') === v ? 'selected' : ''}>${l}</option>`).join('')}
+        </select>
+      </div>` : '';
+
+    // Workspace / company switcher, relocated here from the top bar. Only shown
+    // when the member belongs to more than one workspace.
+    const companies = this.controller.uiState.companies || [];
+    const curCompany = this.controller.uiState.currentCompany;
+    const workspaceHtml = companies.length > 1 ? `
+      <div class="user-menu-section">
+        <div class="field-label" style="margin-bottom:6px;">Workspace</div>
+        <select id="menuCompany" class="user-menu-select" aria-label="Workspace">
+          ${companies.map(id => {
+            const label = id === '*' ? 'All companies' : (App.COMPANIES[id] || { label: id }).label;
+            return `<option value="${App.utils.escapeHtml(id)}" ${id === curCompany ? 'selected' : ''}>${App.utils.escapeHtml(label)}</option>`;
+          }).join('')}
+        </select>
+      </div>` : '';
+
+    // "My time" moved off the top bar into the account menu (gated by view perm).
+    const myTimeHtml = this.controller.canView('time:mine')
+      ? `<div class="user-menu-item" data-action="my-time"><i class="ti ti-clock"></i>My time</div>` : '';
+
     const menu = document.createElement('div');
     menu.className = 'user-menu';
     menu.innerHTML = `
@@ -280,19 +446,25 @@ App.TopbarView = class TopbarView {
           <button class="theme-opt ${currentTheme === 'light' ? 'active' : ''}" data-theme-set="light" aria-pressed="${currentTheme === 'light'}"><i class="ti ti-sun"></i>Light</button>
         </div>
       </div>
+      ${workspaceHtml}
+      ${viewAsHtml}
+      ${myTimeHtml}
+      <div class="user-menu-item" data-action="scale"><i class="ti ti-zoom-scan"></i>Display size</div>
       <div class="user-menu-item" data-action="edit-profile"><i class="ti ti-user-edit"></i>Edit profile</div>
       <div class="user-menu-item" data-action="show-tour"><i class="ti ti-help"></i>Show tour again</div>
       <div class="user-menu-item" data-action="sign-out"><i class="ti ti-logout"></i>Sign out</div>
     `;
     document.body.appendChild(menu);
 
-    // The avatar lives in the sidebar footer (bottom-left), so anchor the menu
-    // above it and aligned to its left edge instead of dropping down-right.
-    const rect = this.avatar.getBoundingClientRect();
+    // The account chip lives in the top bar (top-right), so drop the menu down
+    // from it, right-aligned to the chip so it never runs off-screen.
+    const anchor = this.userChip || this.avatar;
+    const rect = anchor.getBoundingClientRect();
     menu.style.position = 'fixed';
-    menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-    menu.style.left = rect.left + 'px';
-    menu.style.right = 'auto';
+    menu.style.top = (rect.bottom + 6) + 'px';
+    menu.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
+    menu.style.left = 'auto';
+    menu.style.bottom = 'auto';
 
     this.userMenu = menu;
 
@@ -308,6 +480,37 @@ App.TopbarView = class TopbarView {
       this.closeUserMenu();
       if (App.signOut) App.signOut();
     });
+    // Display size: open the scale popover anchored to the account chip (the
+    // menu item is gone after close, so anchor to the persistent chip).
+    menu.querySelector('[data-action="scale"]').addEventListener('click', () => {
+      const anchorEl = this.userChip || this.avatar;
+      this.closeUserMenu();
+      if (App.uiScale) App.uiScale.openAt(anchorEl);
+    });
+    // Workspace / company switch.
+    const companySel = menu.querySelector('#menuCompany');
+    if (companySel) {
+      companySel.addEventListener('click', (e) => e.stopPropagation());
+      companySel.addEventListener('change', (e) => {
+        this.closeUserMenu();
+        this.controller.setCompany(e.target.value);
+      });
+    }
+    // "My time" navigates to the personal time view.
+    const myTimeItem = menu.querySelector('[data-action="my-time"]');
+    if (myTimeItem) myTimeItem.addEventListener('click', () => {
+      this.closeUserMenu();
+      this.controller.setView('time:mine');
+    });
+    // Developer "View as" role preview.
+    const viewAsSel = menu.querySelector('#menuViewAs');
+    if (viewAsSel) {
+      viewAsSel.addEventListener('click', (e) => e.stopPropagation());
+      viewAsSel.addEventListener('change', (e) => {
+        this.closeUserMenu();
+        this.controller.setViewAs(e.target.value);
+      });
+    }
     menu.querySelectorAll('[data-theme-set]').forEach(btn => {
       btn.addEventListener('click', () => {
         const next = btn.dataset.themeSet;

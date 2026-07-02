@@ -11,14 +11,21 @@ App.UiScaleView = class UiScaleView {
     this.STEP = 0.05;
     this.DEFAULT = 1;
 
-    this.btn = document.getElementById('scaleBtn');
-    if (!this.btn) return;
     this.popover = null;
+    this.anchor = null;
 
+    // Always apply the stored scale on boot, even though the trigger now lives
+    // in the account menu (there's no dedicated top-bar button anymore).
     this.applyStored();
-    this.btn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle(); });
+
+    // Back-compat: if a #scaleBtn is present, keep wiring it.
+    this.btn = document.getElementById('scaleBtn');
+    if (this.btn) {
+      this.btn.addEventListener('click', (e) => { e.stopPropagation(); this.toggleAt(this.btn); });
+    }
     document.addEventListener('click', (e) => {
-      if (this.popover && !this.popover.contains(e.target) && e.target !== this.btn && !this.btn.contains(e.target)) {
+      if (this.popover && !this.popover.contains(e.target) &&
+          (!this.anchor || (e.target !== this.anchor && !this.anchor.contains(e.target)))) {
         this.close();
       }
     });
@@ -37,7 +44,10 @@ App.UiScaleView = class UiScaleView {
 
   applyStored() { this.apply(this.currentScale()); }
 
-  toggle() { if (this.popover) this.close(); else this.open(); }
+  // Public entry point used by the account menu: open the scale popover
+  // anchored to a given element (falls back to the legacy button).
+  openAt(anchor) { this.anchor = anchor || this.btn; this.open(); }
+  toggleAt(anchor) { if (this.popover) this.close(); else this.openAt(anchor); }
 
   open() {
     const cur = this.currentScale();
@@ -58,10 +68,11 @@ App.UiScaleView = class UiScaleView {
     `;
     document.body.appendChild(this.popover);
 
-    const r = this.btn.getBoundingClientRect();
+    const anchorEl = this.anchor || this.btn;
+    const r = anchorEl.getBoundingClientRect();
     this.popover.style.position = 'fixed';
     this.popover.style.top   = (r.bottom + 6) + 'px';
-    this.popover.style.right = (window.innerWidth - r.right) + 'px';
+    this.popover.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
 
     const range = this.popover.querySelector('#scaleRange');
     range.addEventListener('input', () => this.apply(parseFloat(range.value)));
@@ -81,13 +92,13 @@ App.UiScaleView = class UiScaleView {
       this.apply(this.DEFAULT);
     });
 
-    this.btn.classList.add('active');
+    if (this.btn) this.btn.classList.add('active');
   }
 
   close() {
     if (this.popover) this.popover.remove();
     this.popover = null;
-    this.btn.classList.remove('active');
+    if (this.btn) this.btn.classList.remove('active');
   }
 
   updateReadout(scale) {

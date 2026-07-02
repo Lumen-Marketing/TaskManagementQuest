@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.BulkActionsView({ controller });
   new App.ResizeHandleView({ controller });
   new App.ToolbarMenuView({ controller });
-  new App.UiScaleView();
+  App.uiScale = new App.UiScaleView();
   new App.ProgressWidgetView({ taskModel, currentUser: App.CURRENT_USER });
   new App.UpNextWidgetView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   new App.FocusWidgetView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });

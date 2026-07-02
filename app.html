@@ -44,14 +44,11 @@
   <!-- TOP BAR -->
   <div class="topbar">
     <div class="topbar-left">
-      <!-- Section title + scope toggle. Painted by TopbarView: #tbTitle tracks
-           the active view; the segment ("My work" / "Company") maps to the
-           mine / all task views and only shows on those scoped list views. -->
-      <div class="tb-title" id="tbTitle">Quest HQ</div>
-      <div class="seg hidden" id="scopeSeg" role="tablist" aria-label="Task scope">
-        <button type="button" data-scope="mine" title="My work"><i class="ti ti-user"></i><span class="seg-label">My work</span></button>
-        <button type="button" data-scope="all" title="Company"><i class="ti ti-users-group"></i><span class="seg-label">Company</span></button>
-      </div>
+      <!-- Brand mark doubles as the mobile nav-drawer toggle (SidebarView). -->
+      <button class="tb-logo logo" id="brandLogo" aria-label="Toggle navigation"><i class="ti ti-bolt"></i></button>
+      <!-- Primary section nav (Home · Tasks · Projects · Team ▾ · Reports),
+           painted + role-gated by TopbarView.renderPrimaryNav. -->
+      <nav class="primary-nav" id="primaryNav" aria-label="Primary"></nav>
     </div>
     <div class="topbar-right">
       <div class="search">
@@ -59,12 +56,22 @@
         <input type="text" id="searchInput" aria-label="Search tasks, people, projects" placeholder="Search tasks, people, projects" />
       </div>
 
-      <!-- Developer-only "view as role" switcher -->
-      <div id="viewAsSwitcher" class="viewas-switcher hidden"></div>
+      <!-- Workspace / company switcher. Painted by TopbarView.renderCompanySwitcher;
+           shown only when >1 workspace. -->
+      <div id="companySwitcher" class="company-switcher hidden"></div>
 
-      <button class="icon-btn" id="scaleBtn" aria-label="Display size" title="Display size">
-        <i class="ti ti-zoom-scan"></i>
+      <!-- Clock in / out (moved from the sidebar footer). -->
+      <button type="button" id="clockWidget" class="clock-widget" aria-label="Clock in / out" title="Clock in / out">
+        <i class="ti ti-player-play-filled" aria-hidden="true"></i>
+        <span id="clockLabel">Clock in</span>
+        <span id="clockTimer" class="clock-timer hidden">00:00:00</span>
       </button>
+
+      <!-- Wallboard sits with the notification bell on the right. My time moved
+           into the account menu; the task quick-filters live under "Tasks ▾". -->
+      <div class="tb-views" id="tbViews" aria-label="Quick views">
+        <button type="button" class="tb-icon" data-view="wallboard" title="Wallboard" aria-label="Wallboard"><i class="ti ti-device-tv"></i></button>
+      </div>
 
       <div style="position: relative;">
         <button class="icon-btn" id="notifBtn" aria-label="Notifications">
@@ -79,64 +86,27 @@
           <div class="notif-list" id="notifList"></div>
         </div>
       </div>
+
+      <!-- Account chip (avatar + name). The chip opens the account menu, which
+           also holds Display size + the developer "View as" switcher. -->
+      <div class="userchip" id="userChip">
+        <button type="button" class="avatar" id="userAvatar" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" style="background: var(--amber); color: var(--color-accent-ink);">AM</button>
+        <div class="uc-meta">
+          <div class="uc-name">Abraham M.</div>
+          <div class="uc-role">Owner · Admin</div>
+        </div>
+        <i class="ti ti-chevron-down uc-gear" aria-hidden="true"></i>
+      </div>
     </div>
   </div>
 
-  <!-- LEFT SIDEBAR -->
-  <nav class="deck" aria-label="Primary">
+  <!-- MOBILE NAV DRAWER — the desktop layout has no sidebar; on phones this
+       slide-in holds the full navigation (SidebarView.renderMobileNav). Hidden
+       on desktop via CSS. -->
+  <nav class="deck drawer" aria-label="Navigation">
     <div class="sidebar">
-      <div class="side-brand">
-        <div class="logo"><i class="ti ti-bolt"></i></div>
-        <div class="side-brand-text">
-          <div class="brand-name">Quest HQ</div>
-          <div class="brand-sub">Operations workspace</div>
-        </div>
-      </div>
-
       <div class="side-scroll">
-      <!-- Personal: Home + Projects, then the "needs attention" filters.
-           "All" and "Mine" were removed here — they're the same task list at two
-           scopes, so they now live in the topbar "My work / Company" toggle.
-           Wallboard (a TV/presentation mode, not a personal view) moved to the
-           footer. -->
-      <div class="side-group grp-views">
-        <div class="side-label">Personal</div>
-        <div class="side-item" data-view="home" title="Home"><i class="ti ti-home"></i><span class="side-item-label">Home</span></div>
-        <div class="side-item" data-view="projects" title="Projects"><i class="ti ti-folders"></i><span class="side-item-label">Projects</span></div>
-        <div class="side-item" data-view="hot" title="Urgent"><i class="ti ti-bolt" style="color: var(--u-urgent);"></i><span class="side-item-label">Urgent</span><span class="side-count" id="cnt-hot" style="color: var(--u-urgent);">0</span></div>
-        <div class="side-item" data-view="today" title="Today"><i class="ti ti-flame" style="color: var(--rust);"></i><span class="side-item-label">Today</span><span class="side-count danger-text" id="cnt-today">0</span></div>
-        <div class="side-item" data-view="overdue" title="Overdue"><i class="ti ti-alert-triangle"></i><span class="side-item-label">Overdue</span><span class="side-count" id="cnt-overdue">0</span></div>
-        <div class="side-item" data-view="watching" title="Watching"><i class="ti ti-eye"></i><span class="side-item-label">Watching</span><span class="side-count" id="cnt-watching">0</span></div>
-      </div>
-
-      <div id="sideExtraGroups">
-        <!-- Skeleton for the dynamic sidebar sections (Company / Time / Org /
-             Admin) while the app boots. Replaced by SidebarView.renderExtraGroups. -->
-        <div class="side-skeleton" aria-hidden="true">
-          <span class="sk sk-side-label"></span>
-          <span class="sk sk-side-item"></span>
-          <span class="sk sk-side-item"></span>
-          <span class="sk sk-side-label"></span>
-          <span class="sk sk-side-item"></span>
-        </div>
-      </div>
-      </div>
-
-      <div class="side-foot">
-        <div class="side-item side-foot-item" data-view="wallboard" title="Wallboard"><i class="ti ti-device-tv"></i><span class="side-item-label">Wallboard</span></div>
-        <button type="button" id="clockWidget" class="clock-widget" aria-label="Clock in / out">
-          <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-          <span id="clockLabel">Clock in</span>
-          <span id="clockTimer" class="clock-timer hidden">00:00:00</span>
-        </button>
-        <div class="userchip">
-          <button type="button" class="avatar" id="userAvatar" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" style="background: var(--amber); color: var(--color-accent-ink);">AM</button>
-          <div class="uc-meta">
-            <div class="uc-name">Abraham M.</div>
-            <div class="uc-role">Owner · Admin</div>
-          </div>
-          <i class="ti ti-settings uc-gear" aria-hidden="true"></i>
-        </div>
+        <div id="railMobileNav" class="rail-mobile-nav"></div>
       </div>
     </div>
   </nav>
@@ -145,28 +115,47 @@
   <main class="main" id="mainPane" tabindex="-1" aria-label="Tasks">
     <div class="list-pane" id="listPane">
 
-      <div class="work-toolbar">
-        <div class="work-toolbar-spacer"></div>
-        <button class="btn" id="viewBtn"><i class="ti ti-table"></i>View: Table</button>
-        <button class="btn" id="viewsBtn"><i class="ti ti-bookmarks"></i>Views</button>
-        <button class="btn" id="filterBtn"><i class="ti ti-filter"></i>Filter</button>
-        <button class="btn" id="sortBtn"><i class="ti ti-arrows-sort"></i>Sort</button>
-        <button class="btn" id="groupBtn"><i class="ti ti-layout-rows"></i>Group by</button>
-        <button class="btn" id="selectBtn"><i class="ti ti-checkbox"></i>Select</button>
-        <button class="btn" id="clearDoneBtn" title="Clear done tasks (deleted in 30 days)" hidden><i class="ti ti-eraser"></i>Clear done</button>
-        <button class="btn" id="exportBtn"><i class="ti ti-download"></i>Export</button>
-        <button class="btn btn-primary" id="newTaskBtn"><i class="ti ti-plus"></i>New task</button>
-      </div>
-
+      <!-- The old work-toolbar row is gone: its View / overflow / create actions
+           now live inside the header card (see .head-card-actions below), and
+           Filter / Sort / Group by live in the Controls widget (#controlsWidget).
+           The secondary buttons (Views/Select/Clear done/Export) stay in the DOM
+           but hidden, reached through the "⋯ More" menu (ToolbarMenuView). -->
       <div class="page-head">
-        <div class="page-title-block">
-          <div class="page-eyebrow" id="pageEyebrow">This week</div>
-          <h1 class="page-title" id="pageTitle">All tasks</h1>
+        <!-- Slim header card: the section name + the scope toggle. Replaces the
+             plain "This week / All tasks" heading. (#pageEyebrow is kept hidden
+             so TaskListView can still write to it without breaking.) -->
+        <div class="head-card">
+          <span class="page-eyebrow" id="pageEyebrow" hidden>This week</span>
+          <h1 class="page-title head-card-title" id="pageTitle">All tasks</h1>
+          <div class="seg" id="scopeSeg" role="tablist" aria-label="Task scope">
+            <button type="button" data-scope="mine" title="My work"><i class="ti ti-user"></i><span class="seg-label">My work</span></button>
+            <button type="button" data-scope="all" title="Company"><i class="ti ti-users-group"></i><span class="seg-label">Company</span></button>
+          </div>
+          <!-- View / overflow / create actions, moved here from the work-toolbar.
+               Same IDs, so ToolbarMenuView + TaskListView handlers stay wired. -->
+          <div class="head-card-actions">
+            <button class="btn" id="viewBtn"><i class="ti ti-table"></i>View: Table</button>
+            <button class="btn tb-secondary" id="viewsBtn"><i class="ti ti-bookmarks"></i>Views</button>
+            <button class="btn tb-secondary" id="selectBtn"><i class="ti ti-checkbox"></i>Select</button>
+            <button class="btn tb-secondary" id="clearDoneBtn" title="Clear done tasks (deleted in 30 days)" hidden><i class="ti ti-eraser"></i>Clear done</button>
+            <button class="btn tb-secondary" id="exportBtn"><i class="ti ti-download"></i>Export</button>
+            <button class="btn btn-more" id="moreBtn" aria-label="More actions" title="More"><i class="ti ti-dots"></i></button>
+            <button class="btn btn-primary" id="newTaskBtn"><i class="ti ti-plus"></i>New task</button>
+          </div>
         </div>
         <div class="page-head-widgets">
           <div class="up-next-mount" id="upNextWidget"></div>
           <div class="focus-widget-mount" id="focusWidget"></div>
           <div class="progress-widget-mount" id="progressWidget"></div>
+          <!-- Controls widget — the Filter/Sort/Group by buttons relocated from
+               the work-toolbar. Same button nodes/IDs, so handlers stay wired. -->
+          <div class="controls-widget-mount" id="controlsWidget">
+            <div class="controls-card">
+              <button class="btn" id="filterBtn"><i class="ti ti-filter"></i>Filter</button>
+              <button class="btn" id="sortBtn"><i class="ti ti-arrows-sort"></i>Sort</button>
+              <button class="btn" id="groupBtn"><i class="ti ti-layout-rows"></i>Group by</button>
+            </div>
+          </div>
         </div>
       </div>
 

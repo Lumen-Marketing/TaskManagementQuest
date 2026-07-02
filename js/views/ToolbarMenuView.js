@@ -14,12 +14,14 @@ App.ToolbarMenuView = class ToolbarMenuView {
     const viewBtn  = document.getElementById('viewBtn');
     const viewsBtn = document.getElementById('viewsBtn');
     const exportBtn = document.getElementById('exportBtn');
+    const moreBtn = document.getElementById('moreBtn');
     if (sortBtn)  sortBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('sort',  sortBtn); });
     if (groupBtn) groupBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('group', groupBtn); });
     if (viewBtn)  viewBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('view',  viewBtn); });
     if (viewsBtn) viewsBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('views', viewsBtn); });
     if (exportBtn) exportBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('export', exportBtn); });
-    [sortBtn, groupBtn, viewBtn, viewsBtn, exportBtn].forEach(btn => {
+    if (moreBtn)  moreBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('more',  moreBtn); });
+    [sortBtn, groupBtn, viewBtn, viewsBtn, exportBtn, moreBtn].forEach(btn => {
       if (btn) { btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false'); }
     });
     document.addEventListener('click', (e) => {
@@ -201,6 +203,35 @@ App.ToolbarMenuView = class ToolbarMenuView {
           if (el.dataset.export === 'tasks') this.controller.exportTasksCsv();
           else this.controller.exportTimeCsv();
           this.close();
+        });
+      });
+    } else if (this.menuFor === 'more') {
+      // Overflow for the secondary toolbar actions. Clear done only appears
+      // when there are done tasks to clear (mirrors the toolbar button state).
+      const clearBtn = document.getElementById('clearDoneBtn');
+      const canClear = clearBtn && !clearBtn.hidden;
+      const rows = [
+        { key: 'views',  label: 'Saved views',   icon: 'ti-bookmarks' },
+        { key: 'select', label: 'Select tasks',  icon: 'ti-checkbox' },
+        ...(canClear ? [{ key: 'clear', label: 'Clear done', icon: 'ti-eraser' }] : []),
+        { key: 'export', label: 'Export',        icon: 'ti-download' },
+      ];
+      this.menu.innerHTML = `
+        <div class="toolbar-menu-title">More</div>
+        ${rows.map(r => `
+          <div class="toolbar-menu-item" data-more="${r.key}">
+            <i class="ti ${r.icon}"></i><span>${r.label}</span>
+          </div>`).join('')}
+      `;
+      const anchor = this.anchor;   // the More button — sub-menus re-anchor here
+      this.menu.querySelectorAll('[data-more]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const k = el.dataset.more;
+          if (k === 'views')       this.toggle('views', anchor);
+          else if (k === 'export') this.toggle('export', anchor);
+          else if (k === 'select') { this.controller.toggleBulkMode(); this.close(); }
+          else if (k === 'clear')  { this.controller.clearDoneTasks(); this.close(); }
         });
       });
     }
