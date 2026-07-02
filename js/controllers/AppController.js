@@ -532,11 +532,12 @@ App.AppController = class AppController {
 
     document.getElementById('taskViewWrap').classList.toggle('hidden', isTimeView || isPageView);
     document.getElementById('timeViewWrap').classList.toggle('hidden', !isTimeView);
-    // Hide the task-table chrome (toolbar buttons + Up next / progress cards)
-    // for any non-task surface: Time, Approvals, Hierarchy, Admin, AND the
-    // Watching view (which is now a team-supervision dashboard, not a table).
+    // Hide the task-table chrome (toolbar buttons + Up next / progress cards +
+    // the My work/Company scope toggle) for any non-task surface: Time,
+    // Approvals, Hierarchy, Admin, AND the Watching view (which is now a
+    // team-supervision dashboard, not a table).
     const hideChrome = isTimeView || v === 'watching';
-    document.querySelectorAll('.work-toolbar, .head-card-actions, .page-head-widgets').forEach(el => {
+    document.querySelectorAll('.work-toolbar, .head-card-actions, .page-head-widgets, #scopeSeg').forEach(el => {
       el.classList.toggle('hidden', hideChrome);
     });
   }

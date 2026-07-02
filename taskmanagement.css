@@ -7287,6 +7287,7 @@ body.ui-command-center .qhq-home .qhq-head { margin-bottom: 4px; }
    the All-tasks card; title down from 30px to the shared 20px. */
 body.ui-command-center .pv-head { margin: 16px 28px 14px; }
 body.ui-command-center .pv-eyebrow { display: none; }
-body.ui-command-center .pv-title { font-size: 20px; margin-top: 0; letter-spacing: -0.02em; }
+/* margin: 0 kills the h1's UA bottom margin so the name truly centers. */
+body.ui-command-center .pv-title { font-size: 20px; margin: 0; letter-spacing: -0.02em; }
 /* Reports: title up to the shared 20px. */
 body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
