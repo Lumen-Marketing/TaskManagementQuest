@@ -4798,12 +4798,10 @@ body.ui-command-center .app > .deck   { display: none; }   /* mobile-only drawer
 
 body.ui-command-center .topbar {
   padding: 0 18px;
-  /* Blend the topbar into the canvas. On Home/All-tasks the panze skin warms
-     the sidebar + content to --pz-bg (#FBFAF8) but leaves --bg as the Light
-     theme's gray #F3F3F5 — so use --pz-bg here (fallback --bg on non-panze
-     views) so the topbar matches the warm sidebar + content. */
   background: var(--pz-bg, var(--bg));
-  border-bottom: none;
+  /* A subtle hairline (same tone as the card outlines) separates the bar from
+     the work surface. */
+  border-bottom: 1px solid var(--border);
 }
 
 /* The brand moved into the sidebar; the topbar-left now holds the title + scope
@@ -5511,10 +5509,14 @@ body.ui-command-center .detail-title {
 .qhq-htext { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .qhq-card-h .ct { font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); line-height: 1.12; }
 .qhq-card-h .meta { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
-.qhq-arlist, .qhq-hdlist { padding: 2px 16px 12px; flex: 1; display: flex; flex-direction: column; }
+/* Alignment contract for every card list: side padding 18px (= the card-head
+   padding) puts row glyphs flush under the 40px head icon, and each row
+   reserves the head icon's 40px + 13px gap for its glyph column so the row
+   TEXT starts exactly under the card title (18 + 40 + 13 = 71px). */
+.qhq-arlist, .qhq-hdlist { padding: 2px 18px 12px; flex: 1; display: flex; flex-direction: column; }
 .qhq-ar-row { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-top: 1px solid var(--border); }
 .qhq-ar-row:first-child { border-top: none; }
-.qhq-ar-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
+.qhq-ar-ic { width: 28px; height: 28px; margin-right: 14px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--rust-bg); color: var(--rust); }
 .qhq-ar-ic.hold { background: #FCEFE0; color: #B5701A; }
 .qhq-ar-ic .qhq-ic { width: 17px; height: 17px; }
 .qhq-ar-b { flex: 1; min-width: 0; }
@@ -5714,11 +5716,11 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-home .tone-green { --tn-bg: var(--green-bg); --tn-fg: var(--green-ink); }
 .qhq-home .tone-slate { --tn-bg: var(--bg-3);     --tn-fg: var(--ink-2); }
 
-.qhq-unlist, .qhq-reclist { padding: 0 16px 14px; flex: 1; display: flex; flex-direction: column; }
+.qhq-unlist, .qhq-reclist { padding: 0 18px 14px; flex: 1; display: flex; flex-direction: column; }
 /* Up next mirrors the At-risk row: tinted glyph chip + title/subtitle + due. */
 .qhq-un-row { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-top: 1px solid var(--border); cursor: pointer; }
 .qhq-un-row:first-child { border-top: none; }
-.qhq-un-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
+.qhq-un-ic { width: 28px; height: 28px; margin-right: 14px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2)); }
 .qhq-un-ic .qhq-ic { width: 17px; height: 17px; }
 .qhq-un-b { flex: 1; min-width: 0; }
 .qhq-un-t { font-size: 12.8px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -5742,6 +5744,7 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-rec-row:first-child { border-top: none; }
 .qhq-rec-av {
   width: 27px; height: 27px; flex: 0 0 auto; border-radius: 50%;
+  margin-right: 15px;  /* 27 + 15 + 11 gap = the 53px glyph column */
   display: grid; place-items: center; font-size: 10.5px; font-weight: 800;
   background: var(--tn-bg, var(--bg-3)); color: var(--tn-fg, var(--ink-2));
 }
@@ -5752,10 +5755,10 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
 .qhq-rec-ago { font-size: 11px; color: var(--ink-4); white-space: nowrap; flex-shrink: 0; }
 
 /* ----- Team workload roster (managers) — reference "workload table" look ----- */
-.qhq-twlist { padding: 2px 16px 12px; flex: 1; display: flex; flex-direction: column; }
+.qhq-twlist { padding: 2px 18px 12px; flex: 1; display: flex; flex-direction: column; }
 .qhq-tw-row {
-  display: grid; grid-template-columns: 30px 172px minmax(120px, 1fr) auto auto;
-  align-items: center; gap: 14px; padding: 10px 0; border-top: 1px solid var(--border); cursor: pointer;
+  display: grid; grid-template-columns: 40px 172px minmax(120px, 1fr) auto auto;
+  align-items: center; gap: 13px; padding: 10px 0; border-top: 1px solid var(--border); cursor: pointer;
 }
 .qhq-tw-row:first-child { border-top: none; }
 .qhq-tw-av {
@@ -5784,7 +5787,9 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
    + name + open count); the wide bar/dots are dropped to stay clean. Counts sit
    on ONE baseline ("6 open · 1 late") so every row is the same height — the
    stacked variant made rows with a late badge taller than their neighbors. */
-.qhq-tw-rail .qhq-tw-row { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; padding: 10px 0; }
+/* Horizontal padding 8px preserved: this rule out-ranks the shared hover-inset
+   (margin 0 -8px + padding 0 8px) — zeroing it shifted rows 8px left. */
+.qhq-tw-rail .qhq-tw-row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 13px; padding: 10px 8px; }
 .qhq-tw-rail .qhq-tw-bar, .qhq-tw-rail .qhq-tw-dots { display: none; }
 .qhq-tw-rail .qhq-tw-av { width: 28px; height: 28px; }
 .qhq-tw-rail .qhq-tw-n { flex-direction: row; align-items: baseline; gap: 7px; }
@@ -5793,9 +5798,9 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
    overview): author avatar + "who · task" line + snippet + ago. The list
    scrolls inside the card so it stays level with the donut card. */
 .qhq-cm-card { overflow: hidden; }
-.qhq-cmlist { padding: 2px 16px 12px; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.qhq-cmlist { padding: 2px 18px 12px; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .qhq-cm-row {
-  display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px;
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 13px;
   align-items: flex-start; padding: 8px; margin: 0 -8px; border-radius: 9px;
   cursor: pointer; transition: background var(--dur-fast) var(--ease-out);
 }
@@ -6118,7 +6123,7 @@ html:not([data-theme="dark"]) body.ui-command-center .deck {
 }
 html:not([data-theme="dark"]) body.ui-command-center .topbar {
   background: var(--bg);
-  border-bottom: none;
+  border-bottom: 1px solid var(--border);
 }
 html:not([data-theme="dark"]) body.ui-command-center .deck .side-item {
   transition: background var(--dropdown-open-dur) var(--resize-ease),
