@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Task — Preview (stubbed)</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/tabler-icons/tabler-icons.min.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="css/newtask.css">
+<style>
+  /* Preview-only chrome. Not part of the app. */
+  body { margin: 0; }
+  #previewbar { position: fixed; top: 0; right: 0; z-index: 200; display: flex; gap: 8px; padding: 8px 12px; font-family: var(--font-body); }
+  #previewbar button { font-size: 12px; font-weight: 700; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  #previewbar .note { font-size: 11px; color: var(--ink-3); align-self: center; margin-right: 8px; }
+</style>
+</head>
+<body>
+<div id="previewbar">
+  <span class="note">PREVIEW · sample data</span>
+  <button onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')">Toggle theme</button>
+</div>
+<div id="newTaskWrap"></div>
+
+<script>
+/* ---- Minimal App stub so the real NewTaskPageView can render standalone ---- */
+window.App = { errors: {} };
+App.errors.ValidationError = class ValidationError extends Error {
+  constructor(msg, opts = {}) { super(msg); this.field = opts.field; }
+};
+
+/* EventBus */
+App.EventBus = (function () {
+  const map = {};
+  return {
+    on: (ev, fn) => { (map[ev] = map[ev] || []).push(fn); },
+    emit: (ev, ...a) => { (map[ev] || []).forEach(fn => fn(...a)); },
+  };
+})();
+
+/* People + companies + priorities */
+App.PEOPLE = {
+  abraham: { id: 'abraham', name: 'Abraham', full: 'Abraham', email: 'a@x.com', color: '#16325C', role: 'Owner' },
+  kristin: { id: 'kristin', name: 'Kristin', full: 'Kristin M.', email: 'k@x.com', color: '#0F6E56', role: 'Admin' },
+  alkeith: { id: 'alkeith', name: 'Alkeith', full: 'Alkeith', email: 'al@x.com', color: '#185FA5', role: 'Field ops' },
+  andres:  { id: 'andres',  name: 'Andres',  full: 'Andres',  email: 'an@x.com', color: '#534AB7', role: 'Drafting' },
+  sean:    { id: 'sean',    name: 'Sean',    full: 'Sean',    email: 's@x.com',  color: '#444441', role: 'Frontend' },
+};
+App.COMPANIES = { roofing: { id: 'roofing', label: 'Quest Roofing' }, drafting: { id: 'drafting', label: 'Quest Drafting' }, lumen: { id: 'lumen', label: 'Lumen Marketing' } };
+App.PRIORITIES = {
+  critical: { label: 'Critical', order: 0 }, urgent: { label: 'Urgent', order: 1 },
+  high: { label: 'High', order: 2 }, medium: { label: 'Medium', order: 3 }, low: { label: 'Low', order: 4 },
+};
+App.TASK_TYPES = { admin: { label: 'Admin' }, bid: { label: 'Bid / Estimate' }, field: { label: 'Field' } };
+App.TASK_LABELS = { none: { id: 'none', label: 'No label' }, roof: { id: 'roof', label: 'Roof' }, drafting: { id: 'drafting', label: 'Drafting' }, office: { id: 'office', label: 'Office' } };
+App.STATUSES = { todo: { label: 'To do' }, prog: { label: 'In progress' }, done: { label: 'Done' } };
+App.projects = { p1: { id: 'p1', name: '8th St. Custom Home', companyId: 'drafting', color: '' }, p2: { id: 'p2', name: 'Ramirez Re-roof', companyId: 'roofing', color: '' } };
+
+/* Per-company / per-type taxonomy stub. 'bid' shows distinct bid-stage statuses. */
+const PEOPLE_BY_CO = {
+  roofing: ['abraham', 'kristin', 'alkeith'],
+  drafting: ['abraham', 'andres', 'kristin'],
+  lumen: ['abraham', 'sean'],
+};
+const STATUSES_BY_TYPE = {
+  admin: [{ key: 'todo', label: 'To do', color: '#5B6472', isDefault: true }, { key: 'prog', label: 'In progress', color: '#1668F0' }, { key: 'done', label: 'Done', color: '#0F6E56', isDone: true }],
+  bid:   [{ key: 'draft', label: 'Drafting bid', color: '#B97E12', isDefault: true }, { key: 'sent', label: 'Sent to subs', color: '#1668F0' }, { key: 'won', label: 'Won', color: '#0F6E56', isDone: true }],
+  field: [{ key: 'sched', label: 'Scheduled', color: '#5B6472', isDefault: true }, { key: 'onsite', label: 'On site', color: '#ED4E0D' }, { key: 'complete', label: 'Complete', color: '#0F6E56', isDone: true }],
+};
+App.taxonomy = {
+  activeTypes: () => Object.entries(App.TASK_TYPES).map(([key, v]) => ({ key, label: v.label })),
+  activeStatuses: (co, type) => (STATUSES_BY_TYPE[type] || STATUSES_BY_TYPE.admin).map(s => ({ ...s })),
+  activeLabels: () => Object.entries(App.TASK_LABELS).filter(([k]) => k !== 'none').map(([key, v]) => ({ key, label: v.label, color: '#8f867b' })),
+  defaultStatus: (co, type) => ((STATUSES_BY_TYPE[type] || STATUSES_BY_TYPE.admin).find(s => s.isDefault) || {}).key || 'todo',
+  typeLabel: (co, t) => (App.TASK_TYPES[t] || {}).label || t,
+  statusLabel: (co, ty, s) => ((STATUSES_BY_TYPE[ty] || STATUSES_BY_TYPE.admin).find(x => x.key === s) || {}).label || s,
+  labelLabel: (co, l) => (App.TASK_LABELS[l] || {}).label || l,
+};
+
+/* utils */
+App.utils = {
+  escapeHtml: (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
+  peopleInCompany: (co) => (PEOPLE_BY_CO[co] || Object.keys(App.PEOPLE)).map(id => App.PEOPLE[id]),
+  todayISO: (offset = 0) => { const d = new Date(); d.setDate(d.getDate() + offset); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; },
+  avatarHtml: (p) => `<span>${(p && p.name || '?').slice(0, 2)}</span>`,
+};
+App.Motion = { shake: (el) => { el.animate([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 200 }); } };
+
+/* fake controller */
+let VIEW = null;
+App.controller = {
+  uiState: { companies: ['roofing', 'drafting', 'lumen'], currentCompany: 'roofing', creatingTask: true },
+  _newTaskPrefill: {},
+  dataStore: { createProject: (row) => Promise.resolve({ id: 'p' + Date.now() }) },
+  toastView: { show: ({ title, sub }) => console.log('[toast]', title, sub) },
+  createTask: (payload) => {
+    console.log('[createTask payload]', payload);
+    if (VIEW) { VIEW.woNumber = 7; VIEW.dispatched = true; VIEW._renderRail(); }
+    alert('Dispatched (preview) — QH-0007\nAssignees: ' + (payload.assigneeIds || []).join(', ') + '\nSee console for the full payload.');
+  },
+  closeNewTaskPage: () => { /* keep the stamped ticket visible in preview */ },
+};
+</script>
+<script src="js/views/newtask/tokenParser.js"></script>
+<script src="js/views/newtask/WorkOrderRail.js"></script>
+<script src="js/validate.js"></script>
+<script src="js/views/NewTaskPageView.js"></script>
+<script>
+  VIEW = new App.NewTaskPageView({ controller: App.controller, currentUser: 'abraham' });
+  App.EventBus.emit('newtask:changed', true);
+</script>
+</body>
+</html>
