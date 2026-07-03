@@ -372,12 +372,15 @@ App.AppController = class AppController {
   }
 
   /* ----- The filtered task set the list/calendar/export all share ----- */
-  getVisibleTasks() {
-    const role = App.effectiveRole();
+  _reportMemberIds(role) {
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
-    const reportMemberIds = (role === 'supervisor' && App.realRole() !== 'developer')
+    return (role === 'supervisor' && App.realRole() !== 'developer')
       ? new Set((App.PROFILES || []).filter(p => p.supervisor_id === me).map(p => p.member_id))
       : null;
+  }
+
+  getVisibleTasks() {
+    const role = App.effectiveRole();
     return this.taskModel.getFiltered({
       view: this.uiState.view,
       scope: this.uiState.scope,
@@ -386,8 +389,69 @@ App.AppController = class AppController {
       activeFilters: this.uiState.filters,
       currentCompany: this.uiState.currentCompany,
       role,
-      reportMemberIds,
+      reportMemberIds: this._reportMemberIds(role),
     });
+  }
+
+  /* Badge counts for the nav (top-bar Tasks dropdown + mobile drawer), computed
+     through the SAME getFiltered pipeline the list views render from — company,
+     role scope, "My work" segment, search query and filter-bar filters all
+     included — so a badge can never disagree with the rows the user actually
+     sees ("All Tasks is empty but the badge says 7 urgent" reads as data loss).
+     Done rows are excluded to keep the badges' established open-work meaning. */
+  badgeCounts() {
+    const role = App.effectiveRole();
+    const reportMemberIds = this._reportMemberIds(role);
+    const count = (view) => this.taskModel.getFiltered({
+      view,
+      scope: this.uiState.scope,
+      searchQuery: this.uiState.searchQuery,
+      currentUser: this.currentUser,
+      activeFilters: this.uiState.filters,
+      currentCompany: this.uiState.currentCompany,
+      role,
+      reportMemberIds,
+    }).filter(t => !App.taxonomy.isDone(t)).length;
+    return {
+      all: App.can('tasks.view') ? count('all') : 0,
+      mine: count('mine'),
+      hot: count('hot'),
+      today: count('today'),
+      overdue: count('overdue'),
+      watching: count('watching'),
+    };
+  }
+
+  /* How many tasks the current view would show if the transient narrowing
+     (search box, "My work" scope, filter bar) were cleared. Drives the honest
+     empty state: "0 because nothing exists" is a different situation from
+     "0 because your search hides them" — the latter must say so, or a full
+     list reads as wiped data. */
+  hiddenByNarrowingCount() {
+    if (this.getVisibleTasks().length > 0) return 0;
+    const role = App.effectiveRole();
+    return this.taskModel.getFiltered({
+      view: this.uiState.view,
+      scope: 'all',
+      searchQuery: '',
+      currentUser: this.currentUser,
+      activeFilters: null,
+      currentCompany: this.uiState.currentCompany,
+      role,
+      reportMemberIds: this._reportMemberIds(role),
+    }).length;
+  }
+
+  /* One-click recovery from an all-hiding narrowing combo (used by the list
+     empty state). Clears the filter bar, the My-work scope and the search box —
+     the #searchInput element is app.html chrome (TopbarView only pushes edits
+     from it, it never syncs back), so blank it here too. */
+  clearNarrowing() {
+    this.clearFilters();
+    this.setScope('all');
+    this.setSearchQuery('');
+    const box = document.getElementById('searchInput');
+    if (box) box.value = '';
   }
 
   _personName(id) {

@@ -152,7 +152,8 @@ App.TaskModel = class TaskModel {
     if (view === 'mine') tasks = tasks.filter(t => t.assignee === currentUser);
     else if (view === 'hot') tasks = tasks.filter(t => (t.priority === 'critical' || t.priority === 'urgent') && !App.taxonomy.isDone(t));
     else if (view === 'today') tasks = tasks.filter(t => t.due === t0 && !App.taxonomy.isDone(t));
-    else if (view === 'overdue') tasks = tasks.filter(t => t.due < t0 && !App.taxonomy.isDone(t));
+    // `t.due &&`: due === '' must not read as overdue ('' < any ISO date).
+    else if (view === 'overdue') tasks = tasks.filter(t => t.due && t.due < t0 && !App.taxonomy.isDone(t));
     else if (view === 'watching') tasks = tasks.filter(t => (t.watchers || []).includes(currentUser));
     else if (view.startsWith('company:')) {
       const c = view.split(':')[1];

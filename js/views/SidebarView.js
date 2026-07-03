@@ -332,38 +332,17 @@ App.SidebarView = class SidebarView {
 
   /* ---------- counts ---------- */
 
-  // The set of tasks this user can actually see right now (active company +
-  // role row-scope), so sidebar badges match the task list. Mirrors the
-  // scoping in TaskModel.getFiltered / migration 028.
-  _scopedActiveTasks() {
-    const role = App.effectiveRole();
-    const cur = this.controller.uiState.currentCompany;
-    const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
-    const clockId = App.DEFAULT_CLOCK_TASK_ID;
-    let base = this.taskModel.all().filter(t => !App.taxonomy.isDone(t) && !t.clearedAt);
-    if (cur && cur !== '*') {
-      base = base.filter(t => t.company === cur || t.id === clockId);
-    }
-    if (role === 'worker') {
-      base = base.filter(t => t.assignee === this.currentUser || t.creator === this.currentUser || t.id === clockId);
-    } else if (role === 'supervisor' && App.realRole() !== 'developer') {
-      // Real supervisor: narrow to their direct reports. A developer previewing
-      // as supervisor sees the whole selected company's team (no narrowing).
-      const reports = new Set((App.PROFILES || [])
-        .filter(p => p.supervisor_id === me).map(p => p.member_id));
-      base = base.filter(t =>
-        t.assignee === this.currentUser || t.creator === this.currentUser ||
-        reports.has(t.assignee) || t.id === clockId);
-    }
-    return base;
-  }
-
   subscribe() {
     App.EventBus.on('tasks:changed', () => { this.renderCounts(); this.renderMobileNav(); });
     App.EventBus.on('time:changed',  () => { this.renderCounts(); this.renderMobileNav(); });
     App.EventBus.on('view:changed',  (view) => this.updateActive(view));
     App.EventBus.on('company:changed', () => { this.renderCounts(); this.renderMobileNav(); });
     App.EventBus.on('role:changed', () => this.refreshForRole());
+    // Badges derive from the same narrowing the lists render with (see
+    // controller.badgeCounts), so they must re-render when that narrowing moves.
+    App.EventBus.on('scope:changed',   () => { this.renderCounts(); this.renderMobileNav(); });
+    App.EventBus.on('search:changed',  () => { this.renderCounts(); this.renderMobileNav(); });
+    App.EventBus.on('filters:changed', () => { this.renderCounts(); this.renderMobileNav(); });
   }
 
   updateActive(view) {
@@ -375,19 +354,10 @@ App.SidebarView = class SidebarView {
   }
 
   // Shared count computation for the top-bar badges + the mobile drawer.
+  // Delegates to the controller so badges run the exact getFiltered pipeline
+  // the list views render from — a badge can never disagree with visible rows.
   _computeCounts() {
-    const all = this._scopedActiveTasks();
-    const today = App.utils.todayISO(0);
-    return {
-      all: App.can('tasks.view') ? all.length : 0,
-      mine: all.filter(t => t.assignee === this.currentUser).length,
-      hot: all.filter(t => t.priority === 'critical' || t.priority === 'urgent').length,
-      today: all.filter(t => t.due === today).length,
-      // `t.due &&`: a task with due === '' must not count as overdue ('' < today
-      // is true for any ISO date). Matches the list views and HomeView.
-      overdue: all.filter(t => t.due && t.due < today).length,
-      watching: all.filter(t => (t.watchers || []).includes(this.currentUser)).length,
-    };
+    return this.controller.badgeCounts();
   }
 
   renderCounts() {

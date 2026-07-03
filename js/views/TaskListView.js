@@ -1279,6 +1279,21 @@ App.TaskListView = class TaskListView {
   }
 
   _renderEmpty({ icon, title, sub, cta, backToAll }) {
+    // Honest empty state: if tasks EXIST here but the search box / filter bar /
+    // "My work" scope hide them all, say so — "Nothing scheduled" over a full
+    // list reads as wiped data (the it-didn't-get-saved panic). One click clears
+    // the narrowing and brings everything back.
+    let clearNarrowing = false;
+    const hidden = this.controller.hiddenByNarrowingCount
+      ? this.controller.hiddenByNarrowingCount() : 0;
+    if (hidden > 0) {
+      icon = 'ti-filter-off';
+      title = `${hidden} task${hidden === 1 ? ' is' : 's are'} hidden`;
+      sub = 'Your search, filters or "My work" scope hide everything in this view.';
+      clearNarrowing = true;
+      cta = false;
+      backToAll = false;
+    }
     const showCta = cta && App.can('tasks.write');
     this.body.className = '';
     this.body.innerHTML = `<div class="empty">
@@ -1286,6 +1301,7 @@ App.TaskListView = class TaskListView {
       <div class="empty-title">${App.utils.escapeHtml(title)}</div>
       <div class="empty-sub">${App.utils.escapeHtml(sub)}</div>
       <div class="empty-actions">
+        ${clearNarrowing ? `<button class="btn btn-primary empty-clear" type="button" data-action="empty-clear-narrowing"><i class="ti ti-filter-off"></i>Clear search & filters</button>` : ''}
         ${backToAll ? `<button class="btn empty-back" type="button" data-action="empty-show-all"><i class="ti ti-list-check"></i>Show all tasks</button>` : ''}
         ${showCta ? `<button class="btn btn-primary empty-cta" type="button" data-action="empty-new-task"><i class="ti ti-plus"></i>New task</button>` : ''}
       </div>
@@ -1294,6 +1310,8 @@ App.TaskListView = class TaskListView {
     if (newBtn) newBtn.addEventListener('click', () => this.controller.openNewTaskPage());
     const allBtn = this.body.querySelector('[data-action="empty-show-all"]');
     if (allBtn) allBtn.addEventListener('click', () => this.controller.setView('all'));
+    const clearBtn = this.body.querySelector('[data-action="empty-clear-narrowing"]');
+    if (clearBtn) clearBtn.addEventListener('click', () => this.controller.clearNarrowing());
   }
 
   // ---- Inline status menu --------------------------------------------------
