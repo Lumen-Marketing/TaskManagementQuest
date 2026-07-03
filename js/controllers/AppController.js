@@ -914,11 +914,16 @@ App.AppController = class AppController {
       dueTime: t.dueTime || null,
       reminderAt: null,
       priority: t.priority || 'medium',
-      status: 'todo',
+      // Per-type taxonomy: the copy starts on its type's default status for this
+      // company (a customized taxonomy may not have 'todo' for this type).
+      status: App.taxonomy.defaultStatus(t.company, t.type || 'admin'),
       assignee: this.currentUser,
       watchers: [],
       subtasks: (t.subtasks || []).map(s => ({ t: s.t, d: false })),
       notify: { inapp: false, watchers: false, whatsapp: false },
+      // History must show this was a duplication, not an original creation —
+      // an unexplained copy is how the boss ended up with an accidental dupe.
+      activityWhat: `duplicated this from "${t.title || 'task'}"`,
     });
   }
 
@@ -1638,9 +1643,11 @@ App.AppController = class AppController {
         : [],
       activity: [{
         who: this.getUserName(this.currentUser),
-        what: payload.assignee === this.currentUser
+        // activityWhat lets a caller that wraps createTask (duplicateTask) write
+        // an honest first history entry instead of the generic "created" one.
+        what: payload.activityWhat || (payload.assignee === this.currentUser
           ? 'created this task'
-          : `assigned this to ${App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].name : payload.assignee}`,
+          : `assigned this to ${App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].name : payload.assignee}`),
         at: new Date().toISOString(),
         when: 'just now',
       }],
