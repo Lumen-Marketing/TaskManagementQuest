@@ -316,8 +316,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
     // silently dropped. Everything else (id, createdAt, …) comes from the server.
     const EDITABLE = [
       'title', 'description', 'type', 'label', 'company', 'creator',
-      'assignee', 'project', 'due', 'dueTime', 'reminderAt', 'priority', 'status',
-      'watchers', 'subtasks', 'activity', 'clearedAt', 'completedAt', 'focusSeq',
+      'assignee', 'assigneeIds', 'project', 'due', 'dueTime', 'reminderAt', 'reminderOffset',
+      'priority', 'status', 'watchers', 'subtasks', 'activity',
+      'clearedAt', 'completedAt', 'focusSeq', 'woNumber',
     ];
     const merged = { ...serverTask };
     for (const f of EDITABLE) {
@@ -358,10 +359,17 @@ App.SupabaseDataStore = class SupabaseDataStore {
       company_id: task.company,
       creator_id: task.creator,
       assignee_id: task.assignee,
+      // Ordered multi-assignee (migration 060). Lead = assignee_ids[0] and is
+      // mirrored into assignee_id above so existing RLS/queries keep working.
+      assignee_ids: (Array.isArray(task.assigneeIds) && task.assigneeIds.length)
+        ? task.assigneeIds
+        : (task.assignee ? [task.assignee] : []),
       project_id: task.project || null,
       due: task.due,
       due_time: task.dueTime || null,
       reminder_at: task.reminderAt || null,
+      // Reminder offset spec for future server-side firing (migration 062).
+      reminder_offset: task.reminderOffset || null,
       priority: task.priority || 'medium',
       urgency: task.priority || 'medium',
       status: task.status || 'todo',
@@ -371,6 +379,8 @@ App.SupabaseDataStore = class SupabaseDataStore {
       cleared_at: task.clearedAt || null,
       completed_at: task.completedAt || null,
       focus_seq: (task.focusSeq === null || task.focusSeq === undefined) ? null : task.focusSeq,
+      // Per-company work-order number (migration 061); assigned server-side at create.
+      wo_number: (task.woNumber === null || task.woNumber === undefined) ? null : task.woNumber,
     };
   }
 
@@ -380,6 +390,21 @@ App.SupabaseDataStore = class SupabaseDataStore {
     const res = await this.supabase.from('projects').insert(row).select('id').single();
     this._throwIfError(res, 'creating project');
     return res.data;
+  }
+
+  /* Atomically claim the next per-company work-order number (migration 061).
+     Returns the assigned int, or null offline / on error (caller leaves the
+     task unnumbered; it can be backfilled later). */
+  async assignWoNumber(company) {
+    if (!company) return null;
+    try {
+      const res = await this.supabase.rpc('assign_wo_number', { company });
+      if (res.error) { console.warn('[wo] assign_wo_number failed', res.error); return null; }
+      return typeof res.data === 'number' ? res.data : null;
+    } catch (err) {
+      console.warn('[wo] assign_wo_number threw', err);
+      return null;
+    }
   }
 
   /* Patch one project folder (e.g. status -> 'done' to complete it, or back to
@@ -741,9 +766,15 @@ App.SupabaseDataStore = class SupabaseDataStore {
       company: row.company_id,
       creator: row.creator_id,
       assignee: row.assignee_id,
+      // Ordered multi-assignee (migration 060); fall back to the single assignee
+      // for rows created before the column existed.
+      assigneeIds: (Array.isArray(row.assignee_ids) && row.assignee_ids.length)
+        ? row.assignee_ids
+        : (row.assignee_id ? [row.assignee_id] : []),
       due: row.due,
       dueTime: row.due_time || null,
       reminderAt: row.reminder_at || null,
+      reminderOffset: row.reminder_offset || null,
       priority: row.priority || row.urgency || 'medium',
       status: row.status,
       project: row.project_id || null,
@@ -755,6 +786,8 @@ App.SupabaseDataStore = class SupabaseDataStore {
       completedAt: row.completed_at || null,
       // Focus list (execution order) sort-key. null = not in the assignee's Focus.
       focusSeq: (row.focus_seq === null || row.focus_seq === undefined) ? null : Number(row.focus_seq),
+      // Per-company work-order number (migration 061); null until assigned.
+      woNumber: (row.wo_number === null || row.wo_number === undefined) ? null : Number(row.wo_number),
     };
   }
 
