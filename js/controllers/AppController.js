@@ -1845,6 +1845,14 @@ App.AppController = class AppController {
       }
       return;
     }
+    // Resolve ordered assignees (lead = index 0) and claim the work-order number.
+    const assigneeIds = Array.isArray(payload.assigneeIds) && payload.assigneeIds.length
+      ? payload.assigneeIds
+      : (payload.assignee ? [payload.assignee] : []);
+    const lead = assigneeIds[0] || payload.assignee;
+    const woNumber = (this.dataStore && this.dataStore.assignWoNumber)
+      ? await this.dataStore.assignWoNumber(payload.company)
+      : null;
     const task = {
       id: App.utils.uid('t'),
       title: payload.title,
@@ -1859,7 +1867,10 @@ App.AppController = class AppController {
       priority: payload.priority,
       status: payload.status,
       creator: this.currentUser,
-      assignee: payload.assignee,
+      assignee: lead,
+      assigneeIds,
+      woNumber,
+      reminderOffset: payload.reminderOffset || null,
       watchers: payload.watchers || [],
       subtasks: Array.isArray(payload.subtasks)
         ? payload.subtasks.map(s => ({ t: s.t, d: !!s.d }))
@@ -1868,39 +1879,43 @@ App.AppController = class AppController {
         who: this.getUserName(this.currentUser),
         // activityWhat lets a caller that wraps createTask (duplicateTask) write
         // an honest first history entry instead of the generic "created" one.
-        what: payload.activityWhat || (payload.assignee === this.currentUser
+        what: payload.activityWhat || (lead === this.currentUser
           ? 'created this task'
-          : `assigned this to ${App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].name : payload.assignee}`),
+          : `assigned this to ${App.PEOPLE[lead] ? App.PEOPLE[lead].name : lead}`),
         at: new Date().toISOString(),
         when: 'just now',
       }],
     };
     this.taskModel.add(task);
 
-    const delegated = payload.assignee !== this.currentUser;
     const creatorName = this.getUserName(this.currentUser);
-    const assigneeName = App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].name : payload.assignee;
-    const assigneeEmail = App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].email : '';
     const creatorEmail = App.PEOPLE[this.currentUser] ? App.PEOPLE[this.currentUser].email : '';
+    const leadName = App.PEOPLE[lead] ? App.PEOPLE[lead].name : lead;
+    const leadEmail = App.PEOPLE[lead] ? App.PEOPLE[lead].email : '';
     const titleEsc = App.utils.escapeHtml(task.title);
+    const delegated = assigneeIds.some(id => id !== this.currentUser);
+    const assigneeNames = assigneeIds.map(id => (App.PEOPLE[id] ? App.PEOPLE[id].name : id)).join(' + ');
 
     const inapp = [];
     const emails = [];
-
-    if (delegated && payload.notify.inapp) {
-      inapp.push({
-        memberId: payload.assignee,
-        taskId: task.id,
-        meta: 'Task assigned',
-        html: `<strong>${App.utils.escapeHtml(creatorName)}</strong> assigned <em>${titleEsc}</em> to you`,
-      });
-    }
-    // Email delivery is automatic: the assignee, the creator, and every watcher
-    // are emailed whenever they have an address on file — independent of the
-    // notify checkboxes, which now only gate the in-app notifications. _deliver
-    // de-dupes, so anyone filling more than one role still gets a single email.
-    if (delegated && assigneeEmail) emails.push(assigneeEmail);
     if (creatorEmail) emails.push(creatorEmail);
+
+    // Fan out to EVERY assignee (not just the lead): in-app if enabled, and email
+    // whenever they have an address on file. _deliver de-dupes, so the creator /
+    // assignee overlap still yields a single email. Never notify yourself about
+    // your own create.
+    assigneeIds.forEach(id => {
+      if (id === this.currentUser) return;
+      if (payload.notify.inapp) {
+        inapp.push({
+          memberId: id,
+          taskId: task.id,
+          meta: 'Task assigned',
+          html: `<strong>${App.utils.escapeHtml(creatorName)}</strong> assigned <em>${titleEsc}</em> to you`,
+        });
+      }
+      if (App.PEOPLE[id] && App.PEOPLE[id].email) emails.push(App.PEOPLE[id].email);
+    });
 
     (payload.watchers || []).forEach(w => {
       if (payload.notify.watchers) {
@@ -1908,7 +1923,7 @@ App.AppController = class AppController {
           memberId: w,
           taskId: task.id,
           meta: 'Watching',
-          html: `You're now watching <em>${titleEsc}</em> (assigned to ${App.utils.escapeHtml(assigneeName)})`,
+          html: `You're now watching <em>${titleEsc}</em> (assigned to ${App.utils.escapeHtml(leadName)})`,
         });
       }
       if (App.PEOPLE[w] && App.PEOPLE[w].email) emails.push(App.PEOPLE[w].email);
@@ -1930,7 +1945,7 @@ App.AppController = class AppController {
     if (saved) {
       this._deliver(inapp, emails, {
         subject: `Quest HQ — ${task.title}`,
-        html: this._emailBody(`<strong>${App.utils.escapeHtml(creatorName)}</strong> created the task <strong>${titleEsc}</strong> (assigned to ${App.utils.escapeHtml(assigneeName)}).`, task),
+        html: this._emailBody(`<strong>${App.utils.escapeHtml(creatorName)}</strong> created the task <strong>${titleEsc}</strong> (assigned to ${App.utils.escapeHtml(assigneeNames)}).`, task),
       });
 
       // "View" opens the freshly-created task's detail — one click to see what
@@ -1946,8 +1961,8 @@ App.AppController = class AppController {
       };
       if (delegated) {
         this.toastView.show({
-          title: `Task assigned to ${assigneeName}`,
-          sub: assigneeEmail ? `Notifying ${assigneeEmail}` : 'In-app notification sent',
+          title: `Task assigned to ${assigneeNames}`,
+          sub: leadEmail ? `Notifying ${assigneeNames}` : 'In-app notification sent',
           action: viewAction,
         });
       } else {
