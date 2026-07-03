@@ -111,8 +111,20 @@ App.validate = (function () {
     const company = oneOf(payload.company, Object.keys(App.COMPANIES || {}), { field: 'company', label: 'Company' });
     const priority = oneOf(payload.priority || 'medium', Object.keys(App.PRIORITIES || {}), { field: 'priority', label: 'Priority' });
     const status = oneOf(payload.status || 'todo', Object.keys(App.STATUSES || {}), { field: 'status', label: 'Status' });
-    const assignee = nonEmpty(payload.assignee, 'Assignee', { field: 'assignee' });
-    if (!(App.PEOPLE || {})[assignee]) throw new ValidationError('Unknown assignee.', { field: 'assignee' });
+    // Assignees: prefer the ordered multi-assignee array (whos); fall back to the
+    // legacy single `assignee`. Lead = index 0. Dedupe, preserve order, validate each.
+    const rawWhos = Array.isArray(payload.whos) && payload.whos.length
+      ? payload.whos
+      : (payload.assignee ? [payload.assignee] : []);
+    const assigneeIds = [];
+    for (const w of rawWhos) {
+      const id = String(w == null ? '' : w).trim();
+      if (!id) continue;
+      if (!(App.PEOPLE || {})[id]) throw new ValidationError(`Unknown assignee: ${id}`, { field: 'assignee' });
+      if (!assigneeIds.includes(id)) assigneeIds.push(id);
+    }
+    if (!assigneeIds.length) throw new ValidationError('Assign at least one person.', { field: 'assignee' });
+    const assignee = assigneeIds[0];
 
     const watchers = Array.isArray(payload.watchers) ? payload.watchers : [];
     if (watchers.length > LIMITS.watchers) {
@@ -135,7 +147,7 @@ App.validate = (function () {
 
     return Object.freeze({
       title, description, type, label, company, priority, status,
-      assignee, watchers: watchers.slice(), subtasks, due, dueTime,
+      assignee, assigneeIds, watchers: watchers.slice(), subtasks, due, dueTime,
     });
   }
 
