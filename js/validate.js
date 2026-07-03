@@ -132,13 +132,10 @@ App.validate = (function () {
 
     const due = isoDate(payload.due, { field: 'due' });
     const dueTime = isoTime(payload.dueTime, { field: 'dueTime' });
-    const bidStatus = type === 'bid'
-      ? oneOf(payload.bidStatus || 'queue', Object.keys(App.BID_STATUSES || {}), { field: 'bidStatus', label: 'Bid status' })
-      : null;
 
     return Object.freeze({
       title, description, type, label, company, priority, status,
-      assignee, watchers: watchers.slice(), subtasks, due, dueTime, bidStatus,
+      assignee, watchers: watchers.slice(), subtasks, due, dueTime,
     });
   }
 

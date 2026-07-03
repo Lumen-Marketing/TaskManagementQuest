@@ -261,7 +261,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
       // ('roof'/'roof_framing'/'framing'). Map 'none' → NULL so picking
       // "No label" doesn't trip the constraint and silently fail the save.
       label: (task.label && task.label !== 'none') ? task.label : null,
-      bid_status: task.type === 'bid' ? (task.bidStatus || 'queue') : null,
+      // bid_status is retired (the Bid pipeline is now the Bid type's own statuses);
+      // the column is kept for history but no longer written from new code.
+      bid_status: null,
       company_id: task.company,
       creator_id: task.creator,
       assignee_id: task.assignee,
@@ -635,7 +637,6 @@ App.SupabaseDataStore = class SupabaseDataStore {
       // DB stores NULL for "no label"; the app uses the 'none' sentinel
       // everywhere (display + the picker), so normalise on the way in.
       label: row.label || 'none',
-      bidStatus: row.bid_status || null,
       company: row.company_id,
       creator: row.creator_id,
       assignee: row.assignee_id,

@@ -47,7 +47,6 @@ App.NewTaskPageView = class NewTaskPageView {
     if (prefill && prefill.project) this._setProject(prefill.project);
     this.renderWatcherChips();
     this.renderSubtaskChips();
-    this.updateBidStatusRow();
     this.updateDelegationBanner();
     setTimeout(() => { const el = document.getElementById('nt-title'); if (el) el.focus(); }, 30);
     try { this.wrap.scrollTop = 0; window.scrollTo(0, 0); } catch (e) { /* noop */ }
@@ -70,6 +69,29 @@ App.NewTaskPageView = class NewTaskPageView {
       .join('');
   }
 
+  // Per-(company,type) Status options from the live taxonomy (falls back to the
+  // hardcoded constants offline). No `selected` -> the type's default status.
+  _statusOptionsHtml(company, type, selected) {
+    const list = App.taxonomy.activeStatuses(company, type);
+    const opts = (list && list.length) ? list : Object.entries(App.STATUSES).map(([key, v]) => ({ key, label: v.label }));
+    const sel = selected || App.taxonomy.defaultStatus(company, type);
+    return opts.map(s => `<option value="${s.key}" ${s.key === sel ? 'selected' : ''}>${App.utils.escapeHtml(s.label)}</option>`).join('');
+  }
+  // Per-company Type options from the taxonomy.
+  _typeOptionsHtml(company, selected) {
+    const list = App.taxonomy.activeTypes(company);
+    const opts = (list && list.length) ? list : Object.entries(App.TASK_TYPES).map(([key, v]) => ({ key, label: v.label }));
+    return opts.map(t => `<option value="${t.key}" ${t.key === selected ? 'selected' : ''}>${App.utils.escapeHtml(t.label)}</option>`).join('');
+  }
+  // Per-company Label options; the "No label" (none) choice is always kept as the head.
+  _labelOptionsHtml(company, selected) {
+    const list = App.taxonomy.activeLabels(company);
+    const opts = (list && list.length) ? list : Object.entries(App.TASK_LABELS).filter(([key]) => key !== 'none').map(([key, v]) => ({ key, label: v.label }));
+    const noneLbl = (App.TASK_LABELS.none && App.TASK_LABELS.none.label) || 'No label';
+    const head = `<option value="none" ${selected === 'none' ? 'selected' : ''}>${App.utils.escapeHtml(noneLbl)}</option>`;
+    return head + opts.map(l => `<option value="${l.key}" ${l.key === selected ? 'selected' : ''}>${App.utils.escapeHtml(l.label)}</option>`).join('');
+  }
+
   /* Re-scope the assignee + watcher pickers to a newly chosen company. */
   _onCompanyChanged(companyId) {
     const sel = document.getElementById('nt-assignee');
@@ -86,6 +108,16 @@ App.NewTaskPageView = class NewTaskPageView {
     }
     const pb = document.getElementById('nt-project');
     if (pb && pb.dataset.current && App.projects[pb.dataset.current] && App.projects[pb.dataset.current].companyId !== companyId) this._setProject(null);
+    // Re-scope Type / Label / Status to the new company's taxonomy. Type/Label keep the
+    // current value if it still exists (else the browser falls to the first option);
+    // Status always resets to the (possibly re-scoped) type's default.
+    const typeSel = document.getElementById('nt-type');
+    const labelSel = document.getElementById('nt-label');
+    const statusSel = document.getElementById('nt-status');
+    if (typeSel)  typeSel.innerHTML  = this._typeOptionsHtml(companyId, typeSel.value);
+    if (labelSel) labelSel.innerHTML = this._labelOptionsHtml(companyId, labelSel.value);
+    const type = typeSel ? typeSel.value : 'admin';
+    if (statusSel) statusSel.innerHTML = this._statusOptionsHtml(companyId, type);
     this.updateDelegationBanner();
   }
 
@@ -123,10 +155,9 @@ App.NewTaskPageView = class NewTaskPageView {
               <div class="tdp-card-title">Details</div>
               <div class="taf-meta" style="background:transparent; padding:0; border-radius:0;">
               <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="nt-company">${companyIds.map(id => { const c = App.COMPANIES[id] || { label: id }; return `<option value="${id}" ${id === selectedCompany ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`; }).join('')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="nt-type">${Object.entries(App.TASK_TYPES).map(([k, v]) => `<option value="${k}" ${k === 'admin' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
-              <label class="taf-field hidden" id="nt-bid-status-row"><span class="taf-field-lbl">Bid status</span><select id="nt-bid-status">${Object.entries(App.BID_STATUSES).map(([k, v]) => `<option value="${k}" ${k === 'queue' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="nt-status"><option value="todo" selected>Active</option><option value="pending">Pending</option><option value="hold">On hold</option></select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="nt-label">${Object.entries(App.TASK_LABELS).map(([k, v]) => `<option value="${k}" ${k === 'roof' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="nt-type">${this._typeOptionsHtml(selectedCompany, 'admin')}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="nt-status">${this._statusOptionsHtml(selectedCompany, 'admin')}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="nt-label">${this._labelOptionsHtml(selectedCompany, 'roof')}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Priority</span><select id="nt-priority">${Object.entries(App.PRIORITIES).map(([k, v]) => `<option value="${k}" ${k === 'medium' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="nt-assignee">${this._assigneeOptionsHtml(selectedCompany, this.currentUser)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="nt-due" class="picker-input" value="${App.utils.todayISO(1)}" /></label>
@@ -210,7 +241,7 @@ App.NewTaskPageView = class NewTaskPageView {
     });
 
     document.getElementById('nt-assignee').addEventListener('change', () => this.updateDelegationBanner());
-    document.getElementById('nt-type').addEventListener('change', () => this.updateBidStatusRow());
+    document.getElementById('nt-type').addEventListener('change', () => this._onTypeChanged());
     document.getElementById('nt-company').addEventListener('change', (e) => this._onCompanyChanged(e.target.value));
 
     const projBtn = document.getElementById('nt-project');
@@ -297,11 +328,12 @@ App.NewTaskPageView = class NewTaskPageView {
     return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
   }
 
-  updateBidStatusRow() {
-    const r = document.getElementById('nt-bid-status-row');
-    if (!r) return;
+  // Type changed -> re-scope the Status options to that (company,type) and reset to its default.
+  _onTypeChanged() {
+    const company = document.getElementById('nt-company').value;
     const type = document.getElementById('nt-type').value;
-    r.classList.toggle('hidden', type !== 'bid');
+    const sel = document.getElementById('nt-status');
+    if (sel) sel.innerHTML = this._statusOptionsHtml(company, type, App.taxonomy.defaultStatus(company, type));
   }
 
   renderWatcherChips() {
@@ -413,7 +445,6 @@ App.NewTaskPageView = class NewTaskPageView {
       assignee: document.getElementById('nt-assignee').value,
       type: document.getElementById('nt-type').value,
       label: document.getElementById('nt-label').value,
-      bidStatus: document.getElementById('nt-bid-status').value,
       company: document.getElementById('nt-company').value,
       due: document.getElementById('nt-due').value,
       dueTime: timeRaw ? (this._parseTime(timeRaw) || timeRaw) : null,
@@ -451,7 +482,6 @@ App.NewTaskPageView = class NewTaskPageView {
       title: 'nt-title', description: 'nt-desc', assignee: 'nt-assignee',
       type: 'nt-type', label: 'nt-label', company: 'nt-company', due: 'nt-due',
       dueTime: 'nt-time', priority: 'nt-priority', status: 'nt-status',
-      bidStatus: 'nt-bid-status',
     };
     const id = fieldMap[err && err.field];
     const el = id && document.getElementById(id);

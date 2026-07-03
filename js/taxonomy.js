@@ -17,6 +17,14 @@ App.taxonomy = (function () {
   const bySort = (a, b) => (a.sort - b.sort) || String(a.label).localeCompare(String(b.label));
   const find = (list, key) => (list || []).find(x => x.key === key);
 
+  // Seeded colour classes snapshotted from the ORIGINAL constants (captured now, before
+  // applyGlobals() rebuilds App.* and gives unknown keys a FALLBACK cls). A key present
+  // here is "seeded" and keeps its pastel cls; a key absent is CUSTOM and renders via hex.
+  const SEED_CLS = { type: {}, status: {}, label: {} };
+  Object.entries(App.TASK_TYPES  || {}).forEach(([k, v]) => { if (v && v.cls) SEED_CLS.type[k]   = v.cls; });
+  Object.entries(App.STATUSES    || {}).forEach(([k, v]) => { if (v && v.cls) SEED_CLS.status[k] = v.cls; });
+  Object.entries(App.TASK_LABELS || {}).forEach(([k, v]) => { if (v && v.cls) SEED_CLS.label[k]  = v.cls; });
+
   // Build the index from raw Supabase rows (or fall back to the constants when empty),
   // then refresh the global constant maps and announce the change.
   function hydrate(raw) {
@@ -86,6 +94,25 @@ App.taxonomy = (function () {
   // A task is complete when its status is its type's is_done status (for its company).
   const isDone = (task) => !!task && task.status === doneStatus(task.company, task.type);
 
+  // Hex colour for a taxonomy entry (reads inactive rows too, for display). kind: 'type'|'status'|'label'.
+  const color = (kind, company, key, type) => {
+    const c = co(company); if (!c) return null;
+    let list;
+    if (kind === 'type') list = c.types;
+    else if (kind === 'label') list = c.labels;
+    else list = (c.statusesByType && c.statusesByType[type]) || [];
+    const hit = (list || []).find(e => e.key === key);
+    return hit && hit.color ? hit.color : null;
+  };
+  // Chip appearance: a SEEDED key (in SEED_CLS) keeps its pastel class, unchanged.
+  // A CUSTOM key renders via an inline hex tint (bg = hex@~10% alpha, ink = hex).
+  const chipStyle = (kind, company, key, type) => {
+    const cls = (SEED_CLS[kind] || {})[key];
+    if (cls) return { cls, style: '' };
+    const hex = color(kind, company, key, type);
+    return hex ? { cls: '', style: `background:${hex}1a;color:${hex};` } : { cls: '', style: '' };
+  };
+
   // Rebuild App.TASK_TYPES / STATUSES / TASK_LABELS from the loaded taxonomy so every
   // existing reader stays data-driven. Labels come from the DB; each known key's `cls`
   // (CSS colour class) is preserved from the current constants so nothing recolours.
@@ -120,5 +147,6 @@ App.taxonomy = (function () {
     hydrate, activeTypes, activeStatuses, activeLabels,
     typeLabel, statusLabel, labelLabel,
     isDone, doneStatus, defaultStatus, applyGlobals,
+    color, chipStyle,
   };
 })();
