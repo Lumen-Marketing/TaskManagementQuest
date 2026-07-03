@@ -10,6 +10,33 @@ App.SupabaseDataStore = class SupabaseDataStore {
     // Last-seen updated_at per task id — used as an optimistic-concurrency guard
     // so a save can't silently clobber an edit made elsewhere.
     this._taskVersions = {};
+    // PostgREST caps a single response at its max-rows setting (~1000 by
+    // default) and SILENTLY truncates — no error. Any unbounded list read
+    // (tasks, time_entries, team_members, notifications) must page through with
+    // .range() or rows simply vanish once a table grows past the cap. See
+    // _pageAll.
+    this._PAGE_SIZE = 1000;
+  }
+
+  /* Page through a select in fixed chunks until a short page comes back, so a
+     table larger than PostgREST's max-rows cap is fully read instead of silently
+     truncated. `buildQuery()` MUST return a fresh PostgREST query each call
+     (with a STABLE .order() so paging windows don't overlap or skip) — we add
+     .range() on top. Returns the concatenated rows. */
+  async _pageAll(buildQuery, label) {
+    const size = this._PAGE_SIZE;
+    const out = [];
+    for (let from = 0; ; from += size) {
+      const to = from + size - 1;
+      const res = await buildQuery().range(from, to);
+      this._throwIfError(res, label);
+      const rows = res.data || [];
+      out.push(...rows);
+      // A page shorter than the window means we've reached the end. (An exactly-
+      // full final page costs one extra empty request, which is harmless.)
+      if (rows.length < size) break;
+    }
+    return out;
   }
 
   async loadProfiles() {
@@ -22,13 +49,18 @@ App.SupabaseDataStore = class SupabaseDataStore {
   }
 
   async loadNotifications() {
-    const res = await this.supabase
-      .from('notifications')
-      .select('*')
-      .eq('member_id', this.currentUser)
-      .order('created_at', { ascending: false });
-    this._throwIfError(res, 'notifications');
-    return (res.data || []).map(row => this._mapNotificationRow(row));
+    // Paged so a busy inbox isn't truncated at the PostgREST max-rows cap.
+    // Secondary .order('id') keeps the paging window stable.
+    const rows = await this._pageAll(
+      () => this.supabase
+        .from('notifications')
+        .select('*')
+        .eq('member_id', this.currentUser)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true }),
+      'notifications',
+    );
+    return rows.map(row => this._mapNotificationRow(row));
   }
 
   // ----- Task comments (migration 053) -----
@@ -93,23 +125,27 @@ App.SupabaseDataStore = class SupabaseDataStore {
   }
 
   async load() {
+    // The four unbounded lists (team_members, tasks, time_entries,
+    // notifications) are paged so they aren't silently truncated at PostgREST's
+    // max-rows cap. Each .order() is stable so paging windows are correct.
+    // active_timers (≤1 row/user) and profiles stay single-shot.
     const [
-      peopleRes,
-      tasksRes,
-      entriesRes,
+      peopleRows,
+      taskRows,
+      entryRows,
+      notificationRows,
       timersRes,
-      notificationsRes,
       profilesRes,
       projectsRes,
       taxTypesRes,
       taxStatusesRes,
       taxLabelsRes,
     ] = await Promise.all([
-      this.supabase.from('team_members').select('*').order('name', { ascending: true }),
-      this.supabase.from('tasks').select('*').order('created_at', { ascending: true }),
-      this.supabase.from('time_entries').select('*').order('start_at', { ascending: false }),
+      this._pageAll(() => this.supabase.from('team_members').select('*').order('name', { ascending: true }).order('id', { ascending: true }), 'people'),
+      this._pageAll(() => this.supabase.from('tasks').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }), 'tasks'),
+      this._pageAll(() => this.supabase.from('time_entries').select('*').order('start_at', { ascending: false }).order('id', { ascending: true }), 'time entries'),
+      this._pageAll(() => this.supabase.from('notifications').select('*').eq('member_id', this.currentUser).order('created_at', { ascending: false }).order('id', { ascending: true }), 'notifications'),
       this.supabase.from('active_timers').select('*'),
-      this.supabase.from('notifications').select('*').eq('member_id', this.currentUser).order('created_at', { ascending: false }),
       (App.can('roles.manage') || App.can('team.view'))
         ? this.supabase.from('profiles').select(this._profileColumns).order('created_at', { ascending: false })
         : Promise.resolve({ data: [], error: null }),
@@ -121,11 +157,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       this.supabase.from('task_labels').select('*'),
     ]);
 
-    this._throwIfError(peopleRes, 'people');
-    this._throwIfError(tasksRes, 'tasks');
-    this._throwIfError(entriesRes, 'time entries');
     this._throwIfError(timersRes, 'active timers');
-    this._throwIfError(notificationsRes, 'notifications');
     this._throwIfError(profilesRes, 'profiles');
     this._throwIfError(projectsRes, 'projects');
     this._throwIfError(taxTypesRes, 'task types');
@@ -133,16 +165,16 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwIfError(taxLabelsRes, 'task labels');
 
     this._taskVersions = {};
-    const tasks = (tasksRes.data || []).map(row => {
+    const tasks = taskRows.map(row => {
       this._taskVersions[row.id] = row.updated_at;
       return this._mapTaskRow(row);
     });
 
     return {
-      people: this._mapPeople(peopleRes.data || []),
+      people: this._mapPeople(peopleRows),
       profiles: profilesRes.data || [],
       tasks,
-      timeEntries: (entriesRes.data || []).map(row => ({
+      timeEntries: entryRows.map(row => ({
         id: row.id,
         userId: row.user_id,
         taskId: row.task_id,
@@ -160,7 +192,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
           taskCompany: row.task_company || null,
         },
       ])),
-      notifications: (notificationsRes.data || []).map(row => this._mapNotificationRow(row)),
+      notifications: notificationRows.map(row => this._mapNotificationRow(row)),
       projects: this._mapProjects(projectsRes.data || []),
       taxonomy: {
         types: taxTypesRes.data || [],
@@ -177,12 +209,17 @@ App.SupabaseDataStore = class SupabaseDataStore {
      against the version that edit was based on, so refreshing it here would mask
      a genuine concurrent-edit conflict. RLS scopes the rows as on initial load. */
   async loadTasks(skipVersionIds) {
-    const res = await this.supabase
-      .from('tasks')
-      .select('*')
-      .order('created_at', { ascending: true });
-    this._throwIfError(res, 'tasks');
-    return (res.data || []).map(row => {
+    // Paged so the poll re-pull isn't truncated once the tasks table grows past
+    // the PostgREST max-rows cap. Secondary .order('id') keeps paging stable.
+    const rows = await this._pageAll(
+      () => this.supabase
+        .from('tasks')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true }),
+      'tasks',
+    );
+    return rows.map(row => {
       if (!skipVersionIds || !skipVersionIds.has(row.id)) {
         this._taskVersions[row.id] = row.updated_at;
       }
@@ -223,10 +260,24 @@ App.SupabaseDataStore = class SupabaseDataStore {
           .maybeSingle();
         this._throwIfError(res, 'saving task');
         if (!res.data) {
+          // Optimistic-lock conflict: the server row changed under us. Do NOT
+          // wholesale-replace the local task with the server copy — that discards
+          // the local edit we were trying to save (e.g. a clearDoneTasks
+          // `clearedAt` would be reverted to the server's null and lost).
+          // Instead FIELD-MERGE: server row is the base, then re-apply the
+          // locally-edited fields on top. We advance the known version to the
+          // server's updated_at so the single-flight retry's next save passes the
+          // lock (the merged task stays dirty upstream → it WILL be retried).
+          // This converges: each retry carries the latest server updated_at, so
+          // it can't loop on the same stale-version conflict.
           const fresh = await this._refetchTask(task.id);
           if (fresh) {
             this._taskVersions[fresh.row.id] = fresh.updatedAt;
-            conflicts.push(fresh.task);
+            const mergedTask = this._mergeConflict(fresh.task, task);
+            // Flag so app.js re-marks it dirty (instead of clearing it) and lets
+            // the coalescing save retry write the merged result.
+            mergedTask._conflictMerged = true;
+            conflicts.push(mergedTask);
           }
         } else {
           this._taskVersions[task.id] = res.data.updated_at;
@@ -248,6 +299,31 @@ App.SupabaseDataStore = class SupabaseDataStore {
     const res = await this.supabase.from('tasks').select('*').eq('id', id).maybeSingle();
     if (res.error || !res.data) return null;
     return { updatedAt: res.data.updated_at, row: res.data, task: this._mapTaskRow(res.data) };
+  }
+
+  /* Field-merge for an optimistic-lock conflict (fix #4).
+     `serverTask` is the freshly-refetched authoritative row (mapped to camel);
+     `localTask` is the in-memory copy whose save just lost the lock — i.e. the
+     user's intended edits. We have only whole-task dirty tracking, so every
+     editable field on localTask is treated as locally-dirty and re-applied on
+     top of the server base. Server-owned metadata that the client never edits
+     (id, createdAt) is taken from the server row. The result is the local edits
+     preserved while inheriting any server-only fields the local copy lacks.
+     Returns a NEW object so the caller can decide how to splice it in. */
+  _mergeConflict(serverTask, localTask) {
+    // List of fields the UI can edit and the save writes back (see _taskRow).
+    // These are re-applied from the local copy so the conflicting save isn't
+    // silently dropped. Everything else (id, createdAt, …) comes from the server.
+    const EDITABLE = [
+      'title', 'description', 'type', 'label', 'company', 'creator',
+      'assignee', 'project', 'due', 'dueTime', 'reminderAt', 'priority', 'status',
+      'watchers', 'subtasks', 'activity', 'clearedAt', 'completedAt', 'focusSeq',
+    ];
+    const merged = { ...serverTask };
+    for (const f of EDITABLE) {
+      if (Object.prototype.hasOwnProperty.call(localTask, f)) merged[f] = localTask[f];
+    }
+    return merged;
   }
 
   _taskRow(task) {

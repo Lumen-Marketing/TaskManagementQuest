@@ -33,6 +33,20 @@ App.TaskModel = class TaskModel {
     App.EventBus.emit('tasks:changed');
   }
 
+  /* Apply a FIELD-MERGED server-conflict result (server base + local edits) and
+     KEEP the task dirty so the next save retries it. Used on optimistic-lock
+     conflicts (fix #4): the datastore has already advanced its known version to
+     the server's updated_at, so the retry's lock will pass and the merge
+     converges (no infinite conflict loop). Emitting 'tasks:changed' both
+     re-renders and (via the bound `persist` debounce) schedules that retry. */
+  applyServerKeepDirty(task) {
+    if (!task) return;
+    const i = this.tasks.findIndex(t => t.id === task.id);
+    if (i === -1) this.tasks.push(task); else this.tasks[i] = task;
+    this._markDirty(task.id);
+    App.EventBus.emit('tasks:changed');
+  }
+
   // Snapshot of the ids with unsaved edits — passed to the data store's poll
   // so it won't advance their optimistic-lock version out from under a pending save.
   dirtyIds() { return new Set(this._dirty); }
