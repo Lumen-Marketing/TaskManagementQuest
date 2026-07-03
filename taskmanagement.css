@@ -301,7 +301,7 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
    and chips, unified menu/popover entrances, smooth input focus, flat
    row hover (no lifts, no borders — matches the panze look), and a
    shared view entrance. Transform/opacity only; a single reduced-motion
-   gate lives at the bottom. The six JS-triggered hero moments live in
+   gate lives at the bottom. The JS-triggered feedback moments live in
    js/utils/motion.js. Controls that already define :active above
    (.btn, .icon-btn, .layout-btn, .finish-btn, .kanban-card) are left
    as-is; these rules fill the gaps.

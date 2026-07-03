@@ -1564,8 +1564,6 @@ App.AppController = class AppController {
     });
     App.projects = await this.dataStore.loadProjects();
     App.EventBus.emit('projects:changed');
-    // Cue the grid to rise the new folder card into place (creation feedback).
-    App.EventBus.emit('project:created', id);
     return id;
   }
 
@@ -1878,9 +1876,6 @@ App.AppController = class AppController {
       }],
     };
     this.taskModel.add(task);
-    // Cue the list to rise the new row into place (creation feedback). Emitted
-    // after add() so the tasks:changed re-render that inserts the row has run.
-    App.EventBus.emit('task:created', task.id);
 
     const delegated = payload.assignee !== this.currentUser;
     const creatorName = this.getUserName(this.currentUser);

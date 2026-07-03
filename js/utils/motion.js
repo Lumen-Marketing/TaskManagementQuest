@@ -1,6 +1,9 @@
 window.App = window.App || {};
 
-/* Microinteraction helper for the six JS-triggered "hero" moments.
+/* Microinteraction helper for the JS-triggered feedback moments. Restrained and
+   purposeful: a completion check, a checkbox pop, an in-flight spinner (busy), an
+   error shake, and a collapse-out on delete — each confirms a real result, none
+   are decorative celebration. Reorder uses flip.
    Web Animations API only — no dependencies, no build step. Every method is a
    no-op-but-correct fallback under prefers-reduced-motion (the state change the
    caller already made stays; we just skip the animation). Views call these and
@@ -22,18 +25,6 @@ App.Motion = (function () {
     );
   }
 
-  // Success confirmation — a single soft pulse. Used when a save lands or a
-  // timer changes state. Confirms the async result, not the click.
-  function pulse(el) {
-    if (!canAnimate(el)) return;
-    el.animate(
-      [{ transform: 'scale(1)', opacity: 1 },
-       { transform: 'scale(1.14)', opacity: 0.75, offset: 0.4 },
-       { transform: 'scale(1)', opacity: 1 }],
-      { duration: 460, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
-    );
-  }
-
   // Completion check — pop the element, then wipe a soft radial highlight so the
   // check reads as "drawn in". Works on any element (we don't require an SVG
   // path, so it's safe on the icon-font checkmarks this app uses).
@@ -44,25 +35,6 @@ App.Motion = (function () {
        { transform: 'scale(1.25) rotate(4deg)', opacity: 1, offset: 0.55 },
        { transform: 'scale(1) rotate(0deg)', opacity: 1 }],
       { duration: 420, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
-    );
-  }
-
-  // Entrance for a just-created row/card: spring-rise into place, then a warm
-  // highlight tint that fades over ~2s so the eye lands on the new item —
-  // visible proof it was created. Two layered animations on one element.
-  function arrive(el) {
-    // Reduced-motion: skip entirely — the success toast already confirms creation.
-    if (!canAnimate(el)) return;
-    el.animate(
-      [{ transform: 'translateY(10px) scale(0.98)', opacity: 0 },
-       { transform: 'translateY(0) scale(1)', opacity: 1 }],
-      { duration: 400, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
-    );
-    el.animate(
-      [{ boxShadow: '0 0 0 9999px rgba(237, 78, 13, 0.14)', offset: 0 },
-       { boxShadow: '0 0 0 9999px rgba(237, 78, 13, 0.14)', offset: 0.15 },
-       { boxShadow: '0 0 0 9999px rgba(237, 78, 13, 0)', offset: 1 }],
-      { duration: 2000, easing: 'ease-out' }
     );
   }
 
@@ -158,5 +130,5 @@ App.Motion = (function () {
     setTimeout(run, 320);
   }
 
-  return { pop, pulse, check, arrive, flip, busy, shake, collapseOut, reduce };
+  return { pop, check, flip, busy, shake, collapseOut, reduce };
 })();

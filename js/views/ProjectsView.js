@@ -20,17 +20,6 @@ App.ProjectsView = class ProjectsView {
     App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); });
     App.EventBus.on('tasks:changed', () => { if (this._visible()) this.render(); });
     App.EventBus.on('company:changed', () => { if (this._visible()) this.render(); });
-    // A just-created folder card rises in with a fading warm highlight — proof
-    // it was created. Two rAFs so the projects:changed re-render has painted.
-    App.EventBus.on('project:created', (id) => {
-      if (!this._visible() || !App.Motion || !id) return;
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        const sel = (window.CSS && CSS.escape) ? CSS.escape(id) : id;
-        const row = this.wrap && this.wrap.querySelector(`[data-project="${sel}"]`);
-        const card = row && row.closest('.pv-rowwrap');
-        if (card) App.Motion.arrive(card);
-      }));
-    });
   }
 
   _visible() { return this.wrap && !this.wrap.classList.contains('hidden'); }
@@ -298,21 +287,11 @@ App.ProjectsView = class ProjectsView {
         const p = (App.projects || {})[id];
         const reopen = p && !this._isActive(p);
         if (reopen) { this.controller.setProjectStatus(id, 'active'); return; }
-        // Finishing a folder — the hero moment. Draw the check, sweep the
-        // progress bar to 100%, give the card one restrained pulse and a
-        // celebratory toast, THEN let it file into the Completed group so the
-        // celebration is seen before the row moves.
-        if (App.Motion) {
-          App.Motion.check(btn.querySelector('i'));
-          const card = btn.closest('.pv-rowwrap');
-          const fill = card && card.querySelector('.pv-fill');
-          if (fill) fill.style.width = '100%';
-          if (card) App.Motion.pulse(card);
-        }
-        if (this.controller.toastView) {
-          this.controller.toastView.show({ title: 'Folder complete!', sub: esc(p && p.name || ''), variant: 'celebrate' });
-        }
-        const delay = (App.Motion && App.Motion.reduce()) ? 0 : 480;
+        // Finishing a folder — one clean signal. Draw the check on the button,
+        // then let the row file into the Completed group. No pulse, no sweep,
+        // no celebration toast; the check plus the row moving is the feedback.
+        if (App.Motion) App.Motion.check(btn.querySelector('i'));
+        const delay = (App.Motion && App.Motion.reduce()) ? 0 : 260;
         // 'complete' — NOT 'done'. The projects_status_check constraint only
         // allows lead/active/hold/complete/cancelled, so 'done' fails the write.
         setTimeout(() => this.controller.setProjectStatus(id, 'complete'), delay);

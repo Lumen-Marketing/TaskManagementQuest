@@ -190,16 +190,6 @@ App.TaskListView = class TaskListView {
 
   subscribe() {
     App.EventBus.on('tasks:changed', () => { if (this.visible()) this.render(); });
-    // A just-created task's row rises into place with a fading warm highlight —
-    // visible proof it was created. Two rAFs so the tasks:changed re-render that
-    // adds the row has painted before we look for it.
-    App.EventBus.on('task:created', (id) => {
-      if (!this.visible() || !App.Motion || !id) return;
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        const row = this.body && this.body.querySelector(`[data-id="${(window.CSS && CSS.escape) ? CSS.escape(id) : id}"]`);
-        if (row) App.Motion.arrive(row);
-      }));
-    });
     App.EventBus.on('time:changed', () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('selection:changed', () => { if (this.visible()) this._syncSelectionHighlight(); });
     App.EventBus.on('search:changed', () => { if (this.visible()) this.renderList(); });
