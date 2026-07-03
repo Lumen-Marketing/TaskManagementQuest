@@ -206,7 +206,9 @@ App.TaskDetailView = class TaskDetailView {
       : `<div style="font-size:11.5px; color:var(--ink-3);">No time logged yet</div>`;
 
     const statusObj = { label: App.taxonomy.statusLabel(t.company, t.type, t.status), cls: (App.STATUSES[t.status] || {}).cls || '' };
-    const typeObj = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' };
+    const typeObj = { label: App.taxonomy.typeLabel(t.company, t.type) };
+    const statusChip = App.taxonomy.chipStyle('status', t.company, t.status, t.type);
+    const typeChip = App.taxonomy.chipStyle('type', t.company, t.type);
     const priObj = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const labelObj = (t.label && t.label !== 'none') ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' };
     const isDone = App.taxonomy.isDone(t);
@@ -248,8 +250,8 @@ App.TaskDetailView = class TaskDetailView {
       <div class="tdp-head">
         <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
         <div class="tdp-chiprow">
-          <button class="tdp-chip tdp-chip-status ${statusObj.cls}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
-          <span class="tdp-chip">${App.utils.escapeHtml(typeObj.label)}</span>
+          <button class="tdp-chip tdp-chip-status ${statusChip.cls}" style="${statusChip.style}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
+          <span class="tdp-chip ${typeChip.cls}" style="${typeChip.style}">${App.utils.escapeHtml(typeObj.label)}</span>
         </div>
         <div class="tdp-title-row">
           <h1 class="tdp-title">${App.utils.escapeHtml(t.title)}</h1>

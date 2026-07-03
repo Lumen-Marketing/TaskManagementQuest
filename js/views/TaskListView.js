@@ -594,7 +594,8 @@ App.TaskListView = class TaskListView {
 
   renderExecRow(t, index, canEdit, ordered) {
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
-    const status = App.STATUSES[t.status] || App.STATUSES.todo;
+    const stLabel = App.taxonomy.statusLabel(t.company, t.type, t.status);
+    const stChip = App.taxonomy.chipStyle('status', t.company, t.status, t.type);
     const due = App.utils.formatDue(t.due);
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', color: 'var(--ink-3)' };
     const myActive = this.timeModel.activeFor(this.currentUser);
@@ -612,7 +613,7 @@ App.TaskListView = class TaskListView {
         <div class="focus-meta">
           <span class="focus-assignee">${App.utils.avatarHtml(person)}${App.utils.escapeHtml(person.name)}</span>
           <span class="priority-block ${priority.cls}">${priority.label}</span>
-          <span class="pill-status ${status.cls}">${App.utils.escapeHtml(status.label)}</span>
+          <span class="pill-status ${stChip.cls}" style="${stChip.style}">${App.utils.escapeHtml(stLabel)}</span>
           <span class="due-cell ${due.cls}">${due.text}</span>
         </div>
       </div>
@@ -804,6 +805,17 @@ App.TaskListView = class TaskListView {
       { key: 'review',  label: 'Review',  cls: 'col-review' },
       { key: 'done',    label: 'Done',    cls: 'col-done' },
     ];
+    // Per-type taxonomies (e.g. the Bid pipeline: queue/started/…) carry status keys
+    // outside the generic set above. Append a column for any status actually present
+    // on a task so nothing is dropped from the board; its label + colour come from the
+    // taxonomy (via the first task carrying that status).
+    const known = new Set(columns.map(c => c.key));
+    tasks.forEach(t => {
+      const k = t.status || 'todo';
+      if (known.has(k)) return;
+      known.add(k);
+      columns.push({ key: k, label: App.taxonomy.statusLabel(t.company, t.type, k), cls: '', chip: App.taxonomy.chipStyle('status', t.company, k, t.type) });
+    });
 
     columns.forEach(col => {
       const colTasks = tasks.filter(t => (t.status || 'todo') === col.key);
@@ -811,7 +823,7 @@ App.TaskListView = class TaskListView {
       column.className = `kanban-col ${col.cls}`;
       column.innerHTML = `
         <div class="kanban-col-head">
-          <span class="kanban-col-title">${col.label}</span>
+          <span class="kanban-col-title"${col.chip && col.chip.style ? ` style="${col.chip.style}"` : ''}>${App.utils.escapeHtml(col.label)}</span>
           <span class="kanban-col-count">${colTasks.length}</span>
         </div>
         <div class="kanban-col-body"></div>
@@ -825,8 +837,8 @@ App.TaskListView = class TaskListView {
   renderKanbanCard(t) {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
-    const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
-    const label = t.label && t.label !== 'none' ? App.TASK_LABELS[t.label] : null;
+    const tyLabel = App.taxonomy.typeLabel(t.company, t.type);
+    const lblLabel = (t.label && t.label !== 'none') ? App.taxonomy.labelLabel(t.company, t.label) : null;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
@@ -839,7 +851,7 @@ App.TaskListView = class TaskListView {
     card.dataset.id = t.id;
     card.innerHTML = `
       <div class="kanban-card-head">
-        <span class="type-text">${type.label}${label ? ` · ${label.label}` : ''}</span>
+        <span class="type-text">${App.utils.escapeHtml(tyLabel)}${lblLabel ? ` · ${App.utils.escapeHtml(lblLabel)}` : ''}</span>
         <span class="priority-dot ${priority.cls}" title="${priority.label}"></span>
       </div>
       <div class="kanban-card-title">${App.utils.escapeHtml(t.title)}</div>
@@ -893,7 +905,7 @@ App.TaskListView = class TaskListView {
     card.innerHTML = `
       <span class="task-card-edge"></span>
       <div class="task-card-top">
-        <span class="task-card-type"><i class="ti ${type.icon || 'ti-file-text'}"></i>${App.utils.escapeHtml(type.label)}</span>
+        <span class="task-card-type"><i class="ti ${type.icon || 'ti-file-text'}"></i>${App.utils.escapeHtml(App.taxonomy.typeLabel(t.company, t.type))}</span>
         <button class="task-card-check ${isDone ? 'is-done' : ''} ${App.can('tasks.write') ? '' : 'hidden'}" data-action="finish-task" title="${isDone ? 'Mark as not done' : 'Finish this task'}" aria-label="${isDone ? 'Mark as not done' : 'Finish this task'}">
           <i class="ti ${isDone ? 'ti-check' : 'ti-circle-check'}"></i>
         </button>
@@ -1082,6 +1094,10 @@ App.TaskListView = class TaskListView {
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
     const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
+    const stLabel = App.taxonomy.statusLabel(t.company, t.type, t.status);
+    const stChip = App.taxonomy.chipStyle('status', t.company, t.status, t.type);
+    const tyLabel = App.taxonomy.typeLabel(t.company, t.type);
+    const tyChip = App.taxonomy.chipStyle('type', t.company, t.type);
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);
     const selected = this.controller.uiState.selectedTaskId === t.id;
@@ -1116,14 +1132,14 @@ App.TaskListView = class TaskListView {
         })()}
       </div>
       <div class="status-cell">${App.can('tasks.write')
-        ? `<button class="status-sel status-${t.status || 'todo'}" data-action="open-status" data-current="${t.status || 'todo'}" title="Change status" aria-haspopup="listbox" aria-expanded="false">
-            <span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span><i class="status-sel-caret ti ti-chevron-down" aria-hidden="true"></i>
+        ? `<button class="status-sel status-${t.status || 'todo'}" style="${stChip.style}" data-action="open-status" data-current="${t.status || 'todo'}" title="Change status" aria-haspopup="listbox" aria-expanded="false">
+            <span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(stLabel)}</span><i class="status-sel-caret ti ti-chevron-down" aria-hidden="true"></i>
           </button>`
-        : `<span class="status-sel status-${t.status || 'todo'}"><span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(status.label)}</span></span>`}</div>
+        : `<span class="status-sel status-${t.status || 'todo'}" style="${stChip.style}"><span class="status-dot"></span><span class="status-sel-label">${App.utils.escapeHtml(stLabel)}</span></span>`}</div>
       <div class="priority-cell">${App.can('tasks.write')
         ? `<button class="priority-block ${priority.cls}" data-action="open-priority" data-current="${t.priority || 'medium'}" title="Change priority" aria-haspopup="listbox" aria-expanded="false">${priority.label}<i class="priority-caret ti ti-chevron-down" aria-hidden="true"></i></button>`
         : `<span class="priority-block ${priority.cls}">${priority.label}</span>`}</div>
-      <div class="type-cell"><span class="type-text type-${t.type || 'admin'}">${App.utils.escapeHtml(type.label)}</span></div>
+      <div class="type-cell"><span class="type-text type-${t.type || 'admin'}" style="${tyChip.style}">${App.utils.escapeHtml(tyLabel)}</span></div>
       <div class="label-cell"><span class="co-chip co-${t.company || 'roofing'}"><span class="co-dot"></span>${App.utils.escapeHtml(company.label)}</span></div>
       <div class="meta-cell" style="display:flex; align-items:center; gap:6px;">
         ${App.utils.avatarHtml(person)}${App.utils.escapeHtml(person.name)}
@@ -1484,11 +1500,15 @@ App.TaskListView = class TaskListView {
 
   _renderQuickStatus() {
     const el = this._quickSheetEl;
+    const t = this.taskModel.find(this._quickSheetTaskId);
+    const list = t ? App.taxonomy.activeStatuses(t.company, t.type) : [];
+    const entries = (list && list.length) ? list : Object.entries(App.STATUSES).map(([k, v]) => ({ key: k, label: v.label }));
     el.innerHTML = `
       <div class="quick-sheet-title">Set status</div>
-      ${Object.entries(App.STATUSES).map(([k, v]) =>
-        `<button type="button" class="quick-sheet-item" data-status="${k}"><span class="status-dot ${v.cls}"></span><span>${App.utils.escapeHtml(v.label)}</span></button>`
-      ).join('')}
+      ${entries.map(s => {
+        const c = t ? App.taxonomy.chipStyle('status', t.company, s.key, t.type) : { cls: '', style: '' };
+        return `<button type="button" class="quick-sheet-item" data-status="${s.key}"><span class="status-dot ${c.cls}" style="${c.style}"></span><span>${App.utils.escapeHtml(s.label)}</span></button>`;
+      }).join('')}
       <div class="quick-sheet-foot"><button type="button" class="quick-sheet-item" data-q="back"><span>Back</span></button></div>
     `;
     el.querySelectorAll('[data-status]').forEach(b => b.addEventListener('click', (e) => {
