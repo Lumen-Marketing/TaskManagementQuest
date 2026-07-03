@@ -154,6 +154,13 @@ App.TaskDetailView = class TaskDetailView {
       return;
     }
 
+    // Switching to a different task resets composer state so a mention staged
+    // for one task can't leak into another task's comment.
+    if (this._composerTaskId !== t.id) {
+      this._composerTaskId = t.id;
+      this._composerMentions = new Set();
+    }
+
     this._openModal();
 
     try {
@@ -749,13 +756,29 @@ App.TaskDetailView = class TaskDetailView {
     const send = () => {
       const text = input.value.trim();
       if (!text) return;
-      // Only keep mentions whose @first token still appears in the final text.
+      // Derive mentions from the typed text itself, not just picker state, so a
+      // hand-typed @name still notifies. For each typed @token, resolve it to a
+      // member id by matching the full typed token first (handles duplicate
+      // first names), then falling back to a first-name match. Picker-populated
+      // ids are unioned in (covers picked-then-edited cases).
       const lower = text.toLowerCase();
       const cands = this._mentionCandidates();
-      const mentions = Array.from(this._composerMentions).filter(id => {
+      const ids = new Set();
+      const tokenRe = /@(\w[\w.]*)/g;
+      let m;
+      while ((m = tokenRe.exec(text)) !== null) {
+        const tok = m[1].toLowerCase();
+        const full = cands.find(c => c.full.toLowerCase() === tok);
+        if (full) { ids.add(full.id); continue; }
+        const first = cands.find(c => c.first.toLowerCase() === tok);
+        if (first) ids.add(first.id);
+      }
+      // Keep any picker-chosen ids whose @first token still appears in the text.
+      Array.from(this._composerMentions).forEach(id => {
         const c = cands.find(x => x.id === id);
-        return c && lower.includes('@' + c.first.toLowerCase());
+        if (c && lower.includes('@' + c.first.toLowerCase())) ids.add(id);
       });
+      const mentions = Array.from(ids);
       this.controller.addTaskComment(t.id, text, mentions);
       input.value = '';
       this._composerMentions = new Set();

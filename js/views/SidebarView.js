@@ -383,7 +383,9 @@ App.SidebarView = class SidebarView {
       mine: all.filter(t => t.assignee === this.currentUser).length,
       hot: all.filter(t => t.priority === 'critical' || t.priority === 'urgent').length,
       today: all.filter(t => t.due === today).length,
-      overdue: all.filter(t => t.due < today).length,
+      // `t.due &&`: a task with due === '' must not count as overdue ('' < today
+      // is true for any ISO date). Matches the list views and HomeView.
+      overdue: all.filter(t => t.due && t.due < today).length,
       watching: all.filter(t => (t.watchers || []).includes(this.currentUser)).length,
     };
   }

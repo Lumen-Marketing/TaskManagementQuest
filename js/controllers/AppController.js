@@ -1,5 +1,14 @@
 window.App = window.App || {};
 
+// Normalize a user-set reminder to "YYYY-MM-DDTHH:MM" (datetime-local shape) or
+// null to clear. Anything not matching that shape is treated as cleared. Used by
+// both createTask and updateTask so create and edit treat reminderAt identically.
+function normalizeReminderAt(value) {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value || '')
+    ? String(value).slice(0, 16)
+    : null;
+}
+
 /* AppController — orchestrates everything.
    - Owns UI state (selected task, current view, search query).
    - Receives commands from views, calls model methods.
@@ -1382,9 +1391,7 @@ App.AppController = class AppController {
       : (task.subtasks || []);
     // User-set reminder ("YYYY-MM-DDTHH:MM" local, or null to clear). Anything
     // not matching the datetime-local shape is treated as cleared.
-    const reminderAt = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(fields.reminderAt || '')
-      ? String(fields.reminderAt).slice(0, 16)
-      : null;
+    const reminderAt = normalizeReminderAt(fields.reminderAt);
 
     const prevStatus = task.status, prevPriority = task.priority, prevAssignee = task.assignee;
 
@@ -1556,7 +1563,7 @@ App.AppController = class AppController {
       project: payload.project || null,
       due: payload.due,
       dueTime: payload.dueTime || null,
-      reminderAt: payload.reminderAt || null,
+      reminderAt: normalizeReminderAt(payload.reminderAt),
       priority: payload.priority,
       status: payload.status,
       creator: this.currentUser,
