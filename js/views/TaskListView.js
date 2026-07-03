@@ -1081,13 +1081,11 @@ App.TaskListView = class TaskListView {
     }));
     this.body.querySelectorAll('.cal-cell').forEach(cell => cell.addEventListener('click', (e) => {
       if (e.target.closest('[data-cal-task]')) return; // chip click handled above
-      const iso = cell.dataset.day;
-      const isPhone = window.matchMedia('(max-width: 720px)').matches;
-      // Phone + a day that has tasks → reveal that day's list. Otherwise, jump
-      // straight to creating a task on that day (when allowed).
-      if (isPhone && cell.classList.contains('has-tasks')) { c.selectCalendarDay(iso); return; }
-      if (App.can('tasks.write')) c.openNewTaskPage({ due: iso });
-      else c.selectCalendarDay(iso);
+      // Clicking a day NAVIGATES to it ("if I click on the 17th, I only want
+      // to see the 17th"): anchor + select the day so its task list panel
+      // shows, on every form factor. It used to open a prefilled new-task
+      // page on desktop, which fought the boss's click-to-see habit.
+      c.openCalendarOn(cell.dataset.day);
     }));
   }
 

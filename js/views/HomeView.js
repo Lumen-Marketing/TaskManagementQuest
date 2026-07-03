@@ -490,6 +490,23 @@ App.HomeView = class HomeView {
     this.wrap.querySelectorAll('.qhq-cal-day[data-day]').forEach(b => b.addEventListener('click', () => {
       this.controller.openCalendarOn(b.dataset.day);
     }));
+    // The month title opens the full month calendar (day clicks above land on
+    // the single day). Promoted to a button in place — no visual change.
+    const calHead = this.wrap.querySelector('.qhq-cal-head');
+    if (calHead) {
+      calHead.setAttribute('role', 'button');
+      calHead.setAttribute('tabindex', '0');
+      calHead.setAttribute('aria-label', 'Open the full calendar');
+      calHead.style.cursor = 'pointer';
+      const openFullCalendar = () => {
+        this.controller.setView('all');
+        this.controller.setLayout('calendar');
+      };
+      calHead.addEventListener('click', openFullCalendar);
+      calHead.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openFullCalendar(); }
+      });
+    }
     const open = el => { const id = el.dataset.id; if (id) this.controller.selectTask(id); };
     this.wrap.querySelectorAll('.qhq-un-row, .qhq-rec-row, .qhq-cm-row').forEach(el => {
       el.addEventListener('click', () => open(el));
