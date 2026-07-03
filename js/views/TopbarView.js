@@ -332,6 +332,16 @@ App.TopbarView = class TopbarView {
 
   renderClockWidget() {
     const active = this.timeModel.activeFor(this.currentUser);
+    // Pulse the pill to life on start and settle it on stop — but only on the
+    // actual transition. renderClockWidget also runs every live tick (updating
+    // the elapsed text), so guard on the previous running state to avoid a
+    // pulse-per-second.
+    const wasRunning = this._clockRunning === true;
+    const isRunning = !!active;
+    if (isRunning !== wasRunning && this._clockRunning !== undefined && App.Motion) {
+      App.Motion.pulse(this.clockWidget);
+    }
+    this._clockRunning = isRunning;
     if (active) {
       const task = this.controller.getTask(active.taskId);
       // Running state shows only the timer — the task title lives on the tooltip

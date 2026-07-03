@@ -38,5 +38,8 @@ App.ToastView = class ToastView {
       el.classList.add('leaving');
       setTimeout(() => el.remove(), 320);
     }, dwell);
+    // Return the node so callers can update it in place (e.g. a "Saving…" toast
+    // that becomes "Saved" and pulses once the debounced save actually lands).
+    return el;
   }
 };

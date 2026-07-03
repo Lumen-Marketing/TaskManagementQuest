@@ -443,7 +443,10 @@ App.TaskDetailView = class TaskDetailView {
     qa('[data-action="delete-task"]').forEach(el => el.addEventListener('click', () => this.controller.deleteTask(t.id)));
 
     const completeBtn = q('[data-action="mark-complete"]');
-    if (completeBtn) completeBtn.addEventListener('click', () => this.controller.completeTask(t.id));
+    if (completeBtn) completeBtn.addEventListener('click', () => {
+      if (!App.taxonomy.isDone(t) && App.Motion) App.Motion.check(completeBtn.querySelector('i') || completeBtn);
+      this.controller.completeTask(t.id);
+    });
 
     // Watch toggle — header button AND the watchers-card "+" share one action.
     qa('[data-action="toggle-watch"]').forEach(el => el.addEventListener('click', () => this.controller.toggleSelfWatch(t.id)));

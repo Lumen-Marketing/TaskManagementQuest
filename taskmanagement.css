@@ -295,6 +295,98 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .btn-danger { background: var(--rust-bg); color: var(--rust-ink); border-color: var(--rust); }
 .btn-danger:hover { background: var(--rust); color: white; }
 
+/* ===================================================================
+   INTERACTIONS — global microinteraction layer
+   Consistent tactile feedback on every control: press-down on buttons
+   and chips, unified menu/popover entrances, smooth input focus, flat
+   row hover (no lifts, no borders — matches the panze look), and a
+   shared view entrance. Transform/opacity only; a single reduced-motion
+   gate lives at the bottom. The six JS-triggered hero moments live in
+   js/utils/motion.js. Controls that already define :active above
+   (.btn, .icon-btn, .layout-btn, .finish-btn, .kanban-card) are left
+   as-is; these rules fill the gaps.
+   =================================================================== */
+
+/* Press feedback — snappy scale-down on tap/click. */
+.pv-new, .pv-chev, .swipe-act, .status-menu-item, .watcher-dropdown-item,
+.focus-widget-head, .toast-action, .filter-badge, .watcher-tag,
+.watcher-add, .subtask-chip {
+  transition: background var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+.pv-new:active, .pv-chev:active, .swipe-act:active, .status-menu-item:active,
+.watcher-dropdown-item:active, .focus-widget-head:active, .toast-action:active,
+.filter-badge:active, .watcher-tag:active, .watcher-add:active,
+.subtask-chip:active {
+  transform: scale(0.97);
+}
+.pv-check:active { transform: scale(0.9); }
+
+/* Unified menu / popover entrance — reuse statusMenuIn (grow from anchor)
+   for every dropdown, picker and floating menu that toggles .hidden. */
+.pnav-menu,
+.tdp-overflow-menu:not(.hidden),
+.watcher-dropdown:not(.hidden),
+.proj-picker:not(.hidden),
+.cm-mention-menu:not(.hidden),
+.tdp-status-menu {
+  animation: statusMenuIn var(--dur-short) var(--ease-out);
+  transform-origin: top;
+}
+
+/* Inputs — smooth focus response on fill/border only. The focus RING is
+   intentionally left instant (see tokens.css) for accessibility, so we
+   never transition box-shadow/outline here. Field label tints to accent. */
+input:not([type="checkbox"]):not([type="radio"]), textarea, select {
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+.field-label { transition: color var(--dur-fast) var(--ease-out); }
+.field:focus-within .field-label { color: var(--amber); }
+
+/* Rows & cards — flat hover tint on pointer devices only; touch gets an
+   :active tap flash. No lifts, no shadow changes, no borders. */
+@media (hover: hover) {
+  .focus-widget-row { transition: background var(--dur-fast) var(--ease-out); }
+  .focus-widget-row:hover { background: var(--bg-2); }
+}
+.pv-row:active, .focus-widget-row:active, .worker-row:active { background: var(--bg-3); }
+
+/* Reorderable rows lift slightly out of the list while dragging. */
+.focus-widget-row.dragging, .worker-row.dragging {
+  opacity: 0.92;
+  transform: scale(1.02);
+}
+
+/* Shared view entrance — a subtle settle as a main surface paints. Smaller
+   travel than the Home dashboard's qhqRise so it reads as arriving, not
+   flying in. Applied by AppController._animateViewEnter on navigation. */
+@keyframes viewEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.view-enter { animation: viewEnter var(--dur-mid) var(--ease-out); }
+
+/* One reduced-motion gate for the whole interaction layer. */
+@media (prefers-reduced-motion: reduce) {
+  .pv-new, .pv-chev, .swipe-act, .status-menu-item, .watcher-dropdown-item,
+  .focus-widget-head, .toast-action, .filter-badge, .watcher-tag, .watcher-add,
+  .subtask-chip, .pv-check, .focus-widget-row,
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select,
+  .field-label {
+    transition: none;
+  }
+  .pnav-menu, .tdp-overflow-menu, .watcher-dropdown, .proj-picker,
+  .cm-mention-menu, .tdp-status-menu, .view-enter {
+    animation: none;
+  }
+  .pv-new:active, .pv-chev:active, .swipe-act:active, .status-menu-item:active,
+  .watcher-dropdown-item:active, .focus-widget-head:active, .toast-action:active,
+  .filter-badge:active, .watcher-tag:active, .watcher-add:active,
+  .subtask-chip:active, .pv-check:active,
+  .focus-widget-row.dragging, .worker-row.dragging {
+    transform: none;
+  }
+}
+
 /* Layout switcher tabs (Table / Timeline / Kanban) */
 .layout-switcher {
   display: flex;

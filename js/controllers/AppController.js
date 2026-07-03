@@ -825,6 +825,27 @@ App.AppController = class AppController {
     document.querySelectorAll('.work-toolbar, .head-card-actions, .page-head-widgets, #scopeSeg').forEach(el => {
       el.classList.toggle('hidden', hideChrome);
     });
+    this._animateViewEnter(v);
+  }
+
+  /* Play the shared "settle" entrance on whichever top-level surface just
+     became visible. Re-adds the class after a forced reflow so the animation
+     restarts on every navigation, not just the first. No-op under reduced
+     motion (the CSS also neutralises .view-enter, but skipping avoids touching
+     the DOM at all). */
+  _animateViewEnter(v) {
+    if (App.Motion && App.Motion.reduce()) return;
+    let id = 'taskViewWrap';
+    if (v === 'home') id = 'homeWrap';
+    else if (v === 'reports') id = 'reportsWrap';
+    else if (v === 'projects') id = 'projectsWrap';
+    else if (v === 'wallboard') id = 'wallboardWrap';
+    else if (v.startsWith('time:') || v === 'approvals' || v === 'team:hierarchy' || v.startsWith('admin:')) id = 'timeViewWrap';
+    const el = document.getElementById(id);
+    if (!el || el.classList.contains('hidden')) return;
+    el.classList.remove('view-enter');
+    void el.offsetWidth; // reflow so re-adding the class restarts the animation
+    el.classList.add('view-enter');
   }
 
   /* ---------- Task taxonomy admin (Settings → Task setup) ----------
@@ -1543,6 +1564,8 @@ App.AppController = class AppController {
     });
     App.projects = await this.dataStore.loadProjects();
     App.EventBus.emit('projects:changed');
+    // Cue the grid to rise the new folder card into place (creation feedback).
+    App.EventBus.emit('project:created', id);
     return id;
   }
 
@@ -1826,6 +1849,9 @@ App.AppController = class AppController {
       }],
     };
     this.taskModel.add(task);
+    // Cue the list to rise the new row into place (creation feedback). Emitted
+    // after add() so the tasks:changed re-render that inserts the row has run.
+    App.EventBus.emit('task:created', task.id);
 
     const delegated = payload.assignee !== this.currentUser;
     const creatorName = this.getUserName(this.currentUser);

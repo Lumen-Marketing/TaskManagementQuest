@@ -190,6 +190,16 @@ App.TaskListView = class TaskListView {
 
   subscribe() {
     App.EventBus.on('tasks:changed', () => { if (this.visible()) this.render(); });
+    // A just-created task's row rises into place with a fading warm highlight —
+    // visible proof it was created. Two rAFs so the tasks:changed re-render that
+    // adds the row has painted before we look for it.
+    App.EventBus.on('task:created', (id) => {
+      if (!this.visible() || !App.Motion || !id) return;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const row = this.body && this.body.querySelector(`[data-id="${(window.CSS && CSS.escape) ? CSS.escape(id) : id}"]`);
+        if (row) App.Motion.arrive(row);
+      }));
+    });
     App.EventBus.on('time:changed', () => { if (this.visible()) this.renderList(); });
     App.EventBus.on('selection:changed', () => { if (this.visible()) this._syncSelectionHighlight(); });
     App.EventBus.on('search:changed', () => { if (this.visible()) this.renderList(); });
@@ -924,7 +934,10 @@ App.TaskListView = class TaskListView {
       const action = e.target.closest('[data-action]');
       if (action) {
         e.stopPropagation();
-        if (action.dataset.action === 'finish-task') this.controller.completeTask(t.id);
+        if (action.dataset.action === 'finish-task') {
+          if (!action.classList.contains('is-done') && App.Motion) App.Motion.check(action.querySelector('i'));
+          this.controller.completeTask(t.id);
+        }
         return;
       }
       if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
@@ -1160,10 +1173,16 @@ App.TaskListView = class TaskListView {
         e.stopPropagation();
         const action = target.dataset.action;
         if (action === 'bulk-toggle') this.controller.toggleBulkSelect(t.id);
-        else if (action === 'toggle-done') this.controller.toggleTaskDone(t.id);
+        else if (action === 'toggle-done') {
+          if (target.checked && App.Motion) App.Motion.pop(target);
+          this.controller.toggleTaskDone(t.id);
+        }
         else if (action === 'open-priority') this._openStatusMenu(t.id, target, 'priority');
         else if (action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
-        else if (action === 'finish-task') this.controller.completeTask(t.id);
+        else if (action === 'finish-task') {
+          if (!target.classList.contains('is-done') && App.Motion) App.Motion.check(target.querySelector('i'));
+          this.controller.completeTask(t.id);
+        }
         else if (action === 'toggle-subtasks') this._toggleSubtaskDrawer(t.id, row, target);
         else if (action === 'open-status') this._openStatusMenu(t.id, target);
         else if (action === 'open-project') this._openProjectMenu(t, target);
@@ -1236,7 +1255,10 @@ App.TaskListView = class TaskListView {
       // Snap the row closed before acting (the delete re-render removes it
       // anyway; the complete keeps it, so reset the scroll position).
       try { wrap.scrollTo({ left: 0, behavior: 'smooth' }); } catch (_) { wrap.scrollLeft = 0; }
-      if (b.dataset.swipe === 'done') this.controller.completeTask(t.id);
+      if (b.dataset.swipe === 'done') {
+        if (!App.taxonomy.isDone(t) && App.Motion) App.Motion.check(b.querySelector('i'));
+        this.controller.completeTask(t.id);
+      }
       else if (b.dataset.swipe === 'del') this.controller.deleteTask(t.id);
     });
     return wrap;
