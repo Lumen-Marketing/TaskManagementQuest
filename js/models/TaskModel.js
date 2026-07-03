@@ -409,11 +409,13 @@ App.TaskModel = class TaskModel {
     return { oldAssignee, newAssignee };
   }
 
-  setField(id, field, value, userName) {
+  // activityText (optional) lets the caller log a specific entry
+  // ("changed status Working on it → Stuck") instead of the generic fallback.
+  setField(id, field, value, userName, activityText) {
     const t = this.find(id);
     if (!t) return;
     t[field] = value;
-    this.pushActivity(t, userName, `changed ${field}`);
+    this.pushActivity(t, userName, activityText || `changed ${field}`);
     this._markDirty(id);
     App.EventBus.emit('tasks:changed');
   }

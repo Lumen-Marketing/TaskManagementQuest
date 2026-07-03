@@ -1475,14 +1475,10 @@ button.tdp-chip:hover { border-color: var(--ink-3); }
 #taskDetailWrap .tdp-card .detail-row .priority-block.is-editing { justify-self: stretch; background: none; padding: 0; color: inherit; }
 .tdp-editable.is-editing::after { content: none; }
 
+/* Inline editors auto-save (change/blur/Enter) — the old ✓/✗ confirm buttons
+   are gone; see the stream-c block at the end of this file for the saved-tick. */
 .tdp-inline-edit { display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; max-width: 100%; }
 .tdp-ie-input { flex: 1 1 auto; min-width: 0; width: 100%; font-size: 12px; padding: 4px 6px; }
-.tdp-ie-save, .tdp-ie-cancel { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: 0 0 24px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; padding: 0; transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out); }
-.tdp-ie-save i, .tdp-ie-cancel i { font-size: 14px; }
-.tdp-ie-save { color: var(--green); border-color: var(--green); }
-.tdp-ie-save:hover { background: var(--green); color: #fff; }
-.tdp-ie-cancel { color: var(--ink-3); }
-.tdp-ie-cancel:hover { color: var(--rust); border-color: var(--rust); }
 
 /* Tabbed Activity / Comments / History */
 .tdp-tablist { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: -2px 0 14px; }
@@ -7253,12 +7249,13 @@ body.ui-command-center .controls-card .btn {
 }
 
 /* ============================================================================
-   Task detail — content + rail body (below the kept full-width header, stat
-   strip and wide properties band = pic 1). The lower content is a DOMINANT
-   column (Description / Subtasks / Comments) with a quiet rail beside it (Quick
-   actions / Watchers / Activity) — so those read as a supporting rail, not a
-   lone stack. Warm-flat panze, no hairline borders. Collapses to one column
-   ≤900px (main first, then the rail).
+   Task detail — content + rail body (below the kept full-width header and stat
+   strip), matched to the boss's mockup: the DOMINANT main column carries the
+   conversation (Description front-and-center → Subtasks → Comments/Activity →
+   History) while the metadata sits in a quiet 360px rail (Details with the
+   de-emphasized read-only Created line, Quick actions, Watchers at the bottom
+   beside History). Warm-flat panze, no hairline borders. Collapses to one
+   interleaved column ≤900px.
    ========================================================================== */
 #taskDetailWrap .tdp-body {
   display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px;
@@ -7267,23 +7264,30 @@ body.ui-command-center .controls-card .btn {
 #taskDetailWrap .tdp-body .tdp-col-main { grid-column: 1; min-width: 0; }
 #taskDetailWrap .tdp-body .tdp-col-right { grid-column: 2; }
 
-/* Rail tabbed card (Comments / Activity / History): fixed height so a long thread
-   or feed scrolls INSIDE the card instead of stretching it — the card stays a
-   constant size, which lets the Watchers card below it line up with Subtasks.
-   The comment composer stays pinned; only the list / feed scrolls. */
+/* Conversation card (Comments / Activity tabs) — lives in the main column now.
+   A long thread or feed scrolls INSIDE the card; the composer stays pinned. */
 #taskDetailWrap .tdp-tabs .tdp-tabpanel.active {
-  display: flex; flex-direction: column; height: 230px; min-height: 0;
+  display: flex; flex-direction: column; min-height: 220px;
 }
-#taskDetailWrap .tdp-tabs .cm-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+#taskDetailWrap .tdp-tabs .cm-list { flex: 1 1 auto; min-height: 0; max-height: 420px; overflow-y: auto; }
 #taskDetailWrap .tdp-tabs .cm-composer { flex: 0 0 auto; }
-#taskDetailWrap .tdp-tabs .tdp-tabpanel[data-panel="activity"],
-#taskDetailWrap .tdp-tabs .tdp-tabpanel[data-panel="history"] { overflow-y: auto; }
+#taskDetailWrap .tdp-tabs .tdp-tabpanel[data-panel="activity"] { max-height: 420px; overflow-y: auto; }
 #taskDetailWrap .tdp-tabs .tdp-activity { max-height: none; overflow: visible; }
 
+/* Single column ≤900px: flatten both column wrappers (display:contents) so the
+   cards interleave in a sensible phone order — description first, details
+   right under it, watchers still beside history. */
 @media (max-width: 900px) {
   #taskDetailWrap .tdp-body { grid-template-columns: 1fr; gap: 16px; }
   #taskDetailWrap .tdp-body .tdp-col-main,
-  #taskDetailWrap .tdp-body .tdp-col-right { grid-column: 1; }
+  #taskDetailWrap .tdp-body .tdp-col-right { display: contents; }
+  #taskDetailWrap .tdp-card-desc     { order: 1; }
+  #taskDetailWrap .tdp-card-details  { order: 2; }
+  #taskDetailWrap .tdp-card-subs     { order: 3; }
+  #taskDetailWrap .tdp-card-conv     { order: 4; }
+  #taskDetailWrap .tdp-card-hist     { order: 5; }
+  #taskDetailWrap .tdp-card-watchers { order: 6; }
+  #taskDetailWrap .tdp-card-qa       { order: 7; }
 }
 
 /* ============================================================================
@@ -7452,4 +7456,99 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
 [data-theme="dark"] #listPane .focus-widget,
 [data-theme="dark"] #listPane .progress-card {
   border: 1px solid var(--border) !important;
+}
+
+/* === stream-c: task-detail === */
+/* Auto-save UX (kill every confirm step), boss-mockup layout deltas, and the
+   shared date/time/reminder picker (js/views/DateTimePickerView.js). */
+
+/* Description card — front and center: full-strength ink, roomier type, and a
+   click-to-edit affordance (pencil in the card title + the text itself). */
+#taskDetailWrap .tdp-card-desc .tdp-card-title { display: flex; align-items: center; justify-content: space-between; }
+.tdp-desc-pencil { width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-3); background: var(--bg-2); transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.tdp-desc-pencil:hover { background: var(--amber-bg); color: var(--amber-ink); }
+.tdp-desc-pencil i { font-size: 14px; }
+#taskDetailWrap .tdp-card-desc .tdp-desc { font-size: 14px; line-height: 1.6; color: var(--ink); }
+#taskDetailWrap .tdp-desc[data-edit-field] { cursor: text; border-radius: 10px; padding: 8px 10px; margin: -8px -10px 0; transition: background var(--dur-fast) var(--ease-out); }
+#taskDetailWrap .tdp-desc[data-edit-field]:hover,
+#taskDetailWrap .tdp-desc[data-edit-field]:focus-visible { background: var(--bg-2); outline: none; }
+#taskDetailWrap .tdp-desc-empty { color: var(--ink-3); }
+.tdp-desc-input { min-height: 96px; }
+
+/* De-emphasized read-only creation line at the bottom-left of Details. */
+.tdp-created { margin-top: 12px; font-size: 11px; color: var(--ink-4); }
+
+/* History card (time log) — scrolls past ~8 entries. */
+.tdp-history { max-height: 300px; overflow-y: auto; }
+
+/* Saved feedback: the field that just auto-saved pulses softly and shows a
+   green tick for a beat. One-shot; the next render clears it. */
+.tdp-saved-flash { animation: tdp-saved-pulse 1.1s var(--ease-out); }
+.tdp-saved-flash::after {
+  content: "\2713"; position: static; margin-left: 6px; font-size: 11px;
+  line-height: 1; font-weight: 700; color: var(--green); opacity: 1;
+  animation: tdp-saved-fade 1.6s var(--ease-out) forwards;
+}
+@keyframes tdp-saved-pulse {
+  0% { background: color-mix(in oklab, var(--green) 16%, transparent); }
+  100% { background: transparent; }
+}
+@keyframes tdp-saved-fade {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Mention menu keyboard navigation (arrows + Enter/Tab). */
+.cm-mention-item.is-active { background: var(--amber-bg); color: var(--amber-ink); }
+
+/* Reminder trigger button (detail Edit form + New task): shows the picked
+   "Jul 8, 9:00 AM" or an empty prompt; opens the popover below. */
+.rp-trigger { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; font-size: 12.5px; font-weight: 600; color: var(--ink-2); background: var(--bg-2); border-radius: 10px; padding: 7px 10px; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.rp-trigger:hover { background: var(--amber-bg); color: var(--amber-ink); }
+.rp-trigger i { font-size: 14px; color: var(--ink-3); flex-shrink: 0; }
+.rp-trigger:hover i { color: inherit; }
+.rp-trigger-empty { color: var(--ink-3); font-weight: 500; }
+.rp-trigger-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Reminder popover: a real month grid (CSS grid — day numbers can never
+   overlap) + a typeable time field. Warm flat: shadow + tint, no hairlines. */
+.rp-pop {
+  position: fixed; z-index: 240; width: 264px; padding: 12px;
+  background: var(--surface); border-radius: var(--radius-md);
+  box-shadow: 0 8px 28px rgba(16, 24, 40, 0.18), 0 2px 8px rgba(16, 24, 40, 0.08);
+  animation: fadeIn var(--dur-short) var(--ease-out);
+}
+.rp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.rp-month { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--ink); }
+.rp-nav { width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); background: var(--bg-2); transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.rp-nav:hover { background: var(--amber-bg); color: var(--amber-ink); }
+.rp-nav i { font-size: 14px; }
+.rp-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 2px; }
+.rp-dow span { text-align: center; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink-4); padding: 2px 0; }
+.rp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.rp-day { aspect-ratio: 1; min-width: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; color: var(--ink-2); border-radius: 8px; padding: 0; transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out); }
+.rp-day:hover { background: var(--bg-2); color: var(--ink); }
+.rp-day-pad { pointer-events: none; }
+.rp-day.is-today { box-shadow: inset 0 0 0 1.5px var(--amber); color: var(--ink); font-weight: 600; }
+.rp-day.is-selected, .rp-day.is-selected:hover { background: var(--amber); color: #fff; font-weight: 700; }
+.rp-timerow { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.rp-timerow i { font-size: 15px; color: var(--ink-3); }
+.rp-time { flex: 1; min-width: 0; font-size: 13px; padding: 7px 10px; border: none; border-radius: 10px; background: var(--bg-2); }
+.rp-time:focus { outline: 2px solid var(--amber); outline-offset: 0; box-shadow: none; border: none; }
+.rp-time-bad, .rp-time[aria-invalid="true"] { outline: 2px solid var(--rust); }
+.rp-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.rp-clear { font-size: 11.5px; font-weight: 600; color: var(--rust); padding: 4px 6px; border-radius: 8px; transition: background var(--dur-fast) var(--ease-out); }
+.rp-clear:hover { background: var(--bg-2); }
+.rp-hint { font-size: 10.5px; color: var(--ink-4); }
+
+/* Phone: keep the popover comfortably tappable and inside the viewport. */
+@media (max-width: 720px) {
+  .rp-pop { width: min(300px, calc(100vw - 16px)); }
+  .rp-day { font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tdp-saved-flash { animation: none; }
+  .tdp-saved-flash::after { animation: none; }
+  .rp-pop { animation: none; }
 }
