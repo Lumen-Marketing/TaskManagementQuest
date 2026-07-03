@@ -7,8 +7,13 @@
 
    Not handled here: cross-origin requests (Supabase, Sentry, CDN, fonts) pass
    straight through, and `env.json` is never cached (runtime config must be
-   fresh). Bump CACHE_VERSION to invalidate old runtime caches on deploy. */
-const CACHE_VERSION = 'questhq-v2';
+   fresh). The cache version is stamped at build time: tools/build-env.mjs
+   replaces the __BUILD_ID__ placeholder with a short content hash so each
+   deploy purges the previous deploy's caches. When the placeholder is never
+   replaced (dev/local, no build step) the literal fallback keeps sw.js valid
+   and the version simply stays constant. */
+const BUILD_ID = '__BUILD_ID__';
+const CACHE_VERSION = 'questhq-' + (BUILD_ID.startsWith('__') ? 'dev' : BUILD_ID);
 const OFFLINE_FALLBACK = '/app.html';
 
 self.addEventListener('install', (event) => {
