@@ -135,7 +135,9 @@ App.NewTaskPageView = class NewTaskPageView {
   }
 
   template() {
-    const me = App.PEOPLE[this.currentUser];
+    // currentUser may resolve to a profile-only member missing from App.PEOPLE
+    // (or a removed roster entry); fall back so the page still renders.
+    const me = App.PEOPLE[this.currentUser] || { name: this.currentUser || 'You' };
     const { ids: companyIds, selected: selectedCompany } = this._companyChoices();
     return `
       <div class="taf ntf">
@@ -422,10 +424,13 @@ App.NewTaskPageView = class NewTaskPageView {
     const emailLabel = document.getElementById('nt-notify-email-label');
     if (assigneeId !== this.currentUser) {
       banner.classList.remove('hidden');
+      const assignee = App.PEOPLE[assigneeId];
+      const assigneeName = assignee ? assignee.name : assigneeId;
+      const creatorName = App.PEOPLE[this.currentUser] ? App.PEOPLE[this.currentUser].name : this.currentUser;
       document.getElementById('nt-delegation-text').textContent =
-        `${App.PEOPLE[assigneeId].name} will see "Assigned by ${App.PEOPLE[this.currentUser].name}" on this task.`;
-      emailLabel.textContent = `Email ${App.PEOPLE[assigneeId].name}`;
-      emailAddr.textContent = App.PEOPLE[assigneeId].email;
+        `${assigneeName} will see "Assigned by ${creatorName}" on this task.`;
+      emailLabel.textContent = `Email ${assigneeName}`;
+      emailAddr.textContent = assignee ? assignee.email : '';
     } else {
       banner.classList.add('hidden');
       emailLabel.textContent = 'Email assignee';

@@ -29,20 +29,31 @@ App.ReportsView = class ReportsView {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  _rangeStart() {
-    const d = new Date(); d.setHours(0, 0, 0, 0);
-    if (this.range === 'week') d.setDate(d.getDate() - 7);
-    else if (this.range === 'quarter') d.setMonth(d.getMonth() - 3);
-    else d.setMonth(d.getMonth() - 1);
-    return d;
+  // Range start as an HQ-calendar YYYY-MM-DD string, so the range boundary uses
+  // the same HQ-calendar basis as the on-time / cycle math (hqDateOf vs t.due).
+  // Anchoring on the HQ "today" date avoids an off-by-one-day for non-Phoenix
+  // viewers near range edges.
+  _rangeStartISO() {
+    const todayHQ = App.utils.todayISO(0); // YYYY-MM-DD in HQ zone
+    const [y, m, d] = todayHQ.split('-').map(Number);
+    // UTC date arithmetic on the calendar components keeps day/month math exact.
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    if (this.range === 'week') dt.setUTCDate(dt.getUTCDate() - 7);
+    else if (this.range === 'quarter') dt.setUTCMonth(dt.getUTCMonth() - 3);
+    else dt.setUTCMonth(dt.getUTCMonth() - 1);
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getUTCDate()).padStart(2, '0');
+    return `${dt.getUTCFullYear()}-${mm}-${dd}`;
   }
 
   _metrics() {
     const all = this.controller.visibleTasks({ includeDone: true });
     const open = all.filter(t => !App.taxonomy.isDone(t));
     const today = App.utils.todayISO(0);
-    const start = this._rangeStart();
-    const done = all.filter(t => t.completedAt && new Date(t.completedAt) >= start);
+    const startISO = this._rangeStartISO();
+    // Compare on the HQ calendar day (same basis as on-time / cycle math) so the
+    // range boundary doesn't drift a day for non-Phoenix viewers.
+    const done = all.filter(t => t.completedAt && App.utils.hqDateOf(t.completedAt) >= startISO);
 
     const critHigh = open.filter(t => t.priority === 'critical' || t.priority === 'high').length;
     const overdue = open.filter(t => t.due && t.due < today).length;

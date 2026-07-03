@@ -1,5 +1,14 @@
 window.App = window.App || {};
 
+// Normalize a user-set reminder to "YYYY-MM-DDTHH:MM" (datetime-local shape) or
+// null to clear. Anything not matching that shape is treated as cleared. Used by
+// both createTask and updateTask so create and edit treat reminderAt identically.
+function normalizeReminderAt(value) {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value || '')
+    ? String(value).slice(0, 16)
+    : null;
+}
+
 /* AppController — orchestrates everything.
    - Owns UI state (selected task, current view, search query).
    - Receives commands from views, calls model methods.
@@ -363,12 +372,15 @@ App.AppController = class AppController {
   }
 
   /* ----- The filtered task set the list/calendar/export all share ----- */
-  getVisibleTasks() {
-    const role = App.effectiveRole();
+  _reportMemberIds(role) {
     const me = (App.currentProfile && App.currentProfile.member_id) || this.currentUser;
-    const reportMemberIds = (role === 'supervisor' && App.realRole() !== 'developer')
+    return (role === 'supervisor' && App.realRole() !== 'developer')
       ? new Set((App.PROFILES || []).filter(p => p.supervisor_id === me).map(p => p.member_id))
       : null;
+  }
+
+  getVisibleTasks() {
+    const role = App.effectiveRole();
     return this.taskModel.getFiltered({
       view: this.uiState.view,
       scope: this.uiState.scope,
@@ -377,8 +389,70 @@ App.AppController = class AppController {
       activeFilters: this.uiState.filters,
       currentCompany: this.uiState.currentCompany,
       role,
-      reportMemberIds,
+      reportMemberIds: this._reportMemberIds(role),
     });
+  }
+
+  /* Badge counts for the nav (top-bar Tasks dropdown + mobile drawer), computed
+     through the SAME getFiltered pipeline the list views render from — company,
+     role scope, "My work" segment, search query and filter-bar filters all
+     included — so a badge is always EXACTLY the number of rows a click on that
+     nav item shows ("All Tasks is empty but the badge says 7 urgent" reads as
+     data loss). No extra done-filter here: getFiltered already excludes done
+     rows for hot/today/overdue and includes them where the list renders them. */
+  badgeCounts() {
+    const role = App.effectiveRole();
+    const reportMemberIds = this._reportMemberIds(role);
+    const count = (view) => this.taskModel.getFiltered({
+      view,
+      scope: this.uiState.scope,
+      searchQuery: this.uiState.searchQuery,
+      currentUser: this.currentUser,
+      activeFilters: this.uiState.filters,
+      currentCompany: this.uiState.currentCompany,
+      role,
+      reportMemberIds,
+    }).length;
+    return {
+      all: App.can('tasks.view') ? count('all') : 0,
+      mine: count('mine'),
+      hot: count('hot'),
+      today: count('today'),
+      overdue: count('overdue'),
+      watching: count('watching'),
+    };
+  }
+
+  /* How many tasks the current view would show if the transient narrowing
+     (search box, "My work" scope, filter bar) were cleared. Drives the honest
+     empty state: "0 because nothing exists" is a different situation from
+     "0 because your search hides them" — the latter must say so, or a full
+     list reads as wiped data. */
+  hiddenByNarrowingCount() {
+    if (this.getVisibleTasks().length > 0) return 0;
+    const role = App.effectiveRole();
+    return this.taskModel.getFiltered({
+      view: this.uiState.view,
+      scope: 'all',
+      searchQuery: '',
+      currentUser: this.currentUser,
+      activeFilters: null,
+      currentCompany: this.uiState.currentCompany,
+      role,
+      reportMemberIds: this._reportMemberIds(role),
+    }).length;
+  }
+
+  /* One-click recovery from an all-hiding narrowing combo (used by the list
+     empty state). Clears the filter bar, the My-work scope and the search box —
+     the #searchInput element is app.html chrome (TopbarView only pushes edits
+     from it, it never syncs back), so blank it here too. */
+  clearNarrowing() {
+    this.clearFilters();
+    this.setScope('all');
+    this.setSearchQuery('');
+    const box = document.getElementById('searchInput');
+    if (box) box.value = '';
   }
 
   _personName(id) {
@@ -841,11 +915,16 @@ App.AppController = class AppController {
       dueTime: t.dueTime || null,
       reminderAt: null,
       priority: t.priority || 'medium',
-      status: 'todo',
+      // Per-type taxonomy: the copy starts on its type's default status for this
+      // company (a customized taxonomy may not have 'todo' for this type).
+      status: App.taxonomy.defaultStatus(t.company, t.type || 'admin'),
       assignee: this.currentUser,
       watchers: [],
       subtasks: (t.subtasks || []).map(s => ({ t: s.t, d: false })),
       notify: { inapp: false, watchers: false, whatsapp: false },
+      // History must show this was a duplication, not an original creation —
+      // an unexplained copy is how the boss ended up with an accidental dupe.
+      activityWhat: `duplicated this from "${t.title || 'task'}"`,
     });
   }
 
@@ -1382,9 +1461,7 @@ App.AppController = class AppController {
       : (task.subtasks || []);
     // User-set reminder ("YYYY-MM-DDTHH:MM" local, or null to clear). Anything
     // not matching the datetime-local shape is treated as cleared.
-    const reminderAt = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(fields.reminderAt || '')
-      ? String(fields.reminderAt).slice(0, 16)
-      : null;
+    const reminderAt = normalizeReminderAt(fields.reminderAt);
 
     const prevStatus = task.status, prevPriority = task.priority, prevAssignee = task.assignee;
 
@@ -1556,7 +1633,7 @@ App.AppController = class AppController {
       project: payload.project || null,
       due: payload.due,
       dueTime: payload.dueTime || null,
-      reminderAt: payload.reminderAt || null,
+      reminderAt: normalizeReminderAt(payload.reminderAt),
       priority: payload.priority,
       status: payload.status,
       creator: this.currentUser,
@@ -1567,9 +1644,11 @@ App.AppController = class AppController {
         : [],
       activity: [{
         who: this.getUserName(this.currentUser),
-        what: payload.assignee === this.currentUser
+        // activityWhat lets a caller that wraps createTask (duplicateTask) write
+        // an honest first history entry instead of the generic "created" one.
+        what: payload.activityWhat || (payload.assignee === this.currentUser
           ? 'created this task'
-          : `assigned this to ${App.PEOPLE[payload.assignee].name}`,
+          : `assigned this to ${App.PEOPLE[payload.assignee] ? App.PEOPLE[payload.assignee].name : payload.assignee}`),
         at: new Date().toISOString(),
         when: 'just now',
       }],

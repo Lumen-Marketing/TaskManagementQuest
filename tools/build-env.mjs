@@ -4,8 +4,9 @@
    the Vercel project's Environment Variables panel (Settings -> Environment
    Variables). The output file (env.json) is gitignored and never committed —
    it only exists on the Vercel build server. */
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 
 const requiredVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
 const missing = requiredVars.filter((name) => !process.env[name]);
@@ -61,3 +62,28 @@ const payload = JSON.stringify({
 const target = resolve(process.cwd(), 'env.json');
 await writeFile(target, payload, 'utf8');
 console.log(`[build-env] Wrote ${target} (${payload.length} bytes, sentry=${sentryDsn ? 'on' : 'off'}, captcha=${turnstileSiteKey ? 'on' : 'off'}, release=${release || '<none>'}).`);
+
+// Stamp a build id into sw.js so the service-worker CACHE_VERSION changes on
+// every deploy and the activate-purge actually drops the previous deploy's
+// caches. Prefer the commit SHA (stable, traceable); otherwise hash the SW
+// source itself so an unchanged worker keeps a stable id. We rewrite the
+// __BUILD_ID__ placeholder in place — if it's already been stamped (or sw.js
+// is missing) we no-op so re-running the build stays idempotent and safe.
+try {
+  const swPath = resolve(process.cwd(), 'sw.js');
+  const sw = await readFile(swPath, 'utf8');
+  if (sw.includes("'__BUILD_ID__'")) {
+    const buildId = (
+      release ||
+      createHash('sha256').update(sw).digest('hex')
+    ).slice(0, 12);
+    const stamped = sw.replace("'__BUILD_ID__'", `'${buildId}'`);
+    await writeFile(swPath, stamped, 'utf8');
+    console.log(`[build-env] Stamped sw.js BUILD_ID=${buildId}.`);
+  } else {
+    console.log('[build-env] sw.js has no __BUILD_ID__ placeholder; skipping stamp.');
+  }
+} catch (err) {
+  // A missing sw.js or write failure must not fail the whole build.
+  console.warn(`[build-env] Could not stamp sw.js: ${err && err.message ? err.message : err}`);
+}

@@ -40,7 +40,7 @@ App.TimeView = class TimeView {
         const day0 = new Date(); day0.setHours(0, 0, 0, 0);
         el.textContent = App.utils.formatDuration(this.timeModel.sessionTotalForUserTask(uid, at.taskId, day0.getTime()));
       } else {
-        el.textContent = App.utils.formatDuration(Date.now() - at.startedAt);
+        el.textContent = App.utils.formatDuration(Math.min(Date.now() - at.startedAt, App.MAX_SHIFT_MS));
       }
     });
   }
@@ -169,7 +169,7 @@ App.TimeView = class TimeView {
           </td>
           <td>${title ? App.utils.escapeHtml(title) : '—'}</td>
           <td>${company ? `<span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>` : '—'}</td>
-          <td class="mono" data-live-timer="${timer.userId}">${App.utils.formatDuration(Date.now() - timer.startedAt)}</td>
+          <td class="mono" data-live-timer="${timer.userId}">${App.utils.formatDuration(Math.min(Date.now() - timer.startedAt, App.MAX_SHIFT_MS))}</td>
           <td><span style="display:inline-flex; align-items:center; gap:4px; color:var(--green-ink); font-size:11px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);"></span>Live</span></td>
         </tr>
       `;
