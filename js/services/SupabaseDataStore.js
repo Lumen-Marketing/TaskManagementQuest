@@ -323,6 +323,21 @@ App.SupabaseDataStore = class SupabaseDataStore {
     for (const f of EDITABLE) {
       if (Object.prototype.hasOwnProperty.call(localTask, f)) merged[f] = localTask[f];
     }
+    // activity is an append-only log, so local-wins would silently drop entries
+    // another device appended — union both sides instead (dedup by who|what|at,
+    // chronological). Deliberately NOT done for watchers: that's an edited set
+    // where a removal must stick, and a union would resurrect removed entries.
+    const srvAct = Array.isArray(serverTask.activity) ? serverTask.activity : [];
+    const locAct = Array.isArray(localTask.activity) ? localTask.activity : [];
+    if (srvAct.length || locAct.length) {
+      const seen = new Set();
+      merged.activity = [...srvAct, ...locAct].filter(a => {
+        const k = `${a && a.who}|${a && a.what}|${a && a.at}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      }).sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
+    }
     return merged;
   }
 

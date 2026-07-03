@@ -396,9 +396,10 @@ App.AppController = class AppController {
   /* Badge counts for the nav (top-bar Tasks dropdown + mobile drawer), computed
      through the SAME getFiltered pipeline the list views render from — company,
      role scope, "My work" segment, search query and filter-bar filters all
-     included — so a badge can never disagree with the rows the user actually
-     sees ("All Tasks is empty but the badge says 7 urgent" reads as data loss).
-     Done rows are excluded to keep the badges' established open-work meaning. */
+     included — so a badge is always EXACTLY the number of rows a click on that
+     nav item shows ("All Tasks is empty but the badge says 7 urgent" reads as
+     data loss). No extra done-filter here: getFiltered already excludes done
+     rows for hot/today/overdue and includes them where the list renders them. */
   badgeCounts() {
     const role = App.effectiveRole();
     const reportMemberIds = this._reportMemberIds(role);
@@ -411,7 +412,7 @@ App.AppController = class AppController {
       currentCompany: this.uiState.currentCompany,
       role,
       reportMemberIds,
-    }).filter(t => !App.taxonomy.isDone(t)).length;
+    }).length;
     return {
       all: App.can('tasks.view') ? count('all') : 0,
       mine: count('mine'),
