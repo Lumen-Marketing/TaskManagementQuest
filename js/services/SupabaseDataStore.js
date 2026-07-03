@@ -391,6 +391,16 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwIfError(res, 'updating project');
   }
 
+  /* Delete one project folder. Tasks filed under it are UNFILED, not deleted:
+     migration 055 re-points tasks.project_id -> ON DELETE SET NULL. RLS gates
+     to the caller's company window (migration 055 "company members can delete
+     projects"). */
+  async deleteProject(id) {
+    if (!id) return;
+    const res = await this.supabase.from('projects').delete().eq('id', id);
+    this._throwIfError(res, 'deleting project');
+  }
+
   /* ---------- Task taxonomy CRUD (Settings → Task setup) ----------
      All writes are RLS-gated to developer/admin/construction_supervisor of the
      row's company (migration 056). Soft-delete = update {active:false}; rows are

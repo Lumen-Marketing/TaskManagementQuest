@@ -119,6 +119,12 @@ App.ProjectsView = class ProjectsView {
     const check = App.can('tasks.write')
       ? `<button class="pv-check${done ? ' done' : ''}" data-done="${esc(p.id)}" type="button" aria-label="${done ? 'Reopen folder' : 'Mark folder complete'}" title="${done ? 'Reopen folder' : 'Mark complete'}"><i class="ti ti-check"></i></button>`
       : '';
+    const actions = App.can('tasks.write')
+      ? `<span class="pv-actions">
+          <button class="pv-act" data-addtask="${esc(p.id)}" type="button" aria-label="Add task to ${esc(p.name)}" title="Add task"><i class="ti ti-plus"></i></button>
+          <button class="pv-act pv-act-del" data-del="${esc(p.id)}" type="button" aria-label="Delete ${esc(p.name)}" title="Delete folder"><i class="ti ti-trash"></i></button>
+        </span>`
+      : '';
     let drawer = '';
     if (open) {
       const tasks = this._folderTasks(p.id);
@@ -134,6 +140,7 @@ App.ProjectsView = class ProjectsView {
           <span class="pv-id"><span class="pv-name">${esc(p.name)}</span>${(p.client || p.address) ? `<span class="pv-client">${esc(p.client || p.address)}</span>` : ''}</span>
           <span class="pv-prog">${prog}</span>
           <span class="pv-duecol${overdue ? ' overdue' : ''}">${due ? 'Due ' + esc(due) : ''}</span>
+          ${actions}
         </div>
         ${drawer}
       </div>`;
@@ -306,7 +313,28 @@ App.ProjectsView = class ProjectsView {
           this.controller.toastView.show({ title: 'Folder complete!', sub: esc(p && p.name || ''), variant: 'celebrate' });
         }
         const delay = (App.Motion && App.Motion.reduce()) ? 0 : 480;
-        setTimeout(() => this.controller.setProjectStatus(id, 'done'), delay);
+        // 'complete' — NOT 'done'. The projects_status_check constraint only
+        // allows lead/active/hold/complete/cancelled, so 'done' fails the write.
+        setTimeout(() => this.controller.setProjectStatus(id, 'complete'), delay);
+      }));
+    host.querySelectorAll('.pv-act[data-addtask]').forEach(btn =>
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const p = (App.projects || {})[btn.dataset.addtask];
+        if (!p) return;
+        this.controller.openNewTaskPage({ project: p.id, company: p.companyId });
+      }));
+    host.querySelectorAll('.pv-act[data-del]').forEach(btn =>
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const p = (App.projects || {})[btn.dataset.del];
+        if (!p) return;
+        const c = this._counts(p.id);
+        const n = c.open + c.done;
+        const warn = n
+          ? `\n\n${n} task${n === 1 ? '' : 's'} filed here will be kept and unfiled (moved out of the folder), not deleted.`
+          : '';
+        if (window.confirm(`Delete folder "${p.name}"?${warn}`)) this.controller.deleteProject(p.id);
       }));
     host.querySelectorAll('.pv-chev').forEach(btn =>
       btn.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(btn.dataset.toggle); }));

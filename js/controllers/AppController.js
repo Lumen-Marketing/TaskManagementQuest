@@ -1569,15 +1569,35 @@ App.AppController = class AppController {
     return id;
   }
 
-  /* Set a folder's lifecycle status — 'done' completes it (files it under the
-     company's Completed group), 'active' reopens it. Refreshes App.projects and
-     notifies views. RLS enforces the company window regardless. */
+  /* Set a folder's lifecycle status — 'complete' completes it (files it under
+     the company's Completed group), 'active' reopens it. NOTE: the projects
+     table's status check constraint only accepts
+     lead/active/hold/complete/cancelled — 'done' is NOT valid and silently
+     fails the update, so completion must use 'complete'. Refreshes App.projects
+     and notifies views. RLS enforces the company window regardless. */
   async setProjectStatus(projectId, status) {
     if (!App.can('tasks.write')) return;
     if (!projectId || !status) return;
     await this.dataStore.updateProject(projectId, { status });
     App.projects = await this.dataStore.loadProjects();
     App.EventBus.emit('projects:changed');
+  }
+
+  /* Delete a folder. Its tasks are unfiled (project_id -> NULL), never deleted
+     (migration 055 re-points the FK to ON DELETE SET NULL). Refreshes
+     App.projects, drops the folder scope if the list is pinned to it, and
+     notifies views. RLS enforces the company window regardless. */
+  async deleteProject(projectId) {
+    if (!App.can('tasks.write')) return;
+    if (!projectId) return;
+    await this.dataStore.deleteProject(projectId);
+    App.projects = await this.dataStore.loadProjects();
+    if (this.uiState.filters && this.uiState.filters.projectId === projectId) {
+      this.uiState.filters.projectId = null;
+      App.EventBus.emit('filters:changed');
+    }
+    App.EventBus.emit('projects:changed');
+    if (this.toastView) this.toastView.show({ title: 'Folder deleted', sub: 'Its tasks were kept and unfiled.' });
   }
 
   /* Grid "New folder" button. Company defaults to the sidebar's current

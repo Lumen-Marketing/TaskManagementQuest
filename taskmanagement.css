@@ -608,6 +608,17 @@ input:not([type="checkbox"]):not([type="radio"]), textarea, select {
 .pv-duecol { flex: 0 0 78px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--pv-ink-3); text-align: right; white-space: nowrap; }
 .pv-duecol.overdue { color: var(--rust); }
 
+/* Per-row actions (add task / delete). Revealed on row hover on desktop so the
+   row stays calm; always visible where there's no hover (touch). */
+.pv-actions { flex: none; display: flex; align-items: center; gap: 2px; margin-left: 2px; opacity: 0; transition: opacity .14s var(--ease-out); }
+.pv-row:hover .pv-actions, .pv-row:focus-within .pv-actions { opacity: 1; }
+.pv-act { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: none; border-radius: 7px; background: transparent; color: var(--pv-ink-3); cursor: pointer; transition: background .14s var(--ease-out), color .14s var(--ease-out), transform .1s var(--ease-out); }
+.pv-act i { font-size: 15px; }
+.pv-act:hover { background: color-mix(in srgb, var(--pc) 14%, transparent); color: var(--pc); }
+.pv-act:active { transform: scale(0.9); }
+.pv-act-del:hover { background: color-mix(in srgb, var(--rust) 14%, transparent); color: var(--rust); }
+@media (hover: none) { .pv-actions { opacity: 1; } }
+
 /* Due-date sub-group header inside a company panel (task-list style). */
 .pv-duehdr { display: flex; align-items: center; gap: 9px; padding: 9px 16px; cursor: pointer; user-select: none; background: color-mix(in srgb, var(--pv-ink) 3%, var(--pv-card)); }
 .pv-duegroup:not(:first-child) .pv-duehdr { box-shadow: inset 0 1px 0 var(--pv-divider); }
