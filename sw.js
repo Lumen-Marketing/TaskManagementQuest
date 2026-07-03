@@ -45,8 +45,20 @@ self.addEventListener('fetch', (event) => {
   // Never cache runtime config — it must always be current.
   if (url.pathname.endsWith('/env.json')) return;
 
+  // App-logic assets must never be silently stale: a plain fetch(req) is
+  // answered by the HTTP cache within its max-age, so "network-first" quietly
+  // becomes "HTTP-cache-first" and a deploy can leave a tab running old JS
+  // against new data until a hard refresh (the Ctrl+F5 bug). cache:'no-cache'
+  // forces a conditional revalidation (cheap 304 when unchanged). Navigations
+  // can't be re-wrapped (Request mode 'navigate' is not constructible) and rely
+  // on the server's no-cache headers; images/fonts keep normal HTTP caching.
+  const dest = req.destination;
+  const netReq = (dest === 'script' || dest === 'style' || dest === 'manifest')
+    ? new Request(req, { cache: 'no-cache' })
+    : req;
+
   event.respondWith(
-    fetch(req)
+    fetch(netReq)
       .then((res) => {
         // Cache a copy of good, basic responses for offline fallback.
         if (res && res.ok && res.type === 'basic') {
