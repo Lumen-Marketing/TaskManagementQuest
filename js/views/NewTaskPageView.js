@@ -1,21 +1,23 @@
 window.App = window.App || {};
 
-/* Full-page "New task" form. Replaces the old centered NewTaskModalView: same
-   fields, validation, and createTask path, but rendered into the #newTaskWrap
-   surface (driven by controller.uiState.creatingTask) so it reads as its own
-   page — matching the redesigned task detail page. The modal-only extras
-   (focus-trap, drag-resize, Ctrl+S size pinning, text zoom) are intentionally
-   dropped; a full page doesn't need them. Field element IDs are kept as `nt-*`
-   so App.validate.newTask's field→input error mapping is unchanged. */
+/* Full-page premium "New task" work-order screen.
+   Left column: boxed title (with live token parsing) + four numbered sections
+   (01 Routing, 02 Schedule, 03 Detail, 04 Watchers). Right column: a dark
+   work-order "ticket" (App.WorkOrderRail) that live-mirrors the form. Sticky
+   footer with Cancel / Create. Everything is custom pickers (no native selects)
+   so it can be fully themed via tokens.css; company selection threads a --accent
+   var through the screen. Field ids stay `nt-*` where App.validate.newTask maps
+   errors to inputs (title). Saves through controller.createTask (multi-assignee,
+   whos[] ordered, lead = index 0). */
 App.NewTaskPageView = class NewTaskPageView {
   constructor({ controller, currentUser }) {
     this.controller = controller;
     this.currentUser = currentUser;
     this.wrap = document.getElementById('newTaskWrap');
-    this.watchers = new Set();
-    this.subtasks = [];
+    this._openMenu = null;           // id of the currently-open menu, or null
+    this._docClick = null;
+    this._onKey = null;
 
-    // Render when the controller opens the page; tear down when it closes.
     App.EventBus.on('newtask:changed', (isOpen) => {
       if (isOpen) this.render(this.controller._newTaskPrefill || {});
       else this.teardown();
@@ -23,505 +25,744 @@ App.NewTaskPageView = class NewTaskPageView {
   }
 
   teardown() {
+    if (this._docClick) { document.removeEventListener('click', this._docClick); this._docClick = null; }
+    if (this._onKey) { document.removeEventListener('keydown', this._onKey); this._onKey = null; }
     if (this.wrap) this.wrap.innerHTML = '';
   }
 
+  /* ---------------- lifecycle ---------------- */
   render(prefill = {}) {
     if (!this.wrap) this.wrap = document.getElementById('newTaskWrap');
     if (!this.wrap) return;
-    this.watchers = new Set();
+    const { selected } = this._companyChoices();
+    const company = (prefill && prefill.company) || selected;
+    const type = (App.taxonomy.activeTypes(company)[0] || { key: 'admin' }).key;
+    this.S = {
+      company,
+      whos: [this.currentUser],
+      pri: 'medium',
+      type,
+      status: App.taxonomy.defaultStatus(company, type),
+      label: null,
+      project: (prefill && prefill.project) || null,
+      remind: 'at', customN: 2, customU: 'hours',
+      date: (prefill && prefill.due) || App.utils.todayISO(1),
+      time: '',
+      channels: { email: true, inapp: true, watchers: false, wa: false },
+    };
+    this.watchers = [];
     this.subtasks = [];
+    this.description = '';
+    this.woNumber = null;            // preview '—' until create assigns a real number
+    this.dispatched = false;
+    this._calY = null; this._calM = null;
+
     this.wrap.innerHTML = this.template();
-
-    if (prefill && prefill.due) {
-      const dueEl = document.getElementById('nt-due');
-      if (dueEl) dueEl.value = prefill.due;
-    }
-
     this.bindEvents();
-    // Pre-fill company + project when opened from a project detail's "New task".
-    if (prefill && prefill.company) {
-      const cs = document.getElementById('nt-company');
-      if (cs) { cs.value = prefill.company; this._onCompanyChanged(prefill.company); }
-    }
-    if (prefill && prefill.project) this._setProject(prefill.project);
-    this.renderWatcherChips();
-    this.renderSubtaskChips();
-    this.updateDelegationBanner();
+    this.sync();
     setTimeout(() => { const el = document.getElementById('nt-title'); if (el) el.focus(); }, 30);
-    try { this.wrap.scrollTop = 0; window.scrollTo(0, 0); } catch (e) { /* noop */ }
+    try { this.wrap.scrollTop = 0; } catch (e) { /* noop */ }
   }
 
-  /* The company the task defaults to, plus the list offered in the dropdown.
-     Excludes the developer '*' sentinel; falls back to every company when the
-     session has none scoped. */
+  /* ---------------- helpers ---------------- */
   _companyChoices() {
-    let ids = (this.controller.uiState.companies || []).filter(id => id !== '*');
+    let ids = ((this.controller.uiState && this.controller.uiState.companies) || []).filter(id => id !== '*');
     if (!ids.length) ids = Object.keys(App.COMPANIES || {});
-    const cur = this.controller.uiState.currentCompany;
+    const cur = this.controller.uiState && this.controller.uiState.currentCompany;
     const selected = (cur && cur !== '*') ? cur : ids[0];
     return { ids, selected };
   }
 
-  _assigneeOptionsHtml(companyId, selectedId) {
-    return App.utils.peopleInCompany(companyId, this.currentUser)
-      .map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`)
-      .join('');
+  // Per-company accent, taken from the existing token palette (no hardcoded hex).
+  // Each company maps to one of the app's accent tokens by its order in the list.
+  _accentToken(companyId) {
+    const tokens = ['--amber', '--blue', '--rust', '--green'];
+    const ids = this._companyChoices().ids;
+    const i = Math.max(0, ids.indexOf(companyId));
+    return tokens[i % tokens.length];
+  }
+  _resolveVar(token) {
+    try { return getComputedStyle(document.documentElement).getPropertyValue(token).trim() || '#ED4E0D'; }
+    catch (e) { return '#ED4E0D'; }
+  }
+  _companyColor(companyId) { return this._resolveVar(this._accentToken(companyId)); }
+
+  _peopleFor(companyId) { return App.utils.peopleInCompany(companyId, this.currentUser); }
+
+  _priList() {
+    // Left→right ascending severity, from App.PRIORITIES.
+    return ['low', 'medium', 'high', 'urgent', 'critical'].filter(k => (App.PRIORITIES || {})[k]);
+  }
+  _isHigh(p) {
+    const o = (App.PRIORITIES[p] || {}).order;
+    const hi = (App.PRIORITIES.high || {}).order;
+    return o != null && hi != null && o <= hi;
   }
 
-  // Per-(company,type) Status options from the live taxonomy (falls back to the
-  // hardcoded constants offline). No `selected` -> the type's default status.
-  _statusOptionsHtml(company, type, selected) {
-    const list = App.taxonomy.activeStatuses(company, type);
-    const opts = (list && list.length) ? list : Object.entries(App.STATUSES).map(([key, v]) => ({ key, label: v.label }));
-    const sel = selected || App.taxonomy.defaultStatus(company, type);
-    return opts.map(s => `<option value="${s.key}" ${s.key === sel ? 'selected' : ''}>${App.utils.escapeHtml(s.label)}</option>`).join('');
-  }
-  // Per-company Type options from the taxonomy.
-  _typeOptionsHtml(company, selected) {
-    const list = App.taxonomy.activeTypes(company);
-    const opts = (list && list.length) ? list : Object.entries(App.TASK_TYPES).map(([key, v]) => ({ key, label: v.label }));
-    return opts.map(t => `<option value="${t.key}" ${t.key === selected ? 'selected' : ''}>${App.utils.escapeHtml(t.label)}</option>`).join('');
-  }
-  // Per-company Label options; the "No label" (none) choice is always kept as the head.
-  _labelOptionsHtml(company, selected) {
-    const list = App.taxonomy.activeLabels(company);
-    const opts = (list && list.length) ? list : Object.entries(App.TASK_LABELS).filter(([key]) => key !== 'none').map(([key, v]) => ({ key, label: v.label }));
-    const noneLbl = (App.TASK_LABELS.none && App.TASK_LABELS.none.label) || 'No label';
-    const head = `<option value="none" ${selected === 'none' ? 'selected' : ''}>${App.utils.escapeHtml(noneLbl)}</option>`;
-    return head + opts.map(l => `<option value="${l.key}" ${l.key === selected ? 'selected' : ''}>${App.utils.escapeHtml(l.label)}</option>`).join('');
-  }
-
-  /* Re-scope the assignee + watcher pickers to a newly chosen company. */
-  _onCompanyChanged(companyId) {
-    const sel = document.getElementById('nt-assignee');
-    if (sel) {
-      const people = App.utils.peopleInCompany(companyId, this.currentUser);
-      const has = id => people.some(p => p.id === id);
-      const next = has(sel.value) ? sel.value
-        : (has(this.currentUser) ? this.currentUser : (people[0] && people[0].id) || '');
-      sel.innerHTML = people.map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === next ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('');
-      const allowed = new Set(people.map(p => p.id));
-      let pruned = false;
-      this.watchers.forEach(w => { if (!allowed.has(w)) { this.watchers.delete(w); pruned = true; } });
-      if (pruned) this.renderWatcherChips();
-    }
-    const pb = document.getElementById('nt-project');
-    if (pb && pb.dataset.current && App.projects[pb.dataset.current] && App.projects[pb.dataset.current].companyId !== companyId) this._setProject(null);
-    // Re-scope Type / Label / Status to the new company's taxonomy. Type/Label keep the
-    // current value if it still exists (else the browser falls to the first option);
-    // Status always resets to the (possibly re-scoped) type's default.
-    const typeSel = document.getElementById('nt-type');
-    const labelSel = document.getElementById('nt-label');
-    const statusSel = document.getElementById('nt-status');
-    if (typeSel)  typeSel.innerHTML  = this._typeOptionsHtml(companyId, typeSel.value);
-    if (labelSel) labelSel.innerHTML = this._labelOptionsHtml(companyId, labelSel.value);
-    const type = typeSel ? typeSel.value : 'admin';
-    if (statusSel) statusSel.innerHTML = this._statusOptionsHtml(companyId, type);
-    this.updateDelegationBanner();
-  }
-
-  /* Reflect the chosen (or cleared) project on the picker-trigger button. */
-  _setProject(id) {
-    const btn = document.getElementById('nt-project');
-    if (!btn) return;
-    const p = id && App.projects ? App.projects[id] : null;
-    btn.dataset.current = id || '';
-    btn.classList.toggle('projtag-empty', !p);
-    btn.style.setProperty('--pc', p ? p.color : '');
-    btn.innerHTML = p
-      ? `<i class="ti ti-folder"></i>${App.utils.escapeHtml(p.name)}`
-      : `<i class="ti ti-folder-plus"></i>No project`;
-  }
-
+  /* ---------------- template ---------------- */
   template() {
-    // currentUser may resolve to a profile-only member missing from App.PEOPLE
-    // (or a removed roster entry); fall back so the page still renders.
-    const me = App.PEOPLE[this.currentUser] || { name: this.currentUser || 'You' };
-    const { ids: companyIds, selected: selectedCompany } = this._companyChoices();
+    const me = App.PEOPLE[this.currentUser] || { name: 'you' };
     return `
-      <div class="taf ntf">
-        <div class="taf-head">
-          <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
-          <span class="taf-eyebrow">New task</span>
-          <span class="taf-createdby"><i class="ti ti-user"></i>Created by you (${App.utils.escapeHtml(me.name)})</span>
+      <div id="nt-root" class="wo-mode">
+        <div class="nt-topbar">
+          <button class="nt-back" data-action="close" type="button" aria-label="Back to tasks"><i class="ti ti-arrow-left"></i> Tasks</button>
+          <span class="nt-crumb">/</span><span class="nt-tag">NEW TASK</span>
+          <span class="nt-byline">Created by ${App.utils.escapeHtml(me.name)}</span>
         </div>
 
-        <input type="text" id="nt-title" class="taf-title-input" placeholder="Lead Name / Task" aria-label="Task title" required autofocus />
+        <div class="nt-cols">
+          <div class="nt-sheet">
+            <div class="nt-titlebox">
+              <input id="nt-title" class="nt-title-in" placeholder="What needs to get done?" autocomplete="off" aria-label="Task title" />
+              <div id="nt-flash" class="nt-flash" aria-live="polite"></div>
+              <div class="nt-hint">Type <b>@name</b> <b>#company</b> <b>!high</b> <b>tmrw</b> <b>9:30a</b> — fields fill as you write.</div>
+            </div>
 
-        <div id="nt-delegation-banner" class="delegation-banner hidden"><i class="ti ti-send"></i><span id="nt-delegation-text"></span></div>
-
-        <div class="tdp-body">
-          <div class="tdp-col-main">
-            <div class="tdp-card">
-              <div class="tdp-card-title">Details</div>
-              <div class="taf-meta" style="background:transparent; padding:0; border-radius:0;">
-              <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="nt-company">${companyIds.map(id => { const c = App.COMPANIES[id] || { label: id }; return `<option value="${id}" ${id === selectedCompany ? 'selected' : ''}>${App.utils.escapeHtml(c.label)}</option>`; }).join('')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="nt-type">${this._typeOptionsHtml(selectedCompany, 'admin')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="nt-status">${this._statusOptionsHtml(selectedCompany, 'admin')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="nt-label">${this._labelOptionsHtml(selectedCompany, 'roof')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Priority</span><select id="nt-priority">${Object.entries(App.PRIORITIES).map(([k, v]) => `<option value="${k}" ${k === 'medium' ? 'selected' : ''}>${App.utils.escapeHtml(v.label)}</option>`).join('')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="nt-assignee">${this._assigneeOptionsHtml(selectedCompany, this.currentUser)}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="nt-due" class="picker-input" value="${App.utils.todayISO(1)}" /></label>
-              <label class="taf-field"><span class="taf-field-lbl">Time</span><input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" /></label>
-              <div class="taf-field"><span class="taf-field-lbl">Reminder</span><button type="button" id="nt-reminderAt" class="rp-trigger rp-trigger-empty" value="" aria-haspopup="dialog"><i class="ti ti-bell"></i><span class="rp-trigger-lbl">Set a reminder</span></button></div>
-              <div class="taf-field"><span class="taf-field-lbl">Project</span><button type="button" id="nt-project" class="projtag projtag-btn projtag-empty" data-current="" aria-haspopup="listbox"><i class="ti ti-folder-plus"></i>No project</button></div>
+            <div class="nt-sec" data-sec="routing">
+              <div class="nt-sec-h"><span class="nt-n">01</span><span class="nt-t">Routing</span><span class="nt-k">C · A · P</span></div>
+              <div class="nt-frow">
+                ${this._pickField('company', 'COMPANY', 'C')}
+                ${this._pickField('assignee', 'ASSIGNEE', 'A')}
+                ${this._priField()}
+                ${this._pickField('type', 'TYPE', '')}
+                ${this._pickField('status', 'STATUS', '')}
+                ${this._pickField('label', 'LABEL', 'L')}
+                ${this._pickField('project', 'PROJECT', '')}
               </div>
             </div>
 
-            <div class="tdp-card">
-              <div class="tdp-card-title">Description</div>
-              <textarea id="nt-desc" class="taf-desc" placeholder="Add details, links, context…" aria-label="Description" rows="4"></textarea>
+            <div class="nt-sec" data-sec="schedule">
+              <div class="nt-sec-h"><span class="nt-n">02</span><span class="nt-t">Schedule</span><span class="nt-k">D</span></div>
+              <div class="nt-frow">
+                ${this._pickField('date', 'DUE DATE', 'D', 'nt-cal-menu')}
+                ${this._pickField('time', 'TIME', '', 'nt-time-menu')}
+                ${this._pickField('remind', 'REMINDER', '')}
+                <div class="nt-f" id="nt-custom-wrap" style="display:none">
+                  <label>CUSTOM REMINDER</label>
+                  <div class="nt-cu-row">
+                    <input type="number" id="nt-customN" min="1" max="99" value="2" />
+                    ${this._pickInline('customU', 'hours before')}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="tdp-card">
-              <div class="tdp-card-title">Subtasks <span class="field-optional">Optional</span></div>
-              <div class="subtask-add-row">
-                <input type="text" id="nt-subtask-input" maxlength="200" placeholder="Add a step and press Enter" />
-                <button class="btn btn-sm" type="button" data-action="add-subtask">Add</button>
+            <div class="nt-sec" data-sec="detail">
+              <div class="nt-sec-h"><span class="nt-n">03</span><span class="nt-t">Detail</span></div>
+              <textarea id="nt-desc" class="nt-desc" placeholder="Add context, links, scope…" aria-label="Description"></textarea>
+              <div class="nt-chkrow">
+                <span class="nt-plus">+</span>
+                <input id="nt-subtask-input" placeholder="Add a checklist step, press Enter" />
               </div>
-              <div class="subtask-chip-list" id="nt-subtasks"></div>
+              <div class="nt-sublist" id="nt-subtasks"></div>
+            </div>
+
+            <div class="nt-sec" data-sec="watchers">
+              <div class="nt-sec-h"><span class="nt-n">04</span><span class="nt-t">Watchers</span></div>
+              <div class="nt-frow">
+                ${this._pickField('watch', 'WATCHERS', '')}
+              </div>
             </div>
           </div>
 
-          <aside class="tdp-col-right">
-            <div class="tdp-card">
-              <div class="tdp-card-title"><i class="ti ti-users"></i> Watchers</div>
-              <div class="watcher-picker">
-                <div class="watcher-tags" id="nt-watchers"></div>
-                <div class="watcher-dropdown hidden" id="nt-watcher-dropdown"></div>
-              </div>
-            </div>
-
-            <div class="tdp-card">
-              <div class="tdp-card-title"><i class="ti ti-bell"></i> Notify on create</div>
-              <div class="notify-box">
-                <label class="notify-option">
-                  <input type="checkbox" id="nt-notify-email" checked />
-                  <i class="ti ti-mail"></i>
-                  <span id="nt-notify-email-label">Email assignee</span>
-                  <span class="email-hint" id="nt-notify-email-addr"></span>
-                </label>
-                <label class="notify-option">
-                  <input type="checkbox" id="nt-notify-inapp" checked />
-                  <i class="ti ti-app-window"></i>
-                  <span>In-app notification</span>
-                </label>
-                <label class="notify-option">
-                  <input type="checkbox" id="nt-notify-watchers" checked />
-                  <i class="ti ti-users"></i>
-                  <span>Also email watchers</span>
-                </label>
-                <label class="notify-option">
-                  <input type="checkbox" id="nt-notify-whatsapp" />
-                  <i class="ti ti-brand-whatsapp"></i>
-                  <span>WhatsApp ping (urgent only)</span>
-                </label>
-              </div>
-            </div>
-          </aside>
+          <div class="nt-rail" id="nt-rail"></div>
         </div>
 
-        <div class="taf-foot">
-          <span class="taf-hint">Press <kbd>Ctrl ↵</kbd> to create</span>
-          <div class="taf-foot-btns">
-            <button class="btn" data-action="close" type="button">Cancel</button>
-            <button class="btn btn-primary taf-create-btn" data-action="submit" type="button">Create &amp; notify</button>
-          </div>
+        <div class="nt-foot">
+          <span class="nt-legend"><b>C</b> company · <b>A</b> assignee · <b>P</b> priority · <b>D</b> due · <b>⌘↵</b> create</span>
+          <span class="nt-grow"></span>
+          <button class="nt-btn-ghost" data-action="close" type="button">Cancel</button>
+          <button class="nt-btn-create" id="nt-create" type="button" disabled>Create &amp; dispatch <span class="k">⌘↵</span></button>
         </div>
+      </div>`;
+  }
+
+  _pickField(key, label, kk, menuClass = '') {
+    return `<div class="nt-f">
+      <label>${label}${kk ? `<span class="nt-kk">${kk}</span>` : ''}</label>
+      <button class="nt-pick" id="nt-pick-${key}" type="button" aria-haspopup="listbox"><span class="nt-pick-val"></span><svg class="nt-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="nt-menu ${menuClass}" id="nt-menu-${key}"></div>
+    </div>`;
+  }
+  _pickInline(key, label) {
+    return `<div class="nt-f2">
+      <button class="nt-pick" id="nt-pick-${key}" type="button"><span class="nt-pick-val">${label}</span><svg class="nt-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="nt-menu" id="nt-menu-${key}"></div>
+    </div>`;
+  }
+  _priField() {
+    return `<div class="nt-f"><label>PRIORITY<span class="nt-kk">P</span></label>
+      <div class="nt-seg" id="nt-seg-pri">${this._priList().map(k =>
+        `<button type="button" data-p="${k}">${App.utils.escapeHtml(App.PRIORITIES[k].label)}</button>`).join('')}</div>
+    </div>`;
+  }
+
+  /* ---------------- menu infrastructure ---------------- */
+  _closeMenus() {
+    if (this._openMenu) {
+      const m = document.getElementById('nt-menu-' + this._openMenu);
+      if (m) m.classList.remove('open');
+      this._openMenu = null;
+    }
+  }
+  _toggleMenu(key, itemsFn) {
+    const menu = document.getElementById('nt-menu-' + key);
+    if (!menu) return;
+    const wasOpen = this._openMenu === key;
+    this._closeMenus();
+    if (!wasOpen) {
+      menu.innerHTML = itemsFn();
+      menu.classList.add('open');
+      this._openMenu = key;
+    }
+  }
+  _reopen(key, itemsFn) {
+    const menu = document.getElementById('nt-menu-' + key);
+    if (menu && this._openMenu === key) menu.innerHTML = itemsFn();
+  }
+
+  /* ---------------- picker item builders ---------------- */
+  _companyItems() {
+    return this._companyChoices().ids.map(id => {
+      const c = App.COMPANIES[id] || { label: id };
+      const sel = this.S.company === id;
+      return `<button class="nt-mitem" data-v="${id}"><span class="nt-dot" style="background:${this._companyColor(id)}"></span>${App.utils.escapeHtml(c.label)}${sel ? '<span class="nt-check">✓</span>' : ''}</button>`;
+    }).join('');
+  }
+  _assigneeItems() {
+    return this._peopleFor(this.S.company).map(p => {
+      const on = this.S.whos.includes(p.id);
+      return `<button class="nt-mitem" data-v="${p.id}"><span class="nt-mini" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>${App.utils.escapeHtml(p.name)}${on ? '<span class="nt-check">✓</span>' : (p.role ? `<small>${App.utils.escapeHtml(p.role)}</small>` : '')}</button>`;
+    }).join('');
+  }
+  _typeItems() {
+    const list = App.taxonomy.activeTypes(this.S.company);
+    return (list.length ? list : [{ key: 'admin', label: 'Admin' }]).map(t =>
+      `<button class="nt-mitem" data-v="${t.key}">${App.utils.escapeHtml(t.label)}${this.S.type === t.key ? '<span class="nt-check">✓</span>' : ''}</button>`).join('');
+  }
+  _statusItems() {
+    const list = App.taxonomy.activeStatuses(this.S.company, this.S.type);
+    if (!list.length) return `<div class="nt-mempty">No statuses for this type</div>`;
+    return list.map(s =>
+      `<button class="nt-mitem" data-v="${s.key}"><span class="nt-dot" style="background:${s.color || 'var(--ink-3)'}"></span>${App.utils.escapeHtml(s.label)}${this.S.status === s.key ? '<span class="nt-check">✓</span>' : ''}</button>`).join('');
+  }
+  _labelItems() {
+    const list = App.taxonomy.activeLabels(this.S.company);
+    const head = `<button class="nt-mitem" data-v="">None${!this.S.label ? '<span class="nt-check">✓</span>' : ''}</button>`;
+    const rows = list.map(l =>
+      `<button class="nt-mitem" data-v="${l.key}"><span class="nt-dot" style="background:${l.color || 'var(--ink-3)'}"></span>${App.utils.escapeHtml(l.label)}${this.S.label === l.key ? '<span class="nt-check">✓</span>' : ''}</button>`).join('');
+    const create = `<div class="nt-mnew"><input placeholder="New label…" maxlength="24" /><button data-newlabel type="button">Create</button></div>`;
+    return head + rows + create;
+  }
+  _projectItems() {
+    const list = Object.values(App.projects || {}).filter(p => p.companyId === this.S.company);
+    const head = `<button class="nt-mitem" data-v="">No project${!this.S.project ? '<span class="nt-check">✓</span>' : ''}</button>`;
+    const rows = list.map(p =>
+      `<button class="nt-mitem" data-v="${p.id}">${App.utils.escapeHtml(p.name)}${this.S.project === p.id ? '<span class="nt-check">✓</span>' : ''}</button>`).join('');
+    const create = `<div class="nt-mnew"><input placeholder="New project…" maxlength="32" /><button data-newproject type="button">Create</button></div>`;
+    return head + rows + create;
+  }
+  _remindItems() {
+    const opts = { none: 'None', at: 'At due time', '1h': '1 hour before', '1d': '1 day before', morn: 'Morning of (7 AM)', custom: 'Custom…' };
+    return Object.entries(opts).map(([k, v]) =>
+      `<button class="nt-mitem" data-v="${k}">${v}${this.S.remind === k ? '<span class="nt-check">✓</span>' : ''}</button>`).join('');
+  }
+  _customUItems() {
+    return ['minutes', 'hours', 'days'].map(u =>
+      `<button class="nt-mitem" data-v="${u}">${u} before${this.S.customU === u ? '<span class="nt-check">✓</span>' : ''}</button>`).join('');
+  }
+  _watchItems() {
+    return this._peopleFor(this.S.company).map(p => {
+      const assigned = this.S.whos.includes(p.id);
+      const on = this.watchers.includes(p.id);
+      return `<button class="nt-mitem" data-v="${p.id}" ${assigned ? 'disabled' : ''}><span class="nt-mini" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>${App.utils.escapeHtml(p.name)}${on ? '<span class="nt-check">✓</span>' : `<small>${assigned ? 'assigned' : (p.role || '')}</small>`}</button>`;
+    }).join('');
+  }
+
+  /* ---------------- calendar + time ---------------- */
+  _calMenu() {
+    const today = App.utils.todayISO(0);
+    const parts = (this.S.date || today).split('-');
+    if (this._calY === null) { this._calY = +parts[0]; this._calM = +parts[1] - 1; }
+    const y = this._calY, m = this._calM;
+    const first = new Date(Date.UTC(y, m, 1));
+    const startDow = first.getUTCDay();
+    const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const monthName = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    let cells = '';
+    for (let i = 0; i < startDow; i++) cells += `<span class="nt-cd off"></span>`;
+    for (let d = 1; d <= days; d++) {
+      const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const cls = 'nt-cd' + (iso === this.S.date ? ' sel' : '') + (iso === today ? ' tod' : '');
+      cells += `<button type="button" class="${cls}" data-day="${iso}">${d}</button>`;
+    }
+    const chip = (lbl, iso) => `<button type="button" class="nt-cq" data-day="${iso}">${lbl}</button>`;
+    return `
+      <div class="nt-cal-h">
+        <button type="button" data-cal="prev" aria-label="Previous month">‹</button>
+        <b>${monthName}</b>
+        <button type="button" data-cal="next" aria-label="Next month">›</button>
       </div>
-    `;
+      <div class="nt-cal-w">${['S','M','T','W','T','F','S'].map(d => `<span>${d}</span>`).join('')}</div>
+      <div class="nt-cal-g">${cells}</div>
+      <div class="nt-cal-q">
+        ${chip('TODAY', App.utils.todayISO(0))}${chip('TMRW', App.utils.todayISO(1))}
+        ${chip('+1W', App.utils.todayISO(7))}
+      </div>`;
+  }
+  _timeMenu() {
+    let rows = `<button class="nt-mitem" data-time="">No time${!this.S.time ? '<span class="nt-check">✓</span>' : ''}</button>`;
+    for (let mins = 6 * 60; mins <= 19 * 60 + 30; mins += 30) {
+      const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+      const mm = String(mins % 60).padStart(2, '0');
+      const v = `${hh}:${mm}`;
+      const label = this._fmtTime(v);
+      rows += `<button class="nt-mitem" data-time="${v}">${label}${this.S.time === v ? '<span class="nt-check">✓</span>' : ''}</button>`;
+    }
+    return rows;
+  }
+  _fmtTime(v) {
+    if (!v) return 'No time';
+    const [h, m] = v.split(':').map(Number);
+    const ap = h < 12 ? 'AM' : 'PM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ap}`;
   }
 
+  /* ---------------- reminder computation ---------------- */
+  _reminderText() {
+    if (this.S.remind === 'custom') {
+      const n = this.S.customN, u = this.S.customU;
+      const unit = n == 1 ? u.slice(0, -1) : u;
+      return `${n} ${unit} before`;
+    }
+    return { none: 'None', at: 'At due time', '1h': '1 hour before', '1d': '1 day before', morn: 'Morning of' }[this.S.remind] || '—';
+  }
+  _computeReminderAt() {
+    if (!this.S.date || this.S.remind === 'none') return null;
+    const time = this.S.time || '09:00';
+    const dueDt = new Date(`${this.S.date}T${time}:00`);
+    if (isNaN(dueDt)) return null;
+    const fmt = (d) => {
+      const p = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+    if (this.S.remind === 'at') return fmt(dueDt);
+    if (this.S.remind === 'morn') return `${this.S.date}T07:00`;
+    let ms = 0;
+    if (this.S.remind === '1h') ms = 3600e3;
+    else if (this.S.remind === '1d') ms = 864e5;
+    else if (this.S.remind === 'custom') {
+      const n = Math.max(1, Number(this.S.customN) || 1);
+      ms = n * ({ minutes: 60e3, hours: 3600e3, days: 864e5 }[this.S.customU] || 3600e3);
+    }
+    return fmt(new Date(dueDt.getTime() - ms));
+  }
+
+  /* ---------------- events ---------------- */
   bindEvents() {
-    this.wrap.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', () => this.controller.closeNewTaskPage()));
-    const submitBtn = this.wrap.querySelector('[data-action="submit"]');
-    if (submitBtn) submitBtn.addEventListener('click', () => this.submit());
+    const root = document.getElementById('nt-root');
+    root.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', () => this.controller.closeNewTaskPage()));
+    document.getElementById('nt-create').addEventListener('click', () => this.submit());
 
-    this.wrap.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); this.submit(); }
-    });
+    // Title parsing.
+    const title = document.getElementById('nt-title');
+    title.addEventListener('input', () => { this._applyParse(false); this.sync(); });
+    title.addEventListener('blur', () => { this._applyParse(true); this.sync(); });
 
-    document.getElementById('nt-assignee').addEventListener('change', () => this.updateDelegationBanner());
-    document.getElementById('nt-type').addEventListener('change', () => this._onTypeChanged());
-    document.getElementById('nt-company').addEventListener('change', (e) => this._onCompanyChanged(e.target.value));
+    // Description + subtasks.
+    document.getElementById('nt-desc').addEventListener('input', (e) => { this.description = e.target.value; });
+    const subIn = document.getElementById('nt-subtask-input');
+    subIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this._addSubtask(); } });
 
-    const projBtn = document.getElementById('nt-project');
-    if (projBtn) projBtn.addEventListener('click', () => {
-      App.projectPicker.open({
-        anchor: projBtn,
-        companyId: document.getElementById('nt-company').value,
-        currentId: projBtn.dataset.current || null,
-        onSelect: (id) => this._setProject(id),
-      });
-    });
+    // Pickers.
+    this._bindPick('company', () => this._companyItems(), (v) => { this.S.company = v; this._afterCompany(); }, false);
+    this._bindPick('assignee', () => this._assigneeItems(), (v) => { this._toggleWho(v); }, true);
+    this._bindPick('type', () => this._typeItems(), (v) => { this.S.type = v; this.sync('type'); }, false);
+    this._bindPick('status', () => this._statusItems(), (v) => { this.S.status = v; this.sync(); }, false);
+    this._bindPick('label', () => this._labelItems(), (v) => { this.S.label = v || null; this.sync('lab'); }, false);
+    this._bindPick('project', () => this._projectItems(), (v) => { this.S.project = v || null; this.sync('proj'); }, false);
+    this._bindPick('remind', () => this._remindItems(), (v) => { this.S.remind = v; this.sync('rem'); }, false);
+    this._bindPick('customU', () => this._customUItems(), (v) => { this.S.customU = v; this.sync('rem'); }, false);
+    this._bindPick('watch', () => this._watchItems(), (v) => { this._toggleWatcher(v); }, true);
+    this._bindPick('date', () => this._calMenu(), null, false);
+    this._bindPick('time', () => this._timeMenu(), null, false);
 
-    this.wrap.querySelector('[data-action="add-subtask"]').addEventListener('click', () => this.addSubtask());
-    const subtaskInput = document.getElementById('nt-subtask-input');
-    if (subtaskInput) subtaskInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); this.addSubtask(); }
-    });
+    // Inline create rows (label / project).
+    this._bindCreateRow('label', 'newlabel', (val) => this._createLabel(val));
+    this._bindCreateRow('project', 'newproject', (val) => this._createProject(val));
 
-    this.wrap.querySelectorAll('.picker-input').forEach(input => {
-      input.addEventListener('click', () => { try { input.showPicker(); } catch (e) { /* unsupported / not user-activated */ } });
-    });
-
-    // Free-typed time, masked to a clean 12h display; converted to 24h on submit.
-    const timeInput = document.getElementById('nt-time');
-    if (timeInput) {
-      timeInput.addEventListener('input', () => {
-        const formatted = this._maskTime(timeInput.value);
-        if (formatted !== timeInput.value) {
-          timeInput.value = formatted;
-          timeInput.setSelectionRange(formatted.length, formatted.length);
-        }
-      });
-      timeInput.addEventListener('blur', () => {
-        const parsed = this._parseTime(timeInput.value);
-        if (parsed) timeInput.value = App.utils.formatClock(parsed);
-      });
-    }
-
-    // Reminder — shared calendar+time popover (js/views/DateTimePickerView.js).
-    // The trigger button keeps the #nt-reminderAt id and carries the picked
-    // "YYYY-MM-DDTHH:MM" in its .value, so submit() reads it unchanged.
-    const remBtn = document.getElementById('nt-reminderAt');
-    if (remBtn) remBtn.addEventListener('click', () => {
-      App.reminderPicker.open({
-        anchor: remBtn,
-        value: remBtn.value || null,
-        onCommit: (v) => {
-          remBtn.value = v || '';
-          remBtn.classList.toggle('rp-trigger-empty', !v);
-          const lbl = remBtn.querySelector('.rp-trigger-lbl');
-          if (lbl) lbl.textContent = v ? App.reminderPicker.format(v) : 'Set a reminder';
-        },
-      });
-    });
-  }
-
-  // Live input mask: auto-insert the colon as digits are typed, expand a typed
-  // "a"/"p" into " AM"/" PM". e.g. "230"->"2:30", "230p"->"2:30 PM".
-  _maskTime(raw) {
-    let s = String(raw == null ? '' : raw).toLowerCase();
-    let ap = '';
-    if (s.includes('p')) ap = ' PM';
-    else if (s.includes('a')) ap = ' AM';
-    const digits = s.replace(/\D/g, '').slice(0, 4);
-    if (!digits) return ap ? digits + ap : '';
-    let body;
-    if (digits.length <= 2) body = digits;
-    else if (digits.length === 3) body = digits.slice(0, 1) + ':' + digits.slice(1);
-    else body = digits.slice(0, 2) + ':' + digits.slice(2);
-    return body + ap;
-  }
-
-  // Parse a loosely-typed time into strict 24h "HH:MM", or null if unusable.
-  _parseTime(raw) {
-    let s = String(raw == null ? '' : raw).trim().toLowerCase();
-    if (!s) return null;
-    let ap = null;
-    const apMatch = s.match(/\s*([ap])\.?\s*m\.?$/);
-    if (apMatch) { ap = apMatch[1]; s = s.slice(0, apMatch.index).trim(); }
-    let h, min = 0;
-    if (s.includes(':')) {
-      const parts = s.split(':');
-      if (parts.length !== 2 || parts[1].length !== 2) return null;
-      h = parseInt(parts[0], 10);
-      min = parseInt(parts[1], 10);
-    } else {
-      if (!/^\d+$/.test(s)) return null;
-      if (s.length <= 2) { h = parseInt(s, 10); min = 0; }
-      else if (s.length === 3) { h = parseInt(s.slice(0, 1), 10); min = parseInt(s.slice(1), 10); }
-      else if (s.length === 4) { h = parseInt(s.slice(0, 2), 10); min = parseInt(s.slice(2), 10); }
-      else return null;
-    }
-    if (isNaN(h) || isNaN(min) || min > 59) return null;
-    if (ap) {
-      if (h < 1 || h > 12) return null;
-      if (ap === 'p' && h !== 12) h += 12;
-      if (ap === 'a' && h === 12) h = 0;
-    } else if (h > 23) {
-      return null;
-    }
-    return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
-  }
-
-  // Type changed -> re-scope the Status options to that (company,type) and reset to its default.
-  _onTypeChanged() {
-    const company = document.getElementById('nt-company').value;
-    const type = document.getElementById('nt-type').value;
-    const sel = document.getElementById('nt-status');
-    if (sel) sel.innerHTML = this._statusOptionsHtml(company, type, App.taxonomy.defaultStatus(company, type));
-  }
-
-  renderWatcherChips() {
-    const watchersEl = document.getElementById('nt-watchers');
-    const dropdown = document.getElementById('nt-watcher-dropdown');
-    if (!watchersEl || !dropdown) return;
-    watchersEl.innerHTML = '';
-
-    this.watchers.forEach(id => {
-      const p = App.PEOPLE[id];
-      const chip = document.createElement('span');
-      chip.className = 'watcher-tag';
-      chip.innerHTML = `${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)} <i class="ti ti-x remove"></i>`;
-      chip.querySelector('.remove').addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.watchers.delete(id);
-        this.renderWatcherChips();
-      });
-      watchersEl.appendChild(chip);
-    });
-
-    const addBtn = document.createElement('span');
-    addBtn.className = 'watcher-add';
-    addBtn.textContent = this.watchers.size ? '+ add' : '+ Add watcher';
-    addBtn.addEventListener('click', (e) => {
+    // Calendar interactions (delegated on the date menu).
+    const dateMenu = document.getElementById('nt-menu-date');
+    dateMenu.addEventListener('click', (e) => {
       e.stopPropagation();
-      const assigneeId = document.getElementById('nt-assignee').value;
-      const companyId = document.getElementById('nt-company').value;
-      dropdown.innerHTML = '';
-      App.utils.peopleInCompany(companyId).filter(p => p.id !== assigneeId && !this.watchers.has(p.id)).forEach(p => {
-        const item = document.createElement('div');
-        item.className = 'watcher-dropdown-item';
-        item.innerHTML = `${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.full)}`;
-        item.addEventListener('click', () => {
-          this.watchers.add(p.id);
-          dropdown.classList.add('hidden');
-          this.renderWatcherChips();
-        });
-        dropdown.appendChild(item);
-      });
-      if (dropdown.children.length === 0) {
-        dropdown.innerHTML = '<div style="padding: 8px 10px; font-size: 11px; color: var(--ink-3);">No more people to add</div>';
-      }
-      dropdown.classList.toggle('hidden');
+      const nav = e.target.closest('[data-cal]');
+      if (nav) { this._calM += (nav.dataset.cal === 'next' ? 1 : -1); if (this._calM < 0) { this._calM = 11; this._calY--; } if (this._calM > 11) { this._calM = 0; this._calY++; } this._reopen('date', () => this._calMenu()); return; }
+      const day = e.target.closest('[data-day]');
+      if (day) { this.S.date = day.dataset.day; this._closeMenus(); this.sync('due'); }
     });
-    watchersEl.appendChild(addBtn);
+    const timeMenu = document.getElementById('nt-menu-time');
+    timeMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const t = e.target.closest('[data-time]');
+      if (t) { this.S.time = t.dataset.time; this._closeMenus(); this.sync('due'); }
+    });
+
+    // Custom reminder N.
+    document.getElementById('nt-customN').addEventListener('input', (e) => { this.S.customN = Math.max(1, Number(e.target.value) || 1); this.sync('rem'); });
+
+    // Priority segmented.
+    document.getElementById('nt-seg-pri').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-p]'); if (!b) return; this._setPri(b.dataset.p);
+    });
+
+    // Dispatch tags live on the rail — delegated there.
+    document.getElementById('nt-rail').addEventListener('click', (e) => {
+      const t = e.target.closest('.dtag'); if (!t) return;
+      const ch = t.dataset.ch;
+      if (ch === 'wa' && !this._isHigh(this.S.pri)) return;
+      this.S.channels[ch] = !this.S.channels[ch];
+      this.sync();
+    });
+
+    // Outside-click closes menus.
+    this._docClick = (e) => { if (!e.target.closest('.nt-f') && !e.target.closest('.nt-f2')) this._closeMenus(); };
+    document.addEventListener('click', this._docClick);
+
+    // Keyboard map.
+    this._onKey = (e) => this._handleKey(e);
+    document.addEventListener('keydown', this._onKey);
   }
 
-  addSubtask() {
-    const input = document.getElementById('nt-subtask-input');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) return;
-    if (this.subtasks.length >= App.validate.LIMITS.subtasks) {
-      this._toast('Too many subtasks', `Max ${App.validate.LIMITS.subtasks} per task.`);
-      return;
-    }
-    this.subtasks.push(text.slice(0, App.validate.LIMITS.title));
-    input.value = '';
-    input.focus();
-    this.renderSubtaskChips();
+  _bindPick(key, itemsFn, onPick, keepOpen) {
+    const btn = document.getElementById('nt-pick-' + key);
+    const menu = document.getElementById('nt-menu-' + key);
+    if (!btn || !menu) return;
+    btn.addEventListener('click', (e) => { e.stopPropagation(); this._toggleMenu(key, itemsFn); });
+    menu.addEventListener('click', (e) => {
+      if (e.target.closest('.nt-mnew')) return; // handled by _bindCreateRow
+      const it = e.target.closest('[data-v]');
+      if (!it || it.disabled) { e.stopPropagation(); return; }
+      e.stopPropagation();
+      if (onPick) onPick(it.dataset.v);
+      if (keepOpen) this._reopen(key, itemsFn); else this._closeMenus();
+    });
+  }
+  _bindCreateRow(key, flag, create) {
+    const menu = document.getElementById('nt-menu-' + key);
+    if (!menu) return;
+    menu.addEventListener('click', (e) => {
+      const btn = e.target.closest(`[data-${flag}]`);
+      if (!btn) return;
+      e.stopPropagation();
+      const inp = menu.querySelector('.nt-mnew input');
+      const val = inp && inp.value.trim();
+      if (val) create(val);
+    });
+    menu.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.matches('.nt-mnew input')) {
+        e.preventDefault(); const val = e.target.value.trim(); if (val) create(val);
+      }
+    });
   }
 
-  renderSubtaskChips() {
+  /* ---------------- state mutations ---------------- */
+  _afterCompany() {
+    // Re-scope type → status to the new company.
+    const types = App.taxonomy.activeTypes(this.S.company);
+    if (!types.some(t => t.key === this.S.type)) this.S.type = (types[0] || { key: 'admin' }).key;
+    const statuses = App.taxonomy.activeStatuses(this.S.company, this.S.type);
+    if (!statuses.some(s => s.key === this.S.status)) this.S.status = App.taxonomy.defaultStatus(this.S.company, this.S.type);
+    // Re-scope assignees/watchers/project to the new company's people.
+    const allowed = new Set(this._peopleFor(this.S.company).map(p => p.id));
+    this.S.whos = this.S.whos.filter(w => allowed.has(w));
+    if (!this.S.whos.length) this.S.whos = [this.currentUser];
+    this.watchers = this.watchers.filter(w => allowed.has(w));
+    if (this.S.project && App.projects[this.S.project] && App.projects[this.S.project].companyId !== this.S.company) this.S.project = null;
+    this.sync('co');
+  }
+  _toggleWho(id) {
+    const i = this.S.whos.indexOf(id);
+    if (i >= 0) { if (this.S.whos.length > 1) this.S.whos.splice(i, 1); }
+    else this.S.whos.push(id);
+    this.sync('who');
+  }
+  _toggleWatcher(id) {
+    if (this.S.whos.includes(id)) return;
+    const i = this.watchers.indexOf(id);
+    if (i >= 0) this.watchers.splice(i, 1); else this.watchers.push(id);
+    this.sync('wat');
+  }
+  _setPri(p) {
+    this.S.pri = p;
+    if (!this._isHigh(p)) this.S.channels.wa = false;
+    else if (!this.S.channels.wa) this.S.channels.wa = true; // auto-arm on high+
+    this.sync('pri');
+  }
+  _addSubtask() {
+    const inp = document.getElementById('nt-subtask-input');
+    const v = inp.value.trim();
+    if (!v) return;
+    if (this.subtasks.length >= (App.validate.LIMITS.subtasks || 50)) return;
+    this.subtasks.push(v.slice(0, App.validate.LIMITS.title || 200));
+    inp.value = ''; inp.focus();
+    this._renderSubtasks(); this.sync('sub');
+  }
+  _renderSubtasks() {
     const list = document.getElementById('nt-subtasks');
-    if (!list) return;
     list.innerHTML = '';
     this.subtasks.forEach((text, i) => {
-      const chip = document.createElement('span');
-      chip.className = 'subtask-chip';
-      chip.innerHTML = `<i class="ti ti-circle"></i><span class="subtask-chip-text"></span><i class="ti ti-x remove"></i>`;
-      chip.querySelector('.subtask-chip-text').textContent = text;
-      chip.querySelector('.remove').addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.subtasks.splice(i, 1);
-        this.renderSubtaskChips();
-      });
-      list.appendChild(chip);
+      const row = document.createElement('div');
+      row.className = 'nt-subitem';
+      row.innerHTML = `<span class="nt-subtext"></span><button class="nt-subdel" type="button" aria-label="Remove step">×</button>`;
+      row.querySelector('.nt-subtext').textContent = text;
+      row.querySelector('.nt-subdel').addEventListener('click', () => { this.subtasks.splice(i, 1); this._renderSubtasks(); this.sync('sub'); });
+      list.appendChild(row);
     });
   }
-
-  updateDelegationBanner() {
-    const assigneeId = document.getElementById('nt-assignee').value;
-    const banner = document.getElementById('nt-delegation-banner');
-    const emailAddr = document.getElementById('nt-notify-email-addr');
-    const emailLabel = document.getElementById('nt-notify-email-label');
-    if (assigneeId !== this.currentUser) {
-      banner.classList.remove('hidden');
-      const assignee = App.PEOPLE[assigneeId];
-      const assigneeName = assignee ? assignee.name : assigneeId;
-      const creatorName = App.PEOPLE[this.currentUser] ? App.PEOPLE[this.currentUser].name : this.currentUser;
-      document.getElementById('nt-delegation-text').textContent =
-        `${assigneeName} will see "Assigned by ${creatorName}" on this task.`;
-      emailLabel.textContent = `Email ${assigneeName}`;
-      emailAddr.textContent = assignee ? assignee.email : '';
-    } else {
-      banner.classList.add('hidden');
-      emailLabel.textContent = 'Email assignee';
-      emailAddr.textContent = '';
-    }
-  }
-
-  submit() {
-    if (!this.wrap || !document.getElementById('nt-title')) return; // already torn down
-    const timeRaw = document.getElementById('nt-time').value.trim();
-    const pendingSubtask = document.getElementById('nt-subtask-input');
-    const subtasks = this.subtasks.slice();
-    if (pendingSubtask && pendingSubtask.value.trim()) subtasks.push(pendingSubtask.value.trim());
-    const rawPayload = {
-      title: document.getElementById('nt-title').value,
-      description: document.getElementById('nt-desc').value,
-      assignee: document.getElementById('nt-assignee').value,
-      type: document.getElementById('nt-type').value,
-      label: document.getElementById('nt-label').value,
-      company: document.getElementById('nt-company').value,
-      due: document.getElementById('nt-due').value,
-      dueTime: timeRaw ? (this._parseTime(timeRaw) || timeRaw) : null,
-      priority: document.getElementById('nt-priority').value,
-      status: document.getElementById('nt-status').value,
-      watchers: Array.from(this.watchers),
-      subtasks,
-    };
-
-    let clean;
+  _createLabel(val) {
+    // Optimistically add to the in-memory taxonomy so it appears immediately.
+    // NOTE: server-side persistence goes through the admin taxonomy path (wired
+    // in a follow-up); for now this is an in-session label.
     try {
-      clean = App.validate.newTask(rawPayload);
-    } catch (err) {
-      this._showFieldError(err);
-      return;
+      const list = App.taxonomy.activeLabels(this.S.company);
+      if (!list.some(l => l.label.toLowerCase() === val.toLowerCase())) {
+        const key = val.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || ('lbl_' + list.length);
+        (App.TASK_LABELS = App.TASK_LABELS || {})[key] = { id: key, label: val };
+        this.S.label = key;
+      }
+    } catch (e) { /* noop */ }
+    this._closeMenus(); this._flash('✓ label created → ' + val); this.sync('lab');
+  }
+  _createProject(val) {
+    // Reuse the existing project create path.
+    const row = { name: val, company_id: this.S.company };
+    if (this.controller.dataStore && this.controller.dataStore.createProject) {
+      Promise.resolve(this.controller.dataStore.createProject(row)).then((res) => {
+        if (res && res.id) {
+          App.projects = App.projects || {};
+          App.projects[res.id] = { id: res.id, name: val, companyId: this.S.company, color: '', status: 'active' };
+          this.S.project = res.id; this.sync('proj');
+        }
+      }).catch(() => {});
     }
+    this._closeMenus(); this._flash('✓ project created → ' + val); this.sync('proj');
+  }
 
-    const reminderEl = document.getElementById('nt-reminderAt');
+  /* ---------------- title parser ---------------- */
+  _parseCtx(atEnd) {
+    return {
+      atEnd: !!atEnd,
+      today: App.utils.todayISO(0),
+      team: this._peopleFor(this.S.company).map(p => ({ id: p.id, name: p.name })),
+      companies: this._companyChoices().ids.map(id => ({ id, label: (App.COMPANIES[id] || { label: id }).label })),
+    };
+  }
+  _applyParse(atEnd) {
+    const el = document.getElementById('nt-title');
+    if (!el || !App.parseTaskTitle) return;
+    const r = App.parseTaskTitle(el.value, this._parseCtx(atEnd));
+    if (!r.hits.length) return;
+    const p = r.patches;
+    if (p.addWhos) p.addWhos.forEach(id => { if (!this.S.whos.includes(id)) this.S.whos.push(id); });
+    if (p.company) { this.S.company = p.company; this._afterCompany(); }
+    if (p.pri) this.S.pri = p.pri;
+    if (p.date) this.S.date = p.date;
+    if (p.time) this.S.time = p.time;
+    el.value = r.cleanTitle + (atEnd ? '' : ' ');
+    this._flash('✓ ' + r.hits.map(h => `${h.kind} → ${h.label}`).join(' · '));
+    r.hits.forEach(h => this._glow('nt-pick-' + this._hitToField(h.kind)));
+    this.sync(this._hitToKey(r.hits[0].kind));
+  }
+  _hitToField(kind) { return { assignee: 'assignee', company: 'company', pri: 'pri', date: 'date', time: 'time' }[kind] || ''; }
+  _hitToKey(kind) { return { assignee: 'who', company: 'co', pri: 'pri', date: 'due', time: 'due' }[kind]; }
+  _flash(msg) {
+    const el = document.getElementById('nt-flash');
+    if (!el) return;
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(this._flashT);
+    this._flashT = setTimeout(() => el.classList.remove('show'), 1600);
+  }
+  _glow(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('glow');
+    setTimeout(() => el.classList.remove('glow'), 1300);
+  }
+
+  /* ---------------- keyboard ---------------- */
+  _handleKey(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); this.submit(); return; }
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (/^(INPUT|TEXTAREA)$/.test(tag)) return;
+    if (e.key === 'Escape') { this._closeMenus(); return; }
+    const map = { c: 'company', a: 'assignee', l: 'label', d: 'date' };
+    const k = e.key.toLowerCase();
+    if (k === 'p') { e.preventDefault(); const list = this._priList(); const i = list.indexOf(this.S.pri); this._setPri(list[(i + 1) % list.length]); return; }
+    if (map[k]) {
+      e.preventDefault();
+      const fn = { company: () => this._companyItems(), assignee: () => this._assigneeItems(), label: () => this._labelItems(), date: () => this._calMenu() }[map[k]];
+      this._toggleMenu(map[k], fn);
+    }
+  }
+
+  /* ---------------- sync (single source of truth) ---------------- */
+  sync(changedKey) {
+    if (!this.S) return;
+    // Invariants.
+    this.watchers = this.watchers.filter(w => !this.S.whos.includes(w));
+    const statuses = App.taxonomy.activeStatuses(this.S.company, this.S.type);
+    if (statuses.length && !statuses.some(s => s.key === this.S.status)) this.S.status = App.taxonomy.defaultStatus(this.S.company, this.S.type);
+    if (!this._isHigh(this.S.pri)) this.S.channels.wa = false;
+
+    // Accent var.
+    const root = document.getElementById('nt-root');
+    if (root) root.style.setProperty('--accent', this._companyColor(this.S.company));
+
+    // Priority segmented active.
+    document.querySelectorAll('#nt-seg-pri button').forEach(b => b.classList.toggle('on', b.dataset.p === this.S.pri));
+
+    // Custom reminder visibility.
+    const cw = document.getElementById('nt-custom-wrap');
+    if (cw) cw.style.display = this.S.remind === 'custom' ? '' : 'none';
+
+    // Picker button labels.
+    this._setPickLabel('company', (App.COMPANIES[this.S.company] || { label: this.S.company }).label, this._companyColor(this.S.company));
+    this._setAssigneeLabel();
+    this._setPickLabel('type', App.taxonomy.typeLabel(this.S.company, this.S.type));
+    this._setPickLabel('status', App.taxonomy.statusLabel(this.S.company, this.S.type, this.S.status));
+    this._setPickLabel('label', this.S.label ? App.taxonomy.labelLabel(this.S.company, this.S.label) : 'None', null, !this.S.label);
+    this._setPickLabel('project', this.S.project && App.projects[this.S.project] ? App.projects[this.S.project].name : 'No project', null, !this.S.project);
+    this._setPickLabel('date', this._fmtDateShort(this.S.date));
+    this._setPickLabel('time', this._fmtTime(this.S.time), null, !this.S.time);
+    this._setPickLabel('remind', this._reminderText());
+    this._setWatchLabel();
+    const cuBtn = document.querySelector('#nt-pick-customU .nt-pick-val');
+    if (cuBtn) cuBtn.textContent = this.S.customU + ' before';
+
+    // Rail.
+    this._renderRail(changedKey);
+
+    // Readiness.
+    const title = ((document.getElementById('nt-title') || {}).value || '').trim();
+    const ready = { title: !!title, who: this.S.whos.length > 0, due: !!this.S.date };
+    const btn = document.getElementById('nt-create');
+    if (btn) btn.disabled = !(ready.title && ready.who && ready.due);
+
+    // Touched section nodes.
+    this._markTouched();
+  }
+
+  _setPickLabel(key, text, swatch, placeholder) {
+    const btn = document.getElementById('nt-pick-' + key);
+    if (!btn) return;
+    const val = btn.querySelector('.nt-pick-val');
+    val.classList.toggle('ph', !!placeholder);
+    val.innerHTML = (swatch ? `<span class="nt-dot" style="background:${swatch}"></span>` : '') + App.utils.escapeHtml(text || '');
+  }
+  _setAssigneeLabel() {
+    const btn = document.getElementById('nt-pick-assignee');
+    if (!btn) return;
+    const roster = this._peopleFor(this.S.company);
+    const people = this.S.whos.map(id => (roster.find(p => p.id === id) || App.PEOPLE[id] || { name: id, color: 'var(--ink-3)' }));
+    const avatars = people.slice(0, 3).map(p => `<span class="nt-mini stack" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>`).join('');
+    const label = people.length === 1 ? people[0].name : `${people[0].name} +${people.length - 1}`;
+    btn.querySelector('.nt-pick-val').innerHTML = avatars + `<span>${App.utils.escapeHtml(label)}</span>`;
+  }
+  _setWatchLabel() {
+    const btn = document.getElementById('nt-pick-watch');
+    if (!btn) return;
+    const val = btn.querySelector('.nt-pick-val');
+    if (!this.watchers.length) { val.classList.add('ph'); val.textContent = 'Add watchers…'; return; }
+    val.classList.remove('ph');
+    const people = this.watchers.map(id => App.PEOPLE[id] || { name: id, color: 'var(--ink-3)' });
+    const avatars = people.slice(0, 3).map(p => `<span class="nt-mini stack" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>`).join('');
+    const label = people.length === 1 ? people[0].name : `${people[0].name} +${people.length - 1}`;
+    val.innerHTML = avatars + `<span>${App.utils.escapeHtml(label)}</span>`;
+  }
+  _fmtDateShort(iso) {
+    if (!iso) return 'Pick date';
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  _railModel() {
+    const roster = this._peopleFor(this.S.company);
+    const people = this.S.whos.map(id => (roster.find(p => p.id === id) || App.PEOPLE[id] || { name: id }));
+    const title = ((document.getElementById('nt-title') || {}).value || '').trim();
+    return {
+      woNumber: this.woNumber,
+      title,
+      company: { label: (App.COMPANIES[this.S.company] || { label: this.S.company }).label, color: this._companyColor(this.S.company) },
+      assignees: people.map(p => ({ name: p.name, init: (p.name || '?').slice(0, 2).toUpperCase(), color: p.color || 'var(--ink-3)' })),
+      priority: { key: this.S.pri, label: (App.PRIORITIES[this.S.pri] || { label: this.S.pri }).label },
+      due: this._fmtDateShort(this.S.date).toUpperCase(),
+      time: this.S.time ? this._fmtTime(this.S.time) : '',
+      reminderText: this._reminderText(),
+      label: this.S.label ? App.taxonomy.labelLabel(this.S.company, this.S.label) : null,
+      project: this.S.project && App.projects[this.S.project] ? App.projects[this.S.project].name : null,
+      subtaskCount: this.subtasks.length,
+      watchers: this.watchers.map(id => (App.PEOPLE[id] || { name: id }).name),
+      channels: this.S.channels,
+      ready: { title: !!title, who: this.S.whos.length > 0, due: !!this.S.date },
+      dispatched: this.dispatched,
+    };
+  }
+  _renderRail(changedKey) {
+    const el = document.getElementById('nt-rail');
+    if (!el) return;
+    el.innerHTML = App.WorkOrderRail.render(this._railModel());
+    if (changedKey) {
+      const line = el.querySelector(`.wo-line[data-k="${changedKey}"]`);
+      if (line) { line.classList.remove('tick'); void line.offsetWidth; line.classList.add('tick'); }
+    }
+  }
+  _markTouched() {
+    // Light a section's node once anything in it differs from the empty defaults.
+    const routing = this.S.whos.length > 1 || this.S.label || this.S.project || this.S.pri !== 'medium';
+    const schedule = !!this.S.time || this.S.remind !== 'at';
+    const detail = this.subtasks.length > 0 || this.description;
+    const watchers = this.watchers.length > 0;
+    const set = (sec, on) => { const s = document.querySelector(`.nt-sec[data-sec="${sec}"]`); if (s) s.classList.toggle('touched', !!on); };
+    set('routing', routing); set('schedule', schedule); set('detail', detail); set('watchers', watchers);
+  }
+
+  /* ---------------- submit ---------------- */
+  submit() {
+    const el = document.getElementById('nt-title');
+    if (!el) return;
+    this._applyParse(true);
+    const title = (document.getElementById('nt-title').value || '').trim();
+    const raw = {
+      title,
+      description: this.description,
+      whos: this.S.whos.slice(),
+      type: this.S.type, label: this.S.label || 'none', company: this.S.company,
+      due: this.S.date, dueTime: this.S.time || null,
+      priority: this.S.pri, status: this.S.status,
+      watchers: this.watchers.slice(),
+      subtasks: this.subtasks.slice(),
+    };
+    let clean;
+    try { clean = App.validate.newTask(raw); }
+    catch (err) { this._showFieldError(err); return; }
     const payload = Object.assign({}, clean, {
-      project: (document.getElementById('nt-project').dataset.current || null),
-      reminderAt: (reminderEl && reminderEl.value) ? reminderEl.value : null,
-      notify: {
-        email:    document.getElementById('nt-notify-email').checked,
-        inapp:    document.getElementById('nt-notify-inapp').checked,
-        watchers: document.getElementById('nt-notify-watchers').checked,
-        whatsapp: document.getElementById('nt-notify-whatsapp').checked,
-      },
+      project: this.S.project || null,
+      reminderAt: this._computeReminderAt(),
+      reminderOffset: this.S.remind === 'custom' ? `custom:${this.S.customN}:${this.S.customU}` : this.S.remind,
+      notify: { email: this.S.channels.email, inapp: this.S.channels.inapp, watchers: this.S.channels.watchers, whatsapp: this.S.channels.wa },
     });
+    this.dispatched = true;
+    this._renderRail();
     this.controller.createTask(payload);
     this.controller.closeNewTaskPage();
   }
 
   _showFieldError(err) {
-    const fieldMap = {
-      title: 'nt-title', description: 'nt-desc', assignee: 'nt-assignee',
-      type: 'nt-type', label: 'nt-label', company: 'nt-company', due: 'nt-due',
-      dueTime: 'nt-time', priority: 'nt-priority', status: 'nt-status',
-    };
-    const id = fieldMap[err && err.field];
-    const el = id && document.getElementById(id);
-    if (el) {
-      el.focus();
-      el.style.borderColor = 'var(--rust)';
-      el.setAttribute('aria-invalid', 'true');
-      if (App.Motion) App.Motion.shake(el); // draw the eye to the rejected field
-      el.addEventListener('input', () => {
-        el.removeAttribute('aria-invalid');
-        el.style.borderColor = '';
-      }, { once: true });
-    }
-    this._toast('Cannot create task', err.message);
-  }
-
-  _toast(title, sub) {
+    const map = { title: 'nt-title' };
+    const id = map[err && err.field] || ('nt-pick-' + (err && err.field));
+    const elx = id && document.getElementById(id);
+    if (elx) { elx.focus && elx.focus(); if (App.Motion && App.Motion.shake) App.Motion.shake(elx); }
     const tv = this.controller && this.controller.toastView;
-    if (tv && tv.show) tv.show({ title, sub });
+    if (tv && tv.show) tv.show({ title: 'Cannot create task', sub: (err && err.message) || 'Check the highlighted field.' });
   }
 };
