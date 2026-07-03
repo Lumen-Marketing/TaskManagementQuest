@@ -365,6 +365,24 @@ input:not([type="checkbox"]):not([type="radio"]), textarea, select {
 @keyframes viewEnter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .view-enter { animation: viewEnter var(--dur-mid) var(--ease-out); }
 
+/* Async/pending button state (App.Motion.busy): dim the label and spin a small
+   ring in its place so the user sees the action is in flight. Inert while busy. */
+@keyframes qhqSpinner { to { transform: rotate(360deg); } }
+.is-busy { position: relative; color: transparent !important; pointer-events: none; cursor: progress; }
+.is-busy > * { opacity: 0; }
+.is-busy::after {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  color: var(--ink-2); opacity: 0.9;
+  animation: qhqSpinner 0.6s linear infinite;
+}
+.btn-primary.is-busy::after { color: oklch(98% 0 0); }
+@media (prefers-reduced-motion: reduce) {
+  /* No spin — show a steady ring so the busy state is still legible. */
+  .is-busy::after { animation: none; border-top-color: currentColor; opacity: 0.55; }
+}
+
 /* One reduced-motion gate for the whole interaction layer. */
 @media (prefers-reduced-motion: reduce) {
   .pv-new, .pv-chev, .swipe-act, .status-menu-item, .watcher-dropdown-item,

@@ -1161,12 +1161,19 @@ App.TaskDetailView = class TaskDetailView {
       el.addEventListener('click', exitEdit)
     );
 
+    const saveBtn = this.pane.querySelector('[data-action="save-edit"]');
     const save = () => {
       this._syncDraftFromDom();
       const ok = this.controller.updateTaskDetails(t.id, this.editDraft);
-      if (ok) exitEdit(); // else stay in edit mode with input preserved
+      if (!ok) return; // validation failed — stay in edit mode with input preserved
+      // Hold the button in a pending state until the change actually SYNCS, then
+      // leave edit mode. saveNow resolves once a save that included this edit
+      // has settled; without it we exit immediately.
+      const restore = (App.Motion && saveBtn) ? App.Motion.busy(saveBtn) : function () {};
+      const finish = () => { restore(); exitEdit(); };
+      if (this.controller.saveNow) this.controller.saveNow().then(finish, finish);
+      else finish();
     };
-    const saveBtn = this.pane.querySelector('[data-action="save-edit"]');
     if (saveBtn) saveBtn.addEventListener('click', save);
 
     // Type change re-scopes Status to the new type and resets it to that type's default.

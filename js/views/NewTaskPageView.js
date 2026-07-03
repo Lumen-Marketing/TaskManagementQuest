@@ -511,6 +511,7 @@ App.NewTaskPageView = class NewTaskPageView {
       el.focus();
       el.style.borderColor = 'var(--rust)';
       el.setAttribute('aria-invalid', 'true');
+      if (App.Motion) App.Motion.shake(el); // draw the eye to the rejected field
       el.addEventListener('input', () => {
         el.removeAttribute('aria-invalid');
         el.style.borderColor = '';

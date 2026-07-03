@@ -1259,7 +1259,12 @@ App.TaskListView = class TaskListView {
         if (!App.taxonomy.isDone(t) && App.Motion) App.Motion.check(b.querySelector('i'));
         this.controller.completeTask(t.id);
       }
-      else if (b.dataset.swipe === 'del') this.controller.deleteTask(t.id);
+      else if (b.dataset.swipe === 'del') {
+        // Collapse the row out (fade + slide + shrink) before the model delete
+        // re-renders, so the removal is seen. The Undo toast still fires.
+        if (App.Motion) App.Motion.collapseOut(wrap, () => this.controller.deleteTask(t.id));
+        else this.controller.deleteTask(t.id);
+      }
     });
     return wrap;
   }

@@ -1596,7 +1596,16 @@ App.AppController = class AppController {
       }
     }
     if (!companyId) return;
-    await this.createProject({ name, companyId });
+    const id = await this.createProject({ name, companyId });
+    // Confirm the creation with a toast that can jump straight into the new
+    // folder (createProject already animates the card rising in).
+    if (id && this.toastView) {
+      this.toastView.show({
+        title: 'Folder created',
+        sub: name,
+        action: { label: 'Open', onClick: () => this.openProject(id) },
+      });
+    }
   }
 
   /* Scope the task list to a single folder (project detail). Sets a single-value
@@ -1909,16 +1918,29 @@ App.AppController = class AppController {
         html: this._emailBody(`<strong>${App.utils.escapeHtml(creatorName)}</strong> created the task <strong>${titleEsc}</strong> (assigned to ${App.utils.escapeHtml(assigneeName)}).`, task),
       });
 
+      // "View" opens the freshly-created task's detail — one click to see what
+      // they just made (the task is already selected in state, so re-emitting
+      // selection:changed opens the pane even if setView('all') is a no-op).
+      const viewAction = {
+        label: 'View',
+        onClick: () => {
+          this.uiState.selectedTaskId = task.id;
+          this.setView('all');
+          App.EventBus.emit('selection:changed');
+        },
+      };
       if (delegated) {
         this.toastView.show({
           title: `Task assigned to ${assigneeName}`,
           sub: assigneeEmail ? `Notifying ${assigneeEmail}` : 'In-app notification sent',
+          action: viewAction,
         });
       } else {
         const watcherCount = (payload.watchers || []).length;
         this.toastView.show({
           title: 'Task created',
-          sub: watcherCount ? `${watcherCount} watcher${watcherCount > 1 ? 's' : ''} notified` : '',
+          sub: watcherCount ? `${watcherCount} watcher${watcherCount > 1 ? 's' : ''} notified` : 'Tap View to open it',
+          action: viewAction,
         });
       }
       if (payload.notify.whatsapp) {

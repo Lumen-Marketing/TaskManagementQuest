@@ -311,19 +311,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reassure first (the changes are re-flagged above and WILL retry), then
         // include the underlying Supabase message so the cause (RLS, constraint,
         // network) isn't hidden behind friendly text.
+        let failToast;
         if (!navigator.onLine) {
-          controller.toastView.show({
+          failToast = controller.toastView.show({
             title: "You're offline",
             sub: 'Your changes are kept and will sync automatically when you reconnect.',
           });
         } else {
           const friendly = (err && err.message) || 'Save failed';
           const cause = err && err.cause && err.cause.message;
-          controller.toastView.show({
+          failToast = controller.toastView.show({
             title: "Couldn't save — your changes are kept",
             sub: `Retrying shortly. ${cause ? `${friendly} — ${cause}` : friendly}`,
           });
         }
+        // Shake the toast so a failed/offline save is impossible to miss.
+        if (App.Motion) App.Motion.shake(failToast);
       }
       return false;
     }
