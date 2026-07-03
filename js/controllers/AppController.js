@@ -836,7 +836,6 @@ App.AppController = class AppController {
       description: t.description || '',
       type: t.type || 'admin',
       label: t.label || 'roof',
-      bidStatus: t.bidStatus || 'queue',
       company: t.company,
       due: t.due || App.utils.todayISO(1),
       dueTime: t.dueTime || null,
@@ -866,7 +865,7 @@ App.AppController = class AppController {
     else watchers.splice(i, 1);
     const ok = this.updateTaskDetails(id, {
       title: t.title, description: t.description, company: t.company,
-      type: t.type, label: t.label, bidStatus: t.bidStatus, status: t.status,
+      type: t.type, label: t.label, status: t.status,
       assignee: t.assignee, due: t.due, dueTime: t.dueTime, reminderAt: t.reminderAt,
       priority: t.priority, watchers, subtasks: t.subtasks,
     });
@@ -1345,7 +1344,7 @@ App.AppController = class AppController {
   }
 
   /* Batch-save every editable detail field from the task detail pane's Edit
-     mode (title, description, company, type, bidStatus, status, assignee, due,
+     mode (title, description, company, type, status, assignee, due,
      dueTime, priority, watchers, subtasks). The whole set is staged in the view
      and only reaches here on Save, so Cancel — which never calls this — leaves
      the task untouched; a refresh shows the saved values (taskModel.update marks
@@ -1377,7 +1376,6 @@ App.AppController = class AppController {
     const priority = fields.priority || task.priority || 'medium';
     const status = fields.status || task.status || 'todo';
     const assignee = fields.assignee || task.assignee;
-    const bidStatus = type === 'bid' ? (fields.bidStatus || task.bidStatus || 'queue') : null;
     const watchers = Array.isArray(fields.watchers) ? [...new Set(fields.watchers)] : (task.watchers || []);
     const subtasks = Array.isArray(fields.subtasks)
       ? fields.subtasks.map(s => ({ t: s.t, d: !!s.d }))
@@ -1392,7 +1390,6 @@ App.AppController = class AppController {
 
     this.taskModel.update(id, {
       title, description, company, project, type, label, due, dueTime, reminderAt, priority, status, assignee, watchers, subtasks,
-      ...(type === 'bid' ? { bidStatus } : {}),
     });
 
     // Done has a side effect the inline path also applies: drop a running timer
@@ -1555,7 +1552,6 @@ App.AppController = class AppController {
       description: payload.description,
       type: payload.type || 'admin',
       label: payload.label || 'roof',
-      bidStatus: payload.type === 'bid' ? (payload.bidStatus || 'queue') : null,
       company: payload.company,
       project: payload.project || null,
       due: payload.due,

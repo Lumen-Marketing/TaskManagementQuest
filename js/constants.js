@@ -35,13 +35,6 @@ App.TASK_LABELS = {
   framing:      { id: 'framing',      label: 'Framing' },
 };
 
-App.BID_STATUSES = {
-  queue:    { id: 'queue',    label: 'In queue',          cls: 'bid-queue'    },
-  started:  { id: 'started',  label: 'Started',           cls: 'bid-started'  },
-  supplier: { id: 'supplier', label: 'Waiting supplier',  cls: 'bid-supplier' },
-  ready:    { id: 'ready',    label: 'Ready to submit',   cls: 'bid-ready'    },
-};
-
 App.STATUSES = {
   todo:    { label: 'Working on it', cls: 'status-doing' },
   pending: { label: 'Pending',       cls: 'status-pending' },
