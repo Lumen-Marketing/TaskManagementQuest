@@ -93,16 +93,27 @@ App.SidebarView = class SidebarView {
   /* ---------- Minimize / expand ---------- */
 
   bindMinimize() {
-    // The top-bar brand mark is the mobile nav-drawer toggle. On desktop the
-    // icon rail is always shown (there's no minimized state), so on desktop the
-    // logo click does nothing — it only opens/closes the drawer on phones.
+    // The top-bar brand mark: on desktop it always navigates Home — the
+    // always-available escape hatch, working from the new-task page and the
+    // task detail too. On phones it stays the nav-drawer toggle (the drawer's
+    // first item is Home), so mobile keeps its only entry into navigation.
     if (this.brandLogo) {
       this.brandLogo.style.cursor = 'pointer';
       this._makeActivatable(this.brandLogo, () => {
         if (this._isMobile()) this._toggleMobileDrawer();
+        else this.controller.goHome();
       });
+      this._syncLogoLabel();
     }
     this._setupMobileDrawer();
+  }
+
+  // Keep the logo's tooltip/label honest on both sides of the breakpoint.
+  _syncLogoLabel() {
+    if (!this.brandLogo) return;
+    const label = this._isMobile() ? 'Toggle navigation' : 'Go to Home';
+    this.brandLogo.title = label;
+    this.brandLogo.setAttribute('aria-label', label);
   }
 
   applyStoredMinimize() {
@@ -138,7 +149,7 @@ App.SidebarView = class SidebarView {
     // Crossing the mobile breakpoint just closes the drawer (the desktop rail
     // has no minimized state to restore).
     const mq = window.matchMedia('(max-width: 720px)');
-    mq.addEventListener('change', () => this._closeMobileDrawer());
+    mq.addEventListener('change', () => { this._closeMobileDrawer(); this._syncLogoLabel(); });
   }
 
   _toggleMobileDrawer() {
@@ -167,11 +178,9 @@ App.SidebarView = class SidebarView {
     if (!this.deck) return;
     this.deck.classList.toggle('minimized', min);
     document.body.classList.toggle('sidebar-minimized', min);
-    if (this.brandLogo) {
-      const label = min ? 'Expand sidebar' : 'Collapse sidebar';
-      this.brandLogo.title = label;
-      this.brandLogo.setAttribute('aria-label', label);
-    }
+    // The logo no longer collapses the rail — don't let a stale
+    // "Collapse sidebar" label overwrite its Home/drawer labelling.
+    this._syncLogoLabel();
   }
 
   /* ---------- Extra sections (Company / Time / Org / Admin) ----------

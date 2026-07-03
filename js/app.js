@@ -237,6 +237,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     controller.restoreUiState();
   }
 
+  // Real browser history: back/forward walks the user's path, #/… deep links
+  // restore on refresh. Must run after restoreUiState so a deep link wins.
+  controller.initHistory();
+
   // Data + views are ready and the last view is restored — fade out the boot loader.
   if (App.hideAppLoader) App.hideAppLoader();
 

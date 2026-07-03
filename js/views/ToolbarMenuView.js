@@ -264,8 +264,8 @@ App.ToolbarMenuView = class ToolbarMenuView {
       groupBtn.innerHTML = `<i class="ti ti-layout-rows"></i>Group: ${lbl}`;
     }
     if (viewBtn) {
-      const layoutIcons = { table: 'ti-table', calendar: 'ti-calendar', kanban: 'ti-layout-kanban' };
-      const layoutLabels = { table: 'Table', calendar: 'Calendar', kanban: 'Kanban' };
+      const layoutIcons = { table: 'ti-table', cards: 'ti-layout-grid', calendar: 'ti-calendar', kanban: 'ti-layout-kanban' };
+      const layoutLabels = { table: 'Table', cards: 'Cards', calendar: 'Calendar', kanban: 'Kanban' };
       const layout = ui.layout || 'table';
       viewBtn.innerHTML = `<i class="ti ${layoutIcons[layout]}"></i>View: ${layoutLabels[layout]}`;
     }

@@ -186,6 +186,7 @@ App.AppController = class AppController {
     App.EventBus.emit('role:changed', eff);
     App.EventBus.emit('view:changed', this.uiState.view);
     App.EventBus.emit('selection:changed');
+    this._syncRoute();
   }
 
   setCompany(id) {
@@ -198,6 +199,7 @@ App.AppController = class AppController {
     // Reuse the existing re-render path so every list/sidebar refreshes.
     App.EventBus.emit('view:changed', this.uiState.view);
     App.EventBus.emit('selection:changed');
+    this._syncRoute();
   }
 
   /* ---------- UI state ---------- */
@@ -206,9 +208,19 @@ App.AppController = class AppController {
       if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot open that view.' });
       return;
     }
+    // Navigating anywhere must escape the full-page New-task form. Without this,
+    // the top-nav/logo clicks changed the view underneath while the form stayed
+    // covering it — the "I want to go home, I can't go home" dead end.
+    if (this.uiState.creatingTask) this.closeNewTaskPage();
     if (this.uiState.view === view) return;
     this.uiState.view = view;
     this.uiState.selectedTaskId = null;
+    // All Tasks always OPENS in table view, whatever mode it was left in.
+    // Explicit switches after entry (View menu, openCalendarOn) still apply.
+    if (view === 'all' && this.uiState.layout !== 'table') {
+      this.uiState.layout = 'table';
+      App.EventBus.emit('layout:changed', 'table');
+    }
     // Focus is a shared cross-person list reached via the widget / Sort menu,
     // not tied to any view — so switching views exits Execution-order back to a
     // normal sort rather than showing the shared list under a view's header.
@@ -221,6 +233,7 @@ App.AppController = class AppController {
     this._persistUiState();
     App.EventBus.emit('view:changed', view);
     App.EventBus.emit('selection:changed');
+    this._syncRoute();
   }
 
   // The head-card "My work" / "Company" segment. Unlike setView this never
@@ -278,9 +291,9 @@ App.AppController = class AppController {
     try { saved = JSON.parse(localStorage.getItem(this._uiStateKey()) || 'null'); }
     catch (e) { saved = null; }
     if (!saved || saved.v !== 1) return;
-    // 'timeline' was replaced by 'calendar' — migrate any stored value.
-    const savedLayout = saved.layout === 'timeline' ? 'calendar' : saved.layout;
-    if (['table', 'calendar', 'kanban', 'cards'].includes(savedLayout)) this.setLayout(savedLayout);
+    // The layout is deliberately NOT restored: All Tasks must always open in
+    // table view (2026-07-04 walkthrough), whatever mode last session ended in.
+    // Deep links (#/tasks/kanban) and saved views still set it explicitly.
     if (saved.calendarMode === 'month' || saved.calendarMode === 'week') this.uiState.calendarMode = saved.calendarMode;
     // Restore sort / group / filters so the user's working set survives a reload
     // (the "filters reset every session" complaint). Validated + merged with
@@ -309,17 +322,162 @@ App.AppController = class AppController {
     if (typeof savedView === 'string' && !isNarrowFilter && this.canView(savedView)) this.setView(savedView);
   }
 
+  /* ---------- browser history (hash routes) ----------
+     Every navigation-level change (view, task detail, folder, calendar day,
+     new-task page, list layout) maps to a `#/...` hash route so the browser /
+     mouse back-forward buttons walk the user's real path, and any route
+     survives a refresh (deep-link safe). Supabase auth fragments
+     (#access_token=…, #type=recovery) never start with `#/`, so they pass
+     through untouched.
+
+     Sync model: mutators call _syncRoute(), which debounces to one pushState
+     per tick (a compound move like openCalendarOn = one history entry, no
+     phantom intermediate stops). popstate/hashchange re-apply the URL to state
+     under the _routing guard so application never pushes; in-app closes push a
+     new entry forward, so back/forward and in-app actions share one stack. */
+  _routeFromState() {
+    const ui = this.uiState;
+    const enc = encodeURIComponent;
+    if (ui.creatingTask) return '#/new';
+    if (ui.selectedTaskId != null) return '#/task/' + enc(String(ui.selectedTaskId));
+    if (ui.view === 'all') {
+      if (ui.filters && ui.filters.projectId) return '#/folder/' + enc(String(ui.filters.projectId));
+      if (ui.layout === 'calendar') {
+        return ui.calendarSelectedDay
+          ? '#/tasks/calendar/' + enc(ui.calendarSelectedDay)
+          : '#/tasks/calendar';
+      }
+      return ui.layout === 'table' ? '#/tasks' : '#/tasks/' + enc(ui.layout);
+    }
+    if (ui.view === 'home') return '#/home';
+    return '#/view/' + enc(ui.view);
+  }
+
+  // Debounced push: state can change several times in one tick (setView +
+  // setLayout + calendar day); only the settled route becomes a history entry.
+  _syncRoute() {
+    if (!this._historyReady || this._routing) return;
+    if (this._routeTimer) return;
+    this._routeTimer = window.setTimeout(() => {
+      this._routeTimer = null;
+      if (this._routing) return;
+      const route = this._routeFromState();
+      if (route === (window.location.hash || '')) return;
+      try { window.history.pushState(null, '', route); } catch (e) { /* pushState throttled/unavailable */ }
+    }, 0);
+  }
+
+  _parseHashParts(hash) {
+    if (!hash || !hash.startsWith('#/')) return null;
+    return hash.slice(2).split('/').map(s => {
+      try { return decodeURIComponent(s); } catch (e) { return s; }
+    });
+  }
+
+  // Apply a `#/...` hash to uiState through the normal mutators (so panes,
+  // events, and persistence all behave), without pushing new entries.
+  _applyRoute(hash) {
+    const parts = this._parseHashParts(hash);
+    if (!parts) return;
+    this._routing = true;
+    try {
+      const [head, a, b] = parts;
+      if (head !== 'new' && this.uiState.creatingTask) this.closeNewTaskPage();
+      if (head === 'new') {
+        if (!this.uiState.creatingTask) this.openNewTaskPage();
+      } else if (head === 'task' && a) {
+        // Roles without a task surface (clock-only) can't open a detail page —
+        // leave their state alone and let the canonicalize below fix the URL.
+        const t = App.can('tasks.view') ? this.taskModel.find(a) : null;
+        if (t) {
+          // The detail page overlays task surfaces but not the Time screens.
+          if (this.uiState.view.startsWith('time:')) this.setView('all');
+          if (this.uiState.selectedTaskId !== a) {
+            this.uiState.selectedTaskId = a;
+            App.EventBus.emit('selection:changed');
+          }
+        } else if (App.can('tasks.view')) {
+          if (this.uiState.selectedTaskId) this.closeDetail();
+          this.setView('all');
+          if (this.toastView) this.toastView.show({ title: 'Task not found', sub: 'It may have been deleted.' });
+        }
+      } else {
+        if (this.uiState.selectedTaskId) this.closeDetail();
+        if (head === 'folder' && a) {
+          this.uiState.filters = this.uiState.filters || {};
+          this.uiState.filters.projectId = a;
+          this.setView('all');
+          App.EventBus.emit('filters:changed');
+        } else if (head === 'tasks') {
+          if (this.uiState.filters) this.uiState.filters.projectId = null;
+          this.setView('all');
+          this.setLayout(['table', 'calendar', 'kanban', 'cards'].includes(a) ? a : 'table');
+          if (a === 'calendar') {
+            const iso = /^\d{4}-\d{2}-\d{2}$/.test(b || '') ? b : null;
+            this.uiState.calendarAnchor = iso;
+            this.uiState.calendarSelectedDay = iso;
+            App.EventBus.emit('calendar:changed');
+          }
+          App.EventBus.emit('filters:changed');
+        } else if (head === 'home') {
+          this.setView('home');
+        } else if (head === 'view' && a) {
+          this.setView(a);
+        }
+      }
+    } finally {
+      this._routing = false;
+    }
+    // Canonicalize in place (permission fallback, unknown route, encoding) —
+    // rewrite the current entry rather than minting a new one.
+    const canonical = this._routeFromState();
+    if (canonical !== (window.location.hash || '')) {
+      try { window.history.replaceState(null, '', canonical); } catch (e) { /* ignore */ }
+    }
+  }
+
+  // Called once from app.js after data + views are ready and the last-session
+  // state is restored. A `#/...` deep link in the URL wins over restored state.
+  initHistory() {
+    if (this._historyReady) return;
+    this._historyReady = true;
+    const onNav = () => {
+      const h = window.location.hash || '';
+      if (!h.startsWith('#/')) return;             // auth fragments, #mainPane skip-link
+      if (h === this._routeFromState()) return;    // popstate+hashchange double-fire
+      this._applyRoute(h);
+    };
+    window.addEventListener('popstate', onNav);
+    window.addEventListener('hashchange', onNav);
+    const h = window.location.hash || '';
+    if (h.startsWith('#/')) this._applyRoute(h);
+    else {
+      try { window.history.replaceState(null, '', this._routeFromState()); } catch (e) { /* ignore */ }
+    }
+  }
+
+  // Always-available Home escape hatch (topbar logo). Closes whatever
+  // full-page surface is up first so it works from the new-task page and the
+  // task detail too; falls back for roles that can't see Home.
+  goHome() {
+    if (this.uiState.creatingTask) this.closeNewTaskPage();
+    if (this.uiState.selectedTaskId) this.closeDetail();
+    if (this.canView('home')) this.setView('home');
+    else this.setView(App.can('tasks.view') ? 'all' : 'time:mine');
+  }
+
   setSearchQuery(q) {
     this.uiState.searchQuery = q;
     App.EventBus.emit('search:changed', q);
   }
 
   setLayout(layout) {
-    if (!['table', 'calendar', 'kanban'].includes(layout)) return;
+    if (!['table', 'calendar', 'kanban', 'cards'].includes(layout)) return;
     if (this.uiState.layout === layout) return;
     this.uiState.layout = layout;
     this._persistUiState();
     App.EventBus.emit('layout:changed', layout);
+    this._syncRoute();
   }
 
   /* ----- Calendar view controls ----- */
@@ -330,6 +488,7 @@ App.AppController = class AppController {
     this.uiState.calendarSelectedDay = null;
     this._persistUiState();
     App.EventBus.emit('calendar:changed');
+    this._syncRoute();
   }
 
   // Move the calendar by ±1 month (month mode) or ±1 week (week mode). delta is
@@ -346,18 +505,21 @@ App.AppController = class AppController {
     this.uiState.calendarAnchor = App.utils.toISODate(base);
     this.uiState.calendarSelectedDay = null;
     App.EventBus.emit('calendar:changed');
+    this._syncRoute();
   }
 
   resetCalendarToToday() {
     this.uiState.calendarAnchor = null;
     this.uiState.calendarSelectedDay = null;
     App.EventBus.emit('calendar:changed');
+    this._syncRoute();
   }
 
   selectCalendarDay(iso) {
     this.uiState.calendarSelectedDay =
       this.uiState.calendarSelectedDay === iso ? null : iso;
     App.EventBus.emit('calendar:changed');
+    this._syncRoute();
   }
 
   // Jump straight to the All-tasks Calendar, anchored + pre-selected on a date
@@ -369,6 +531,7 @@ App.AppController = class AppController {
     this.setView('all');
     this.setLayout('calendar');
     App.EventBus.emit('calendar:changed');
+    this._syncRoute();
   }
 
   /* ----- The filtered task set the list/calendar/export all share ----- */
@@ -513,6 +676,7 @@ App.AppController = class AppController {
   selectTask(id) {
     this.uiState.selectedTaskId = (this.uiState.selectedTaskId === id) ? null : id;
     App.EventBus.emit('selection:changed');
+    this._syncRoute();
   }
 
   // Keyboard j/k navigation: move the selection to the next/prev task in the
@@ -529,6 +693,7 @@ App.AppController = class AppController {
     const id = ids[next];
     this.uiState.selectedTaskId = id;
     App.EventBus.emit('selection:changed');
+    this._syncRoute();
     // Bring the row into view if it scrolled off.
     const safe = (window.CSS && CSS.escape) ? CSS.escape(String(id)) : String(id);
     const el = document.querySelector(`#listBody [data-id="${safe}"]`);
@@ -538,6 +703,7 @@ App.AppController = class AppController {
   closeDetail() {
     this.uiState.selectedTaskId = null;
     App.EventBus.emit('selection:changed');
+    this._syncRoute();
   }
 
   /* ---------- comments (migration 053) ---------- */
@@ -1415,11 +1581,13 @@ App.AppController = class AppController {
     this.uiState.filters.projectId = projectId || null;
     this.setView('all');
     App.EventBus.emit('filters:changed');
+    this._syncRoute();
   }
 
   clearProjectScope() {
     if (this.uiState.filters) this.uiState.filters.projectId = null;
     App.EventBus.emit('filters:changed');
+    this._syncRoute();
   }
 
   /* Batch-save every editable detail field from the task detail pane's Edit
@@ -1605,6 +1773,7 @@ App.AppController = class AppController {
     }
     this._togglePanes();
     App.EventBus.emit('newtask:changed', true);
+    this._syncRoute();
   }
 
   // Close the New task page and restore whatever surface was showing before.
@@ -1614,6 +1783,7 @@ App.AppController = class AppController {
     this._newTaskPrefill = null;
     this._togglePanes();
     App.EventBus.emit('newtask:changed', false);
+    this._syncRoute();
   }
 
   async createTask(payload) {
@@ -1735,6 +1905,7 @@ App.AppController = class AppController {
     }
     this.uiState.selectedTaskId = task.id;
     App.EventBus.emit('selection:changed');
+    this._syncRoute();
   }
 
   /* ---------- timer actions ---------- */
@@ -1881,6 +2052,7 @@ App.AppController = class AppController {
       } else {
         App.EventBus.emit('selection:changed');
       }
+      this._syncRoute();
     }
   }
 
@@ -1972,6 +2144,7 @@ App.AppController = class AppController {
     App.EventBus.emit('sort:changed');
     App.EventBus.emit('group:changed');
     App.EventBus.emit('layout:changed', this.uiState.layout);
+    this._syncRoute();
   }
 
   deleteSavedView(id) {
