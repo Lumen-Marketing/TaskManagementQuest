@@ -205,11 +205,10 @@ App.TaskDetailView = class TaskDetailView {
         ).join('')
       : `<div style="font-size:11.5px; color:var(--ink-3);">No time logged yet</div>`;
 
-    const statusObj = App.STATUSES[t.status] || { label: t.status || '—', cls: '' };
+    const statusObj = { label: App.taxonomy.statusLabel(t.company, t.type, t.status), cls: (App.STATUSES[t.status] || {}).cls || '' };
     const typeObj = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' };
     const priObj = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const labelObj = (t.label && t.label !== 'none') ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' };
-    const bidObj = App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' };
     const isDone = App.taxonomy.isDone(t);
     const today = App.utils.todayISO(0);
     const overdue = !!(t.due && t.due < today && !isDone);
@@ -250,7 +249,6 @@ App.TaskDetailView = class TaskDetailView {
         <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
         <div class="tdp-chiprow">
           <button class="tdp-chip tdp-chip-status ${statusObj.cls}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
-          ${t.type === 'bid' ? `<span class="tdp-chip">${App.utils.escapeHtml(bidObj.label)}</span>` : ''}
           <span class="tdp-chip">${App.utils.escapeHtml(typeObj.label)}</span>
         </div>
         <div class="tdp-title-row">
@@ -313,7 +311,6 @@ App.TaskDetailView = class TaskDetailView {
             <div class="taf-field"><span class="taf-field-lbl">Time</span><span ${ev('dueTime')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Reminder</span><span ${ev('reminderAt')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Type</span><span ${ev('type')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
-            ${t.type === 'bid' ? `<div class="taf-field"><span class="taf-field-lbl">Bid status</span><span ${ev('bidStatus')}>${App.utils.escapeHtml(bidObj.label)}</span></div>` : ''}
             <div class="taf-field"><span class="taf-field-lbl">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Project</span>${projectChipHtml}</div>
@@ -553,6 +550,18 @@ App.TaskDetailView = class TaskDetailView {
     }
   }
 
+  // Status <option> entries for a (company,type) from the live taxonomy (constants fallback).
+  // Keeps the current value even if it's now inactive so a save never silently drops it.
+  _statusOpts(company, type, selected) {
+    const list = App.taxonomy.activeStatuses(company, type);
+    const src = (list && list.length) ? list.map(s => [s.key, s.label])
+              : Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]);
+    if (selected && !src.some(([k]) => k === selected)) {
+      src.unshift([selected, App.taxonomy.statusLabel(company, type, selected)]);
+    }
+    return src;
+  }
+
   // Build the editor element (id="tdp-ie-input") for a given field.
   _inlineEditorHtml(t, field) {
     const esc = App.utils.escapeHtml;
@@ -560,11 +569,10 @@ App.TaskDetailView = class TaskDetailView {
       `<select id="tdp-ie-input" class="tdp-ie-input">${entries.map(([k, label]) =>
         `<option value="${esc(k)}" ${k === selected ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select>`;
     switch (field) {
-      case 'status':    return sel(Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]), t.status);
+      case 'status':    return sel(this._statusOpts(t.company, t.type, t.status), t.status);
       case 'priority':  return sel(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), t.priority);
       case 'type':      return sel(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), t.type);
       case 'label':     return sel(Object.entries(App.TASK_LABELS).map(([k, v]) => [k, v.label]), t.label || 'none');
-      case 'bidStatus': return sel(Object.entries(App.BID_STATUSES).map(([k, v]) => [k, v.label]), t.bidStatus || 'queue');
       case 'company':   return sel(Object.values(App.COMPANIES).map(c => [c.id, c.label]), t.company);
       case 'assignee':  return sel(App.utils.peopleInCompany(t.company, t.assignee).map(p => [p.id, p.name]), t.assignee);
       case 'due':       return `<input type="date" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc(t.due || '')}" />`;
@@ -607,8 +615,10 @@ App.TaskDetailView = class TaskDetailView {
     if (existing) { existing.remove(); return; }
     const menu = document.createElement('div');
     menu.className = 'tdp-status-menu';
-    menu.innerHTML = Object.entries(App.STATUSES).map(([k, v]) =>
-      `<button class="tdp-status-opt ${k === t.status ? 'is-cur' : ''}" data-status="${App.utils.escapeHtml(k)}" type="button">${App.utils.escapeHtml(v.label)}</button>`
+    const list = App.taxonomy.activeStatuses(t.company, t.type);
+    const entries = (list && list.length) ? list.map(s => [s.key, s.label]) : Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]);
+    menu.innerHTML = entries.map(([k, label]) =>
+      `<button class="tdp-status-opt ${k === t.status ? 'is-cur' : ''}" data-status="${App.utils.escapeHtml(k)}" type="button">${App.utils.escapeHtml(label)}</button>`
     ).join('');
     anchor.parentElement.appendChild(menu);
     menu.querySelectorAll('[data-status]').forEach(b => b.addEventListener('click', (e) => {
@@ -618,7 +628,7 @@ App.TaskDetailView = class TaskDetailView {
       if (status && status !== t.status) {
         this.controller.updateTaskDetails(t.id, {
           title: t.title, description: t.description, company: t.company,
-          type: t.type, label: t.label, bidStatus: t.bidStatus, status,
+          type: t.type, label: t.label, status,
           assignee: t.assignee, due: t.due, dueTime: t.dueTime, reminderAt: t.reminderAt,
           priority: t.priority, watchers: t.watchers, subtasks: t.subtasks,
         });
@@ -771,7 +781,6 @@ App.TaskDetailView = class TaskDetailView {
       project: t.project || null,
       type: t.type || 'admin',
       label: t.label || 'roof',
-      bidStatus: t.bidStatus || 'queue',
       status: t.status || 'todo',
       assignee: t.assignee,
       due: t.due || '',
@@ -797,7 +806,6 @@ App.TaskDetailView = class TaskDetailView {
     set('company', 'edit-company');
     set('type', 'edit-type');
     set('label', 'edit-label');
-    set('bidStatus', 'edit-bidStatus');
     set('status', 'edit-status');
     set('assignee', 'edit-assignee');
     set('due', 'edit-due');
@@ -870,8 +878,7 @@ App.TaskDetailView = class TaskDetailView {
               <div class="taf-meta" style="background:transparent; padding:0; border-radius:0;">
               <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="edit-company">${opts(Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="edit-type" data-action="type-change">${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}</select></label>
-              ${d.type === 'bid' ? `<label class="taf-field"><span class="taf-field-lbl">Bid status</span><select id="edit-bidStatus">${opts(Object.entries(App.BID_STATUSES).map(([k, v]) => [k, v.label]), d.bidStatus)}</select></label>` : ''}
-              <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="edit-status">${opts(Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]), d.status)}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="edit-status">${opts(this._statusOpts(d.company, d.type, d.status), d.status)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="edit-label">${opts(Object.entries(App.TASK_LABELS).map(([k, v]) => [k, v.label]), d.label)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Priority</span><select id="edit-priority">${opts(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), d.priority)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="edit-assignee">${App.utils.peopleInCompany(d.company, d.assignee).map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('')}</select></label>
@@ -921,7 +928,6 @@ App.TaskDetailView = class TaskDetailView {
 
   bindEditHandlers(t, { focusTitle = false } = {}) {
     const exitEdit = () => { this.editingId = null; this.editDraft = null; this.render(); };
-    const rerender = () => { this._syncDraftFromDom(); this.renderEditMode(t); };
 
     this.pane.querySelectorAll('[data-action="cancel-edit"]').forEach(el =>
       el.addEventListener('click', exitEdit)
@@ -935,9 +941,14 @@ App.TaskDetailView = class TaskDetailView {
     const saveBtn = this.pane.querySelector('[data-action="save-edit"]');
     if (saveBtn) saveBtn.addEventListener('click', save);
 
-    // Type toggle re-renders so the Bid-status row appears/disappears.
+    // Type change re-scopes Status to the new type and resets it to that type's default.
     const typeSel = this.pane.querySelector('[data-action="type-change"]');
-    if (typeSel) typeSel.addEventListener('change', rerender);
+    if (typeSel) typeSel.addEventListener('change', (e) => {
+      this._syncDraftFromDom();
+      this.editDraft.type = e.target.value;
+      this.editDraft.status = App.taxonomy.defaultStatus(this.editDraft.company, e.target.value);
+      this.renderEditMode(t);
+    });
 
     // Project picker in edit mode: stage the choice on the draft, then re-render
     // so the button reflects it. Scope to the company currently selected.
