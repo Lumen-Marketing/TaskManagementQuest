@@ -89,6 +89,7 @@ description = string
 ```
 
 **Invariants enforced in `sync()`** (mirrors the prototype):
+- **Status follows Type:** on any Type or Company change, re-scope Status options to `activeStatuses(company, type)` and reset `S.status` to `defaultStatus(company, type)` unless the current key survives under the new type.
 - `watchers = watchers.filter(w => !whos.includes(w))` — assignees can't be watchers.
 - Members in `whos` are disabled (labeled "assigned") in the watcher menu.
 - WhatsApp channel: unlocked and auto-armed iff `pri === 'high'`; dropping below High disarms + relocks.
@@ -100,9 +101,25 @@ description = string
 
 ### 6.1 Custom pickers (replace all native selects)
 Generic button + absolutely-positioned menu; one open at a time; outside-click / Esc closes; menu clicks `stopPropagation`.
-- **Company** — options from `App.COMPANIES`; switching re-themes `--accent` and re-scopes Type/Status/Label/Assignee/Watcher options via `App.taxonomy`.
+
+**Option sources & the two-tier taxonomy model.** Every option-bearing field draws from the customizable per-company taxonomy (tables 056–058, admin-managed via `TaskSetupAdminView`). They split into two tiers on *this* screen:
+
+| Field | Options source | Inline "create" here? |
+|-------|----------------|----------------------|
+| Company | `App.COMPANIES` | No — pick only |
+| Type | `taxonomy.activeTypes(company)` | No — admin-managed set |
+| Status | `taxonomy.activeStatuses(company, type)` | No — admin-managed set (per-type) |
+| Priority | fixed Low/Med/High | No |
+| Reminder | fixed offsets | No |
+| Label | `taxonomy.activeLabels(company)` | **Yes** → new company-scoped label into taxonomy |
+| Project | `App.projects` | **Yes** → new row in `projects` |
+
+- **Status is a function of (company, type), not global.** Each Type carries its own status set (e.g. a `bid` type has bid-stage statuses; an `admin` type has admin statuses) — the retired global `bid_status` column is folded into this per-type taxonomy, with `is_done`/`is_default` per status. **Changing Type re-scopes the Status menu from `activeStatuses(company, type)` and resets `S.status` to `taxonomy.defaultStatus(company, type)`** (unless the current status key still exists under the new type, in which case it's kept). Changing Company re-scopes Type first, which cascades into Status.
+- **Company** — options from `App.COMPANIES`; switching re-themes `--accent` and re-scopes Type → Status → Label → Assignee → Watcher options via `App.taxonomy`.
 - **Assignee (multi)** — menu stays open; rows toggle ✓; button shows up to 3 stacked avatars + "Name +N"; adds to `whos` (never replaces); purges watchers of assignees on change.
-- **Status / Type / Label / Project** — Label & Project menus end with an inline create row (text input + Create; Enter commits); new value appended, selected, confirmed via parse-flash line. Create-on-the-fly is **tenant-scoped** (goes through the existing taxonomy/project create path).
+- **Type** — pick-only; drives the Status set (above).
+- **Status** — pick-only; options depend on the selected Type; carries `is_done`/`is_default` semantics, so no ad-hoc invention on this screen.
+- **Label / Project** — menus end with an inline create row (text input + Create; Enter commits); new value appended, selected, confirmed via parse-flash line. Create-on-the-fly is **tenant/company-scoped**, **deduped case-insensitively**, and persists into the taxonomy (`task_labels`) / `projects` so it appears in the admin and on future tasks.
 - **Priority** — segmented control (Low/Med/High), not a menu.
 - **Reminder** — None / At due time / 1h before / 1d before / Morning of (7 AM) / Custom…; Custom reveals number + unit (minutes/hours/days before).
 
@@ -208,7 +225,8 @@ Migrations are numbered from `060` (existing tree ends at two colliding `059_*` 
 - [ ] Priority High→Med disarms + relocks WhatsApp
 - [ ] Multi-assign: menu stays open, toggles, button shows stacked avatars "+N"
 - [ ] Assigning a current watcher removes them from watchers; disabled in watcher menu
-- [ ] Label/Project "Create" adds, selects, prints on ticket; tenant-scoped
+- [ ] Changing Type re-scopes Status options and resets to that type's default; a `bid` type shows bid statuses, an `admin` type shows admin statuses
+- [ ] Label/Project "Create" adds, selects, prints on ticket; tenant-scoped, case-insensitive dedupe, persists into taxonomy
 - [ ] Calendar month nav + quick chips work; selected day = ink pill; today ringed; "today" is the real date
 - [ ] Time list scrolls to selection; "No time" clears
 - [ ] Custom reminder shows N + unit; ticket prints "3 DAYS BEFORE" / "1 DAY BEFORE"
