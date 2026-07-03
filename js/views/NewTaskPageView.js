@@ -164,7 +164,7 @@ App.NewTaskPageView = class NewTaskPageView {
               <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="nt-assignee">${this._assigneeOptionsHtml(selectedCompany, this.currentUser)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="nt-due" class="picker-input" value="${App.utils.todayISO(1)}" /></label>
               <label class="taf-field"><span class="taf-field-lbl">Time</span><input type="text" id="nt-time" inputmode="text" autocomplete="off" placeholder="e.g. 9:30 AM" /></label>
-              <label class="taf-field"><span class="taf-field-lbl">Reminder</span><input type="datetime-local" id="nt-reminderAt" class="picker-input" /></label>
+              <div class="taf-field"><span class="taf-field-lbl">Reminder</span><button type="button" id="nt-reminderAt" class="rp-trigger rp-trigger-empty" value="" aria-haspopup="dialog"><i class="ti ti-bell"></i><span class="rp-trigger-lbl">Set a reminder</span></button></div>
               <div class="taf-field"><span class="taf-field-lbl">Project</span><button type="button" id="nt-project" class="projtag projtag-btn projtag-empty" data-current="" aria-haspopup="listbox"><i class="ti ti-folder-plus"></i>No project</button></div>
               </div>
             </div>
@@ -281,6 +281,23 @@ App.NewTaskPageView = class NewTaskPageView {
         if (parsed) timeInput.value = App.utils.formatClock(parsed);
       });
     }
+
+    // Reminder — shared calendar+time popover (js/views/DateTimePickerView.js).
+    // The trigger button keeps the #nt-reminderAt id and carries the picked
+    // "YYYY-MM-DDTHH:MM" in its .value, so submit() reads it unchanged.
+    const remBtn = document.getElementById('nt-reminderAt');
+    if (remBtn) remBtn.addEventListener('click', () => {
+      App.reminderPicker.open({
+        anchor: remBtn,
+        value: remBtn.value || null,
+        onCommit: (v) => {
+          remBtn.value = v || '';
+          remBtn.classList.toggle('rp-trigger-empty', !v);
+          const lbl = remBtn.querySelector('.rp-trigger-lbl');
+          if (lbl) lbl.textContent = v ? App.reminderPicker.format(v) : 'Set a reminder';
+        },
+      });
+    });
   }
 
   // Live input mask: auto-insert the colon as digits are typed, expand a typed

@@ -1507,12 +1507,14 @@ App.AppController = class AppController {
     }
   }
 
-  updateTaskField(id, field, value) {
+  // activityText (optional, from the detail view's auto-save path) makes the
+  // logged activity specific; TaskModel.setField falls back to a generic entry.
+  updateTaskField(id, field, value, activityText) {
     if (!App.can('tasks.write')) return;
     const task = this.taskModel.find(id);
     if (!task) return;
     const prev = task[field];
-    this.taskModel.setField(id, field, value, this.getUserName(this.currentUser));
+    this.taskModel.setField(id, field, value, this.getUserName(this.currentUser), activityText);
     const doneKey = App.taxonomy.doneStatus(task.company, task.type);
     if (field === 'status' && value === doneKey && prev !== doneKey) {
       this._revertToGeneralShiftIfOnTask(id);

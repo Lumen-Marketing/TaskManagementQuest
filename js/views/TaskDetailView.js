@@ -178,14 +178,6 @@ App.TaskDetailView = class TaskDetailView {
 
     // Read-only watcher chips — editing watchers lives in the Edit form.
     const watcherIds = t.watchers || [];
-    const watchersHtml = `
-      <div class="watchers-cell">
-        ${watcherIds.map(w => {
-          const p = App.PEOPLE[w];
-          return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
-        }).join('') || '<span style="color:var(--ink-3); font-size:11px;">No watchers</span>'}
-      </div>
-    `;
 
     // Read-only subtasks — toggling moved into the Edit form.
     const subtasksHtml = (t.subtasks || []).map((s) =>
@@ -241,17 +233,26 @@ App.TaskDetailView = class TaskDetailView {
     }).join('');
     // Remember which tab the user is on so a background re-render (a posted
     // comment, a sync poll) doesn't yank them off it. Tabs are
-    // Comments / Activity / History; default to Comments.
-    if (!this._activeTab) this._activeTab = 'comments';
+    // Comments / Activity (History is its own card now); default to Comments.
+    if (!this._activeTab || this._activeTab === 'history') this._activeTab = 'comments';
     const tabActive = (name) => this._activeTab === name ? ' active' : '';
 
     // Inline per-field editing: Details-card values are click-to-edit for users
     // with write access. `ev(field, baseCls)` returns the class + data attrs that
     // mark a value cell editable; read-only viewers just get the base class.
+    // Edits auto-save on selection/blur — there is no confirm step.
     const canWrite = App.can('tasks.write');
     const ev = (field, baseCls = 'detail-val') => canWrite
-      ? `class="${baseCls} tdp-editable" data-edit-field="${field}" title="Click to edit" tabindex="0" role="button"`
+      ? `class="${baseCls} tdp-editable" data-edit-field="${field}" title="Click to change · saves automatically" tabindex="0" role="button"`
       : `class="${baseCls}"`;
+
+    // De-emphasized read-only creation line for the bottom of the Details card.
+    // createdAt is a real instant (timestamptz) → format in the shared HQ zone;
+    // legacy rows without it just show who created the task.
+    const createdWhen = t.createdAt
+      ? App.utils.formatInstant(t.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
+    const createdLine = `Created${createdWhen ? ' ' + App.utils.escapeHtml(createdWhen) : ''} by ${App.utils.escapeHtml(creator.name)}`;
 
     this.pane.innerHTML = `
       <div class="tdp-head">
@@ -309,13 +310,41 @@ App.TaskDetailView = class TaskDetailView {
 
       <div class="tdp-body">
         <div class="tdp-col-main">
-          <div class="tdp-card">
+          <div class="tdp-card tdp-card-desc">
+            <div class="tdp-card-title">Description
+              ${canWrite ? `<button class="tdp-desc-pencil" data-action="edit-desc" title="Edit description" aria-label="Edit description" type="button"><i class="ti ti-pencil"></i></button>` : ''}
+            </div>
+            <div class="detail-desc tdp-desc${t.description ? '' : ' tdp-desc-empty'}"${canWrite ? ' data-edit-field="description" tabindex="0" role="button" title="Click to edit · saves on click-away"' : ''}>${App.utils.escapeHtml(t.description || (canWrite ? 'No description yet. Click to add one.' : 'No description yet.'))}</div>
+          </div>
+
+          ${subtaskCount ? `
+          <div class="tdp-card tdp-card-subs">
+            <div class="tdp-card-title">Subtasks</div>
+            ${subtasksHtml}
+          </div>` : ''}
+
+          <div class="tdp-card tdp-tabs tdp-card-conv">
+            <div class="tdp-tablist" role="tablist">
+              <button class="tdp-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments</button>
+              <button class="tdp-tab${tabActive('activity')}" data-tab="activity" type="button"><i class="ti ti-bolt"></i>Activity</button>
+            </div>
+            <div class="tdp-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
+            <div class="tdp-tabpanel${tabActive('activity')}" data-panel="activity"><div class="tdp-activity">${activityHtml}</div></div>
+          </div>
+
+          <div class="tdp-card tdp-card-hist">
+            <div class="tdp-card-title"><i class="ti ti-history"></i> History</div>
+            <div class="tdp-history">${entriesHtml}</div>
+          </div>
+        </div>
+
+        <aside class="tdp-col-right">
+          <div class="tdp-card tdp-card-details">
             <div class="tdp-card-title">Details</div>
             <div class="taf-meta taf-meta-detail" style="background:transparent; padding:0; border-radius:0;">
             <div class="taf-field"><span class="taf-field-lbl">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Assignee</span><span ${ev('assignee', 'detail-val detail-person')}>${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Created by</span><span class="detail-val detail-person">${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Due</span><span ${ev('due', `detail-val ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Time</span><span ${ev('dueTime')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
             <div class="taf-field"><span class="taf-field-lbl">Reminder</span><span ${ev('reminderAt')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
@@ -325,22 +354,10 @@ App.TaskDetailView = class TaskDetailView {
             <div class="taf-field"><span class="taf-field-lbl">Project</span>${projectChipHtml}</div>
             <div class="taf-field"><span class="taf-field-lbl">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
             </div>
+            <div class="tdp-created">${createdLine}</div>
           </div>
 
-          <div class="tdp-card">
-            <div class="tdp-card-title">Description</div>
-            <div class="detail-desc">${App.utils.escapeHtml(t.description || 'No description yet.')}</div>
-          </div>
-
-          ${subtaskCount ? `
-          <div class="tdp-card">
-            <div class="tdp-card-title">Subtasks</div>
-            ${subtasksHtml}
-          </div>` : ''}
-        </div>
-
-        <aside class="tdp-col-right">
-          <div class="tdp-card">
+          <div class="tdp-card tdp-card-qa">
             <div class="tdp-card-title">Quick actions</div>
             <div class="tdp-qa-grid">
               <button class="tdp-qa" data-action="qa-reassign" type="button"><i class="ti ti-user-share"></i>Reassign</button>
@@ -352,18 +369,7 @@ App.TaskDetailView = class TaskDetailView {
             </div>
           </div>
 
-          <div class="tdp-card tdp-tabs">
-            <div class="tdp-tablist" role="tablist">
-              <button class="tdp-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments</button>
-              <button class="tdp-tab${tabActive('activity')}" data-tab="activity" type="button"><i class="ti ti-bolt"></i>Activity</button>
-              <button class="tdp-tab${tabActive('history')}" data-tab="history" type="button"><i class="ti ti-history"></i>History</button>
-            </div>
-            <div class="tdp-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
-            <div class="tdp-tabpanel${tabActive('activity')}" data-panel="activity"><div class="tdp-activity">${activityHtml}</div></div>
-            <div class="tdp-tabpanel${tabActive('history')}" data-panel="history">${entriesHtml}</div>
-          </div>
-
-          <div class="tdp-card">
+          <div class="tdp-card tdp-card-watchers">
             <div class="tdp-card-title"><i class="ti ti-eye"></i> Watchers</div>
             <div class="watchers-cell tdp-watchers">
               ${watcherChipsHtml || '<span class="tdp-empty">No watchers</span>'}
@@ -375,6 +381,23 @@ App.TaskDetailView = class TaskDetailView {
     `;
 
     this.bindHandlers(t);
+
+    // Auto-save feedback: the field that just saved gets a quiet green tick +
+    // pulse (see .tdp-saved-flash). One-shot — the next render replaces the DOM.
+    if (this._justSaved) {
+      const f = this._justSaved;
+      this._justSaved = null;
+      const cell = this.pane.querySelector(`[data-edit-field="${f}"]`);
+      if (cell) cell.classList.add('tdp-saved-flash');
+      if (f === 'status') {
+        const chip = this.pane.querySelector('.tdp-chip-status');
+        if (chip) chip.classList.add('tdp-saved-flash');
+      }
+      if (f === 'project') {
+        const tag = this.pane.querySelector('[data-action="open-project"]');
+        if (tag) tag.classList.add('tdp-saved-flash');
+      }
+    }
     } catch (err) {
       // Never leave the pane blank: show a message with a working Close button.
       if (App.observability) App.observability.captureException(err, { source: 'TaskDetailView.render' });
@@ -446,15 +469,35 @@ App.TaskDetailView = class TaskDetailView {
     const qaNote = q('[data-action="qa-note"]');
     if (qaNote) qaNote.addEventListener('click', focusComment);
 
+    // Reassign / Set due jump straight to the auto-save inline editors (no Edit
+    // form detour); Add subtask still stages through the Edit form.
     const qaReassign = q('[data-action="qa-reassign"]');
-    if (qaReassign) qaReassign.addEventListener('click', () => enterEdit('edit-assignee'));
+    if (qaReassign) qaReassign.addEventListener('click', () => this._openInlineEdit(t, 'assignee'));
     const qaSubtask = q('[data-action="qa-subtask"]');
     if (qaSubtask) qaSubtask.addEventListener('click', () => enterEdit('edit-subtask-input'));
     const qaSetdue = q('[data-action="qa-setdue"]');
-    if (qaSetdue) qaSetdue.addEventListener('click', () => enterEdit('edit-due'));
+    if (qaSetdue) qaSetdue.addEventListener('click', () => this._openInlineEdit(t, 'due'));
     const qaLogcall = q('[data-action="qa-logcall"]');
     if (qaLogcall) qaLogcall.addEventListener('click', () => { this._activeTab = 'comments'; this.controller.addCallLog(t.id); });
-    qa('[data-action="qa-duplicate"]').forEach(el => el.addEventListener('click', () => this.controller.duplicateTask(t.id)));
+    // Duplicate navigates to the copy (createTask selects it); the toast makes
+    // that hand-off explicit so a stray click can't silently mint tasks.
+    qa('[data-action="qa-duplicate"]').forEach(el => el.addEventListener('click', () => {
+      this.controller.duplicateTask(t.id);
+      const tv = this.controller.toastView;
+      if (tv && tv.show) tv.show({ title: 'Task duplicated', sub: 'You are now viewing the copy.' });
+    }));
+
+    // Description: pencil button and the text itself both open the inline
+    // editor (saves on click-away, Esc cancels) — no full Edit mode needed.
+    const descPencil = q('[data-action="edit-desc"]');
+    if (descPencil) descPencil.addEventListener('click', () => this._openDescEdit(t));
+    const descText = q('[data-edit-field="description"]');
+    if (descText) {
+      descText.addEventListener('click', () => this._openDescEdit(t));
+      descText.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._openDescEdit(t); }
+      });
+    }
 
     // Overflow (⋯) menu toggle.
     const overflowBtn = q('[data-action="overflow"]');
@@ -486,7 +529,10 @@ App.TaskDetailView = class TaskDetailView {
         anchor: projBtn,
         companyId: t.company,
         currentId: t.project || null,
-        onSelect: (projectId) => this.controller.updateTaskField(t.id, 'project', projectId),
+        onSelect: (projectId) => {
+          this._justSaved = 'project';
+          this.controller.updateTaskField(t.id, 'project', projectId, this._activityTextFor(t, 'project', projectId));
+        },
       });
     });
 
@@ -512,50 +558,162 @@ App.TaskDetailView = class TaskDetailView {
 
   /* ---------- inline per-field editing (Details card) ---------- */
 
-  // Swap a single Details value for an inline editor with ✓ (save) / ✗ (cancel).
-  // Only one is open at a time — opening another first re-renders to a clean state.
-  // While open, render() is suppressed for this task (see the _inlineEdit guard),
-  // so a background sync poll can't wipe the editor mid-edit.
+  // Swap a single Details value for an inline editor that AUTO-SAVES: selects
+  // commit on change (pick a value → saved), free-typed inputs commit on blur
+  // or Enter, Escape cancels. No confirm buttons. Only one editor is open at a
+  // time — opening another first re-renders to a clean state. While open,
+  // render() is suppressed for this task (see the _inlineEdit guard), so a
+  // background sync poll can't wipe the editor mid-edit.
   _openInlineEdit(t, field) {
     if (!App.can('tasks.write') || !field) return;
     // Already editing this exact field (e.g. a bubbled click) — leave it be.
     if (this._inlineEdit && this._inlineEdit.taskId === t.id && this._inlineEdit.field === field) return;
     // Close any other open editor by re-rendering to the plain display first.
     if (this._inlineEdit) { this._inlineEdit = null; this.render(); }
+    if (field === 'description') { this._openDescEdit(t); return; }
+
+    const cell = this.pane.querySelector(`[data-edit-field="${field}"]`);
+    if (!cell) return;
+
+    // Reminder opens the shared calendar + typeable-time popover directly.
+    if (field === 'reminderAt') {
+      this._inlineEdit = { taskId: t.id, field };
+      cell.classList.add('is-editing');
+      App.reminderPicker.open({
+        anchor: cell,
+        value: t.reminderAt || null,
+        onCommit: (v) => this._commitInlineEdit(t, 'reminderAt', v == null ? '' : v),
+        onCancel: () => { this._inlineEdit = null; this.render(); },
+      });
+      return;
+    }
 
     this._inlineEdit = { taskId: t.id, field };
-    const cell = this.pane.querySelector(`[data-edit-field="${field}"]`);
-    if (!cell) { this._inlineEdit = null; return; }
+    const token = this._inlineEdit;
     cell.classList.add('is-editing');
-    cell.innerHTML = `
-      <span class="tdp-inline-edit">
-        ${this._inlineEditorHtml(t, field)}
-        <button class="tdp-ie-save" data-ie="save" title="Save" aria-label="Save" type="button"><i class="ti ti-check"></i></button>
-        <button class="tdp-ie-cancel" data-ie="cancel" title="Cancel" aria-label="Cancel" type="button"><i class="ti ti-x"></i></button>
-      </span>`;
+    cell.innerHTML = `<span class="tdp-inline-edit">${this._inlineEditorHtml(t, field)}</span>`;
 
     const wrap = cell.querySelector('.tdp-inline-edit');
     const input = cell.querySelector('#tdp-ie-input');
-    // Keep clicks inside the editor from bubbling to the cell's own click handler
-    // (which would otherwise re-open the editor) or the document Escape/close.
-    if (wrap) wrap.addEventListener('click', (e) => e.stopPropagation());
+    // Keep clicks AND Enter/Space keydowns inside the editor from bubbling to
+    // the cell's own open-editor handlers. The keydown matters: the event's
+    // bubble path is fixed at dispatch, so the Enter that commits (re-rendering
+    // the pane) still reaches the old cell's keydown handler afterwards — which
+    // would silently re-open the editor on the fresh DOM.
+    if (wrap) {
+      wrap.addEventListener('click', (e) => e.stopPropagation());
+      wrap.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); });
+    }
+    if (!input) { this._inlineEdit = null; this.render(); return; }
 
-    const commit = () => this._commitInlineEdit(t, field, input ? input.value : '');
-    const cancel = () => { this._inlineEdit = null; this.render(); };
-    const saveBtn = cell.querySelector('[data-ie="save"]');
-    const cancelBtn = cell.querySelector('[data-ie="cancel"]');
-    if (saveBtn) saveBtn.addEventListener('click', commit);
-    if (cancelBtn) cancelBtn.addEventListener('click', cancel);
-    if (input) {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); commit(); }
-        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
-      });
-      input.focus();
-      // Open the native date/time picker straight away where supported.
-      if (/^(date|time|datetime-local)$/.test(input.type)) {
-        try { input.showPicker(); } catch (e) { /* not user-activated / unsupported */ }
+    // One-shot settle guard: change → blur double-fires on selects, and
+    // render() tearing the node down must not commit or cancel twice. The
+    // token keeps a QUEUED blur (clicking straight onto another editable
+    // cell opens a new editor before this setTimeout runs) from tearing
+    // down that new editor — a stale settle only cleans up after itself.
+    let settled = false;
+    const commit = () => { if (settled) return; settled = true; this._commitInlineEdit(t, field, input.value, token); };
+    const cancel = () => {
+      if (settled) return; settled = true;
+      if (this._inlineEdit === token) { this._inlineEdit = null; this.render(); }
+    };
+
+    if (input.tagName === 'SELECT') {
+      // Pick an option → saved instantly; click away without picking → close.
+      input.addEventListener('change', commit);
+      input.addEventListener('blur', () => setTimeout(cancel, 0));
+    } else {
+      // Free-typed (due date / due time): saved on blur or Enter.
+      if (field === 'dueTime') App.timeField.attachMask(input);
+      input.addEventListener('blur', () => setTimeout(commit, 0));
+    }
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
+      else if (e.key === 'Enter' && input.tagName !== 'SELECT') { e.preventDefault(); commit(); }
+    });
+    input.focus();
+    // Pop the options / native calendar open straight away where supported.
+    if (input.tagName === 'SELECT' || input.type === 'date') {
+      try { input.showPicker(); } catch (e) { /* not user-activated / unsupported */ }
+    }
+  }
+
+  /* Inline description editor (the pencil / clicking the text). Swaps the text
+     for a textarea; saves on click-away or Cmd/Ctrl+Enter, Escape cancels. */
+  _openDescEdit(t) {
+    if (!App.can('tasks.write')) return;
+    if (this._inlineEdit && this._inlineEdit.taskId === t.id && this._inlineEdit.field === 'description') return;
+    if (this._inlineEdit) { this._inlineEdit = null; this.render(); }
+
+    const holder = this.pane.querySelector('[data-edit-field="description"]');
+    if (!holder) return;
+    this._inlineEdit = { taskId: t.id, field: 'description' };
+    const token = this._inlineEdit;
+
+    const ta = document.createElement('textarea');
+    ta.className = 'taf-desc tdp-desc-input';
+    ta.rows = Math.min(12, Math.max(4, String(t.description || '').split('\n').length + 1));
+    ta.maxLength = 5000;
+    ta.placeholder = 'Add details, links, context…';
+    ta.value = t.description || '';
+    holder.replaceWith(ta);
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+
+    let settled = false;
+    const commit = () => {
+      if (settled) return; settled = true;
+      const value = ta.value.trim().slice(0, 5000);
+      const isCurrent = this._inlineEdit === token;
+      if (isCurrent) this._inlineEdit = null;
+      if (value !== (t.description || '')) {
+        this._justSaved = 'description';
+        this.controller.updateTaskField(t.id, 'description', value, this._activityTextFor(t, 'description', value));
+      } else if (isCurrent) this.render();
+    };
+    const cancel = () => {
+      if (settled) return; settled = true;
+      if (this._inlineEdit === token) { this._inlineEdit = null; this.render(); }
+    };
+    ta.addEventListener('blur', () => setTimeout(commit, 0));
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); commit(); }
+    });
+  }
+
+  /* Specific activity line for an auto-saved field change, built BEFORE the
+     save while `t` still holds the old values ("changed status Working on it
+     → Stuck"). Falls back to TaskModel's generic entry when it returns ''. */
+  _activityTextFor(t, field, value) {
+    switch (field) {
+      case 'status': {
+        const from = App.taxonomy.statusLabel(t.company, t.type, t.status);
+        const to = App.taxonomy.statusLabel(t.company, t.type, value);
+        return `changed status ${from} → ${to}`;
       }
+      case 'priority':
+        return `changed priority to ${(App.PRIORITIES[value] || {}).label || value}`;
+      case 'due':
+        return value ? `changed the due date to ${this._formatDue(value)}` : 'cleared the due date';
+      case 'dueTime':
+        return value ? `set the due time to ${App.utils.formatClock(value)}` : 'cleared the due time';
+      case 'reminderAt':
+        return value ? `set a reminder for ${this._formatReminder(value)}` : 'removed the reminder';
+      case 'type':
+        return `changed type to ${App.taxonomy.typeLabel(t.company, value)}`;
+      case 'label':
+        return `changed label to ${(App.TASK_LABELS[value] || {}).label || value}`;
+      case 'company':
+        return `moved this to ${(App.COMPANIES[value] || {}).label || value}`;
+      case 'project': {
+        const p = value && App.projects ? App.projects[value] : null;
+        return p ? `filed this under ${p.name}` : 'removed this from its project';
+      }
+      case 'description':
+        return 'updated the description';
+      default:
+        return '';
     }
   }
 
@@ -585,40 +743,55 @@ App.TaskDetailView = class TaskDetailView {
       case 'company':   return sel(Object.values(App.COMPANIES).map(c => [c.id, c.label]), t.company);
       case 'assignee':  return sel(App.utils.peopleInCompany(t.company, t.assignee).map(p => [p.id, p.name]), t.assignee);
       case 'due':       return `<input type="date" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc(t.due || '')}" />`;
-      case 'dueTime':   return `<input type="time" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc(t.dueTime || '')}" />`;
-      case 'reminderAt':return `<input type="datetime-local" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc((t.reminderAt || '').slice(0, 16))}" />`;
+      // Free-typed 12h time — "9", "230p", "10:30" all work (App.timeField).
+      case 'dueTime':   return `<input type="text" id="tdp-ie-input" class="tdp-ie-input" inputmode="text" autocomplete="off" spellcheck="false" placeholder="e.g. 9:30 AM" value="${esc(t.dueTime ? App.utils.formatClock(t.dueTime) : '')}" />`;
       default:          return '';
     }
   }
 
-  // Save the edited value (✓). assignee uses reassignTask (notifies the new
-  // assignee); everything else uses updateTaskField. A no-op change just restores
-  // the display. Clearing the _inlineEdit guard BEFORE saving lets the resulting
-  // tasks:changed re-render the card with the saved value.
-  _commitInlineEdit(t, field, rawValue) {
-    this._inlineEdit = null;
+  // Persist an auto-saved value. assignee uses reassignTask (notifies the new
+  // assignee); everything else uses updateTaskField with a specific activity
+  // line. A no-op change just restores the display. Clearing the _inlineEdit
+  // guard BEFORE saving lets the resulting tasks:changed re-render the card
+  // with the saved value; _justSaved drives the green saved-tick on that render.
+  // `token` (when given) marks a stale queued commit: the value still saves,
+  // but teardown/render is skipped so it can't wipe a newer open editor.
+  _commitInlineEdit(t, field, rawValue, token) {
+    const isCurrent = !token || this._inlineEdit === token;
+    if (isCurrent) this._inlineEdit = null;
     if (field === 'assignee') {
-      if (rawValue && rawValue !== t.assignee) { this.controller.reassignTask(t.id, rawValue); this._toastSaved(); }
-      else this.render();
+      if (rawValue && rawValue !== t.assignee) {
+        this._justSaved = 'assignee';
+        this.controller.reassignTask(t.id, rawValue);
+      } else if (isCurrent) this.render();
       return;
     }
-    // Optional date/time/reminder clear to null; the rest are constrained selects.
     let value = rawValue;
-    if (field === 'due' || field === 'dueTime' || field === 'reminderAt') value = rawValue || null;
+    if (field === 'dueTime') {
+      const raw = String(rawValue || '').trim();
+      value = raw ? App.timeField.parse(raw) : null;
+      if (raw && !value) {
+        // Unreadable time: keep the old value and say so quietly.
+        const tv = this.controller && this.controller.toastView;
+        if (tv && tv.show) tv.show({ title: 'Couldn’t read that time', sub: 'Try "9:30 AM" or "14:00".' });
+        if (isCurrent) this.render();
+        return;
+      }
+    }
+    // Optional date/reminder clear to null; the rest are constrained selects.
+    if (field === 'due' || field === 'reminderAt') value = rawValue || null;
     const cur = t[field] == null ? '' : String(t[field]);
     const next = value == null ? '' : String(value);
-    if (cur !== next) { this.controller.updateTaskField(t.id, field, value); this._toastSaved(); }
-    else this.render();
-  }
-
-  _toastSaved() {
-    const tv = this.controller && this.controller.toastView;
-    if (tv && tv.show) tv.show({ title: 'Saved' });
+    if (cur !== next) {
+      this._justSaved = field;
+      this.controller.updateTaskField(t.id, field, value, this._activityTextFor(t, field, value));
+    } else if (isCurrent) this.render();
   }
 
   // Tiny popover to change a task's status straight from the header chip, without
-  // entering full Edit mode. Persists through updateTaskDetails (which notifies
-  // watchers of the status change). Re-clicking the chip closes it.
+  // entering full Edit mode. Persists through updateTaskField (which notifies
+  // watchers and logs a specific "from → to" activity line). Re-clicking the
+  // chip closes it.
   _openStatusMenu(t, anchor) {
     const existing = this.pane.querySelector('.tdp-status-menu');
     if (existing) { existing.remove(); return; }
@@ -635,12 +808,8 @@ App.TaskDetailView = class TaskDetailView {
       const status = b.dataset.status;
       menu.remove();
       if (status && status !== t.status) {
-        this.controller.updateTaskDetails(t.id, {
-          title: t.title, description: t.description, company: t.company,
-          type: t.type, label: t.label, status,
-          assignee: t.assignee, due: t.due, dueTime: t.dueTime, reminderAt: t.reminderAt,
-          priority: t.priority, watchers: t.watchers, subtasks: t.subtasks,
-        });
+        this._justSaved = 'status';
+        this.controller.updateTaskField(t.id, 'status', status, this._activityTextFor(t, 'status', status));
       }
     }));
     const close = (e) => {
@@ -670,7 +839,7 @@ App.TaskDetailView = class TaskDetailView {
         <textarea id="cmInput" class="cm-input" rows="2" placeholder="Write an update or @mention…">${esc(draft)}</textarea>
         <div id="cmMentionMenu" class="cm-mention-menu hidden" role="listbox"></div>
         <div class="cm-actions">
-          <span class="cm-hint">Type <b>@</b> to mention a teammate</span>
+          <span class="cm-hint"><b>Enter</b> posts · <b>Shift+Enter</b> new line · <b>@</b> mentions</span>
           <button id="cmSend" class="btn btn-primary cm-send" type="button">Comment</button>
         </div>
       </div>`;
@@ -707,13 +876,38 @@ App.TaskDetailView = class TaskDetailView {
     const menu = this.pane.querySelector('#cmMentionMenu');
     if (!input || !sendBtn || !menu) return;
     this._composerMentions = this._composerMentions || new Set();
+    this._mentionActive = 0;
 
     const persistDraft = () => {
       this._commentDraft = this._commentDraft || {};
       this._commentDraft[t.id] = input.value;
     };
 
-    const closeMenu = () => { menu.classList.add('hidden'); menu.innerHTML = ''; };
+    const closeMenu = () => { menu.classList.add('hidden'); menu.innerHTML = ''; this._mentionActive = 0; };
+
+    // Insert the highlighted (or clicked) mention at the caret and stay in the
+    // composer — Podio flow: @mention + Enter selects, the NEXT Enter posts.
+    const applyMention = (el) => {
+      const caret2 = input.selectionStart;
+      const before = input.value.slice(0, caret2).replace(/@(\w*)$/, '@' + el.dataset.first + ' ');
+      const after = input.value.slice(caret2);
+      input.value = before + after;
+      const pos = before.length;
+      input.setSelectionRange(pos, pos);
+      this._composerMentions.add(el.dataset.id);
+      persistDraft();
+      closeMenu();
+      input.focus();
+    };
+
+    const menuItems = () => Array.from(menu.querySelectorAll('.cm-mention-item'));
+    const setActive = (i) => {
+      const list = menuItems();
+      if (!list.length) return;
+      this._mentionActive = ((i % list.length) + list.length) % list.length;
+      list.forEach((el, j) => el.classList.toggle('is-active', j === this._mentionActive));
+      list[this._mentionActive].scrollIntoView({ block: 'nearest' });
+    };
 
     const renderMenu = () => {
       const caret = input.selectionStart;
@@ -728,28 +922,31 @@ App.TaskDetailView = class TaskDetailView {
       menu.innerHTML = matches.map(c =>
         `<div class="cm-mention-item" role="option" data-id="${App.utils.escapeHtml(c.id)}" data-first="${App.utils.escapeHtml(c.first)}">${App.utils.escapeHtml(c.full)}</div>`).join('');
       menu.classList.remove('hidden');
-      menu.querySelectorAll('.cm-mention-item').forEach(el => {
-        el.addEventListener('mousedown', (e) => {
-          e.preventDefault(); // keep focus in the textarea
-          const caret2 = input.selectionStart;
-          const before = input.value.slice(0, caret2).replace(/@(\w*)$/, '@' + el.dataset.first + ' ');
-          const after = input.value.slice(caret2);
-          input.value = before + after;
-          const pos = before.length;
-          input.setSelectionRange(pos, pos);
-          this._composerMentions.add(el.dataset.id);
-          persistDraft();
-          closeMenu();
-          input.focus();
-        });
+      menuItems().forEach((el, idx) => {
+        el.addEventListener('mousedown', (e) => { e.preventDefault(); applyMention(el); });
+        el.addEventListener('mouseenter', () => setActive(idx));
       });
+      setActive(0);
     };
 
     input.addEventListener('input', () => { persistDraft(); renderMenu(); });
     input.addEventListener('keydown', (e) => {
-      // Cmd/Ctrl+Enter sends; Escape closes the mention menu.
-      if (e.key === 'Escape' && !menu.classList.contains('hidden')) { e.stopPropagation(); closeMenu(); return; }
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+      const menuOpen = !menu.classList.contains('hidden');
+      if (menuOpen) {
+        // Keyboard-drive the mention menu: arrows move, Enter/Tab select and
+        // keep focus in the composer, Escape dismisses.
+        if (e.key === 'Escape') { e.stopPropagation(); closeMenu(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(this._mentionActive + 1); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); setActive(this._mentionActive - 1); return; }
+        if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          const el = menuItems()[this._mentionActive] || menuItems()[0];
+          if (el) applyMention(el);
+          return;
+        }
+      }
+      // Enter posts; Shift+Enter makes a new line (Cmd/Ctrl+Enter still posts).
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
     });
     input.addEventListener('blur', () => setTimeout(closeMenu, 120));
 
@@ -779,11 +976,14 @@ App.TaskDetailView = class TaskDetailView {
         if (c && lower.includes('@' + c.first.toLowerCase())) ids.add(id);
       });
       const mentions = Array.from(ids);
-      this.controller.addTaskComment(t.id, text, mentions);
+      // Reset the composer BEFORE posting: comments:changed can re-render
+      // synchronously, and the rebuilt composer (drawn from _commentDraft)
+      // must come up empty rather than resurrect the just-sent text.
       input.value = '';
       this._composerMentions = new Set();
       if (this._commentDraft) delete this._commentDraft[t.id];
       closeMenu();
+      this.controller.addTaskComment(t.id, text, mentions);
     };
     sendBtn.addEventListener('click', send);
   }
@@ -909,7 +1109,7 @@ App.TaskDetailView = class TaskDetailView {
               <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="edit-assignee">${App.utils.peopleInCompany(d.company, d.assignee).map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('')}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="edit-due" value="${App.utils.escapeHtml(d.due)}" class="picker-input" /></label>
               <label class="taf-field"><span class="taf-field-lbl">Time <span class="field-optional">Optional</span></span><input type="time" id="edit-dueTime" value="${App.utils.escapeHtml(d.dueTime)}" class="picker-input" /></label>
-              <label class="taf-field"><span class="taf-field-lbl">Reminder <span class="field-optional">Optional</span></span><input type="datetime-local" id="edit-reminderAt" value="${App.utils.escapeHtml(d.reminderAt)}" class="picker-input" /></label>
+              <div class="taf-field"><span class="taf-field-lbl">Reminder <span class="field-optional">Optional</span></span><button type="button" id="edit-reminderAt" class="rp-trigger ${d.reminderAt ? '' : 'rp-trigger-empty'}" value="${App.utils.escapeHtml(d.reminderAt)}" aria-haspopup="dialog"><i class="ti ti-bell"></i><span class="rp-trigger-lbl">${d.reminderAt ? App.utils.escapeHtml(App.reminderPicker.format(d.reminderAt)) : 'Set a reminder'}</span></button></div>
               <div class="taf-field"><span class="taf-field-lbl">Project</span>${(() => {
                 const p = d.project && App.projects ? App.projects[d.project] : null;
                 return `<button type="button" id="edit-project" class="projtag projtag-btn ${p ? '' : 'projtag-empty'}" data-action="edit-open-project" aria-haspopup="listbox" ${p ? `style="--pc:${App.utils.escapeHtml(p.color)}"` : ''}><i class="ti ${p ? 'ti-folder' : 'ti-folder-plus'}"></i>${p ? App.utils.escapeHtml(p.name) : 'No project'}</button>`;
@@ -1049,6 +1249,24 @@ App.TaskDetailView = class TaskDetailView {
         try { input.showPicker(); } catch (e) { /* unsupported or not user-activated */ }
       })
     );
+
+    // Reminder — shared calendar+time popover. The trigger button carries the
+    // staged "YYYY-MM-DDTHH:MM" in its .value, so _syncDraftFromDom reads it
+    // like any input.
+    const editRem = this.pane.querySelector('#edit-reminderAt');
+    if (editRem) editRem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      App.reminderPicker.open({
+        anchor: editRem,
+        value: editRem.value || null,
+        onCommit: (v) => {
+          editRem.value = v || '';
+          editRem.classList.toggle('rp-trigger-empty', !v);
+          const lbl = editRem.querySelector('.rp-trigger-lbl');
+          if (lbl) lbl.textContent = v ? App.reminderPicker.format(v) : 'Set a reminder';
+        },
+      });
+    });
 
     // Keydown on the edit body (replaced each render) so listeners can't stack.
     const editBody = this.pane.querySelector('.detail-body');
