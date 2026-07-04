@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Detail — Preview (stubbed)</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/tabler-icons/tabler-icons.min.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="taskmanagement.css">
+<link rel="stylesheet" href="css/taskdetail.css">
+<style>
+  /* Preview-only chrome. Not part of the app. */
+  body { margin: 0; background: var(--bg); }
+  #previewbar { position: fixed; top: 0; right: 0; z-index: 200; display: flex; gap: 8px; padding: 8px 12px; font-family: var(--font-body); }
+  #previewbar button { font-size: 12px; font-weight: 700; border: none; box-shadow: var(--shadow-sm); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+  #previewbar .note { font-size: 11px; color: var(--ink-3); align-self: center; margin-right: 8px; }
+  /* The real view relocates #detailPane into #taskDetailWrap; keep both present. */
+  #taskDetailWrap { display: block; }
+</style>
+</head>
+<body>
+<div id="previewbar">
+  <span class="note">PREVIEW · sample data · pickers are no-ops</span>
+  <button onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')">Toggle theme</button>
+</div>
+
+<div id="mainPane"></div>
+<section id="taskDetailWrap" class="qhq-page detail-page" aria-label="Task details"></section>
+<div id="detailPane" class="detail-pane hidden"></div>
+<div id="listPane"></div>
+
+<script>
+window.App = { errors: {} };
+App.can = () => true;
+App.EventBus = (function () { const m = {}; return { on: (e, f) => { (m[e] = m[e] || []).push(f); }, emit: (e, ...a) => { (m[e] || []).forEach(f => f(...a)); } }; })();
+
+App.PEOPLE = {
+  abraham: { id: 'abraham', name: 'Abraham', full: 'Abraham Q.', email: 'a@x.com', color: '#16325C' },
+  kristin: { id: 'kristin', name: 'Kristin', full: 'Kristin M.', email: 'k@x.com', color: '#0F6E56' },
+  alkeith: { id: 'alkeith', name: 'Alkeith', full: 'Alkeith R.', email: 'al@x.com', color: '#185FA5' },
+  andres:  { id: 'andres',  name: 'Andres',  full: 'Andres V.',  email: 'an@x.com', color: '#534AB7' },
+  sean:    { id: 'sean',    name: 'Sean',    full: 'Sean D.',    email: 's@x.com',  color: '#444441' },
+};
+App.COMPANIES = { roofing: { id: 'roofing', label: 'Quest Roofing', pill: '' } };
+App.PRIORITIES = {
+  critical: { label: 'Critical', cls: 'priority-critical' }, urgent: { label: 'Urgent', cls: 'priority-urgent' },
+  high: { label: 'High', cls: 'priority-high' }, medium: { label: 'Medium', cls: 'priority-medium' }, low: { label: 'Low', cls: 'priority-low' },
+};
+App.TASK_TYPES = { admin: { label: 'Admin' }, bid: { label: 'Bid / Estimate' }, field: { label: 'Field' } };
+App.TASK_LABELS = { none: { id: 'none', label: 'No label' }, roof: { id: 'roof', label: 'Roof' } };
+App.STATUSES = { todo: { label: 'To do', cls: '' }, prog: { label: 'In progress', cls: '' }, done: { label: 'Done', cls: '' } };
+App.projects = { p1: { id: 'p1', name: 'Ramirez Re-roof', color: '#ED4E0D' } };
+
+const STATUSES_BY_TYPE = {
+  admin: [{ key: 'todo', label: 'To do', isDefault: true }, { key: 'prog', label: 'In progress' }, { key: 'done', label: 'Done', isDone: true }],
+};
+App.taxonomy = {
+  statusLabel: (co, ty, s) => ((STATUSES_BY_TYPE.admin.find(x => x.key === s)) || {}).label || s,
+  typeLabel: (co, t) => (App.TASK_TYPES[t] || {}).label || t,
+  chipStyle: () => ({ cls: '', style: '' }),
+  isDone: (t) => t.status === 'done',
+  doneStatus: () => 'done',
+  defaultStatus: () => 'todo',
+  activeStatuses: () => STATUSES_BY_TYPE.admin.map(s => ({ ...s })),
+};
+
+App.utils = {
+  escapeHtml: (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
+  avatarHtml: (p, extra) => { const cls = 'avatar-xs' + (extra ? ' ' + extra : ''); const bg = p && p.color || 'var(--ink-3)'; const nm = (p && (p.full || p.name) || '?'); const ini = nm.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(); return `<span class="${cls}" style="background:${bg};">${ini}</span>`; },
+  peopleInCompany: () => Object.values(App.PEOPLE),
+  initials: (s) => String(s || '').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(),
+  todayISO: (o = 0) => { const d = new Date(); d.setDate(d.getDate() + o); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; },
+  formatDuration: (ms) => { const s = Math.floor(ms / 1000); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h}h ${m}m`; },
+  formatHours: (ms) => `${(ms / 3600000).toFixed(1)}h`,
+  formatClock: (t) => t, formatClockTz: (t) => t,
+  timeAgo: (d) => d ? '2h ago' : '', formatInstant: () => 'Jul 1, 2026',
+  safeColor: (c) => c, uid: (p) => p + Date.now(),
+};
+App.Motion = { check: () => {}, busy: () => (() => {}) };
+
+const SAMPLE = {
+  id: 't1', title: 'Re-roof the Ramirez residence — full tear-off',
+  description: 'Full tear-off and 30-yr architectural shingle install. Confirm dumpster drop by Tuesday. HOA approval attached. Watch for the skylight flashing on the north face.',
+  type: 'admin', label: 'roof', company: 'roofing', project: 'p1',
+  status: 'prog', priority: 'high', creator: 'abraham',
+  assignee: 'alkeith', assigneeIds: ['alkeith', 'andres', 'kristin'],
+  due: App.utils.todayISO(-1), dueTime: '14:00', reminderAt: null,
+  watchers: ['sean'],
+  subtasks: [{ t: 'Order materials', d: true }, { t: 'Schedule crew', d: true }, { t: 'Pull permit', d: false }, { t: 'Final inspection', d: false }],
+  activity: [{ who: 'Abraham Q.', what: 'created this task', at: null, when: '3d ago' }, { who: 'Alkeith R.', what: 'changed status To do → In progress', at: '1' }],
+  comments: [
+    { authorId: 'kristin', body: 'HOA approval just came through.', createdAt: '1' },
+    { authorId: 'alkeith', body: '📞 Logged a call — homeowner confirmed Tuesday drop.', createdAt: '2' },
+    { authorId: 'andres', body: 'Drafting the flashing detail now @kristin', createdAt: '3' },
+  ],
+  createdAt: '2026-07-01T10:00:00Z', _commentsLoaded: true,
+};
+
+App.controller = {
+  uiState: { selectedTaskId: 't1', view: 'all' },
+  taskModel: { find: (id) => id === 't1' ? SAMPLE : null, all: () => [SAMPLE] },
+  timeModel: { activeFor: () => null, totalForTask: () => 5400000 * 3, entriesForTask: () => [{ userId: 'alkeith', durationMs: 5400000, end: '1' }] },
+  canDeleteTask: () => true,
+  loadTaskComments: () => {}, closeDetail: () => alert('close (preview)'),
+  toggleTimerForTask: () => alert('toggle timer (preview)'),
+  completeTask: () => alert('complete (preview)'),
+  toggleSelfWatch: () => alert('watch (preview)'),
+  duplicateTask: () => alert('duplicate (preview)'),
+  addCallLog: () => alert('log call (preview)'),
+  addTaskComment: (id, text) => alert('comment: ' + text),
+  updateTaskField: (id, f, v) => alert(`set ${f} = ${v} (preview)`),
+  setAssignees: (id, ids) => alert('setAssignees: ' + ids.join(', ') + ' (preview)'),
+  reassignTask: () => {},
+  toastView: { show: ({ title }) => console.log('[toast]', title) },
+};
+App.projectPicker = { open: () => alert('project picker (preview)') };
+App.reminderPicker = { open: () => alert('reminder picker (preview)'), format: (v) => v };
+App.timeField = { attachMask: () => {}, parse: (s) => s };
+</script>
+<script src="js/views/TaskDetailView.js"></script>
+<script>
+  new App.TaskDetailView({ taskModel: App.controller.taskModel, timeModel: App.controller.timeModel, controller: App.controller, currentUser: 'abraham' });
+  App.EventBus.emit('selection:changed');
+</script>
+</body>
+</html>

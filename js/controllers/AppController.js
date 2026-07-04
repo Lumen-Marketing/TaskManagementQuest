@@ -1746,6 +1746,79 @@ App.AppController = class AppController {
     }
   }
 
+  /* Multi-assignee reassignment (task detail Reassign picker). Accepts an
+     ordered id list (lead = index 0), writes assigneeIds + mirrors
+     assignee = ids[0], saves via the model's dirty path, and fans out the same
+     in-app + email notification to every NEWLY-added assignee — reusing
+     createTask's fan-out shape and its save-before-notify ordering so a worker
+     assigning to a teammate doesn't trip the notification FK/RLS race. Watchers
+     stay exclusive with assignees (anyone made an assignee is removed from
+     watchers). A no-op (same ordered set) does nothing. */
+  async setAssignees(id, idsArray) {
+    if (!App.can('tasks.write')) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot change this task.' });
+      return;
+    }
+    const task = this.taskModel.find(id);
+    if (!task) return;
+
+    // Normalise: unique, order-preserving, non-empty.
+    const ids = [];
+    (idsArray || []).forEach(x => { if (x && !ids.includes(x)) ids.push(x); });
+    if (!ids.length) return; // a task must keep at least one assignee
+
+    const prevIds = (Array.isArray(task.assigneeIds) && task.assigneeIds.length)
+      ? task.assigneeIds
+      : (task.assignee ? [task.assignee] : []);
+    // No change (same people, same order) — nothing to do.
+    if (prevIds.length === ids.length && prevIds.every((v, i) => v === ids[i])) return;
+
+    const lead = ids[0];
+    // Keep watcher/assignee exclusivity: a person can't be both.
+    const watchers = (task.watchers || []).filter(w => !ids.includes(w));
+
+    const names = ids.map(x => (App.PEOPLE[x] ? App.PEOPLE[x].name : x)).join(' + ');
+    this.taskModel.update(id, { assigneeIds: ids, assignee: lead, watchers });
+    this.taskModel.addActivity(id, {
+      who: this.getUserName(this.currentUser),
+      what: ids.length > 1 ? `assigned this to ${names}` : `reassigned this to ${names}`,
+      at: new Date().toISOString(),
+      when: 'just now',
+    });
+
+    // Fan out to every NEWLY-added assignee (not those already on the task, and
+    // never yourself). Mirrors createTask's inapp + email construction.
+    const added = ids.filter(x => !prevIds.includes(x) && x !== this.currentUser);
+    const creatorName = this.getUserName(this.currentUser);
+    const titleEsc = App.utils.escapeHtml(task.title);
+    const inapp = [];
+    const emails = [];
+    added.forEach(x => {
+      inapp.push({
+        memberId: x,
+        taskId: task.id,
+        meta: 'Task assigned',
+        html: `<strong>${App.utils.escapeHtml(creatorName)}</strong> assigned <em>${titleEsc}</em> to you`,
+      });
+      if (App.PEOPLE[x] && App.PEOPLE[x].email) emails.push(App.PEOPLE[x].email);
+    });
+
+    // Save BEFORE delivering (see createTask for the FK/RLS-race rationale).
+    const saved = this.saveNow ? await this.saveNow() : true;
+    if (saved && added.length) {
+      this._deliver(inapp, emails, {
+        subject: `Quest HQ — ${task.title}`,
+        html: this._emailBody(`<strong>${App.utils.escapeHtml(creatorName)}</strong> assigned <strong>${titleEsc}</strong> to ${App.utils.escapeHtml(names)}.`, task),
+      });
+    }
+    if (this.toastView) {
+      this.toastView.show({
+        title: ids.length > 1 ? `Assigned to ${names}` : `Reassigned to ${names}`,
+        sub: added.length ? (emails.length ? `Notifying ${names}` : 'In-app notification sent') : 'Assignees updated',
+      });
+    }
+  }
+
   /* Deliver notifications (in-app + best-effort email) to recipients other than
      the current user. In-app failures surface a toast; email is best-effort. */
   async _deliver(inappRecipients, emails, emailContent) {

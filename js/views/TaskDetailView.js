@@ -170,6 +170,15 @@ App.TaskDetailView = class TaskDetailView {
     // detail pane renders blank.
     const creator = App.PEOPLE[t.creator] || { name: t.creator || 'Unknown', full: t.creator || 'Unknown', color: 'var(--ink-3)' };
     const assignee = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: 'var(--ink-3)' };
+    // Ordered multi-assignee (lead = index 0). Falls back to the single assignee
+    // for rows created before multi-assignee.
+    const assigneeIds = (Array.isArray(t.assigneeIds) && t.assigneeIds.length)
+      ? t.assigneeIds
+      : (t.assignee ? [t.assignee] : []);
+    const assignees = assigneeIds.map(id => App.PEOPLE[id] || { id, name: id || 'Unassigned', full: id || 'Unassigned', color: 'var(--ink-3)' });
+    const assigneeLabel = assignees.length
+      ? (assignees.length === 1 ? assignees[0].name : `${assignees[0].name} +${assignees.length - 1}`)
+      : 'Unassigned';
     const company = App.COMPANIES[t.company] || { pill: '', label: t.company || '—' };
     const delegated = t.creator !== t.assignee;
     const myActive = this.timeModel.activeFor(this.currentUser);
@@ -181,28 +190,32 @@ App.TaskDetailView = class TaskDetailView {
 
     // Read-only subtasks — toggling moved into the Edit form.
     const subtasksHtml = (t.subtasks || []).map((s) =>
-      `<div class="subtask ${s.d ? 'done' : ''}">
-         <i class="ti ${s.d ? 'ti-circle-check-filled' : 'ti-circle'}"></i>${App.utils.escapeHtml(s.t)}
+      `<div class="td2-step ${s.d ? 'done' : ''}">
+         <i class="ti ${s.d ? 'ti-circle-check-filled' : 'ti-circle'}"></i><span>${App.utils.escapeHtml(s.t)}</span>
        </div>`
-    ).join('') || `<div style="font-size:11.5px; color:var(--ink-3);">No subtasks yet</div>`;
+    ).join('') || `<div class="td2-empty">No steps yet</div>`;
+    // Checklist progress (done / total) for the progress bar.
+    const subsDone = (t.subtasks || []).filter(s => s.d).length;
+    const subsTotal = (t.subtasks || []).length;
+    const subsPct = subsTotal ? Math.round((subsDone / subsTotal) * 100) : 0;
 
     const activityHtml = (t.activity || []).map(a => {
       // Prefer the real timestamp (relative); fall back to the legacy `when`
       // label for seed data / rows written before activity carried a timestamp.
       const ago = App.utils.timeAgo(a.at) || a.when || '';
-      return `<div class="activity-item"><span class="who">${App.utils.escapeHtml(a.who)}</span> ${App.utils.escapeHtml(a.what)}${ago ? ` · ${App.utils.escapeHtml(ago)}` : ''}</div>`;
-    }).join('') || `<div style="font-size:11.5px; color:var(--ink-3);">No activity yet</div>`;
+      return `<div class="td2-feed-item"><i class="ti ti-point-filled td2-feed-dot"></i><span><span class="td2-feed-who">${App.utils.escapeHtml(a.who)}</span> ${App.utils.escapeHtml(a.what)}${ago ? ` · ${App.utils.escapeHtml(ago)}` : ''}</span></div>`;
+    }).join('') || `<div class="td2-empty">No activity yet</div>`;
 
     const recentEntries = this.timeModel.entriesForTask(t.id).slice(0, 5);
     const entriesHtml = recentEntries.length
       ? recentEntries.map(e =>
-          `<div class="activity-item">
-             <span class="who">${App.utils.escapeHtml(App.PEOPLE[e.userId] ? App.PEOPLE[e.userId].name : e.userId)}</span> logged
-             <strong style="color:var(--ink-2);">${App.utils.formatHours(e.durationMs)}</strong>
-             · ${App.utils.timeAgo(e.end)}
-           </div>`
+          `<div class="td2-feed-item"><i class="ti ti-clock td2-feed-dot"></i><span>
+             <span class="td2-feed-who">${App.utils.escapeHtml(App.PEOPLE[e.userId] ? App.PEOPLE[e.userId].name : e.userId)}</span> logged
+             <strong>${App.utils.formatHours(e.durationMs)}</strong>
+             · ${App.utils.escapeHtml(App.utils.timeAgo(e.end))}
+           </span></div>`
         ).join('')
-      : `<div style="font-size:11.5px; color:var(--ink-3);">No time logged yet</div>`;
+      : `<div class="td2-empty">No time logged yet</div>`;
 
     const statusObj = { label: App.taxonomy.statusLabel(t.company, t.type, t.status), cls: (App.STATUSES[t.status] || {}).cls || '' };
     const typeObj = { label: App.taxonomy.typeLabel(t.company, t.type) };
@@ -229,12 +242,12 @@ App.TaskDetailView = class TaskDetailView {
       : (proj ? `<span class="projtag" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</span>` : '<span class="detail-val">—</span>');
     const watcherChipsHtml = watcherIds.map(w => {
       const p = App.PEOPLE[w];
-      return p ? `<span class="watcher-chip-detail">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
+      return p ? `<span class="td2-watcher">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
     }).join('');
     // Remember which tab the user is on so a background re-render (a posted
     // comment, a sync poll) doesn't yank them off it. Tabs are
-    // Comments / Activity (History is its own card now); default to Comments.
-    if (!this._activeTab || this._activeTab === 'history') this._activeTab = 'comments';
+    // Comments / Activity / History; default to Comments.
+    if (!['comments', 'activity', 'history'].includes(this._activeTab)) this._activeTab = 'comments';
     const tabActive = (name) => this._activeTab === name ? ' active' : '';
 
     // Inline per-field editing: Details-card values are click-to-edit for users
@@ -242,8 +255,8 @@ App.TaskDetailView = class TaskDetailView {
     // mark a value cell editable; read-only viewers just get the base class.
     // Edits auto-save on selection/blur — there is no confirm step.
     const canWrite = App.can('tasks.write');
-    const ev = (field, baseCls = 'detail-val') => canWrite
-      ? `class="${baseCls} tdp-editable" data-edit-field="${field}" title="Click to change · saves automatically" tabindex="0" role="button"`
+    const ev = (field, baseCls = 'td2-field-v') => canWrite
+      ? `class="${baseCls} td2-editable tdp-editable" data-edit-field="${field}" title="Click to change · saves automatically" tabindex="0" role="button"`
       : `class="${baseCls}"`;
 
     // De-emphasized read-only creation line for the bottom of the Details card.
@@ -255,128 +268,116 @@ App.TaskDetailView = class TaskDetailView {
     const createdLine = `Created${createdWhen ? ' ' + App.utils.escapeHtml(createdWhen) : ''} by ${App.utils.escapeHtml(creator.name)}`;
 
     this.pane.innerHTML = `
-      <div class="tdp-head">
-        <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
-        <div class="tdp-chiprow">
-          <button class="tdp-chip tdp-chip-status ${statusChip.cls}" style="${statusChip.style}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
-          <span class="tdp-chip ${typeChip.cls}" style="${typeChip.style}">${App.utils.escapeHtml(typeObj.label)}</span>
-        </div>
-        <div class="tdp-title-row">
-          <h1 class="tdp-title">${App.utils.escapeHtml(t.title)}</h1>
-          <div class="tdp-head-actions">
-            <button class="btn" data-action="focus-comment" type="button"><i class="ti ti-message"></i>Comment</button>
-            <button class="btn ${isWatching ? 'is-on' : ''}" data-action="toggle-watch" type="button"><i class="ti ti-eye"></i>${isWatching ? 'Watching' : 'Watch'}</button>
-            ${App.can('tasks.write') ? `<button class="btn" data-action="edit-task" type="button"><i class="ti ti-pencil"></i>Edit</button>` : ''}
-            <button class="btn icon-btn" data-action="overflow" aria-label="More actions" aria-haspopup="true" type="button"><i class="ti ti-dots"></i></button>
-            <div class="tdp-overflow-menu hidden" id="tdpOverflow">
-              <button class="tdp-overflow-item" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
-              ${canDelete ? `<button class="tdp-overflow-item danger" data-action="delete-task" type="button"><i class="ti ti-trash"></i>Delete task</button>` : ''}
+      <div class="td2" data-tdid="${App.utils.escapeHtml(t.id)}">
+      <div class="td2-head">
+        <button class="td2-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
+        <div class="td2-titlebar">
+          <h1 class="td2-title${canWrite ? ' is-editable' : ''}"${canWrite ? ' contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Task title" title="Click to rename"' : ''}>${App.utils.escapeHtml(t.title)}</h1>
+          <div class="td2-head-actions">
+            <button class="td2-btn ${isWatching ? 'is-on' : ''}" data-action="toggle-watch" type="button"><i class="ti ti-eye"></i>${isWatching ? 'Watching' : 'Watch'}</button>
+            ${App.can('tasks.write') ? `<button class="td2-btn td2-btn-primary ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
+            <button class="td2-btn td2-icon" data-action="overflow" aria-label="More actions" aria-haspopup="true" type="button"><i class="ti ti-dots"></i></button>
+            <div class="td2-overflow hidden" id="tdpOverflow">
+              <button class="td2-overflow-item" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
+              ${App.can('tasks.write') ? `<button class="td2-overflow-item" data-action="edit-task" type="button"><i class="ti ti-pencil"></i>Edit all fields</button>` : ''}
+              ${canDelete ? `<button class="td2-overflow-item danger" data-action="delete-task" type="button"><i class="ti ti-trash"></i>Delete task</button>` : ''}
             </div>
           </div>
         </div>
-        <div class="tdp-meta">
-          <span class="tdp-meta-item">${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span>
-          <span class="tdp-meta-item ${overdue ? 'over' : ''}"><i class="ti ti-calendar"></i>Due ${App.utils.escapeHtml(this._formatDue(t.due))}${overdue ? ` · ${daysOverdue}d overdue` : ''}</span>
-          <span class="tdp-meta-item"><span class="tdp-pri-dot ${priObj.cls}"></span>${App.utils.escapeHtml(priObj.label)}</span>
+        <div class="td2-chiprow">
+          <button class="td2-chip td2-chip-status ${statusChip.cls}" style="${statusChip.style}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
+          <button class="td2-chip td2-chip-plain${overdue ? ' over' : ''}"${canWrite ? ' data-action="chip-due"' : ''} type="button"><i class="ti ti-calendar"></i>${App.utils.escapeHtml(this._formatDue(t.due))}${overdue ? ` · ${daysOverdue}d overdue` : ''}</button>
+          <button class="td2-chip td2-chip-assignee"${canWrite ? ' data-action="chip-assignee"' : ''} type="button">${this._avatarStack(assignees)}<span class="td2-chip-name">${App.utils.escapeHtml(assigneeLabel)}</span></button>
+          <span class="td2-chip td2-chip-pri"><span class="td2-pri-dot ${priObj.cls}"></span>${App.utils.escapeHtml(priObj.label)}</span>
         </div>
       </div>
 
       ${(delegated || myTimerOnThis) ? `
-      <div class="tdp-top">
+      <div class="td2-banners">
           ${delegated ? `
-            <div class="delegation-banner">
+            <div class="td2-banner td2-banner-deleg">
               <i class="ti ti-send"></i>
-              <span><strong>${App.utils.escapeHtml(assignee.name)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
+              <span><strong>${App.utils.escapeHtml(assigneeLabel)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
             </div>
           ` : ''}
-
           ${myTimerOnThis ? `
-            <div class="timer-banner">
+            <div class="td2-banner td2-banner-timer">
               <i class="ti ti-player-record-filled"></i>
               <span>Tracking time on this task</span>
-              <span class="live-time" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
+              <span class="td2-live" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
             </div>
           ` : ''}
       </div>` : ''}
 
-      <div class="tdp-stats">
-        <div class="tdp-stat"><b>${commentsCount}</b><span>Comments</span></div>
-        <div class="tdp-stat"><b>${watcherIds.length}</b><span>Watchers</span></div>
-        <div class="tdp-stat"><b>${subtaskCount}</b><span>Subtasks</span></div>
-        <div class="tdp-stats-spacer"></div>
-        <button class="btn tdp-clockin" data-action="toggle-timer" type="button"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}</button>
-        ${App.can('tasks.write') ? `<button class="btn btn-primary tdp-complete ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
+      <div class="td2-brief${t.description ? '' : ' is-empty'}">
+        <div class="td2-brief-lbl">Brief${canWrite ? `<button class="td2-brief-edit" data-action="edit-desc" title="Edit brief" aria-label="Edit brief" type="button"><i class="ti ti-pencil"></i></button>` : ''}</div>
+        <div class="detail-desc td2-brief-body"${canWrite ? ' data-edit-field="description" tabindex="0" role="button" title="Click to edit · saves on click-away"' : ''}>${App.utils.escapeHtml(t.description || (canWrite ? 'No brief yet. Click to add context, links, and detail.' : 'No brief yet.'))}</div>
       </div>
 
-      <div class="tdp-body">
-        <div class="tdp-col-main">
-          <div class="tdp-card tdp-card-desc">
-            <div class="tdp-card-title">Description
-              ${canWrite ? `<button class="tdp-desc-pencil" data-action="edit-desc" title="Edit description" aria-label="Edit description" type="button"><i class="ti ti-pencil"></i></button>` : ''}
+      <div class="td2-grid">
+        <div class="td2-col td2-col-left">
+          <div class="td2-card">
+            <div class="td2-card-h">Details</div>
+            <div class="td2-fields">
+              <div class="td2-field"><span class="td2-field-k">Status</span><span ${ev('status', 'td2-field-v')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Priority</span><span ${ev('priority', `td2-field-v priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Assignees</span><span ${ev('assignee', 'td2-field-v td2-field-people')}>${this._avatarStack(assignees)}<span class="td2-chip-name">${App.utils.escapeHtml(assigneeLabel)}</span></span></div>
+              <div class="td2-field"><span class="td2-field-k">Due</span><span ${ev('due', `td2-field-v ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Time</span><span ${ev('dueTime', 'td2-field-v')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Reminder</span><span ${ev('reminderAt', 'td2-field-v')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Type</span><span ${ev('type', 'td2-field-v')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Label</span><span ${ev('label', 'td2-field-v')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Company</span><span ${ev('company', 'td2-field-v')}>${App.utils.escapeHtml(company.label)}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Project</span>${projectChipHtml}</div>
+              <div class="td2-field"><span class="td2-field-k">Time spent</span><span class="td2-field-v td2-mono">${App.utils.formatHours(totalMs)} total</span></div>
             </div>
-            <div class="detail-desc tdp-desc${t.description ? '' : ' tdp-desc-empty'}"${canWrite ? ' data-edit-field="description" tabindex="0" role="button" title="Click to edit · saves on click-away"' : ''}>${App.utils.escapeHtml(t.description || (canWrite ? 'No description yet. Click to add one.' : 'No description yet.'))}</div>
+            <div class="td2-created">${createdLine}</div>
           </div>
 
-          ${subtaskCount ? `
-          <div class="tdp-card tdp-card-subs">
-            <div class="tdp-card-title">Subtasks</div>
-            ${subtasksHtml}
-          </div>` : ''}
-
-          <div class="tdp-card tdp-tabs tdp-card-conv">
-            <div class="tdp-tablist" role="tablist">
-              <button class="tdp-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments</button>
-              <button class="tdp-tab${tabActive('activity')}" data-tab="activity" type="button"><i class="ti ti-bolt"></i>Activity</button>
-            </div>
-            <div class="tdp-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
-            <div class="tdp-tabpanel${tabActive('activity')}" data-panel="activity"><div class="tdp-activity">${activityHtml}</div></div>
-          </div>
-
-          <div class="tdp-card tdp-card-hist">
-            <div class="tdp-card-title"><i class="ti ti-history"></i> History</div>
-            <div class="tdp-history">${entriesHtml}</div>
+          <div class="td2-card">
+            <div class="td2-card-h">Checklist${subsTotal ? `<span class="td2-count">${subsDone}/${subsTotal}</span>` : ''}</div>
+            ${subsTotal ? `<div class="td2-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${subsPct}" aria-label="Checklist progress"><div class="td2-progress-fill${subsDone === subsTotal ? ' full' : ''}" style="width:${subsPct}%;"></div></div>` : ''}
+            <div class="td2-steps">${subtasksHtml}</div>
+            ${canWrite ? `<button class="td2-addstep" data-action="qa-subtask" type="button"><i class="ti ti-plus"></i>Add step</button>` : ''}
           </div>
         </div>
 
-        <aside class="tdp-col-right">
-          <div class="tdp-card tdp-card-details">
-            <div class="tdp-card-title">Details</div>
-            <div class="taf-meta taf-meta-detail" style="background:transparent; padding:0; border-radius:0;">
-            <div class="taf-field"><span class="taf-field-lbl">Status</span><span ${ev('status')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Priority</span><span ${ev('priority', `priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Assignee</span><span ${ev('assignee', 'detail-val detail-person')}>${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Due</span><span ${ev('due', `detail-val ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Time</span><span ${ev('dueTime')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Reminder</span><span ${ev('reminderAt')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Type</span><span ${ev('type')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Label</span><span ${ev('label')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Company</span><span ${ev('company')}>${App.utils.escapeHtml(company.label)}</span></div>
-            <div class="taf-field"><span class="taf-field-lbl">Project</span>${projectChipHtml}</div>
-            <div class="taf-field"><span class="taf-field-lbl">Time spent</span><span class="detail-val" style="font-family:'SFMono-Regular',monospace;">${App.utils.formatHours(totalMs)} total</span></div>
+        <div class="td2-col td2-col-center">
+          <div class="td2-card td2-card-conv">
+            <div class="td2-tablist" role="tablist">
+              <button class="td2-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments${commentsCount ? ` <span class="td2-tabcount">${commentsCount}</span>` : ''}</button>
+              <button class="td2-tab${tabActive('activity')}" data-tab="activity" type="button"><i class="ti ti-bolt"></i>Activity</button>
+              <button class="td2-tab${tabActive('history')}" data-tab="history" type="button"><i class="ti ti-history"></i>History</button>
             </div>
-            <div class="tdp-created">${createdLine}</div>
+            <div class="td2-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
+            <div class="td2-tabpanel${tabActive('activity')}" data-panel="activity"><div class="td2-feed">${activityHtml}</div></div>
+            <div class="td2-tabpanel${tabActive('history')}" data-panel="history"><div class="td2-feed">${entriesHtml}</div></div>
+          </div>
+        </div>
+
+        <aside class="td2-col td2-col-right">
+          <div class="td2-card">
+            <div class="td2-card-h">Quick actions</div>
+            <div class="td2-qa-grid">
+              <button class="td2-qa" data-action="qa-reassign" type="button"><i class="ti ti-user-share"></i>Reassign</button>
+              <button class="td2-qa" data-action="qa-subtask" type="button"><i class="ti ti-subtask"></i>Add subtask</button>
+              <button class="td2-qa" data-action="qa-setdue" type="button"><i class="ti ti-calendar"></i>Set due</button>
+              <button class="td2-qa" data-action="qa-note" type="button"><i class="ti ti-note"></i>Add note</button>
+              <button class="td2-qa" data-action="qa-logcall" type="button"><i class="ti ti-phone"></i>Log call</button>
+              <button class="td2-qa" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
+            </div>
+            <button class="td2-qa td2-qa-wide td2-clockin" data-action="toggle-timer" type="button"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}</button>
           </div>
 
-          <div class="tdp-card tdp-card-qa">
-            <div class="tdp-card-title">Quick actions</div>
-            <div class="tdp-qa-grid">
-              <button class="tdp-qa" data-action="qa-reassign" type="button"><i class="ti ti-user-share"></i>Reassign</button>
-              <button class="tdp-qa" data-action="qa-subtask" type="button"><i class="ti ti-subtask"></i>Add subtask</button>
-              <button class="tdp-qa" data-action="qa-setdue" type="button"><i class="ti ti-calendar"></i>Set due</button>
-              <button class="tdp-qa" data-action="qa-note" type="button"><i class="ti ti-note"></i>Add note</button>
-              <button class="tdp-qa" data-action="qa-logcall" type="button"><i class="ti ti-phone"></i>Log call</button>
-              <button class="tdp-qa" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
-            </div>
-          </div>
-
-          <div class="tdp-card tdp-card-watchers">
-            <div class="tdp-card-title"><i class="ti ti-eye"></i> Watchers</div>
-            <div class="watchers-cell tdp-watchers">
-              ${watcherChipsHtml || '<span class="tdp-empty">No watchers</span>'}
-              <button class="tdp-watch-add" data-action="toggle-watch" title="${isWatching ? 'Stop watching' : 'Watch this task'}" aria-label="Toggle watch" type="button"><i class="ti ${isWatching ? 'ti-eye-off' : 'ti-plus'}"></i></button>
+          <div class="td2-card">
+            <div class="td2-card-h"><i class="ti ti-eye"></i> Watchers${watcherIds.length ? `<span class="td2-count">${watcherIds.length}</span>` : ''}</div>
+            <div class="td2-watchers">
+              ${watcherChipsHtml || '<span class="td2-empty">No watchers yet</span>'}
+              <button class="td2-watch-add" data-action="toggle-watch" title="${isWatching ? 'Stop watching' : 'Watch this task'}" aria-label="Toggle watch" type="button"><i class="ti ${isWatching ? 'ti-eye-off' : 'ti-plus'}"></i></button>
             </div>
           </div>
         </aside>
+      </div>
       </div>
     `;
 
@@ -388,14 +389,18 @@ App.TaskDetailView = class TaskDetailView {
       const f = this._justSaved;
       this._justSaved = null;
       const cell = this.pane.querySelector(`[data-edit-field="${f}"]`);
-      if (cell) cell.classList.add('tdp-saved-flash');
+      if (cell) cell.classList.add('td2-saved-flash');
       if (f === 'status') {
-        const chip = this.pane.querySelector('.tdp-chip-status');
-        if (chip) chip.classList.add('tdp-saved-flash');
+        const chip = this.pane.querySelector('.td2-chip-status');
+        if (chip) chip.classList.add('td2-saved-flash');
+      }
+      if (f === 'assignee') {
+        const chip = this.pane.querySelector('.td2-chip-assignee');
+        if (chip) chip.classList.add('td2-saved-flash');
       }
       if (f === 'project') {
         const tag = this.pane.querySelector('[data-action="open-project"]');
-        if (tag) tag.classList.add('tdp-saved-flash');
+        if (tag) tag.classList.add('td2-saved-flash');
       }
     }
     } catch (err) {
@@ -455,10 +460,10 @@ App.TaskDetailView = class TaskDetailView {
     // so the next background re-render restores it (see _activeTab in render).
     const setTab = (name) => {
       this._activeTab = name;
-      qa('.tdp-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-      qa('.tdp-tabpanel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+      qa('.td2-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      qa('.td2-tabpanel').forEach(p => p.classList.toggle('active', p.dataset.panel === name));
     };
-    qa('.tdp-tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+    qa('.td2-tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
     const focusComment = () => {
       setTab('comments');
@@ -466,18 +471,28 @@ App.TaskDetailView = class TaskDetailView {
       if (input) input.focus();
     };
 
-    // Header Comment button + the "Add note" quick action both jump to comments.
-    const fc = q('[data-action="focus-comment"]');
-    if (fc) fc.addEventListener('click', focusComment);
+    // The "Add note" quick action jumps to the comments composer.
     const qaNote = q('[data-action="qa-note"]');
     if (qaNote) qaNote.addEventListener('click', focusComment);
 
-    // Reassign / Set due jump straight to the auto-save inline editors (no Edit
-    // form detour); Add subtask still stages through the Edit form.
+    // Inline-editable title (contenteditable). Saves on blur / Enter (Enter
+    // doesn't insert a newline), Escape reverts. Reuses updateTaskField('title').
+    const titleEl = q('.td2-title.is-editable');
+    if (titleEl) this._wireTitleEdit(t, titleEl);
+
+    // Reassign quick action + the header assignee chip open the multi-select
+    // assignee picker; Set due jumps to the inline date editor; Add subtask
+    // stages through the Edit form.
+    const openAssignees = (anchor) => this._openAssigneePicker(t, anchor);
     const qaReassign = q('[data-action="qa-reassign"]');
-    if (qaReassign) qaReassign.addEventListener('click', () => this._openInlineEdit(t, 'assignee'));
-    const qaSubtask = q('[data-action="qa-subtask"]');
-    if (qaSubtask) qaSubtask.addEventListener('click', () => enterEdit('edit-subtask-input'));
+    if (qaReassign) qaReassign.addEventListener('click', () => openAssignees(qaReassign));
+    const chipAssignee = q('[data-action="chip-assignee"]');
+    if (chipAssignee) chipAssignee.addEventListener('click', (e) => { e.stopPropagation(); openAssignees(chipAssignee); });
+    const chipDue = q('[data-action="chip-due"]');
+    if (chipDue) chipDue.addEventListener('click', () => this._openInlineEdit(t, 'due'));
+    // "Add subtask" (Quick actions) AND "Add step" (Checklist card) share this
+    // action, so bind every match, not just the first.
+    qa('[data-action="qa-subtask"]').forEach(el => el.addEventListener('click', () => enterEdit('edit-subtask-input')));
     const qaSetdue = q('[data-action="qa-setdue"]');
     if (qaSetdue) qaSetdue.addEventListener('click', () => this._openInlineEdit(t, 'due'));
     const qaLogcall = q('[data-action="qa-logcall"]');
@@ -539,11 +554,17 @@ App.TaskDetailView = class TaskDetailView {
       });
     });
 
-    // Inline per-field editing: click (or Enter/Space on) a Details value to edit it.
+    // Inline per-field editing: click (or Enter/Space on) a Details value to edit
+    // it. Assignee is special — it opens the multi-select picker rather than the
+    // single-value inline <select>.
+    const openField = (el) => {
+      if (el.dataset.editField === 'assignee') this._openAssigneePicker(t, el);
+      else this._openInlineEdit(t, el.dataset.editField);
+    };
     qa('.tdp-editable').forEach(el => {
-      el.addEventListener('click', () => this._openInlineEdit(t, el.dataset.editField));
+      el.addEventListener('click', () => openField(el));
       el.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._openInlineEdit(t, el.dataset.editField); }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openField(el); }
       });
     });
 
@@ -823,6 +844,118 @@ App.TaskDetailView = class TaskDetailView {
     setTimeout(() => document.addEventListener('click', close), 0);
   }
 
+  /* ---------- multi-assignee ---------- */
+
+  // Stacked-avatar cluster (lead first) mirroring the New Task assignee stack.
+  // Overlapping circles with a ring so they read as one group.
+  _avatarStack(people) {
+    if (!people || !people.length) {
+      return `<span class="td2-av-stack"><span class="avatar-xs td2-av" style="background:var(--ink-3);">?</span></span>`;
+    }
+    const shown = people.slice(0, 4);
+    const extra = people.length - shown.length;
+    const avs = shown.map(p => App.utils.avatarHtml(p, 'td2-av')).join('');
+    const more = extra > 0 ? `<span class="avatar-xs td2-av td2-av-more">+${extra}</span>` : '';
+    return `<span class="td2-av-stack">${avs}${more}</span>`;
+  }
+
+  // Inline-editable title via contenteditable. Enter commits (no newline),
+  // Escape reverts, blur commits. Saves through updateTaskField('title'), which
+  // marks the row dirty and logs activity. Empty titles revert to the original.
+  _wireTitleEdit(t, el) {
+    const original = t.title || '';
+    const commit = () => {
+      const next = (el.textContent || '').trim().slice(0, 200);
+      if (!next) { el.textContent = original; return; }
+      if (next === original) return;
+      this._justSaved = 'title';
+      this.controller.updateTaskField(t.id, 'title', next, 'renamed this task');
+    };
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      else if (e.key === 'Escape') { e.preventDefault(); el.textContent = original; el.blur(); }
+    });
+    el.addEventListener('blur', commit);
+  }
+
+  // Multi-select assignee picker (add/remove people, lead = first selected).
+  // Same interaction vocabulary as the New Task assignee picker: a menu of
+  // company members with a check on each selected person; the running order is
+  // preserved (click order = priority, lead first). Commit on close via
+  // controller.setAssignees, which fans out notifications to newly-added people.
+  _openAssigneePicker(t, anchor) {
+    if (!App.can('tasks.write')) return;
+    // Toggle: re-clicking the trigger closes an open menu.
+    const existing = this.pane.querySelector('.td2-assignee-menu');
+    if (existing) { existing.remove(); if (this._closeAssigneeMenu) this._closeAssigneeMenu(); return; }
+
+    // Suppress background re-renders while the picker is open (same guard the
+    // inline editors use) so a sync poll can't wipe the menu mid-edit.
+    this._inlineEdit = { taskId: t.id, field: 'assignee' };
+    const token = this._inlineEdit;
+
+    const startIds = (Array.isArray(t.assigneeIds) && t.assigneeIds.length)
+      ? t.assigneeIds.slice()
+      : (t.assignee ? [t.assignee] : []);
+    const selected = startIds.slice(); // ordered working set (lead = index 0)
+    const people = App.utils.peopleInCompany(t.company, selected);
+
+    const menu = document.createElement('div');
+    menu.className = 'td2-assignee-menu';
+    const renderRows = () => {
+      menu.innerHTML = `
+        <div class="td2-am-h">Assignees${selected.length ? ` <span class="td2-am-lead">lead: ${App.utils.escapeHtml((App.PEOPLE[selected[0]] || { name: selected[0] }).name)}</span>` : ''}</div>
+        <div class="td2-am-list">
+          ${people.map(p => {
+            const on = selected.includes(p.id);
+            return `<button class="td2-am-item ${on ? 'is-on' : ''}" data-id="${App.utils.escapeHtml(p.id)}" type="button">
+              ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
+              ${on ? '<i class="ti ti-check td2-am-check"></i>' : ''}
+            </button>`;
+          }).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
+        </div>`;
+      menu.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = b.dataset.id;
+        const i = selected.indexOf(id);
+        if (i === -1) selected.push(id);
+        else if (selected.length > 1) selected.splice(i, 1); // keep at least one
+        renderRows();
+      }));
+    };
+    renderRows();
+
+    // Anchor the menu to the trigger's positioned parent.
+    const host = anchor.parentElement || this.pane;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    host.appendChild(menu);
+    if (anchor.classList) anchor.classList.add('is-editing');
+
+    const cleanup = () => {
+      menu.remove();
+      document.removeEventListener('click', close);
+      if (anchor.classList) anchor.classList.remove('is-editing');
+      this._closeAssigneeMenu = null;
+    };
+    const commitAndClose = () => {
+      const changed = selected.length !== startIds.length || selected.some((v, i) => v !== startIds[i]);
+      cleanup();
+      if (this._inlineEdit === token) this._inlineEdit = null;
+      if (changed) {
+        this._justSaved = 'assignee';
+        this.controller.setAssignees(t.id, selected);
+      } else {
+        this.render();
+      }
+    };
+    this._closeAssigneeMenu = commitAndClose;
+    const close = (e) => {
+      if (menu.contains(e.target) || (anchor && anchor.contains(e.target))) return;
+      commitAndClose();
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+
   /* ---------- comments ---------- */
   // Inner comments markup (list + composer) for the Activity/Comments/History
   // tab panel. No outer card — the tab panel is the container. `_wireComments`
@@ -852,13 +985,24 @@ App.TaskDetailView = class TaskDetailView {
     const esc = App.utils.escapeHtml;
     const person = App.PEOPLE[c.authorId] || { name: c.authorId || 'Someone', full: c.authorId || 'Someone', color: 'var(--ink-3)' };
     const ago = (c.createdAt && App.utils.timeAgo(c.createdAt)) || '';
+    // Cosmetic Call/Note tag derived from the marker the quick actions already
+    // write (no schema). "Log call" posts a 📞 prefix → CALL LOG; a leading 📝
+    // (if ever used) → NOTE. The marker is stripped from the displayed text.
+    // Anything else renders as a plain comment (Slice A is display-only).
+    let raw = String(c.body || '');
+    let tag = '';
+    if (/^\s*📞/.test(raw)) { tag = 'CALL LOG'; raw = raw.replace(/^\s*📞\s*/, ''); }
+    else if (/^\s*📝/.test(raw)) { tag = 'NOTE'; raw = raw.replace(/^\s*📝\s*/, ''); }
     // Escape first, then lightly highlight @mention tokens.
-    const body = esc(c.body || '').replace(/@(\w[\w.]*)/g, '<span class="cm-at">@$1</span>');
+    const body = esc(raw).replace(/@(\w[\w.]*)/g, '<span class="cm-at">@$1</span>');
+    const tagHtml = tag
+      ? `<span class="td2-cm-tag ${tag === 'CALL LOG' ? 'call' : 'note'}"><i class="ti ${tag === 'CALL LOG' ? 'ti-phone' : 'ti-note'}"></i>${tag}</span>`
+      : '';
     return `
       <div class="cm-row">
         <div class="cm-av">${App.utils.avatarHtml(person)}</div>
         <div class="cm-bubble">
-          <div class="cm-meta"><span class="cm-who">${esc(person.name)}</span>${ago ? `<span class="cm-ago">· ${esc(ago)}</span>` : ''}</div>
+          <div class="cm-meta"><span class="cm-who">${esc(person.name)}</span>${tagHtml}${ago ? `<span class="cm-ago">· ${esc(ago)}</span>` : ''}</div>
           <div class="cm-text">${body}</div>
         </div>
       </div>`;
