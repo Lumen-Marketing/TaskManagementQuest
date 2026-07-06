@@ -812,8 +812,8 @@ App.TaskDetailView = class TaskDetailView {
     switch (field) {
       case 'status':    return sel(this._statusOpts(t.company, t.type, t.status), t.status);
       case 'priority':  return sel(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), t.priority);
-      case 'type':      return sel(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), t.type);
-      case 'label':     return sel(Object.entries(App.TASK_LABELS).map(([k, v]) => [k, v.label]), t.label || 'none');
+      case 'type':      return sel(App.taxonomy.activeTypes(t.company).map(tp => [tp.key, tp.label]), t.type);
+      case 'label':     return sel([['none', (App.TASK_LABELS.none && App.TASK_LABELS.none.label) || 'No label'], ...App.taxonomy.activeLabels(t.company).map(l => [l.key, l.label])], t.label || 'none');
       case 'company':   return sel(Object.values(App.COMPANIES).map(c => [c.id, c.label]), t.company);
       case 'assignee':  return sel(App.utils.peopleInCompany(t.company, t.assignee).map(p => [p.id, p.name]), t.assignee);
       case 'due':       return `<input type="date" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc(t.due || '')}" />`;
@@ -1523,9 +1523,9 @@ App.TaskDetailView = class TaskDetailView {
               <div class="tdp-card-title">Details</div>
               <div class="taf-meta" style="background:transparent; padding:0; border-radius:0;">
               <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="edit-company">${opts(Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="edit-type" data-action="type-change">${opts(Object.entries(App.TASK_TYPES).map(([k, v]) => [k, v.label]), d.type)}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="edit-type" data-action="type-change">${opts(App.taxonomy.activeTypes(d.company).map(tp => [tp.key, tp.label]), d.type)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="edit-status">${opts(this._statusOpts(d.company, d.type, d.status), d.status)}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="edit-label">${opts(Object.entries(App.TASK_LABELS).map(([k, v]) => [k, v.label]), d.label)}</select></label>
+              <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="edit-label">${opts([['none', (App.TASK_LABELS.none && App.TASK_LABELS.none.label) || 'No label'], ...App.taxonomy.activeLabels(d.company).map(l => [l.key, l.label])], d.label || 'none')}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Priority</span><select id="edit-priority">${opts(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), d.priority)}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="edit-assignee">${App.utils.peopleInCompany(d.company, d.assignee).map(p => `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(p.name)}</option>`).join('')}</select></label>
               <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="edit-due" value="${App.utils.escapeHtml(d.due)}" class="picker-input" /></label>
@@ -1600,6 +1600,20 @@ App.TaskDetailView = class TaskDetailView {
       this._syncDraftFromDom();
       this.editDraft.type = e.target.value;
       this.editDraft.status = App.taxonomy.defaultStatus(this.editDraft.company, e.target.value);
+      this.renderEditMode(t);
+    });
+
+    // Company change re-scopes Type, Status, Label, Assignee to the new company's taxonomy.
+    const companySel = this.pane.querySelector('#edit-company');
+    if (companySel) companySel.addEventListener('change', (e) => {
+      this._syncDraftFromDom();
+      const newCo = e.target.value;
+      this.editDraft.company = newCo;
+      const newTypes = App.taxonomy.activeTypes(newCo);
+      if (!newTypes.some(tp => tp.key === this.editDraft.type)) {
+        this.editDraft.type = (newTypes[0] && newTypes[0].key) || this.editDraft.type;
+      }
+      this.editDraft.status = App.taxonomy.defaultStatus(newCo, this.editDraft.type);
       this.renderEditMode(t);
     });
 
