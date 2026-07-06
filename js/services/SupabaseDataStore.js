@@ -691,9 +691,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
       role: updates.role,
       approved: !!updates.approved,
     };
-    // supervisorId / companyIds are optional; only set them when provided.
+    // supervisorId / companyIds / position are optional; only set them when provided.
     if ('supervisorId' in updates) patch.supervisor_id = updates.supervisorId || null;
     if ('companyIds' in updates) patch.company_ids = Array.isArray(updates.companyIds) ? updates.companyIds : [];
+    if ('position' in updates) patch.position = updates.position || null;
     const res = await this.supabase
       .from('profiles')
       .update(patch)

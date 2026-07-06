@@ -1221,6 +1221,7 @@ input:not([type="checkbox"]):not([type="radio"]), textarea, select {
    occupy, instead of floating unframed on the canvas. */
 .time-section .empty { background: var(--surface); border: 1px solid var(--border); border-radius: var(--block-radius, var(--radius-sm)); }
 .approval-table select { min-width: 140px; }
+.approval-position-input { width: 100%; min-width: 130px; max-width: 180px; font-size: 12px; padding: 4px 7px; }
 .approval-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); }
 .approval-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .approval-head .time-section-title { margin-bottom: 0; }

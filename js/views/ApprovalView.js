@@ -45,9 +45,9 @@ App.ApprovalView = class ApprovalView {
           <div class="approval-scroll">
             <table class="time-table approval-table">
               <thead>
-                <tr><th>Person</th><th>Role</th><th>Company</th><th>Reports to</th><th>Status</th><th>Email</th><th></th></tr>
+                <tr><th>Person</th><th>Role</th><th>Position</th><th>Company</th><th>Reports to</th><th>Status</th><th>Email</th><th></th></tr>
               </thead>
-              <tbody>${rows || '<tr><td colspan="7">No accounts found.</td></tr>'}</tbody>
+              <tbody>${rows || '<tr><td colspan="8">No accounts found.</td></tr>'}</tbody>
             </table>
           </div>
         </div>
@@ -97,6 +97,7 @@ App.ApprovalView = class ApprovalView {
           </span>
         </td>
         <td data-label="Role"><select data-field="role">${roles}</select></td>
+        <td data-label="Position"><input type="text" class="approval-position-input" data-field="position" value="${App.utils.escapeHtml(profile.position || '')}" placeholder="e.g. Drafting Lead" maxlength="80" /></td>
         <td data-label="Company"><div class="company-multi" data-field="companies">${companyChecks}</div></td>
         <td data-label="Reports to"><select data-field="supervisor">${supervisorOpts}</select></td>
         <td data-label="Status">
@@ -138,13 +139,18 @@ App.ApprovalView = class ApprovalView {
         const role = row.querySelector('[data-field="role"]').value;
         const approved = row.querySelector('[data-field="approved"]').checked;
         const supervisorId = row.querySelector('[data-field="supervisor"]').value || null;
+        const position = (row.querySelector('[data-field="position"]').value || '').trim() || null;
         const companyIds = Array.from(
           row.querySelectorAll('[data-field="companies"] input[type="checkbox"]:checked')
         ).map(el => el.value);
         button.disabled = true;
         button.textContent = 'Saving';
         try {
-          await this.dataStore.updateProfileAccess(profileId, { role, approved, supervisorId, companyIds });
+          await this.dataStore.updateProfileAccess(profileId, { role, approved, supervisorId, companyIds, position });
+          // Mirror position into App.PEOPLE immediately so the picker reflects it
+          // without waiting for a full data reload (team_members trigger runs async).
+          const memberId = row.dataset.memberId;
+          if (memberId && App.PEOPLE && App.PEOPLE[memberId]) App.PEOPLE[memberId].position = position;
           this.controller.toastView.show({ title: 'Access updated', sub: approved ? 'Account approved' : 'Account set to pending' });
           // Reload from the server so the table reflects the saved state without a manual refresh.
           await this.reloadAndRender();
