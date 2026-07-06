@@ -92,9 +92,13 @@ const SAMPLE = {
   subtasks: [{ t: 'Order materials', d: true }, { t: 'Schedule crew', d: true }, { t: 'Pull permit', d: false }, { t: 'Final inspection', d: false }],
   activity: [{ who: 'Abraham Q.', what: 'created this task', at: null, when: '3d ago' }, { who: 'Alkeith R.', what: 'changed status To do → In progress', at: '1' }],
   comments: [
-    { authorId: 'kristin', body: 'HOA approval just came through.', createdAt: '1' },
-    { authorId: 'alkeith', body: '📞 Logged a call — homeowner confirmed Tuesday drop.', createdAt: '2' },
-    { authorId: 'andres', body: 'Drafting the flashing detail now @kristin', createdAt: '3' },
+    { id: 'c1', authorId: 'kristin', kind: 'note', body: 'HOA approval just came through.', createdAt: '1',
+      reactions: [{ memberId: 'abraham', emoji: '🎉' }, { memberId: 'andres', emoji: '🎉' }, { memberId: 'alkeith', emoji: '👍' }] },
+    { id: 'c2', authorId: 'alkeith', kind: 'call', body: 'Homeowner confirmed Tuesday drop.', createdAt: '2',
+      reactions: [{ memberId: 'kristin', emoji: '✅' }] },
+    { id: 'c3', authorId: 'andres', kind: 'comment', body: 'Drafting the flashing detail now @kristin', createdAt: '3', reactions: [] },
+    // Legacy row (pre-064): kind 'comment' but 📞 body — should still tag CALL LOG.
+    { id: 'c4', authorId: 'abraham', kind: 'comment', body: '📞 Logged a call — left a voicemail.', createdAt: '4', reactions: [] },
   ],
   createdAt: '2026-07-01T10:00:00Z', _commentsLoaded: true,
 };
@@ -110,7 +114,18 @@ App.controller = {
   toggleSelfWatch: () => alert('watch (preview)'),
   duplicateTask: () => alert('duplicate (preview)'),
   addCallLog: () => alert('log call (preview)'),
-  addTaskComment: (id, text) => alert('comment: ' + text),
+  addTaskComment: (id, text, mentions, kind) => alert(`comment (${kind || 'comment'}): ` + text),
+  // Local toggle so reactions are clickable in the preview (me = 'abraham').
+  toggleReaction: (taskId, commentId, emoji) => {
+    const c = (SAMPLE.comments || []).find(x => x.id === commentId);
+    if (!c) return;
+    c.reactions = c.reactions || [];
+    const had = c.reactions.some(r => r.memberId === 'abraham' && r.emoji === emoji);
+    c.reactions = had
+      ? c.reactions.filter(r => !(r.memberId === 'abraham' && r.emoji === emoji))
+      : c.reactions.concat([{ memberId: 'abraham', emoji }]);
+    App.EventBus.emit('comments:changed', taskId);
+  },
   updateTaskField: (id, f, v) => alert(`set ${f} = ${v} (preview)`),
   setAssignees: (id, ids) => alert('setAssignees: ' + ids.join(', ') + ' (preview)'),
   reassignTask: () => {},

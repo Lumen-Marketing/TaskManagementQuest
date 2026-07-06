@@ -1019,41 +1019,95 @@ App.TaskDetailView = class TaskDetailView {
           ? `<div class="cm-empty">No comments yet. Start the conversation.</div>`
           : `<div class="cm-empty">Loading comments…</div>`);
     const draft = (this._commentDraft && this._commentDraft[t.id]) || '';
+    // Composer kind (Slice C). A segmented control chooses how the post is
+    // recorded — Comment / Note / Call — writing task_comments.kind (064).
+    // Self-contained here so the Slice-B quick-actions panel is untouched.
+    const kind = (this._composerKind && this._composerKind[t.id]) || 'comment';
+    const seg = [
+      ['comment', 'Comment', 'ti-message'],
+      ['note', 'Note', 'ti-note'],
+      ['call', 'Call', 'ti-phone'],
+    ].map(([k, lbl, icon]) =>
+      `<button class="td2-cm-kind${kind === k ? ' is-on' : ''}" type="button" data-kind="${k}"><i class="ti ${icon}"></i>${lbl}</button>`
+    ).join('');
     return `
       <div class="cm-list">${rows}</div>
       <div class="cm-composer">
+        <div class="td2-cm-kindseg" role="tablist">${seg}</div>
         <textarea id="cmInput" class="cm-input" rows="2" placeholder="Write an update or @mention…">${esc(draft)}</textarea>
         <div id="cmMentionMenu" class="cm-mention-menu hidden" role="listbox"></div>
         <div class="cm-actions">
           <span class="cm-hint"><b>Enter</b> posts · <b>Shift+Enter</b> new line · <b>@</b> mentions</span>
-          <button id="cmSend" class="btn btn-primary cm-send" type="button">Comment</button>
+          <button id="cmSend" class="btn btn-primary cm-send" type="button">${kind === 'call' ? 'Log call' : kind === 'note' ? 'Add note' : 'Comment'}</button>
         </div>
       </div>`;
+  }
+
+  // The curated reaction set (Slice C). Fixed + tokened — no open emoji picker,
+  // to stay on-brand for a work tool.
+  _reactionSet() { return ['👍', '❤️', '🎉', '✅', '👀']; }
+
+  // Aggregate a comment's raw reaction rows ([{memberId, emoji}]) into ordered
+  // {emoji, count, mine} groups, following the fixed set order so the row is
+  // stable. Only emojis with at least one reaction render as a pill.
+  _aggregateReactions(c) {
+    const rows = Array.isArray(c.reactions) ? c.reactions : [];
+    if (!rows.length) return [];
+    const counts = new Map();
+    const mine = new Set();
+    rows.forEach(r => {
+      counts.set(r.emoji, (counts.get(r.emoji) || 0) + 1);
+      if (r.memberId === this.currentUser) mine.add(r.emoji);
+    });
+    const order = this._reactionSet();
+    const known = order.filter(e => counts.has(e));
+    const extra = Array.from(counts.keys()).filter(e => !order.includes(e)); // legacy/other
+    return known.concat(extra).map(e => ({ emoji: e, count: counts.get(e), mine: mine.has(e) }));
   }
 
   _commentRow(c) {
     const esc = App.utils.escapeHtml;
     const person = App.PEOPLE[c.authorId] || { name: c.authorId || 'Someone', full: c.authorId || 'Someone', color: 'var(--ink-3)' };
     const ago = (c.createdAt && App.utils.timeAgo(c.createdAt)) || '';
-    // Cosmetic Call/Note tag derived from the marker the quick actions already
-    // write (no schema). "Log call" posts a 📞 prefix → CALL LOG; a leading 📝
-    // (if ever used) → NOTE. The marker is stripped from the displayed text.
-    // Anything else renders as a plain comment (Slice A is display-only).
+    // Kind tag (migration 064). `kind` is authoritative: 'call' → CALL LOG,
+    // 'note' → NOTE. Legacy rows saved before 064 are all kind 'comment', so
+    // fall back to the old 📞/📝 body marker (and strip it) to keep them tagged.
     let raw = String(c.body || '');
-    let tag = '';
-    if (/^\s*📞/.test(raw)) { tag = 'CALL LOG'; raw = raw.replace(/^\s*📞\s*/, ''); }
-    else if (/^\s*📝/.test(raw)) { tag = 'NOTE'; raw = raw.replace(/^\s*📝\s*/, ''); }
+    let tag = c.kind === 'call' ? 'CALL LOG' : c.kind === 'note' ? 'NOTE' : '';
+    if (!tag) {
+      if (/^\s*📞/.test(raw)) { tag = 'CALL LOG'; raw = raw.replace(/^\s*📞\s*/, ''); }
+      else if (/^\s*📝/.test(raw)) { tag = 'NOTE'; raw = raw.replace(/^\s*📝\s*/, ''); }
+    }
     // Escape first, then lightly highlight @mention tokens.
     const body = esc(raw).replace(/@(\w[\w.]*)/g, '<span class="cm-at">@$1</span>');
     const tagHtml = tag
       ? `<span class="td2-cm-tag ${tag === 'CALL LOG' ? 'call' : 'note'}"><i class="ti ${tag === 'CALL LOG' ? 'ti-phone' : 'ti-note'}"></i>${tag}</span>`
       : '';
+    const cid = esc(String(c.id || ''));
+    // Reaction pills (aggregated) + a hover-reveal add-reaction button whose
+    // picker offers the fixed set. Buttons carry data-cid/data-emoji for
+    // delegated wiring in _wireComments.
+    const groups = this._aggregateReactions(c);
+    const pills = groups.map(g =>
+      `<button class="td2-cm-react${g.mine ? ' mine' : ''}" type="button" data-cid="${cid}" data-emoji="${esc(g.emoji)}" aria-pressed="${g.mine}"><span class="td2-cm-react-e">${esc(g.emoji)}</span><span class="td2-cm-react-n">${g.count}</span></button>`
+    ).join('');
+    const picker = this._reactionSet().map(e =>
+      `<button class="td2-cm-rpick-b" type="button" data-cid="${cid}" data-emoji="${esc(e)}" title="React ${esc(e)}">${esc(e)}</button>`
+    ).join('');
+    const reactHtml = `
+          <div class="td2-cm-reacts">
+            ${pills}
+            <div class="td2-cm-addwrap">
+              <button class="td2-cm-addreact" type="button" data-react-add="${cid}" aria-label="Add reaction"><i class="ti ti-mood-smile"></i></button>
+              <div class="td2-cm-rpick hidden" data-rpick="${cid}" role="menu">${picker}</div>
+            </div>
+          </div>`;
     return `
       <div class="cm-row">
         <div class="cm-av">${App.utils.avatarHtml(person)}</div>
         <div class="cm-bubble">
           <div class="cm-meta"><span class="cm-who">${esc(person.name)}</span>${tagHtml}${ago ? `<span class="cm-ago">· ${esc(ago)}</span>` : ''}</div>
-          <div class="cm-text">${body}</div>
+          <div class="cm-text">${body}</div>${reactHtml}
         </div>
       </div>`;
   }
@@ -1068,12 +1122,52 @@ App.TaskDetailView = class TaskDetailView {
   }
 
   _wireComments(t) {
+    // --- reactions (Slice C) --- wired first so they work even if the composer
+    // is absent. The whole pane is rebuilt each render, so these listeners are
+    // attached to fresh nodes and never accumulate. Delegated on the list.
+    const list = this.pane.querySelector('.cm-list');
+    if (list) {
+      const closePickers = (except) => {
+        this.pane.querySelectorAll('.td2-cm-rpick').forEach(p => { if (p !== except) p.classList.add('hidden'); });
+      };
+      list.addEventListener('click', (e) => {
+        const pill = e.target.closest('.td2-cm-react, .td2-cm-rpick-b');
+        if (pill && pill.dataset.emoji) {
+          closePickers();
+          this.controller.toggleReaction(t.id, pill.dataset.cid, pill.dataset.emoji);
+          return;
+        }
+        const add = e.target.closest('.td2-cm-addreact');
+        if (add) {
+          const pick = list.querySelector(`.td2-cm-rpick[data-rpick="${add.dataset.reactAdd}"]`);
+          const wasHidden = pick && pick.classList.contains('hidden');
+          closePickers();                       // collapse any open picker first
+          if (pick && wasHidden) pick.classList.remove('hidden'); // open only if it was closed
+          return;
+        }
+        closePickers();
+      });
+    }
+
     const input = this.pane.querySelector('#cmInput');
     const sendBtn = this.pane.querySelector('#cmSend');
     const menu = this.pane.querySelector('#cmMentionMenu');
     if (!input || !sendBtn || !menu) return;
     this._composerMentions = this._composerMentions || new Set();
     this._mentionActive = 0;
+
+    // --- composer kind segmented control (Slice C) --- update state in place
+    // (no re-render, to keep composer focus/draft), retitle the send button.
+    this._composerKind = this._composerKind || {};
+    const kindBtns = Array.from(this.pane.querySelectorAll('.td2-cm-kindseg .td2-cm-kind'));
+    const sendLabel = (k) => (k === 'call' ? 'Log call' : k === 'note' ? 'Add note' : 'Comment');
+    kindBtns.forEach(btn => btn.addEventListener('click', () => {
+      const k = btn.dataset.kind;
+      this._composerKind[t.id] = k;
+      kindBtns.forEach(b => b.classList.toggle('is-on', b === btn));
+      sendBtn.textContent = sendLabel(k);
+      input.focus();
+    }));
 
     const persistDraft = () => {
       this._commentDraft = this._commentDraft || {};
@@ -1173,14 +1267,16 @@ App.TaskDetailView = class TaskDetailView {
         if (c && lower.includes('@' + c.first.toLowerCase())) ids.add(id);
       });
       const mentions = Array.from(ids);
+      const kind = (this._composerKind && this._composerKind[t.id]) || 'comment';
       // Reset the composer BEFORE posting: comments:changed can re-render
-      // synchronously, and the rebuilt composer (drawn from _commentDraft)
-      // must come up empty rather than resurrect the just-sent text.
+      // synchronously, and the rebuilt composer (drawn from _commentDraft/kind)
+      // must come up empty + back on Comment rather than resurrect prior state.
       input.value = '';
       this._composerMentions = new Set();
       if (this._commentDraft) delete this._commentDraft[t.id];
+      if (this._composerKind) delete this._composerKind[t.id];
       closeMenu();
-      this.controller.addTaskComment(t.id, text, mentions);
+      this.controller.addTaskComment(t.id, text, mentions, kind);
     };
     sendBtn.addEventListener('click', send);
   }

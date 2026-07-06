@@ -63,22 +63,33 @@ App.SupabaseDataStore = class SupabaseDataStore {
     return rows.map(row => this._mapNotificationRow(row));
   }
 
-  // ----- Task comments (migration 053) -----
-  async loadComments(taskId) {
-    const res = await this.supabase
-      .from('task_comments')
-      .select('*')
-      .eq('task_id', taskId)
-      .order('created_at', { ascending: true });
-    this._throwIfError(res, 'task_comments');
-    return (res.data || []).map(r => ({
+  // ----- Task comments (migrations 053, 064) -----
+  // Shape a task_comments row (optionally with an embedded comment_reactions
+  // array from PostgREST) into the client comment object. `kind` (064) is a
+  // real column; older rows default to 'comment'. Reactions are returned raw
+  // (one {memberId, emoji} per row) — the view aggregates counts + "mine".
+  _mapCommentRow(r) {
+    const rx = Array.isArray(r.comment_reactions) ? r.comment_reactions : [];
+    return {
       id: r.id,
       taskId: r.task_id,
       authorId: r.author_id,
       body: r.body || '',
+      kind: r.kind || 'comment',
       mentions: Array.isArray(r.mentions) ? r.mentions : [],
+      reactions: rx.map(x => ({ memberId: x.member_id, emoji: x.emoji })),
       createdAt: r.created_at,
-    }));
+    };
+  }
+
+  async loadComments(taskId) {
+    const res = await this.supabase
+      .from('task_comments')
+      .select('*, comment_reactions(member_id, emoji)')
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: true });
+    this._throwIfError(res, 'task_comments');
+    return (res.data || []).map(r => this._mapCommentRow(r));
   }
 
   // Latest comments across every task the viewer can see (RLS-scoped). The
@@ -91,17 +102,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
       .order('created_at', { ascending: false })
       .limit(limit);
     this._throwIfError(res, 'task_comments recent');
-    return (res.data || []).map(r => ({
-      id: r.id,
-      taskId: r.task_id,
-      authorId: r.author_id,
-      body: r.body || '',
-      mentions: Array.isArray(r.mentions) ? r.mentions : [],
-      createdAt: r.created_at,
-    }));
+    return (res.data || []).map(r => this._mapCommentRow(r));
   }
 
-  async addComment(taskId, { body, mentions }) {
+  async addComment(taskId, { body, mentions, kind }) {
     const res = await this.supabase
       .from('task_comments')
       .insert({
@@ -109,19 +113,35 @@ App.SupabaseDataStore = class SupabaseDataStore {
         author_id: this.currentUser,
         body: String(body || ''),
         mentions: Array.isArray(mentions) ? mentions : [],
+        kind: ['comment', 'note', 'call'].includes(kind) ? kind : 'comment',
       })
-      .select('*')
+      .select('*, comment_reactions(member_id, emoji)')
       .single();
     this._throwIfError(res, 'task_comments insert');
-    const r = res.data;
-    return {
-      id: r.id,
-      taskId: r.task_id,
-      authorId: r.author_id,
-      body: r.body || '',
-      mentions: Array.isArray(r.mentions) ? r.mentions : [],
-      createdAt: r.created_at,
-    };
+    return this._mapCommentRow(res.data);
+  }
+
+  // ----- Comment reactions (migration 064) -----
+  // Toggle is a two-call add/remove keyed on (comment, me, emoji); the unique
+  // index makes a re-add a no-op at the DB level, but the UI never double-adds.
+  async addReaction(commentId, emoji) {
+    const res = await this.supabase
+      .from('comment_reactions')
+      .insert({ comment_id: commentId, member_id: this.currentUser, emoji: String(emoji) })
+      .select('member_id, emoji')
+      .single();
+    this._throwIfError(res, 'comment_reactions insert');
+    return { memberId: res.data.member_id, emoji: res.data.emoji };
+  }
+
+  async removeReaction(commentId, emoji) {
+    const res = await this.supabase
+      .from('comment_reactions')
+      .delete()
+      .eq('comment_id', commentId)
+      .eq('member_id', this.currentUser)
+      .eq('emoji', String(emoji));
+    this._throwIfError(res, 'comment_reactions delete');
   }
 
   async load() {
