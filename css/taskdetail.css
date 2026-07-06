@@ -347,6 +347,17 @@
 #taskDetailWrap .td2-cm-kind:hover { color: var(--ink-2); }
 #taskDetailWrap .td2-cm-kind.is-on { color: var(--ink); background: var(--surface); box-shadow: var(--shadow-sm); }
 
+/* composer tools row (pic layout: Log call / Note + attach / voice, left of Post) */
+#taskDetailWrap .td2-cm-tools { display: inline-flex; align-items: center; gap: 4px; }
+#taskDetailWrap .td2-cm-tool {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; color: var(--ink-3); background: none; border: none;
+  border-radius: var(--radius-xs); cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+#taskDetailWrap .td2-cm-tool:hover { color: var(--ink-2); background: var(--bg-3); }
+#taskDetailWrap .td2-cm-tool i { font-size: 17px; }
+
 /* ---------- right: quick actions + watchers ---------- */
 #taskDetailWrap .td2-qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #taskDetailWrap .td2-qa {

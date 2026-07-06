@@ -1064,21 +1064,23 @@ App.TaskDetailView = class TaskDetailView {
     // recorded — Comment / Note / Call — writing task_comments.kind (064).
     // Self-contained here so the Slice-B quick-actions panel is untouched.
     const kind = (this._composerKind && this._composerKind[t.id]) || 'comment';
-    const seg = [
-      ['comment', 'Comment', 'ti-message'],
-      ['note', 'Note', 'ti-note'],
-      ['call', 'Call', 'ti-phone'],
-    ].map(([k, lbl, icon]) =>
-      `<button class="td2-cm-kind${kind === k ? ' is-on' : ''}" type="button" data-kind="${k}"><i class="ti ${icon}"></i>${lbl}</button>`
-    ).join('');
+    // Layout matches the locked Task-Detail pic: text box on top, then a tools row
+    // (Log call / Note + attach/voice) with Post on the right. Default is a plain
+    // comment; "Log call"/"Note" toggle task_comments.kind (migration 064).
+    const kindBtn = (k, lbl, icon) =>
+      `<button class="td2-cm-kind${kind === k ? ' is-on' : ''}" type="button" data-kind="${k}"><i class="ti ${icon}"></i>${lbl}</button>`;
     return `
       <div class="cm-list">${rows}</div>
       <div class="cm-composer">
-        <div class="td2-cm-kindseg" role="tablist">${seg}</div>
         <textarea id="cmInput" class="cm-input" rows="2" placeholder="Write an update or @mention…">${esc(draft)}</textarea>
         <div id="cmMentionMenu" class="cm-mention-menu hidden" role="listbox"></div>
         <div class="cm-actions">
-          <span class="cm-hint"><b>Enter</b> posts · <b>Shift+Enter</b> new line · <b>@</b> mentions</span>
+          <div class="td2-cm-tools" role="tablist">
+            ${kindBtn('call', 'Log call', 'ti-phone')}
+            ${kindBtn('note', 'Note', 'ti-note')}
+            <button class="td2-cm-tool" type="button" data-cm-soon="Attachments" aria-label="Attach file" title="Attachments — coming soon"><i class="ti ti-paperclip"></i></button>
+            <button class="td2-cm-tool" type="button" data-cm-soon="Voice notes" aria-label="Voice note" title="Voice notes — coming soon"><i class="ti ti-microphone"></i></button>
+          </div>
           <button id="cmSend" class="btn btn-primary cm-send" type="button">Post</button>
         </div>
       </div>`;
@@ -1215,14 +1217,22 @@ App.TaskDetailView = class TaskDetailView {
     // --- composer kind segmented control (Slice C) --- update state in place
     // (no re-render, to keep composer focus/draft), retitle the send button.
     this._composerKind = this._composerKind || {};
-    const kindBtns = Array.from(this.pane.querySelectorAll('.td2-cm-kindseg .td2-cm-kind'));
-    const sendLabel = () => 'Post';
+    const kindBtns = Array.from(this.pane.querySelectorAll('.td2-cm-tools .td2-cm-kind'));
     kindBtns.forEach(btn => btn.addEventListener('click', () => {
       const k = btn.dataset.kind;
-      this._composerKind[t.id] = k;
-      kindBtns.forEach(b => b.classList.toggle('is-on', b === btn));
-      sendBtn.textContent = sendLabel(k);
+      // Toggle: clicking the active kind returns to a plain comment.
+      const already = this._composerKind[t.id] === k;
+      const next = already ? 'comment' : k;
+      this._composerKind[t.id] = next;
+      kindBtns.forEach(b => b.classList.toggle('is-on', !already && b === btn));
+      sendBtn.textContent = 'Post';
       input.focus();
+    }));
+    // Visual-only tools (attachments / voice notes) — present to match the locked
+    // pic; not wired to a feature yet, so acknowledge the tap rather than fail silently.
+    this.pane.querySelectorAll('.td2-cm-tools [data-cm-soon]').forEach(btn => btn.addEventListener('click', () => {
+      const tv = this.controller && this.controller.toastView;
+      if (tv && tv.show) tv.show({ title: btn.getAttribute('data-cm-soon') + ' — coming soon' });
     }));
 
     const persistDraft = () => {
