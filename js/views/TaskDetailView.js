@@ -322,17 +322,9 @@ App.TaskDetailView = class TaskDetailView {
 
     this.pane.innerHTML = `
       <div class="td2" data-tdid="${App.utils.escapeHtml(t.id)}">
-      ${canNav ? `
-        <button class="td2-nav td2-nav-prev" data-action="nav-prev" aria-label="Previous task" type="button"><i class="ti ti-chevron-left"></i></button>
-        <button class="td2-nav td2-nav-next" data-action="nav-next" aria-label="Next task" type="button"><i class="ti ti-chevron-right"></i></button>` : ''}
       <div class="td2-head">
         <div class="td2-back-row">
           <button class="td2-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
-          ${canNav ? `<div class="td2-pager">
-            <button class="td2-pager-btn" data-action="nav-prev" aria-label="Previous task" type="button"><i class="ti ti-chevron-left"></i></button>
-            <span class="td2-pager-pos">${navPos >= 0 ? navPos + 1 : '–'} / ${navTotal}</span>
-            <button class="td2-pager-btn" data-action="nav-next" aria-label="Next task" type="button"><i class="ti ti-chevron-right"></i></button>
-          </div>` : ''}
         </div>
         <div class="td2-titlebar">
           <h1 class="td2-title${canWrite ? ' is-editable' : ''}"${canWrite ? ' contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Task title" title="Click to rename"' : ''}>${App.utils.escapeHtml(t.title)}</h1>
@@ -354,14 +346,8 @@ App.TaskDetailView = class TaskDetailView {
         </div>
       </div>
 
-      ${(delegated || myTimerOnThis) ? `
+      ${(myTimerOnThis) ? `
       <div class="td2-banners">
-          ${delegated ? `
-            <div class="td2-banner td2-banner-deleg">
-              <i class="ti ti-send"></i>
-              <span><strong>${App.utils.escapeHtml(assigneeLabel)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
-            </div>
-          ` : ''}
           ${myTimerOnThis ? `
             <div class="td2-banner td2-banner-timer">
               <i class="ti ti-player-record-filled"></i>
