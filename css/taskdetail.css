@@ -798,3 +798,35 @@
 #taskDetailWrap .td2-wstack .avatar-xs:first-child { margin-left: 0; }
 #taskDetailWrap .td2-wstack .td2-watch-add { width: 27px; height: 27px; margin-left: -7px; border: 1.5px dashed var(--ink-3); background: var(--surface); }
 #taskDetailWrap .td2-wstack .td2-watch-add:hover { border-style: solid; border-color: var(--accent); background: var(--accent); color: #fff; }
+
+/* ============================================================
+   Fidelity pass 2 — match the prototype's smaller typographic
+   details: Title-case Details labels, mono card headers, inline
+   "· n" counts, orange Post button, inline empty-Project row,
+   and a Reply link under each comment.
+   ============================================================ */
+/* Details field labels: Title-case sans (not UPPERCASE mono) */
+#taskDetailWrap .td2-field-k {
+  font-family: var(--font-body); text-transform: none; letter-spacing: normal;
+  font-size: 12.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px;
+}
+/* Card headers: IBM Plex Mono, letter-spaced (the "DETAILS / QUICK ACTIONS" look) */
+#taskDetailWrap .td2-card-h { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.1em; font-size: 11.5px; }
+#taskDetailWrap .td2-stuck-h { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.1em; font-size: 10px; }
+/* Counts read inline ("· 3", "· 1/3") instead of as a right-aligned pill */
+#taskDetailWrap .td2-card-h .td2-count {
+  margin-left: 0; background: none; padding: 0; border-radius: 0;
+  font-family: var(--font-mono); font-weight: 600; font-size: 11.5px; color: var(--ink); letter-spacing: 0.1em;
+}
+#taskDetailWrap .td2-card-h .td2-count::before { content: '· '; }
+/* Composer Post button → orange pill */
+#taskDetailWrap .cm-send { background: var(--accent); border-color: var(--accent); color: #fff; border-radius: var(--radius-pill); }
+#taskDetailWrap .cm-send:hover { background: var(--accent-dark); border-color: var(--accent-dark); color: #fff; }
+/* Empty Project row: label left, orange "+ Add" right (matches spec §4) */
+#taskDetailWrap .td2-field-proj-empty { grid-template-columns: 1fr auto; align-items: center; }
+#taskDetailWrap .td2-field-proj-empty .td2-field-k { margin-bottom: 0; }
+#taskDetailWrap .td2-field-proj-empty .td2-addproj { justify-self: end; }
+/* Reply link under each comment */
+#taskDetailWrap .td2-cm-actions { display: flex; gap: 14px; margin-top: 7px; }
+#taskDetailWrap .td2-cm-reply { background: none; border: none; padding: 0; font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--ink-2); cursor: pointer; }
+#taskDetailWrap .td2-cm-reply:hover { color: var(--accent); }

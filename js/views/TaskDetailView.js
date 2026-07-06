@@ -385,7 +385,7 @@ App.TaskDetailView = class TaskDetailView {
               <div class="td2-field"><span class="td2-field-k">Company</span><span ${ev('company', 'td2-field-v')}><span class="td2-sq"></span>${App.utils.escapeHtml(company.label)}</span></div>
               <div class="td2-field"><span class="td2-field-k">Type</span><span ${ev('type', 'td2-field-v')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
               <div class="td2-field"><span class="td2-field-k">Label</span><span ${ev('label', 'td2-field-v')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
-              <div class="td2-field"><span class="td2-field-k">Project</span>${projectChipHtml}</div>
+              <div class="td2-field${proj ? '' : ' td2-field-proj-empty'}"><span class="td2-field-k">Project</span>${projectChipHtml}</div>
               <div class="td2-field"><span class="td2-field-k">Created</span><span class="td2-field-v td2-created-v">${createdWhen ? App.utils.escapeHtml(createdWhen) : App.utils.escapeHtml('by ' + creator.name)}</span></div>
             </div>
           </div>
@@ -434,7 +434,7 @@ App.TaskDetailView = class TaskDetailView {
           </div>
 
           <div class="td2-card">
-            <div class="td2-card-h"><i class="ti ti-eye"></i> Watchers${watcherIds.length ? `<span class="td2-count">${watcherIds.length}</span>` : ''}</div>
+            <div class="td2-card-h">Watchers${watcherIds.length ? `<span class="td2-count">${watcherIds.length}</span>` : ''}</div>
             <div class="td2-wstack">
               ${watcherIds.map(w => { const p = App.PEOPLE[w]; return p ? App.utils.avatarHtml(p) : ''; }).join('')}
               <button class="td2-watch-add" data-action="toggle-watch" title="${isWatching ? 'Stop watching' : 'Watch this task'}" aria-label="Toggle watch" type="button"><i class="ti ${isWatching ? 'ti-eye-off' : 'ti-plus'}"></i></button>
@@ -1093,7 +1093,7 @@ App.TaskDetailView = class TaskDetailView {
         <div id="cmMentionMenu" class="cm-mention-menu hidden" role="listbox"></div>
         <div class="cm-actions">
           <span class="cm-hint"><b>Enter</b> posts · <b>Shift+Enter</b> new line · <b>@</b> mentions</span>
-          <button id="cmSend" class="btn btn-primary cm-send" type="button">${kind === 'call' ? 'Log call' : kind === 'note' ? 'Add note' : 'Comment'}</button>
+          <button id="cmSend" class="btn btn-primary cm-send" type="button">Post</button>
         </div>
       </div>`;
   }
@@ -1163,6 +1163,7 @@ App.TaskDetailView = class TaskDetailView {
         <div class="cm-bubble">
           <div class="cm-meta"><span class="cm-who">${esc(person.name)}</span>${tagHtml}${ago ? `<span class="cm-ago">· ${esc(ago)}</span>` : ''}</div>
           <div class="cm-text">${body}</div>${reactHtml}
+          <div class="td2-cm-actions"><button class="td2-cm-reply" type="button" data-reply-first="${esc(String(person.name || '').trim().split(/\s+/)[0])}">Reply</button></div>
         </div>
       </div>`;
   }
@@ -1186,6 +1187,20 @@ App.TaskDetailView = class TaskDetailView {
         this.pane.querySelectorAll('.td2-cm-rpick').forEach(p => { if (p !== except) p.classList.add('hidden'); });
       };
       list.addEventListener('click', (e) => {
+        // Reply → prefill the composer with @FirstName and focus it.
+        const reply = e.target.closest('.td2-cm-reply');
+        if (reply) {
+          const input = this.pane.querySelector('#cmInput');
+          if (input) {
+            const first = reply.dataset.replyFirst || '';
+            if (first && !input.value.includes('@' + first)) {
+              input.value = (input.value.trim() ? input.value.trim() + ' ' : '') + '@' + first + ' ';
+            }
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+          }
+          return;
+        }
         const pill = e.target.closest('.td2-cm-react, .td2-cm-rpick-b');
         if (pill && pill.dataset.emoji) {
           closePickers();
@@ -1215,7 +1230,7 @@ App.TaskDetailView = class TaskDetailView {
     // (no re-render, to keep composer focus/draft), retitle the send button.
     this._composerKind = this._composerKind || {};
     const kindBtns = Array.from(this.pane.querySelectorAll('.td2-cm-kindseg .td2-cm-kind'));
-    const sendLabel = (k) => (k === 'call' ? 'Log call' : k === 'note' ? 'Add note' : 'Comment');
+    const sendLabel = () => 'Post';
     kindBtns.forEach(btn => btn.addEventListener('click', () => {
       const k = btn.dataset.kind;
       this._composerKind[t.id] = k;
