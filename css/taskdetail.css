@@ -6,6 +6,12 @@
 
 #taskDetailWrap .td2 {
   --accent: var(--amber);
+  /* v1-FINAL type system (pro2.html): Hanken Grotesk UI/display, IBM Plex Mono data.
+     Overriding the three font tokens here re-skins the whole task-detail subtree
+     without touching every rule. Scoped to #taskDetailWrap so nothing leaks app-wide. */
+  --font-body: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --font-display: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   font-family: var(--font-body);
   color: var(--ink);
   max-width: 1280px;

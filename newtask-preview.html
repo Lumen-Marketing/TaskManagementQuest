@@ -86,6 +86,8 @@ App.utils = {
   avatarHtml: (p) => `<span>${(p && p.name || '?').slice(0, 2)}</span>`,
 };
 App.Motion = { shake: (el) => { el.animate([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 200 }); } };
+App.can = () => true;
+App.ROLES = { Owner: { label: 'Owner' }, Admin: { label: 'Admin' } };
 
 /* fake controller */
 let VIEW = null;
@@ -96,7 +98,7 @@ App.controller = {
   toastView: { show: ({ title, sub }) => console.log('[toast]', title, sub) },
   createTask: (payload) => {
     console.log('[createTask payload]', payload);
-    if (VIEW) { VIEW.woNumber = 7; VIEW.dispatched = true; VIEW._renderRail(); }
+    if (VIEW) { VIEW.woNumber = 7; VIEW.dispatched = true; VIEW._renderPreview(); }
     alert('Dispatched (preview) — QH-0007\nAssignees: ' + (payload.assigneeIds || []).join(', ') + '\nSee console for the full payload.');
   },
   closeNewTaskPage: () => { /* keep the stamped ticket visible in preview */ },
