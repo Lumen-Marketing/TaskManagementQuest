@@ -285,7 +285,9 @@ App.NewTaskPageView = class NewTaskPageView {
     return this._peopleFor(this.S.company).map(p => {
       const assigned = this.S.whos.includes(p.id);
       const on = this.watchers.includes(p.id);
-      return `<button class="nt-mitem" data-v="${p.id}" ${assigned ? 'disabled' : ''}><span class="nt-mini" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>${App.utils.escapeHtml(p.name)}${on ? '<span class="nt-check">✓</span>' : `<small>${assigned ? 'assigned' : (p.role || '')}</small>`}</button>`;
+      const wsub = assigned ? 'assigned' : (p.position || (p.role && App.ROLES && App.ROLES[p.role] ? App.ROLES[p.role].label : p.role) || '');
+      const wnameHtml = wsub ? `<span class="nt-mname">${App.utils.escapeHtml(p.name)}<small>${App.utils.escapeHtml(wsub)}</small></span>` : App.utils.escapeHtml(p.name);
+      return `<button class="nt-mitem" data-v="${p.id}" ${assigned ? 'disabled' : ''}><span class="nt-mini" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>${wnameHtml}${on ? '<span class="nt-check">✓</span>' : ''}</button>`;
     }).join('');
   }
 
