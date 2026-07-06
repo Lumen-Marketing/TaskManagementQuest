@@ -376,7 +376,7 @@ App.NewTaskPageView = class NewTaskPageView {
     const root = document.getElementById('nt-root');
     root.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', () => this.controller.closeNewTaskPage()));
     const setupBtn = root.querySelector('[data-action="task-setup"]');
-    if (setupBtn) setupBtn.addEventListener('click', () => { this.controller.closeNewTaskPage(); this.controller.navigate('admin:task-setup'); });
+    if (setupBtn) setupBtn.addEventListener('click', () => { this.controller.setView('admin:task-setup'); });
     document.getElementById('nt-create').addEventListener('click', () => this.submit());
 
     // Title parsing.
