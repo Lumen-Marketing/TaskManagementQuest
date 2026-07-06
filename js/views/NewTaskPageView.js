@@ -119,7 +119,7 @@ App.NewTaskPageView = class NewTaskPageView {
             </div>
 
             <div class="nt-sec" data-sec="routing">
-              <div class="nt-sec-h"><span class="nt-n">01</span><span class="nt-t">Routing</span><span class="nt-k">C · A · P</span></div>
+              <div class="nt-sec-h"><span class="nt-n">01</span><span class="nt-t">Routing</span><span class="nt-k">C · A · P</span>${App.can('task-setup.manage') ? '<button class="nt-setup-link" data-action="task-setup" type="button"><i class="ti ti-adjustments"></i> Task setup</button>' : ''}</div>
               <div class="nt-frow">
                 ${this._pickField('company', 'COMPANY', 'C')}
                 ${this._pickField('assignee', 'ASSIGNEE', 'A')}
@@ -233,7 +233,8 @@ App.NewTaskPageView = class NewTaskPageView {
     return this._peopleFor(this.S.company).map(p => {
       const on = this.S.whos.includes(p.id);
       const sub = p.position || (p.role && App.ROLES && App.ROLES[p.role] ? App.ROLES[p.role].label : p.role);
-      return `<button class="nt-mitem" data-v="${p.id}"><span class="nt-mini" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>${App.utils.escapeHtml(p.name)}${on ? '<span class="nt-check">✓</span>' : (sub ? `<small>${App.utils.escapeHtml(sub)}</small>` : '')}</button>`;
+      const nameHtml = sub ? `<span class="nt-mname">${App.utils.escapeHtml(p.name)}<small>${App.utils.escapeHtml(sub)}</small></span>` : App.utils.escapeHtml(p.name);
+      return `<button class="nt-mitem" data-v="${p.id}"><span class="nt-mini" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>${nameHtml}${on ? '<span class="nt-check">✓</span>' : ''}</button>`;
     }).join('');
   }
   _typeItems() {
@@ -372,6 +373,8 @@ App.NewTaskPageView = class NewTaskPageView {
   bindEvents() {
     const root = document.getElementById('nt-root');
     root.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', () => this.controller.closeNewTaskPage()));
+    const setupBtn = root.querySelector('[data-action="task-setup"]');
+    if (setupBtn) setupBtn.addEventListener('click', () => { this.controller.closeNewTaskPage(); this.controller.navigate('admin:task-setup'); });
     document.getElementById('nt-create').addEventListener('click', () => this.submit());
 
     // Title parsing.
