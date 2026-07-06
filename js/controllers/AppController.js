@@ -39,7 +39,7 @@ App.AppController = class AppController {
       calendarMode: 'month',
       calendarAnchor: null,
       calendarSelectedDay: null,
-      filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' },
+      filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' },
       filtersOpen: false,
       sortBy: 'priority',
       sortDir: 'asc',
@@ -302,8 +302,8 @@ App.AppController = class AppController {
     if (saved.sortDir === 'asc' || saved.sortDir === 'desc') this.uiState.sortDir = saved.sortDir;
     if (saved.groupBy && App.GROUP_OPTIONS[saved.groupBy]) this.uiState.groupBy = saved.groupBy;
     if (saved.filters && typeof saved.filters === 'object') {
-      const d = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' };
-      for (const k of ['assignees', 'companies', 'statuses', 'priorities', 'types', 'projects']) {
+      const d = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' };
+      for (const k of ['assignees', 'companies', 'statuses', 'priorities', 'types', 'projects', 'labels']) {
         if (Array.isArray(saved.filters[k])) d[k] = saved.filters[k];
       }
       if (typeof saved.filters.dueRange === 'string') d.dueRange = saved.filters.dueRange;
@@ -2430,8 +2430,17 @@ App.AppController = class AppController {
     this._persistUiState();
   }
 
+  /* Single-select company filter behind the Tasks board's top chip row. Table-
+     local (drives the `companies` filter group), so it does NOT change the app-
+     wide company scope (setCompany). 'all' / falsy clears it. */
+  setCompanyScopeFilter(id) {
+    this.uiState.filters.companies = (id && id !== 'all') ? [id] : [];
+    App.EventBus.emit('filters:changed');
+    this._persistUiState();
+  }
+
   clearFilters() {
-    this.uiState.filters = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], dueRange: 'all' };
+    this.uiState.filters = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' };
     App.EventBus.emit('filters:changed');
     this._persistUiState();
   }
@@ -2444,6 +2453,7 @@ App.AppController = class AppController {
       + (f.priorities || []).length
       + (f.types      || []).length
       + (f.projects   || []).length
+      + (f.labels     || []).length
       + ((f.dueRange && f.dueRange !== 'all') ? 1 : 0);
   }
 

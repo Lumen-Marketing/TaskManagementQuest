@@ -1,0 +1,226 @@
+/* ============================================================
+   QUEST HQ — TASKS BOARD SKIN  (docs/tasks-board.html → live)
+   A faithful port of the boss's locked prototype, scoped to the
+   Table layout only via  #taskViewWrap.qt-skin . Light-only
+   island (matches the New Task / Task Detail v1 pages). It reuses
+   the app's existing row actions + inline menus; only the look,
+   columns and grouping chrome are replaced here.
+   ============================================================ */
+
+#taskViewWrap.qt-skin {
+  --qt-orange:#ED4E0D; --qt-orange-dark:#c2410c;
+  --qt-red:#D92B2B; --qt-red-dark:#A32D2D;
+  --qt-green:#0F6E56;
+  --qt-ink:#111111; --qt-ink-soft:#3f3d39; --qt-ink-3:#5f5b55;
+  --qt-canvas:#f4f2ee; --qt-card:#ffffff; --qt-chip:#f5f2ee;
+  --qt-line:#e5e1da; --qt-line-soft:#f0ede8; --qt-line-strong:#d6d2cb;
+  --qt-sans:'Hanken Grotesk', system-ui, sans-serif;
+  --qt-mono:'IBM Plex Mono', monospace;
+}
+
+/* The static column header (app.html) is replaced by the rendered one. */
+#taskViewWrap.qt-skin > .list-header { display: none !important; }
+
+/* Canvas wrapper — gives the white group cards something warm to sit on. */
+#taskViewWrap.qt-skin .qt-wrap {
+  background: var(--qt-canvas);
+  font-family: var(--qt-sans);
+  color: var(--qt-ink);
+  padding: 18px 24px 60px;
+  min-height: 100%;
+}
+#taskViewWrap.qt-skin .qt-wrap * { box-sizing: border-box; }
+
+/* ---------- company filter chips ---------- */
+#taskViewWrap.qt-skin .qt-chiprow { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+#taskViewWrap.qt-skin .qt-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--qt-sans); font-size: 12.5px; font-weight: 700;
+  padding: 6px 14px; border-radius: 999px;
+  border: 1.5px solid var(--qt-line-strong); background: #fff; color: var(--qt-ink);
+  cursor: pointer; transition: border-color .12s ease, background .12s ease, color .12s ease;
+}
+#taskViewWrap.qt-skin .qt-chip:hover { border-color: var(--qt-ink); }
+#taskViewWrap.qt-skin .qt-chip.on { background: var(--qt-ink); border-color: var(--qt-ink); color: #fff; }
+#taskViewWrap.qt-skin .qt-chip .sq { width: 7px; height: 7px; border-radius: 2px; background: var(--qt-orange); }
+
+/* ---------- column header ---------- */
+#taskViewWrap.qt-skin .qt-cols {
+  display: grid;
+  grid-template-columns: 30px 18px minmax(0,2.3fr) 118px 106px 118px 116px 118px;
+  gap: 10px; padding: 0 16px 8px; align-items: center;
+}
+#taskViewWrap.qt-skin .qt-colcell {
+  font-family: var(--qt-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: .1em; color: var(--qt-ink);
+}
+#taskViewWrap.qt-skin .qt-colbtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--qt-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .1em;
+  color: var(--qt-ink); padding: 4px 6px; border-radius: 7px;
+  background: none; border: none; cursor: pointer;
+}
+#taskViewWrap.qt-skin .qt-colbtn:hover { background: #e9e5dd; }
+#taskViewWrap.qt-skin .qt-colbtn i { font-size: 12px; opacity: .6; }
+#taskViewWrap.qt-skin .qt-colbtn.filtered { color: var(--qt-orange-dark); background: #FDF1EA; }
+
+/* ---------- groups ---------- */
+#taskViewWrap.qt-skin .qt-group {
+  background: #fff; border: 1px solid var(--qt-line); border-radius: 14px;
+  overflow: hidden; margin: 0 0 14px;
+}
+#taskViewWrap.qt-skin .qt-group::before { content: none; } /* kill the app's left rail */
+#taskViewWrap.qt-skin .qt-ghead {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  cursor: pointer; user-select: none; background: #fff;
+  font-family: var(--qt-sans);
+}
+#taskViewWrap.qt-skin .qt-ghead:hover { filter: brightness(.985); }
+#taskViewWrap.qt-skin .qt-gname { font-size: 15px; font-weight: 800; color: var(--qt-ink); }
+#taskViewWrap.qt-skin .qt-gcount {
+  font-family: var(--qt-mono); font-size: 10.5px; font-weight: 600; color: #fff;
+  padding: 2px 10px; border-radius: 999px; margin-left: auto; background: #5f5b55;
+}
+#taskViewWrap.qt-skin .qt-ghead .qt-chev { transition: transform .15s ease; color: inherit; font-size: 15px; display: inline-flex; }
+#taskViewWrap.qt-skin .qt-ghead .qt-gicon { display: inline-flex; font-size: 15px; }
+#taskViewWrap.qt-skin .qt-group.collapsed .qt-chev { transform: rotate(-90deg); }
+#taskViewWrap.qt-skin .qt-group.collapsed .qt-gbody { display: none; }
+#taskViewWrap.qt-skin .qt-group.collapsed .qt-ghead { border-bottom: none; }
+/* overdue / today / plain heads */
+#taskViewWrap.qt-skin .qt-ghead.overdue { background: #FCEBEB; border-bottom: 1px solid #f5d0cb; }
+#taskViewWrap.qt-skin .qt-ghead.overdue .qt-gname { color: var(--qt-red-dark); }
+#taskViewWrap.qt-skin .qt-ghead.overdue .qt-gcount { background: var(--qt-red); }
+#taskViewWrap.qt-skin .qt-ghead.overdue .qt-gicon { color: var(--qt-red); }
+#taskViewWrap.qt-skin .qt-ghead.today { border-bottom: 1px solid var(--qt-line-soft); }
+#taskViewWrap.qt-skin .qt-ghead.today .qt-gcount { background: var(--qt-orange); }
+#taskViewWrap.qt-skin .qt-ghead.today .qt-gicon { color: var(--qt-orange); }
+#taskViewWrap.qt-skin .qt-ghead.plain { border-bottom: 1px solid var(--qt-line-soft); }
+#taskViewWrap.qt-skin .qt-emptygroup { font-size: 13px; font-weight: 600; color: var(--qt-ink-3); padding: 14px 16px; }
+
+/* ---------- rows ---------- */
+#taskViewWrap.qt-skin .qt-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px 18px minmax(0,2.3fr) 118px 106px 118px 116px 118px;
+  gap: 10px; padding: 12px 16px; align-items: center;
+  border-bottom: 1px solid #cfc8bd;
+  background: #fff; cursor: pointer;
+  font-family: var(--qt-sans);
+}
+#taskViewWrap.qt-skin .qt-row:last-child { border-bottom: none; }
+#taskViewWrap.qt-skin .qt-row:hover { background: #faf8f5; }
+#taskViewWrap.qt-skin .qt-row.selected { background: #FDF1EA; }
+#taskViewWrap.qt-skin .qt-row.qt-stuckrow { background: #FEF7F5; }
+#taskViewWrap.qt-skin .qt-row.qt-stuckrow:hover { background: #FDF0EC; }
+
+#taskViewWrap.qt-skin .qt-ck { display: flex; justify-content: center; }
+#taskViewWrap.qt-skin .qt-ck input { width: 15px; height: 15px; accent-color: var(--qt-orange); cursor: pointer; }
+
+#taskViewWrap.qt-skin .qt-pdot { width: 9px; height: 9px; border-radius: 50%; justify-self: center; background: #b4b2a9; }
+#taskViewWrap.qt-skin .qt-pdot.priority-critical { background: var(--qt-red); }
+#taskViewWrap.qt-skin .qt-pdot.priority-urgent   { background: var(--qt-orange); }
+#taskViewWrap.qt-skin .qt-pdot.priority-high     { background: #F0792F; }
+#taskViewWrap.qt-skin .qt-pdot.priority-medium   { background: #EF9F27; }
+#taskViewWrap.qt-skin .qt-pdot.priority-low      { background: #b4b2a9; }
+
+#taskViewWrap.qt-skin .qt-tcell { min-width: 0; }
+#taskViewWrap.qt-skin .qt-ttitle {
+  font-size: 14px; font-weight: 700; color: #111;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#taskViewWrap.qt-skin .qt-row:hover .qt-ttitle { color: var(--qt-orange-dark); }
+#taskViewWrap.qt-skin .qt-done .qt-ttitle { text-decoration: line-through; color: var(--qt-ink-3); }
+#taskViewWrap.qt-skin .qt-steps { font-family: var(--qt-mono); font-size: 10.5px; color: var(--qt-ink-3); font-weight: 500; margin-left: 6px; }
+#taskViewWrap.qt-skin .qt-stuckbadge {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700;
+  padding: 2px 9px; border-radius: 999px; background: #FCEBEB; border: 1px solid #f0b9b0;
+  color: var(--qt-red-dark); margin-top: 4px;
+}
+#taskViewWrap.qt-skin .qt-stuckbadge i { font-size: 12px; }
+
+/* inline-edit + display cells */
+#taskViewWrap.qt-skin .qt-cellbtn {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+  color: #111; padding: 4px 8px; border-radius: 8px; max-width: 100%;
+  background: none; border: none; cursor: pointer; text-align: left;
+}
+#taskViewWrap.qt-skin button.qt-cellbtn:hover { background: var(--qt-chip); }
+#taskViewWrap.qt-skin .qt-cellbtn .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: #888780; }
+#taskViewWrap.qt-skin .qt-cellbtn .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#taskViewWrap.qt-skin .qt-cellbtn .chv { opacity: .5; flex-shrink: 0; font-size: 12px; display: inline-flex; }
+#taskViewWrap.qt-skin .qt-cellbtn.status-todo    .dot { background: #378ADD; }
+#taskViewWrap.qt-skin .qt-cellbtn.status-pending .dot { background: #EF9F27; }
+#taskViewWrap.qt-skin .qt-cellbtn.status-hold    .dot { background: var(--qt-red); }
+#taskViewWrap.qt-skin .qt-cellbtn.status-review  .dot { background: #EF9F27; }
+#taskViewWrap.qt-skin .qt-cellbtn.status-done    .dot { background: var(--qt-green); }
+
+#taskViewWrap.qt-skin .qt-pbadge {
+  font-size: 10px; font-weight: 700; padding: 4px 11px; border-radius: 999px; letter-spacing: .02em;
+  background: var(--qt-chip); border: 1px solid var(--qt-line-strong); color: #111;
+  cursor: pointer;
+}
+#taskViewWrap.qt-skin .qt-pbadge.priority-critical { background: var(--qt-red); color: #fff; border-color: transparent; }
+#taskViewWrap.qt-skin .qt-pbadge.priority-urgent   { background: var(--qt-orange); color: #fff; border-color: transparent; }
+#taskViewWrap.qt-skin .qt-pbadge.priority-high     { background: #F0792F; color: #fff; border-color: transparent; }
+#taskViewWrap.qt-skin .qt-pbadge.priority-medium   { background: #FAC775; color: #412402; border-color: transparent; }
+#taskViewWrap.qt-skin .qt-pbadge.priority-low      { background: var(--qt-chip); border: 1px solid var(--qt-line-strong); color: #111; }
+#taskViewWrap.qt-skin .qt-pcell { display: inline-flex; align-items: center; gap: 4px; }
+#taskViewWrap.qt-skin .qt-pcell .chv { opacity: .5; font-size: 12px; display: inline-flex; }
+
+#taskViewWrap.qt-skin .qt-avatar {
+  width: 22px; height: 22px; border-radius: 50%; color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; flex-shrink: 0;
+}
+
+#taskViewWrap.qt-skin .qt-due { font-family: var(--qt-mono); font-size: 11px; font-weight: 600; line-height: 1.45; color: #111; }
+#taskViewWrap.qt-skin .qt-due.late  { color: var(--qt-red); }
+#taskViewWrap.qt-skin .qt-due.today { color: var(--qt-orange-dark); }
+#taskViewWrap.qt-skin .qt-due.done  { color: var(--qt-green); }
+#taskViewWrap.qt-skin .qt-due .qt-duetime { display: block; font-size: 10px; color: var(--qt-ink-3); }
+
+/* ---------- hover action cluster (timer / finish / quick) ---------- */
+#taskViewWrap.qt-skin .qt-actions {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 2px;
+  background: linear-gradient(90deg, transparent, #faf8f5 22%, #faf8f5);
+  padding: 4px 4px 4px 20px; border-radius: 10px;
+  opacity: 0; pointer-events: none; transition: opacity .12s ease;
+}
+#taskViewWrap.qt-skin .qt-row:hover .qt-actions { opacity: 1; pointer-events: auto; }
+#taskViewWrap.qt-skin .qt-actions button {
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px; color: var(--qt-ink-soft); background: none; border: none; cursor: pointer;
+}
+#taskViewWrap.qt-skin .qt-actions button:hover { background: var(--qt-chip); color: var(--qt-ink); }
+#taskViewWrap.qt-skin .qt-actions button i { font-size: 16px; }
+#taskViewWrap.qt-skin .qt-actions .timer-btn.active { color: var(--qt-orange); opacity: 1; }
+#taskViewWrap.qt-skin .qt-actions .finish-btn.is-done { color: var(--qt-green); }
+#taskViewWrap.qt-skin .qt-actions .hidden { display: none; }
+
+/* Empty state keeps the app's .empty block; just center it on the canvas. */
+#taskViewWrap.qt-skin .qt-wrap .empty { background: transparent; }
+
+/* Phones: the dense 8-column grid can't fit, so each row reflows into a two-
+   line card — checkbox · title · due on top, then the status / priority / label
+   / assignee chips wrap onto a second line. The mono column header is dropped
+   (the group heads carry enough structure). Mobile-first is the app's priority. */
+@media (max-width: 720px) {
+  #taskViewWrap.qt-skin .qt-wrap { padding: 14px 12px 72px; }
+  #taskViewWrap.qt-skin .qt-cols { display: none; }
+  #taskViewWrap.qt-skin .qt-row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+    padding: 13px 14px;
+  }
+  #taskViewWrap.qt-skin .qt-ck { order: 1; }
+  #taskViewWrap.qt-skin .qt-pdot { order: 2; }
+  #taskViewWrap.qt-skin .qt-tcell { order: 3; flex: 1 1 52%; min-width: 0; }
+  #taskViewWrap.qt-skin .qt-ttitle { white-space: normal; }
+  #taskViewWrap.qt-skin .qt-due { order: 4; margin-left: auto; text-align: right; }
+  #taskViewWrap.qt-skin .qt-cell-status { order: 5; }
+  #taskViewWrap.qt-skin .qt-cell-priority { order: 6; }
+  #taskViewWrap.qt-skin .qt-cell-label { order: 7; }
+  #taskViewWrap.qt-skin .qt-cell-assignee { order: 8; }
+  #taskViewWrap.qt-skin .qt-cellbtn { padding: 2px 4px; }
+  #taskViewWrap.qt-skin .qt-actions { display: none; }
+}

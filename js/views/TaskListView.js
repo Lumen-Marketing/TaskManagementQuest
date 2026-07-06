@@ -88,8 +88,12 @@ App.TaskListView = class TaskListView {
         options: Object.entries(App.STATUSES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.statuses || []).includes(k) })) };
     }
     if (col === 'companies') {
-      return { multi: true, group: 'companies', title: 'Filter label',
+      return { multi: true, group: 'companies', title: 'Filter company',
         options: Object.entries(App.COMPANIES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.companies || []).includes(k) })) };
+    }
+    if (col === 'labels') {
+      return { multi: true, group: 'labels', title: 'Filter label',
+        options: Object.entries(App.TASK_LABELS || {}).map(([k, v]) => ({ value: k, label: v.label, selected: (f.labels || []).includes(k) })) };
     }
     // Due is a single-select range (mirrors FilterBarView's options).
     const ranges = [
@@ -291,6 +295,10 @@ App.TaskListView = class TaskListView {
   _renderListInner() {
     // Reflect bulk-select mode on <body> so CSS can reveal the row checkboxes.
     document.body.classList.toggle('is-bulk', !!this.controller.uiState.bulkMode);
+    // The prototype "qt" skin (css/tasks.css) is scoped to the Table layout via
+    // #taskViewWrap.qt-skin. Drop it for every other layout so their CSS isn't
+    // scoped away; renderTable() re-adds it.
+    this.wrap.classList.remove('qt-skin');
     // The Watching view stacks two panels: the tasks you're watching, and
     // (for managers) a team dashboard of your direct reports.
     // Tear down any Focus-list drag listeners from the previous render — the
@@ -711,19 +719,36 @@ App.TaskListView = class TaskListView {
     return row;
   }
 
+  /* ===== Table layout — the boss's locked "Tasks board" prototype, ported to
+     live data (css/tasks.css, .qt-* classes). Company → top filter chips, a
+     rendered column header (Status/Priority/Label/Assignee/Due), due-bucket
+     groups, and rows that reuse the existing inline menus + actions. The static
+     app.html .list-header is hidden by CSS under #taskViewWrap.qt-skin. */
   renderTable() {
     const tasks = this.getFilteredTasks();
-    this.body.className = '';
+    this.wrap.classList.add('qt-skin');
+    this.body.className = 'qt-body';
     this.body.innerHTML = '';
 
-    // Restore the column header that the Focus-list (Execution-order sort) and
-    // worker/watching views hide — a sort change re-renders the list without a
-    // full render(), so syncLayoutSwitcher doesn't run to bring it back.
-    const listHeader = document.querySelector('#taskViewWrap .list-header');
-    if (listHeader) listHeader.classList.remove('hidden');
+    const wrap = document.createElement('div');
+    wrap.className = 'qt-wrap';
+    wrap.appendChild(this._qtChipRow());
+    wrap.appendChild(this._qtColsHeader());
 
     if (tasks.length === 0) {
-      this._renderEmpty(this._emptyConfig());
+      const cfg = this._emptyConfig();
+      const showCta = cfg.cta && App.can('tasks.write');
+      const e = document.createElement('div');
+      e.className = 'empty';
+      e.innerHTML = `
+        <i class="ti ${cfg.icon}"></i>
+        <div class="empty-title">${App.utils.escapeHtml(cfg.title)}</div>
+        <div class="empty-sub">${App.utils.escapeHtml(cfg.sub)}</div>
+        ${showCta ? `<div class="empty-actions"><button class="btn btn-primary empty-cta" type="button" data-action="empty-new-task"><i class="ti ti-plus"></i>New task</button></div>` : ''}`;
+      const cta = e.querySelector('[data-action="empty-new-task"]');
+      if (cta) cta.addEventListener('click', () => this.controller.openNewTaskPage());
+      wrap.appendChild(e);
+      this.body.appendChild(wrap);
       this._prependProjectHeader();
       return;
     }
@@ -734,38 +759,161 @@ App.TaskListView = class TaskListView {
     groups.forEach(g => {
       const collapsed = collapsedGroups.has(g.key);
       const section = document.createElement('div');
-      section.className = 'task-group' + (collapsed ? ' collapsed' : '');
-      section.style.setProperty('--group-color', g.color);
+      section.className = 'qt-group' + (collapsed ? ' collapsed' : '');
 
+      const headCls = g.key === 'overdue' ? 'overdue' : g.key === 'today' ? 'today' : 'plain';
       const head = document.createElement('div');
-      head.className = 'group-head';
+      head.className = 'qt-ghead ' + headCls;
       head.dataset.groupKey = g.key;
-      // The "Clear done" action now lives OUTSIDE the table, in the toolbar
-      // (#clearDoneBtn), toggled by _syncClearDoneBtn() — not in the group head.
       head.innerHTML = `
-        <button class="group-chevron" aria-label="Toggle group" data-action="toggle-group">
-          <i class="ti ti-chevron-down"></i>
-        </button>
-        <span class="group-pill" style="background:${g.color};">${App.utils.escapeHtml(String(g.label || '?').trim().charAt(0).toUpperCase())}</span>
-        <span class="group-title">${App.utils.escapeHtml(g.label)}</span>
-        <span class="group-count">${g.items.length}</span>
-      `;
-      head.querySelector('[data-action="toggle-group"]').addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.controller.toggleGroupCollapsed(g.key);
-      });
+        <span class="qt-chev"><i class="ti ti-chevron-down"></i></span>
+        <span class="qt-gicon"><i class="ti ${this._qtGroupIcon(g.key)}"></i></span>
+        <span class="qt-gname">${App.utils.escapeHtml(g.label)}</span>
+        <span class="qt-gcount">${g.items.length}</span>`;
+      head.addEventListener('click', () => this.controller.toggleGroupCollapsed(g.key));
       section.appendChild(head);
 
       if (!collapsed) {
         const body = document.createElement('div');
-        body.className = 'group-body';
-        g.items.forEach(t => body.appendChild(this.renderRow(t)));
+        body.className = 'qt-gbody';
+        g.items.forEach(t => body.appendChild(this._qtRow(t)));
         section.appendChild(body);
       }
 
-      this.body.appendChild(section);
+      wrap.appendChild(section);
     });
+
+    this.body.appendChild(wrap);
     this._prependProjectHeader();
+  }
+
+  _qtGroupIcon(key) {
+    return ({
+      overdue: 'ti-alert-triangle', today: 'ti-flame', tomorrow: 'ti-arrow-narrow-right',
+      thisWeek: 'ti-calendar', later: 'ti-clock', done: 'ti-circle-check',
+    })[key] || 'ti-layout-rows';
+  }
+
+  // Company filter chips (prototype's top row). Single-select: "All" clears the
+  // companies filter; a company narrows to just it. Drives the same filter state
+  // as everything else via the controller (table-local, no global scope change).
+  _qtChipRow() {
+    const row = document.createElement('div');
+    row.className = 'qt-chiprow';
+    const active = (this.controller.uiState.filters && this.controller.uiState.filters.companies) || [];
+    const accessible = (this.controller.uiState.companies || []).filter(id => App.COMPANIES[id]);
+    const ids = accessible.length ? accessible : Object.keys(App.COMPANIES);
+    const chips = [{ id: 'all', label: 'All' }].concat(ids.map(id => ({ id, label: App.COMPANIES[id].label })));
+    row.innerHTML = chips.map(c => {
+      const on = c.id === 'all' ? active.length === 0 : (active.length === 1 && active[0] === c.id);
+      return `<button type="button" class="qt-chip ${on ? 'on' : ''}" data-company="${App.utils.escapeHtml(c.id)}">${c.id === 'all' ? '' : '<span class="sq"></span>'}${App.utils.escapeHtml(c.label)}</button>`;
+    }).join('');
+    row.querySelectorAll('[data-company]').forEach(btn =>
+      btn.addEventListener('click', () => this.controller.setCompanyScopeFilter(btn.dataset.company)));
+    return row;
+  }
+
+  // The rendered column header. Each label is a filter button wired to the same
+  // dropdown machinery as the old header (_openColumnFilter → _columnFilterModel).
+  _qtColsHeader() {
+    const cols = document.createElement('div');
+    cols.className = 'qt-cols';
+    const f = this.controller.uiState.filters || {};
+    const btn = (label, col, extraClass = '') => {
+      const on = col === 'due' ? (f.dueRange && f.dueRange !== 'all') : ((f[col] || []).length > 0);
+      const n = col === 'due' ? 1 : (f[col] || []).length;
+      return `<button type="button" class="qt-colbtn ${on ? 'filtered' : ''} ${extraClass}" data-filter-col="${col}" aria-haspopup="listbox" aria-expanded="false">${label}${on ? ` (${n})` : ''} <i class="ti ti-chevron-down"></i></button>`;
+    };
+    cols.innerHTML = `
+      <span class="qt-colcell"></span>
+      <span class="qt-colcell"></span>
+      <span class="qt-colcell" style="font-weight:600">TASK</span>
+      ${btn('STATUS', 'statuses')}
+      ${btn('PRIORITY', 'priorities')}
+      ${btn('LABEL', 'labels', 'qt-col-label')}
+      ${btn('ASSIGNEE', 'assignees', 'qt-col-assignee')}
+      ${btn('DUE', 'due')}`;
+    cols.querySelectorAll('.qt-colbtn').forEach(b =>
+      b.addEventListener('click', (e) => { e.stopPropagation(); this._openColumnFilter(b); }));
+    return cols;
+  }
+
+  _qtRow(t) {
+    const esc = App.utils.escapeHtml;
+    const t0 = App.utils.todayISO(0);
+    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#8a857e' };
+    const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
+    const statusKey = t.status || 'todo';
+    const stLabel = App.taxonomy.statusLabel(t.company, t.type, t.status);
+    const lblKey = t.label || 'none';
+    const lblLabel = App.taxonomy.labelLabel(t.company, lblKey);
+    const lblColor = (App.taxonomy.color && App.taxonomy.color('label', t.company, lblKey, t.type)) || '#8a857e';
+    const isDone = App.taxonomy.isDone(t);
+    const isStuck = statusKey === 'hold' && !isDone;
+    const selected = this.controller.uiState.selectedTaskId === t.id;
+    const bulkSel = this.controller.isBulkSelected(t.id);
+    const canWrite = App.can('tasks.write');
+    const canClock = App.can('clock.use');
+    const myActive = this.timeModel.activeFor(this.currentUser);
+    const myTimerOnThis = myActive && myActive.taskId === t.id;
+    const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+    const subCount = subs.length;
+    const subDone = subs.filter(s => s.d).length;
+
+    let dueText = '—', dueCls = '';
+    if (t.due) {
+      dueText = App.utils.formatDue(t.due).text;
+      dueCls = isDone ? 'done' : (t.due < t0 ? 'late' : (t.due === t0 ? 'today' : ''));
+    } else if (isDone) { dueText = 'Done'; dueCls = 'done'; }
+
+    const initials = App.utils.initials(person.full || person.name || t.assignee || '?');
+    const avColor = App.utils.safeColor(person.color);
+    const firstName = String(person.name || person.full || 'Unassigned').split(' ')[0];
+
+    const row = document.createElement('div');
+    row.className = 'qt-row' + (selected ? ' selected' : '') + (bulkSel ? ' bulk-selected' : '') + (isStuck ? ' qt-stuckrow' : '') + (isDone ? ' qt-done' : '');
+    row.dataset.id = t.id;
+    row.innerHTML = `
+      <span class="qt-ck"><input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${canWrite ? '' : 'disabled'} aria-label="Complete task"></span>
+      <span class="qt-pdot ${priority.cls}" title="${esc(priority.label)}"></span>
+      <div class="qt-tcell">
+        <span class="qt-ttitle">${esc(t.title)}${subCount ? `<span class="qt-steps">${subDone}/${subCount}</span>` : ''}</span>
+        ${isStuck ? `<div><span class="qt-stuckbadge"><i class="ti ti-alert-hexagon"></i>STUCK · ${esc(stLabel)}</span></div>` : ''}
+      </div>
+      <div class="qt-cell-status">${canWrite
+        ? `<button class="qt-cellbtn status-${statusKey}" data-action="open-status" data-current="${statusKey}" title="Change status" aria-haspopup="listbox" aria-expanded="false"><span class="dot"></span><span class="nm">${esc(stLabel)}</span><span class="chv"><i class="ti ti-chevron-down"></i></span></button>`
+        : `<span class="qt-cellbtn status-${statusKey}"><span class="dot"></span><span class="nm">${esc(stLabel)}</span></span>`}</div>
+      <div class="qt-cell-priority">${canWrite
+        ? `<span class="qt-pcell"><button class="qt-pbadge ${priority.cls}" data-action="open-priority" data-current="${t.priority || 'medium'}" title="Change priority" aria-haspopup="listbox" aria-expanded="false">${esc(priority.label.toUpperCase())}</button><span class="chv"><i class="ti ti-chevron-down"></i></span></span>`
+        : `<span class="qt-pbadge ${priority.cls}">${esc(priority.label.toUpperCase())}</span>`}</div>
+      <div class="qt-cell-label">${lblKey !== 'none'
+        ? `<span class="qt-cellbtn"><span class="dot" style="background:${lblColor}"></span><span class="nm">${esc(lblLabel)}</span></span>`
+        : `<span class="qt-cellbtn" style="color:#a8a39b"><span class="nm">—</span></span>`}</div>
+      <div class="qt-cell-assignee"><span class="qt-cellbtn"><span class="qt-avatar" style="background:${avColor}">${esc(initials)}</span><span class="nm">${esc(firstName)}</span></span></div>
+      <div class="qt-due ${dueCls}">${esc(dueText)}${t.dueTime ? `<span class="qt-duetime">${esc(App.utils.formatClockTz(t.dueTime))}</span>` : ''}</div>
+      <div class="qt-actions">
+        ${canClock ? `<button class="timer-btn ${myTimerOnThis ? 'active' : ''}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i></button>` : ''}
+        ${canWrite ? `<button class="finish-btn ${isDone ? 'is-done' : ''}" data-action="finish-task" title="${isDone ? 'Mark as not done' : 'Finish this task'}"><i class="ti ${isDone ? 'ti-check' : 'ti-circle-check'}"></i></button>` : ''}
+        ${canWrite ? `<button class="quick-actions-btn" data-action="open-quick" aria-label="Quick actions"><i class="ti ti-dots-vertical"></i></button>` : ''}
+      </div>`;
+
+    row.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-action]');
+      if (target) {
+        e.stopPropagation();
+        const action = target.dataset.action;
+        if (action === 'toggle-done') { if (target.checked && App.Motion) App.Motion.pop(target); this.controller.toggleTaskDone(t.id); }
+        else if (action === 'open-status') this._openStatusMenu(t.id, target);
+        else if (action === 'open-priority') this._openStatusMenu(t.id, target, 'priority');
+        else if (action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
+        else if (action === 'finish-task') { if (!target.classList.contains('is-done') && App.Motion) App.Motion.check(target.querySelector('i')); this.controller.completeTask(t.id); }
+        else if (action === 'open-quick') this._openQuickSheet(t.id);
+        return;
+      }
+      if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
+      this.controller.selectTask(t.id);
+    });
+    return row;
   }
 
   /* Prepend the project-detail folder header when the list is scoped to one

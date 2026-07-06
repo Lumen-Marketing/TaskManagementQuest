@@ -195,6 +195,7 @@ App.TaskModel = class TaskModel {
       if (f.statuses  && f.statuses.length)  tasks = tasks.filter(t => f.statuses.includes(t.status || 'todo'));
       if (f.priorities && f.priorities.length) tasks = tasks.filter(t => f.priorities.includes(t.priority || 'medium'));
       if (f.types && f.types.length) tasks = tasks.filter(t => f.types.includes(t.type || 'admin'));
+      if (f.labels && f.labels.length) tasks = tasks.filter(t => f.labels.includes(t.label || 'none'));
       if (f.dueRange && f.dueRange !== 'all') {
         const t1 = App.utils.todayISO(1);
         const t7 = App.utils.todayISO(7);
