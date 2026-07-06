@@ -66,20 +66,24 @@ App.ProfileView = class ProfileView {
             <input type="text" id="pf-name" value="${App.utils.escapeHtml(currentName)}" placeholder="Your name" maxlength="80" />
           </div>
 
-          <div class="field" style="margin-top:18px;">
-            <label class="field-label" for="pf-current-password">Current password</label>
-            <input type="password" id="pf-current-password" placeholder="Required only to change your password" autocomplete="current-password" maxlength="128" />
-          </div>
+          <button type="button" class="btn-link pf-pw-toggle" id="pf-pw-toggle" style="margin-top:14px;font-size:13px;">Change password</button>
 
-          <div class="field" style="margin-top:12px;">
-            <label class="field-label" for="pf-password">New password</label>
-            <input type="password" id="pf-password" placeholder="Leave blank to keep current" autocomplete="new-password" maxlength="128" />
-            <div class="profile-hint">At least 8 characters, with upper- and lowercase letters, a number, and a special character.</div>
-          </div>
+          <div id="pf-pw-section" style="display:none;">
+            <div class="field" style="margin-top:14px;">
+              <label class="field-label" for="pf-current-password">Current password</label>
+              <input type="password" id="pf-current-password" placeholder="Required to change your password" autocomplete="current-password" maxlength="128" />
+            </div>
 
-          <div class="field" style="margin-top:12px;">
-            <label class="field-label" for="pf-password-confirm">Confirm new password</label>
-            <input type="password" id="pf-password-confirm" placeholder="Re-enter new password" autocomplete="new-password" maxlength="128" />
+            <div class="field" style="margin-top:12px;">
+              <label class="field-label" for="pf-password">New password</label>
+              <input type="password" id="pf-password" placeholder="At least 8 characters" autocomplete="new-password" maxlength="128" />
+              <div class="profile-hint">Upper- and lowercase letters, a number, and a special character.</div>
+            </div>
+
+            <div class="field" style="margin-top:12px;">
+              <label class="field-label" for="pf-password-confirm">Confirm new password</label>
+              <input type="password" id="pf-password-confirm" placeholder="Re-enter new password" autocomplete="new-password" maxlength="128" />
+            </div>
           </div>
 
           <div class="modal-actions">
@@ -144,6 +148,26 @@ App.ProfileView = class ProfileView {
         this.submit();
       }
     });
+
+    const pwToggle = document.getElementById('pf-pw-toggle');
+    const pwSection = document.getElementById('pf-pw-section');
+    if (pwToggle && pwSection) {
+      pwToggle.addEventListener('click', () => {
+        const open = pwSection.style.display !== 'none';
+        pwSection.style.display = open ? 'none' : 'block';
+        pwToggle.textContent = open ? 'Change password' : 'Cancel password change';
+        if (!open) {
+          setTimeout(() => {
+            const first = document.getElementById('pf-current-password');
+            if (first) first.focus();
+          }, 0);
+        } else {
+          document.getElementById('pf-current-password').value = '';
+          document.getElementById('pf-password').value = '';
+          document.getElementById('pf-password-confirm').value = '';
+        }
+      });
+    }
 
     // Name change updates the initials preview when no photo is showing.
     document.getElementById('pf-name').addEventListener('input', () => {
