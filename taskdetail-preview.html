@@ -108,6 +108,9 @@ App.controller = {
   taskModel: { find: (id) => id === 't1' ? SAMPLE : null, all: () => [SAMPLE] },
   timeModel: { activeFor: () => null, totalForTask: () => 5400000 * 3, entriesForTask: () => [{ userId: 'alkeith', durationMs: 5400000, end: '1' }] },
   canDeleteTask: () => true,
+  // Prev/next preview stubs so the side arrows + header pager render (1 / 3).
+  getVisibleTasks: () => [SAMPLE, { id: 't2' }, { id: 't3' }],
+  selectAdjacentTask: (d) => alert('next/prev task: ' + (d > 0 ? 'next' : 'prev') + ' (preview)'),
   loadTaskComments: () => {}, closeDetail: () => alert('close (preview)'),
   toggleTimerForTask: () => alert('toggle timer (preview)'),
   completeTask: () => alert('complete (preview)'),

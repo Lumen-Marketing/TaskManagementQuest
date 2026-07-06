@@ -231,19 +231,47 @@ App.TaskDetailView = class TaskDetailView {
       const d1 = new Date(t.due + 'T00:00:00'), d2 = new Date(today + 'T00:00:00');
       daysOverdue = Math.max(1, Math.round((d2 - d1) / 86400000));
     }
+    // Four-state due pill (spec §3): overdue (red) · today (orange) · on-track
+    // (black outline) · completed (green). Empty due → a neutral "set due" pill.
+    const dueToday = !!(t.due && t.due === today && !isDone);
+    let daysUntil = 0;
+    if (t.due) {
+      const d1 = new Date(t.due + 'T00:00:00'), d2 = new Date(today + 'T00:00:00');
+      daysUntil = Math.round((d1 - d2) / 86400000);
+    }
+    const _shortDate = (d) => { const x = new Date(d + 'T00:00:00'); return isNaN(x.getTime()) ? d : x.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+    const _dayLabel = (d) => { const x = new Date(d + 'T00:00:00'); return isNaN(x.getTime()) ? d : x.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
+    let dueState, dueInner;
+    if (isDone) { dueState = 'done'; dueInner = `<i class="ti ti-circle-check"></i>COMPLETED`; }
+    else if (!t.due) { dueState = 'soon'; dueInner = `<i class="ti ti-calendar"></i>No due date`; }
+    else if (overdue) { dueState = 'over'; dueInner = `<i class="ti ti-alert-triangle-filled"></i>${daysOverdue} DAY${daysOverdue === 1 ? '' : 'S'} OVERDUE <span class="td2-due-sub">· was due ${App.utils.escapeHtml(_shortDate(t.due))}</span>`; }
+    else if (dueToday) { dueState = 'today'; dueInner = `<i class="ti ti-flame"></i>DUE TODAY`; }
+    else { dueState = 'soon'; dueInner = `<i class="ti ti-calendar"></i>Due ${App.utils.escapeHtml(_dayLabel(t.due))} <span class="td2-due-sub">· in ${daysUntil} day${daysUntil === 1 ? '' : 's'}</span>`; }
+
+    // Prev/next navigation position within the currently-visible (filtered +
+    // sorted) list — reuses the controller's existing selectAdjacentTask so the
+    // arrows behave exactly like the j/k shortcuts. Guarded so the stubbed
+    // preview controller (no getVisibleTasks) doesn't throw.
+    let navTotal = 0, navPos = -1;
+    if (typeof this.controller.getVisibleTasks === 'function') {
+      const vis = this.controller.getVisibleTasks();
+      navTotal = vis.length;
+      navPos = vis.findIndex(x => x.id === t.id);
+    }
+    const canNav = typeof this.controller.selectAdjacentTask === 'function' && navTotal > 1;
     const isWatching = watcherIds.includes(this.currentUser);
     const commentsCount = (t.comments || []).length;
     const subtaskCount = (t.subtasks || []).length;
     const canDelete = this.controller.canDeleteTask(t);
     // Project folder chip — a picker trigger for writers, read-only otherwise.
     const proj = t.project && App.projects ? App.projects[t.project] : null;
-    const projectChipHtml = App.can('tasks.write')
-      ? `<button class="projtag projtag-btn ${proj ? '' : 'projtag-empty'}" data-action="open-project" aria-haspopup="listbox" aria-expanded="false" ${proj ? `style="--pc:${App.utils.escapeHtml(proj.color)}"` : ''}><i class="ti ${proj ? 'ti-folder' : 'ti-folder-plus'}"></i>${proj ? App.utils.escapeHtml(proj.name) : 'Project'}</button>`
-      : (proj ? `<span class="projtag" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</span>` : '<span class="detail-val">—</span>');
-    const watcherChipsHtml = watcherIds.map(w => {
-      const p = App.PEOPLE[w];
-      return p ? `<span class="td2-watcher">${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}</span>` : '';
-    }).join('');
+    const projectChipHtml = proj
+      ? (App.can('tasks.write')
+          ? `<button class="projtag projtag-btn" data-action="open-project" aria-haspopup="listbox" aria-expanded="false" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</button>`
+          : `<span class="projtag" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</span>`)
+      : (App.can('tasks.write')
+          ? `<button class="td2-addproj" data-action="open-project" aria-haspopup="listbox" type="button">+ Add</button>`
+          : '<span class="detail-val">—</span>');
     // Remember which tab the user is on so a background re-render (a posted
     // comment, a sync poll) doesn't yank them off it. Tabs are
     // Comments / Activity / History; default to Comments.
@@ -259,13 +287,11 @@ App.TaskDetailView = class TaskDetailView {
       ? `class="${baseCls} td2-editable tdp-editable" data-edit-field="${field}" title="Click to change · saves automatically" tabindex="0" role="button"`
       : `class="${baseCls}"`;
 
-    // De-emphasized read-only creation line for the bottom of the Details card.
-    // createdAt is a real instant (timestamptz) → format in the shared HQ zone;
-    // legacy rows without it just show who created the task.
+    // Created row value — a real instant (timestamptz) formatted in the shared HQ
+    // zone with time; legacy rows without createdAt fall back to the creator name.
     const createdWhen = t.createdAt
-      ? App.utils.formatInstant(t.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })
+      ? App.utils.formatInstant(t.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
       : '';
-    const createdLine = `Created${createdWhen ? ' ' + App.utils.escapeHtml(createdWhen) : ''} by ${App.utils.escapeHtml(creator.name)}`;
 
     // Stuck / blocked-on card (Slice B). task.stuck = { reason, on, at } | null.
     // The blocked-on person + reason + "N days" since flagged drive the card;
@@ -296,12 +322,22 @@ App.TaskDetailView = class TaskDetailView {
 
     this.pane.innerHTML = `
       <div class="td2" data-tdid="${App.utils.escapeHtml(t.id)}">
+      ${canNav ? `
+        <button class="td2-nav td2-nav-prev" data-action="nav-prev" aria-label="Previous task" type="button"><i class="ti ti-chevron-left"></i></button>
+        <button class="td2-nav td2-nav-next" data-action="nav-next" aria-label="Next task" type="button"><i class="ti ti-chevron-right"></i></button>` : ''}
       <div class="td2-head">
-        <button class="td2-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
+        <div class="td2-back-row">
+          <button class="td2-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
+          ${canNav ? `<div class="td2-pager">
+            <button class="td2-pager-btn" data-action="nav-prev" aria-label="Previous task" type="button"><i class="ti ti-chevron-left"></i></button>
+            <span class="td2-pager-pos">${navPos >= 0 ? navPos + 1 : '–'} / ${navTotal}</span>
+            <button class="td2-pager-btn" data-action="nav-next" aria-label="Next task" type="button"><i class="ti ti-chevron-right"></i></button>
+          </div>` : ''}
+        </div>
         <div class="td2-titlebar">
           <h1 class="td2-title${canWrite ? ' is-editable' : ''}"${canWrite ? ' contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Task title" title="Click to rename"' : ''}>${App.utils.escapeHtml(t.title)}</h1>
           <div class="td2-head-actions">
-            <button class="td2-btn ${isWatching ? 'is-on' : ''}" data-action="toggle-watch" type="button"><i class="ti ti-eye"></i>${isWatching ? 'Watching' : 'Watch'}</button>
+            <button class="td2-btn td2-btn-watch ${isWatching ? 'is-on' : ''}" data-action="toggle-watch" type="button"><i class="ti ti-eye"></i>${isWatching ? 'Watching' : 'Watch'}</button>
             ${App.can('tasks.write') ? `<button class="td2-btn td2-btn-primary ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
             <button class="td2-btn td2-icon" data-action="overflow" aria-label="More actions" aria-haspopup="true" type="button"><i class="ti ti-dots"></i></button>
             <div class="td2-overflow hidden" id="tdpOverflow">
@@ -313,9 +349,8 @@ App.TaskDetailView = class TaskDetailView {
         </div>
         <div class="td2-chiprow">
           <button class="td2-chip td2-chip-status ${statusChip.cls}" style="${statusChip.style}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
-          <button class="td2-chip td2-chip-plain${overdue ? ' over' : ''}"${canWrite ? ' data-action="chip-due"' : ''} type="button"><i class="ti ti-calendar"></i>${App.utils.escapeHtml(this._formatDue(t.due))}${overdue ? ` · ${daysOverdue}d overdue` : ''}</button>
+          <button class="td2-chip td2-chip-due ${dueState}"${canWrite ? ' data-action="chip-due"' : ''} type="button">${dueInner}</button>
           <button class="td2-chip td2-chip-assignee"${canWrite ? ' data-action="chip-assignee"' : ''} type="button">${this._avatarStack(assignees)}<span class="td2-chip-name">${App.utils.escapeHtml(assigneeLabel)}</span></button>
-          <span class="td2-chip td2-chip-pri"><span class="td2-pri-dot ${priObj.cls}"></span>${App.utils.escapeHtml(priObj.label)}</span>
         </div>
       </div>
 
@@ -346,19 +381,13 @@ App.TaskDetailView = class TaskDetailView {
           <div class="td2-card">
             <div class="td2-card-h">Details</div>
             <div class="td2-fields">
-              <div class="td2-field"><span class="td2-field-k">Status</span><span ${ev('status', 'td2-field-v')}>${App.utils.escapeHtml(statusObj.label)}</span></div>
               <div class="td2-field"><span class="td2-field-k">Priority</span><span ${ev('priority', `td2-field-v priority-block ${priObj.cls}`)}>${App.utils.escapeHtml(priObj.label)}</span></div>
-              <div class="td2-field"><span class="td2-field-k">Assignees</span><span ${ev('assignee', 'td2-field-v td2-field-people')}>${this._avatarStack(assignees)}<span class="td2-chip-name">${App.utils.escapeHtml(assigneeLabel)}</span></span></div>
-              <div class="td2-field"><span class="td2-field-k">Due</span><span ${ev('due', `td2-field-v ${overdue ? 'over' : ''}`)}>${App.utils.escapeHtml(this._formatDue(t.due))}</span></div>
-              <div class="td2-field"><span class="td2-field-k">Time</span><span ${ev('dueTime', 'td2-field-v')}>${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span></div>
-              <div class="td2-field"><span class="td2-field-k">Reminder</span><span ${ev('reminderAt', 'td2-field-v')}>${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span></div>
+              <div class="td2-field"><span class="td2-field-k">Company</span><span ${ev('company', 'td2-field-v')}><span class="td2-sq"></span>${App.utils.escapeHtml(company.label)}</span></div>
               <div class="td2-field"><span class="td2-field-k">Type</span><span ${ev('type', 'td2-field-v')}>${App.utils.escapeHtml(typeObj.label)}</span></div>
               <div class="td2-field"><span class="td2-field-k">Label</span><span ${ev('label', 'td2-field-v')}>${App.utils.escapeHtml(labelObj.label)}</span></div>
-              <div class="td2-field"><span class="td2-field-k">Company</span><span ${ev('company', 'td2-field-v')}>${App.utils.escapeHtml(company.label)}</span></div>
               <div class="td2-field"><span class="td2-field-k">Project</span>${projectChipHtml}</div>
-              <div class="td2-field"><span class="td2-field-k">Time spent</span><span class="td2-field-v td2-mono">${App.utils.formatHours(totalMs)} total</span></div>
+              <div class="td2-field"><span class="td2-field-k">Created</span><span class="td2-field-v td2-created-v">${createdWhen ? App.utils.escapeHtml(createdWhen) : App.utils.escapeHtml('by ' + creator.name)}</span></div>
             </div>
-            <div class="td2-created">${createdLine}</div>
           </div>
 
           <div class="td2-card">
@@ -386,26 +415,28 @@ App.TaskDetailView = class TaskDetailView {
           ${stuckHtml}
           <div class="td2-card">
             <div class="td2-card-h">Quick actions</div>
-            ${canWrite ? `<div class="td2-qa-engage">
-              ${stuck ? '' : `<button class="td2-qa td2-qa-stuck" data-action="qa-stuck" type="button"><i class="ti ti-alert-triangle"></i>I'm stuck</button>`}
-              ${nudgeName ? `<button class="td2-qa" data-action="qa-nudge" type="button"><i class="ti ti-bell-ringing"></i>Nudge ${App.utils.escapeHtml(nudgeName)}</button>` : ''}
-              <button class="td2-qa" data-action="qa-help" type="button"><i class="ti ti-lifebuoy"></i>Request help</button>
-            </div>` : ''}
-            <div class="td2-qa-grid">
-              <button class="td2-qa" data-action="qa-reassign" type="button"><i class="ti ti-user-share"></i>Reassign</button>
-              <button class="td2-qa" data-action="qa-subtask" type="button"><i class="ti ti-subtask"></i>Add subtask</button>
-              <button class="td2-qa" data-action="qa-setdue" type="button"><i class="ti ti-calendar"></i>Set due</button>
-              <button class="td2-qa" data-action="qa-note" type="button"><i class="ti ti-note"></i>Add note</button>
-              <button class="td2-qa" data-action="qa-logcall" type="button"><i class="ti ti-phone"></i>Log call</button>
-              <button class="td2-qa" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
+            <div class="td2-qa-list">
+              <button class="td2-qa td2-qa-solid td2-clockin" data-action="toggle-timer" type="button"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}</button>
+              ${(canWrite && nudgeName) ? `<button class="td2-qa td2-qa-nudge${overdue ? ' is-late' : ''}" data-action="qa-nudge" type="button"><i class="ti ti-bell-ringing"></i>Nudge ${App.utils.escapeHtml(nudgeName)}${overdue ? `<span class="td2-qa-late">${daysOverdue}D LATE</span>` : ''}</button>` : ''}
+              ${canWrite ? `<button class="td2-qa td2-qa-solid" data-action="qa-help" type="button"><i class="ti ti-lifebuoy"></i>Request help</button>` : ''}
+              ${(canWrite && !stuck) ? `<button class="td2-qa td2-qa-outline" data-action="qa-stuck" type="button"><i class="ti ti-alert-triangle"></i>I'm stuck</button>` : ''}
+              <button class="td2-qa td2-qa-outline" data-action="qa-reassign" type="button"><i class="ti ti-user-share"></i>Reassign</button>
+              <div class="td2-qa-morewrap">
+                <button class="td2-qa td2-qa-more" data-action="qa-more" aria-haspopup="true" type="button">More <i class="ti ti-chevron-down"></i></button>
+                <div class="td2-qa-menu hidden" id="td2QaMore" role="menu">
+                  <button data-action="qa-subtask" type="button"><i class="ti ti-subtask"></i>Add subtask</button>
+                  <button data-action="qa-logcall" type="button"><i class="ti ti-phone"></i>Log a call</button>
+                  <button data-action="qa-note" type="button"><i class="ti ti-note"></i>Add note</button>
+                  <button data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
+                </div>
+              </div>
             </div>
-            <button class="td2-qa td2-qa-wide td2-clockin" data-action="toggle-timer" type="button"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}</button>
           </div>
 
           <div class="td2-card">
             <div class="td2-card-h"><i class="ti ti-eye"></i> Watchers${watcherIds.length ? `<span class="td2-count">${watcherIds.length}</span>` : ''}</div>
-            <div class="td2-watchers">
-              ${watcherChipsHtml || '<span class="td2-empty">No watchers yet</span>'}
+            <div class="td2-wstack">
+              ${watcherIds.map(w => { const p = App.PEOPLE[w]; return p ? App.utils.avatarHtml(p) : ''; }).join('')}
               <button class="td2-watch-add" data-action="toggle-watch" title="${isWatching ? 'Stop watching' : 'Watch this task'}" aria-label="Toggle watch" type="button"><i class="ti ${isWatching ? 'ti-eye-off' : 'ti-plus'}"></i></button>
             </div>
           </div>
@@ -581,6 +612,30 @@ App.TaskDetailView = class TaskDetailView {
         const menu = this.pane && this.pane.querySelector('#tdpOverflow');
         if (!menu || menu.classList.contains('hidden')) return;
         const btn = this.pane.querySelector('[data-action="overflow"]');
+        if (menu.contains(e.target) || (btn && btn.contains(e.target))) return;
+        menu.classList.add('hidden');
+      });
+    }
+
+    // Prev/next task arrows (side chevrons + header pager) reuse the controller's
+    // existing selectAdjacentTask — same walk order as the j/k shortcuts.
+    qa('[data-action="nav-prev"]').forEach(el => el.addEventListener('click', () => this.controller.selectAdjacentTask && this.controller.selectAdjacentTask(-1)));
+    qa('[data-action="nav-next"]').forEach(el => el.addEventListener('click', () => this.controller.selectAdjacentTask && this.controller.selectAdjacentTask(1)));
+
+    // Quick-actions "More" dropdown (Add subtask / Log call / Add note / Duplicate).
+    // The items carry the same data-actions bound elsewhere; this only toggles.
+    const qaMoreBtn = q('[data-action="qa-more"]');
+    const qaMoreMenu = q('#td2QaMore');
+    if (qaMoreBtn && qaMoreMenu) {
+      qaMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); qaMoreMenu.classList.toggle('hidden'); });
+      qaMoreMenu.addEventListener('click', () => qaMoreMenu.classList.add('hidden'));
+    }
+    if (!this._qaMoreDocBound) {
+      this._qaMoreDocBound = true;
+      document.addEventListener('click', (e) => {
+        const menu = this.pane && this.pane.querySelector('#td2QaMore');
+        if (!menu || menu.classList.contains('hidden')) return;
+        const btn = this.pane.querySelector('[data-action="qa-more"]');
         if (menu.contains(e.target) || (btn && btn.contains(e.target))) return;
         menu.classList.add('hidden');
       });

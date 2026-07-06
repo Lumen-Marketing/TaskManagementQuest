@@ -587,6 +587,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (e.key === 'k') {
       e.preventDefault();
       controller.selectAdjacentTask(-1);
+    } else if (e.key === 'ArrowRight') {
+      // Right/Left step to the next/prev task, but only while a task detail is
+      // open (so arrow keys aren't hijacked on the list or elsewhere).
+      if (!controller.uiState.selectedTaskId) return;
+      e.preventDefault();
+      controller.selectAdjacentTask(1);
+    } else if (e.key === 'ArrowLeft') {
+      if (!controller.uiState.selectedTaskId) return;
+      e.preventDefault();
+      controller.selectAdjacentTask(-1);
     } else if (e.key === 'c' || e.key === 'C') {
       if (controller.uiState.selectedTaskId && App.can('tasks.write')) {
         e.preventDefault();

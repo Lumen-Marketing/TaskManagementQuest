@@ -599,3 +599,202 @@
 @media (max-width: 560px) {
   #taskDetailWrap .te-frow { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   TASK DETAIL — "v1 FINAL" prototype skin (locked spec).
+   Layered after the base .td2 rules (same specificity, later in
+   the cascade → wins) so the whole thing is reversible by
+   deleting this block. Colors: the locked-spec hex are mapped
+   to a scoped orange accent + three solid brand fills so LIGHT
+   matches the mockup exactly while DARK mode still resolves
+   through the token surfaces. Solid fills (red/green/teal, white
+   text) read correctly on either theme.
+   ============================================================ */
+#taskDetailWrap .td2 {
+  --accent: #ED4E0D;        /* Quest orange — flips every var(--accent) usage */
+  --accent-dark: #c2410c;
+  --p-red: #D92B2B;         /* urgency: overdue pill + critical priority */
+  --p-green: #0F6E56;       /* complete / done */
+  --p-teal: #4A6362;        /* Watch button */
+  position: relative;
+}
+
+/* ---- header buttons ---- */
+#taskDetailWrap .td2-btn {
+  border: 1.5px solid var(--border-strong);
+  border-radius: 11px;
+  background: var(--surface);
+  box-shadow: none;
+}
+#taskDetailWrap .td2-btn:hover { border-color: var(--ink); box-shadow: none; transform: none; }
+#taskDetailWrap .td2-btn.td2-icon { border-color: var(--border-strong); }
+
+/* Watch — turquoise-gray, outlined off / solid on */
+#taskDetailWrap .td2-btn-watch { border-color: var(--p-teal); color: var(--p-teal); }
+#taskDetailWrap .td2-btn-watch:hover { border-color: var(--p-teal); background: color-mix(in srgb, var(--p-teal) 12%, var(--surface)); }
+#taskDetailWrap .td2-btn-watch.is-on { background: var(--p-teal); border-color: var(--p-teal); color: #fff; }
+#taskDetailWrap .td2-btn-watch.is-on:hover { background: color-mix(in srgb, var(--p-teal) 85%, #000); color: #fff; }
+
+/* Mark complete — solid orange pill → solid green when done */
+#taskDetailWrap .td2-btn-primary {
+  border: 1.5px solid var(--accent); border-radius: var(--radius-pill);
+  background: var(--accent); color: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 3px 10px rgba(0,0,0,.08);
+}
+#taskDetailWrap .td2-btn-primary:hover { filter: brightness(.94); border-color: var(--accent); box-shadow: 0 2px 4px rgba(0,0,0,.08), 0 6px 16px rgba(0,0,0,.10); }
+#taskDetailWrap .td2-btn-primary.is-done { background: var(--p-green); border-color: var(--p-green); color: #fff; }
+
+/* ---- prev / next task navigation ---- */
+#taskDetailWrap .td2-nav {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 55;
+  width: 46px; height: 46px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--surface); color: var(--ink);
+  border: 1.5px solid var(--border-strong); box-shadow: var(--shadow-md);
+  cursor: pointer; transition: border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+#taskDetailWrap .td2-nav:hover { border-color: var(--ink); background: var(--bg-2); }
+#taskDetailWrap .td2-nav:active { transform: translateY(-50%) scale(.94); }
+#taskDetailWrap .td2-nav i { font-size: 22px; }
+#taskDetailWrap .td2-nav-prev { left: 14px; }
+#taskDetailWrap .td2-nav-next { right: 14px; }
+/* header pager (always visible; the big side arrows hide when the viewport is
+   too narrow to clear the content) */
+#taskDetailWrap .td2-pager {
+  display: inline-flex; align-items: center; gap: 2px; margin-left: auto;
+}
+#taskDetailWrap .td2-pager-btn {
+  width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: none; border: none; color: var(--ink-2); cursor: pointer;
+}
+#taskDetailWrap .td2-pager-btn:hover { background: var(--bg-3); color: var(--ink); }
+#taskDetailWrap .td2-pager-btn i { font-size: 18px; }
+#taskDetailWrap .td2-pager-pos { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--ink-3); min-width: 44px; text-align: center; }
+#taskDetailWrap .td2-back-row { display: flex; align-items: center; gap: var(--space-sm); }
+@media (max-width: 1240px) { #taskDetailWrap .td2-nav { display: none; } }
+
+/* ---- chip row → bordered pills ---- */
+#taskDetailWrap .td2-chip {
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface); box-shadow: none;
+}
+#taskDetailWrap button.td2-chip:hover { border-color: var(--ink); box-shadow: none; transform: none; }
+#taskDetailWrap .td2-chip.is-editing { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent); }
+
+/* four-state due pill */
+#taskDetailWrap .td2-chip-due.over { background: var(--p-red); border-color: var(--p-red); color: #fff; }
+#taskDetailWrap .td2-chip-due.today { background: var(--accent); border-color: var(--accent); color: #fff; }
+#taskDetailWrap .td2-chip-due.soon { border: 2px solid var(--ink); background: var(--surface); color: var(--ink); }
+#taskDetailWrap .td2-chip-due.done { background: var(--p-green); border-color: var(--p-green); color: #fff; }
+#taskDetailWrap .td2-chip-due.over i, #taskDetailWrap .td2-chip-due.today i, #taskDetailWrap .td2-chip-due.done i { color: #fff; }
+#taskDetailWrap .td2-chip-due .td2-due-sub { font-weight: 500; opacity: .9; }
+
+/* ---- Details → stacked label + pill value ---- */
+#taskDetailWrap .td2-field {
+  grid-template-columns: 1fr; gap: 5px; padding: 9px 0; align-items: start;
+}
+#taskDetailWrap .td2-field + .td2-field { box-shadow: inset 0 1px 0 var(--border); }
+#taskDetailWrap .td2-field-k { margin-bottom: 1px; }
+#taskDetailWrap .td2-editable {
+  justify-self: start;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px solid var(--border-strong); border-radius: var(--radius-pill);
+  padding: 6px 13px; margin: 0; font-size: 13.5px; font-weight: 700;
+  background: var(--surface); max-width: 100%;
+}
+#taskDetailWrap .td2-editable:hover { border-color: var(--ink); background: var(--surface); }
+#taskDetailWrap .td2-editable::after {
+  content: ''; flex: none; margin-left: 1px;
+  width: 0; height: 0;
+  border-left: 3.5px solid transparent; border-right: 3.5px solid transparent;
+  border-top: 4px solid currentColor; opacity: .5;
+}
+#taskDetailWrap .td2-sq { width: 7px; height: 7px; border-radius: 2px; background: var(--accent); display: inline-block; flex: none; }
+/* priority pill: critical solid red, others white pill + colored dot */
+#taskDetailWrap .td2-field .priority-block {
+  border: 1.5px solid var(--border-strong); border-radius: var(--radius-pill);
+  padding: 6px 13px; font-size: 13.5px;
+}
+#taskDetailWrap .td2-field .priority-block::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block;
+  background: var(--u-medium);
+}
+#taskDetailWrap .td2-field .priority-block.priority-critical { background: var(--p-red); border-color: var(--p-red); color: #fff; }
+#taskDetailWrap .td2-field .priority-block.priority-critical::before { display: none; }
+#taskDetailWrap .td2-field .priority-block.priority-critical::after { border-top-color: #fff; }
+#taskDetailWrap .td2-field .priority-block.priority-urgent::before { background: var(--u-urgent); }
+#taskDetailWrap .td2-field .priority-block.priority-high::before { background: var(--u-high); }
+#taskDetailWrap .td2-field .priority-block.priority-medium::before { background: var(--u-medium); }
+#taskDetailWrap .td2-field .priority-block.priority-low::before { background: var(--u-low); }
+/* +Add project link */
+#taskDetailWrap .td2-addproj { background: none; border: none; padding: 0; font-family: var(--font-body); font-size: 13.5px; font-weight: 700; color: var(--accent); cursor: pointer; }
+#taskDetailWrap .td2-addproj:hover { text-decoration: underline; }
+
+/* ---- checklist → orange ---- */
+#taskDetailWrap .td2-progress-fill, #taskDetailWrap .td2-progress-fill.full { background: var(--accent); }
+#taskDetailWrap .td2-step.done i { color: var(--accent); }
+#taskDetailWrap .td2-step i { color: var(--ink-2); }
+#taskDetailWrap .td2-addstep { background: none; border: 1.5px solid var(--border-strong); border-radius: 8px; }
+#taskDetailWrap .td2-addstep:hover { background: var(--bg-2); border-color: var(--ink); }
+
+/* ---- comment bubbles → chip fill, speech-bubble corner ---- */
+#taskDetailWrap .cm-bubble { background: var(--bg-2); border: none; border-radius: 4px 12px 12px 12px; }
+
+/* ---- quick actions → vertical list ---- */
+#taskDetailWrap .td2-qa-list { display: flex; flex-direction: column; gap: 8px; }
+#taskDetailWrap .td2-qa-list .td2-qa {
+  width: 100%; justify-content: flex-start; padding: 12px 13px;
+  border-radius: 10px; font-size: var(--text-sm);
+}
+/* white, soft-shadow (Clock in / Request help) */
+#taskDetailWrap .td2-qa-solid { background: var(--surface); border: 1.5px solid var(--border-strong); box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 3px 10px rgba(0,0,0,.08); }
+#taskDetailWrap .td2-qa-solid:hover { background: var(--surface); box-shadow: 0 2px 4px rgba(0,0,0,.08), 0 6px 16px rgba(0,0,0,.10); border-color: var(--border-strong); }
+#taskDetailWrap .td2-qa-solid i { color: var(--ink-2); }
+/* white, bold outline (I'm stuck / Reassign) */
+#taskDetailWrap .td2-qa-outline { background: var(--surface); border: 1.5px solid var(--border-strong); }
+#taskDetailWrap .td2-qa-outline:hover { background: var(--surface); border-color: var(--ink); }
+#taskDetailWrap .td2-qa-outline i { color: var(--ink-2); }
+/* Nudge — white, red outline + "nD LATE" badge when overdue */
+#taskDetailWrap .td2-qa-nudge { background: var(--surface); border: 1.5px solid var(--border-strong); }
+#taskDetailWrap .td2-qa-nudge:hover { background: var(--surface); border-color: var(--ink); }
+#taskDetailWrap .td2-qa-nudge.is-late { border-color: var(--p-red); color: var(--p-red); }
+#taskDetailWrap .td2-qa-nudge.is-late i { color: var(--p-red); }
+#taskDetailWrap .td2-qa-nudge.is-late:hover { background: color-mix(in srgb, var(--p-red) 8%, var(--surface)); border-color: var(--p-red); }
+#taskDetailWrap .td2-qa-late { margin-left: auto; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .04em; background: var(--p-red); color: #fff; padding: 2px 7px; border-radius: var(--radius-pill); }
+#taskDetailWrap .td2-qa-timer { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink-2); }
+/* More dropdown */
+#taskDetailWrap .td2-qa-morewrap { position: relative; }
+#taskDetailWrap .td2-qa-more { justify-content: center; background: var(--bg-2); border: 1.5px solid var(--border-strong); color: var(--ink-2); }
+#taskDetailWrap .td2-qa-more:hover { background: var(--bg-3); color: var(--ink); }
+#taskDetailWrap .td2-qa-menu {
+  position: absolute; bottom: calc(100% + 6px); left: 0; right: 0; z-index: 60;
+  background: var(--surface); border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+  padding: 5px; animation: td2-menu-in var(--dur-fast) var(--ease-out);
+}
+#taskDetailWrap .td2-qa-menu.hidden { display: none; }
+#taskDetailWrap .td2-qa-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 11px; border: none; background: none; border-radius: 8px;
+  font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); cursor: pointer;
+}
+#taskDetailWrap .td2-qa-menu button:hover { background: var(--bg-3); color: var(--ink); }
+#taskDetailWrap .td2-qa-menu button i { font-size: 16px; color: var(--ink-3); }
+
+/* ---- stuck card → 2px red border, red badge, black Unblock ---- */
+#taskDetailWrap .td2-stuck { background: var(--surface); border: 2px solid var(--p-red); box-shadow: var(--shadow-sm); }
+#taskDetailWrap .td2-stuck-h, #taskDetailWrap .td2-stuck-h i, #taskDetailWrap .td2-stuck-lbl { color: var(--p-red); }
+#taskDetailWrap .td2-stuck-age { margin-left: auto; background: var(--p-red); color: #fff; font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .04em; padding: 2px 8px; border-radius: var(--radius-pill); }
+#taskDetailWrap .td2-stuck-btn { border: 1.5px solid var(--border-strong); box-shadow: none; background: var(--surface); }
+#taskDetailWrap .td2-stuck-btn:hover { border-color: var(--ink); box-shadow: none; }
+/* "black" button: pair --ink bg with --surface text so it inverts cleanly in
+   dark mode (both tokens flip together) instead of going white-on-white. */
+#taskDetailWrap .td2-stuck-btn-primary { background: var(--ink); border-color: var(--ink); color: var(--surface); box-shadow: none; }
+#taskDetailWrap .td2-stuck-btn-primary:hover { background: color-mix(in srgb, var(--ink) 88%, var(--bg-3)); border-color: var(--ink); color: var(--surface); }
+#taskDetailWrap .td2-stuck-btn-primary i { color: var(--surface); }
+
+/* ---- watchers → overlapping avatar stack + dashed add ---- */
+#taskDetailWrap .td2-wstack { display: flex; align-items: center; }
+#taskDetailWrap .td2-wstack .avatar-xs { width: 30px; height: 30px; font-size: 11px; border: 2px solid var(--surface); margin-left: -7px; }
+#taskDetailWrap .td2-wstack .avatar-xs:first-child { margin-left: 0; }
+#taskDetailWrap .td2-wstack .td2-watch-add { width: 27px; height: 27px; margin-left: -7px; border: 1.5px dashed var(--ink-3); background: var(--surface); }
+#taskDetailWrap .td2-wstack .td2-watch-add:hover { border-style: solid; border-color: var(--accent); background: var(--accent); color: #fff; }
