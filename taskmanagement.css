@@ -7250,19 +7250,23 @@ body.ui-command-center .controls-card .btn {
    the selected type + active default/done pills. Collapses to one column on mobile.
    Renders inside the shared #timeViewWrap.
    ========================================================================== */
-#timeViewWrap .tsetup { padding: 4px 2px 40px; color: var(--ink); }
-.tsetup-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-.tsetup-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); margin: 0; }
-.tsetup-sub { font-size: 13px; color: var(--ink-3); margin: 3px 0 0; }
-.tsetup-company-wrap { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
-.tsetup-company { appearance: none; -webkit-appearance: none; background: var(--bg-2); color: var(--ink); border: none; border-radius: var(--radius-pill); padding: 8px 30px 8px 13px; font-size: 13px; font-weight: 600; cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23929AA3' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; }
+/* Task setup — premium surface chrome matching the New-task work-order screen
+   (css/newtask.css): centered container, warm surface cards per section,
+   sectioned headers. Markup unchanged — restyle only. */
+#timeViewWrap .tsetup { max-width: 1120px; margin: 0 auto; padding: var(--space-md) 2px 48px; color: var(--ink); }
+.tsetup-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.tsetup-title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 800; letter-spacing: -0.02em; color: var(--ink); margin: 0; }
+.tsetup-sub { font-size: 13px; color: var(--ink-3); margin: 4px 0 0; }
+.tsetup-company-wrap { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.tsetup-company { appearance: none; -webkit-appearance: none; background: var(--bg-2); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 32px 9px 13px; font-size: 13px; font-weight: 700; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23929AA3' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.tsetup-company:hover { border-color: var(--border-strong); }
 
-.tsetup-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 26px; }
-.tsetup-col { min-width: 0; }
-.tsetup-col-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.tsetup-col-head > span { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tsetup-add { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--amber); font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 8px; cursor: pointer; flex: 0 0 auto; }
+.tsetup-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; }
+.tsetup-col { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: 18px 20px 20px; }
+.tsetup-col-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.tsetup-col-head > span { font-size: var(--text-xs); font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tsetup-add { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--amber); font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 8px; cursor: pointer; flex: 0 0 auto; }
 .tsetup-add:hover { background: var(--amber-bg); color: var(--amber-ink); }
 .tsetup-add i { font-size: 14px; }
 
@@ -7291,7 +7295,7 @@ body.ui-command-center .controls-card .btn {
 .tsetup-swatch::-webkit-color-swatch { border: none; border-radius: 6px; }
 .tsetup-swatch::-moz-color-swatch { border: none; border-radius: 6px; }
 
-.tsetup-labels { margin-top: 22px; }
+.tsetup-labels { margin-top: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: 18px 20px 20px; }
 .tsetup-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .tsetup-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--bg-2); border-radius: var(--radius-pill); padding: 5px 8px 5px 11px; }
 .tsetup-chip .tsetup-lbl { font-size: 13px; }
