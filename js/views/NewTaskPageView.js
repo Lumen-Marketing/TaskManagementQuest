@@ -247,9 +247,13 @@ App.NewTaskPageView = class NewTaskPageView {
   }
   _statusItems() {
     const list = App.taxonomy.activeStatuses(this.S.company, this.S.type);
-    if (!list.length) return `<div class="nt-mempty">No statuses for this type</div>`;
-    return list.map(s =>
-      `<button class="nt-mitem" data-v="${s.key}"><span class="nt-dot" style="background:${s.color || 'var(--ink-3)'}"></span>${App.utils.escapeHtml(s.label)}${this.S.status === s.key ? '<span class="nt-check">✓</span>' : ''}</button>`).join('');
+    const rows = list.length
+      ? list.map(s => `<button class="nt-mitem" data-v="${s.key}"><span class="nt-dot" style="background:${s.color || 'var(--ink-3)'}"></span>${App.utils.escapeHtml(s.label)}${this.S.status === s.key ? '<span class="nt-check">✓</span>' : ''}</button>`).join('')
+      : `<div class="nt-mempty">No statuses for this type</div>`;
+    const create = App.can('task-setup.manage')
+      ? `<div class="nt-mnew"><input placeholder="New status…" maxlength="32" /><button data-newstatus type="button">Create</button></div>`
+      : '';
+    return rows + create;
   }
   _labelItems() {
     const list = App.taxonomy.activeLabels(this.S.company);
@@ -393,8 +397,9 @@ App.NewTaskPageView = class NewTaskPageView {
     this._bindPick('date', () => this._calMenu(), null, false);
     this._bindPick('time', () => this._timeMenu(), null, false);
 
-    // Inline create rows (type / label / project).
+    // Inline create rows (type / status / label / project).
     this._bindCreateRow('type', 'newtype', (val) => this._createType(val));
+    this._bindCreateRow('status', 'newstatus', (val) => this._createStatus(val));
     this._bindCreateRow('label', 'newlabel', (val) => this._createLabel(val));
     this._bindCreateRow('project', 'newproject', (val) => this._createProject(val));
 
@@ -525,6 +530,14 @@ App.NewTaskPageView = class NewTaskPageView {
       row.querySelector('.nt-subdel').addEventListener('click', () => { this.subtasks.splice(i, 1); this._renderSubtasks(); this.sync('sub'); });
       list.appendChild(row);
     });
+  }
+  async _createStatus(val) {
+    try {
+      await this.controller.addStatus(this.S.company, this.S.type, val, '#8f867b');
+      const exists = App.taxonomy.activeStatuses(this.S.company, this.S.type).find(s => s.label.toLowerCase() === val.toLowerCase());
+      if (exists) this.S.status = exists.key;
+    } catch (e) { /* noop */ }
+    this._closeMenus(); this._flash('✓ status created → ' + val); this.sync();
   }
   async _createType(val) {
     try {
