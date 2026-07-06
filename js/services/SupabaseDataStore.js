@@ -846,6 +846,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
         // (migration 039). Absent column (pre-migration) -> treat as active.
         active: row.active !== false,
         position: row.position || null,
+        role: row.role || null,
       };
       return acc;
     }, {});

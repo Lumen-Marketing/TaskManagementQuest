@@ -232,7 +232,8 @@ App.NewTaskPageView = class NewTaskPageView {
   _assigneeItems() {
     return this._peopleFor(this.S.company).map(p => {
       const on = this.S.whos.includes(p.id);
-      return `<button class="nt-mitem" data-v="${p.id}"><span class="nt-mini" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>${App.utils.escapeHtml(p.name)}${on ? '<span class="nt-check">✓</span>' : (p.role ? `<small>${App.utils.escapeHtml(p.role)}</small>` : '')}</button>`;
+      const sub = p.position || (p.role && App.ROLES && App.ROLES[p.role] ? App.ROLES[p.role].label : p.role);
+      return `<button class="nt-mitem" data-v="${p.id}"><span class="nt-mini" style="background:${p.color || 'var(--ink-3)'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>${App.utils.escapeHtml(p.name)}${on ? '<span class="nt-check">✓</span>' : (sub ? `<small>${App.utils.escapeHtml(sub)}</small>` : '')}</button>`;
     }).join('');
   }
   _typeItems() {
