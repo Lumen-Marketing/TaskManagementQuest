@@ -739,15 +739,16 @@ App.AppController = class AppController {
     App.EventBus.emit('comments:changed', taskId);
   }
 
-  async addTaskComment(taskId, body, mentions) {
+  async addTaskComment(taskId, body, mentions, kind) {
     if (!App.can('tasks.write') && !App.can('tasks.comment')) { /* fall through: comment allowed for any viewer of the task */ }
     const text = String(body || '').trim();
     if (!text) return;
     const t = this.taskModel.find(taskId);
     if (!t) return;
+    const k = ['comment', 'note', 'call'].includes(kind) ? kind : 'comment';
     let saved;
     try {
-      saved = await this.dataStore.addComment(taskId, { body: text, mentions: mentions || [] });
+      saved = await this.dataStore.addComment(taskId, { body: text, mentions: mentions || [], kind: k });
     } catch (e) {
       console.error('[comments] add failed:', e);
       if (this.toastView) this.toastView.show({ title: 'Comment not saved', sub: 'Please try again.' });
@@ -1139,10 +1140,39 @@ App.AppController = class AppController {
     return ok ? nowWatching : (t.watchers || []).includes(this.currentUser);
   }
 
-  // Quick "Log call" — drops a lightweight tagged note on the task's thread.
-  // No call/CRM data model; it's just a recognizable comment.
+  // Quick "Log call" — drops a call-kind entry on the task's thread. The kind
+  // column (064) carries the CALL tag now, so the body is plain text; the emoji
+  // is dropped for new rows (legacy 📞-prefixed rows still tag via fallback).
   addCallLog(id) {
-    this.addTaskComment(id, '📞 Logged a call', []);
+    this.addTaskComment(id, 'Logged a call', [], 'call');
+  }
+
+  // Toggle my reaction (emoji) on a comment. Optimistic: flip local state and
+  // re-render immediately, then reconcile with the datastore; on failure we
+  // revert and toast. One row per (comment, me, emoji) — see migration 064.
+  async toggleReaction(taskId, commentId, emoji) {
+    const t = this.taskModel.find(taskId);
+    if (!t || !Array.isArray(t.comments)) return;
+    const c = t.comments.find(x => x.id === commentId);
+    if (!c) return;
+    c.reactions = Array.isArray(c.reactions) ? c.reactions : [];
+    const me = this.currentUser;
+    const had = c.reactions.some(r => r.memberId === me && r.emoji === emoji);
+    // Optimistic local flip.
+    if (had) c.reactions = c.reactions.filter(r => !(r.memberId === me && r.emoji === emoji));
+    else c.reactions.push({ memberId: me, emoji });
+    App.EventBus.emit('comments:changed', taskId);
+    try {
+      if (had) await this.dataStore.removeReaction(commentId, emoji);
+      else await this.dataStore.addReaction(commentId, emoji);
+    } catch (e) {
+      console.error('[reactions] toggle failed:', e);
+      // Revert to the pre-flip state and re-render.
+      if (had) c.reactions.push({ memberId: me, emoji });
+      else c.reactions = c.reactions.filter(r => !(r.memberId === me && r.emoji === emoji));
+      if (this.toastView) this.toastView.show({ title: 'Reaction not saved', sub: 'Please try again.' });
+      App.EventBus.emit('comments:changed', taskId);
+    }
   }
 
   // Hard stop: close the current user's timer if it's pointed at this task.
