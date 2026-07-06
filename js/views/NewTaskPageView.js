@@ -238,8 +238,12 @@ App.NewTaskPageView = class NewTaskPageView {
   }
   _typeItems() {
     const list = App.taxonomy.activeTypes(this.S.company);
-    return (list.length ? list : [{ key: 'admin', label: 'Admin' }]).map(t =>
+    const rows = (list.length ? list : [{ key: 'admin', label: 'Admin' }]).map(t =>
       `<button class="nt-mitem" data-v="${t.key}">${App.utils.escapeHtml(t.label)}${this.S.type === t.key ? '<span class="nt-check">✓</span>' : ''}</button>`).join('');
+    const create = App.can('task-setup.manage')
+      ? `<div class="nt-mnew"><input placeholder="New type…" maxlength="32" /><button data-newtype type="button">Create</button></div>`
+      : '';
+    return rows + create;
   }
   _statusItems() {
     const list = App.taxonomy.activeStatuses(this.S.company, this.S.type);
@@ -389,7 +393,8 @@ App.NewTaskPageView = class NewTaskPageView {
     this._bindPick('date', () => this._calMenu(), null, false);
     this._bindPick('time', () => this._timeMenu(), null, false);
 
-    // Inline create rows (label / project).
+    // Inline create rows (type / label / project).
+    this._bindCreateRow('type', 'newtype', (val) => this._createType(val));
     this._bindCreateRow('label', 'newlabel', (val) => this._createLabel(val));
     this._bindCreateRow('project', 'newproject', (val) => this._createProject(val));
 
@@ -520,6 +525,16 @@ App.NewTaskPageView = class NewTaskPageView {
       row.querySelector('.nt-subdel').addEventListener('click', () => { this.subtasks.splice(i, 1); this._renderSubtasks(); this.sync('sub'); });
       list.appendChild(row);
     });
+  }
+  async _createType(val) {
+    try {
+      await this.controller.addType(this.S.company, val, '#8f867b');
+      const newKey = val.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || ('type_' + Date.now());
+      const exists = App.taxonomy.activeTypes(this.S.company).find(t => t.label.toLowerCase() === val.toLowerCase());
+      this.S.type = (exists && exists.key) || newKey;
+      this.S.status = App.taxonomy.defaultStatus(this.S.company, this.S.type);
+    } catch (e) { /* noop */ }
+    this._closeMenus(); this._flash('✓ type created → ' + val); this.sync('type');
   }
   _createLabel(val) {
     // Optimistically add to the in-memory taxonomy so it appears immediately.
