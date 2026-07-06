@@ -267,6 +267,33 @@ App.TaskDetailView = class TaskDetailView {
       : '';
     const createdLine = `Created${createdWhen ? ' ' + App.utils.escapeHtml(createdWhen) : ''} by ${App.utils.escapeHtml(creator.name)}`;
 
+    // Stuck / blocked-on card (Slice B). task.stuck = { reason, on, at } | null.
+    // The blocked-on person + reason + "N days" since flagged drive the card;
+    // Unblock clears it, Comment jumps to the composer.
+    const stuck = t.stuck || null;
+    const stuckHtml = stuck ? (() => {
+      const blocker = App.PEOPLE[stuck.on] || { name: stuck.on || 'Someone', full: stuck.on || 'Someone', color: 'var(--ink-3)' };
+      const days = this._daysSince(stuck.at);
+      const ageLabel = days <= 0 ? 'today' : `${days} day${days === 1 ? '' : 's'}`;
+      return `
+        <div class="td2-card td2-stuck">
+          <div class="td2-stuck-h"><i class="ti ti-alert-triangle-filled"></i>Stuck</div>
+          <div class="td2-stuck-reason">${App.utils.escapeHtml(stuck.reason || '')}</div>
+          <div class="td2-stuck-on">
+            <span class="td2-stuck-lbl">Blocked on</span>
+            <span class="td2-stuck-person">${App.utils.avatarHtml(blocker)}<span class="td2-stuck-name">${App.utils.escapeHtml(blocker.name)}</span></span>
+            <span class="td2-stuck-age">${App.utils.escapeHtml(ageLabel)}</span>
+          </div>
+          <div class="td2-stuck-actions">
+            ${canWrite ? `<button class="td2-stuck-btn td2-stuck-btn-primary" data-action="qa-unblock" type="button"><i class="ti ti-lock-open"></i>Unblock</button>` : ''}
+            <button class="td2-stuck-btn" data-action="qa-stuck-comment" type="button"><i class="ti ti-message"></i>Comment</button>
+          </div>
+        </div>`;
+    })() : '';
+
+    // First assignee's name for the "Nudge {name}" quick action.
+    const nudgeName = assignees.length ? assignees[0].name : '';
+
     this.pane.innerHTML = `
       <div class="td2" data-tdid="${App.utils.escapeHtml(t.id)}">
       <div class="td2-head">
@@ -356,8 +383,14 @@ App.TaskDetailView = class TaskDetailView {
         </div>
 
         <aside class="td2-col td2-col-right">
+          ${stuckHtml}
           <div class="td2-card">
             <div class="td2-card-h">Quick actions</div>
+            ${canWrite ? `<div class="td2-qa-engage">
+              ${stuck ? '' : `<button class="td2-qa td2-qa-stuck" data-action="qa-stuck" type="button"><i class="ti ti-alert-triangle"></i>I'm stuck</button>`}
+              ${nudgeName ? `<button class="td2-qa" data-action="qa-nudge" type="button"><i class="ti ti-bell-ringing"></i>Nudge ${App.utils.escapeHtml(nudgeName)}</button>` : ''}
+              <button class="td2-qa" data-action="qa-help" type="button"><i class="ti ti-lifebuoy"></i>Request help</button>
+            </div>` : ''}
             <div class="td2-qa-grid">
               <button class="td2-qa" data-action="qa-reassign" type="button"><i class="ti ti-user-share"></i>Reassign</button>
               <button class="td2-qa" data-action="qa-subtask" type="button"><i class="ti ti-subtask"></i>Add subtask</button>
@@ -504,6 +537,23 @@ App.TaskDetailView = class TaskDetailView {
       const tv = this.controller.toastView;
       if (tv && tv.show) tv.show({ title: 'Task duplicated', sub: 'You are now viewing the copy.' });
     }));
+
+    // ---- Slice B engagement actions ----
+    // Unblock (stuck card) — clears task.stuck.
+    const unblockBtn = q('[data-action="qa-unblock"]');
+    if (unblockBtn) unblockBtn.addEventListener('click', () => this.controller.unblock(t.id));
+    // Comment (stuck card) — jump to the composer.
+    const stuckComment = q('[data-action="qa-stuck-comment"]');
+    if (stuckComment) stuckComment.addEventListener('click', focusComment);
+    // Nudge every assignee (bar the current user).
+    const nudgeBtn = q('[data-action="qa-nudge"]');
+    if (nudgeBtn) nudgeBtn.addEventListener('click', () => this.controller.nudge(t.id));
+    // "I'm stuck" — inline panel (reason + person picker), Confirm → flagStuck.
+    const stuckBtn = q('[data-action="qa-stuck"]');
+    if (stuckBtn) stuckBtn.addEventListener('click', () => this._openStuckPanel(t, stuckBtn));
+    // "Request help" — person picker → requestHelp.
+    const helpBtn = q('[data-action="qa-help"]');
+    if (helpBtn) helpBtn.addEventListener('click', () => this._openHelpPicker(t, helpBtn));
 
     // Description: pencil button and the text itself both open the inline
     // editor (saves on click-away, Esc cancels) — no full Edit mode needed.
@@ -1133,6 +1183,134 @@ App.TaskDetailView = class TaskDetailView {
       this.controller.addTaskComment(t.id, text, mentions);
     };
     sendBtn.addEventListener('click', send);
+  }
+
+  /* ---------- Slice B: stuck / help pickers ---------- */
+
+  // Whole days elapsed since an ISO timestamp (0 = today). Defensive against
+  // bad/missing values.
+  _daysSince(iso) {
+    if (!iso) return 0;
+    const then = new Date(iso).getTime();
+    if (isNaN(then)) return 0;
+    return Math.max(0, Math.floor((Date.now() - then) / 86400000));
+  }
+
+  /* "I'm stuck" inline panel anchored to the trigger: a reason textarea + a
+     teammate picker (excluding self). Confirm stays disabled until both are
+     filled → controller.flagStuck. Re-clicking the trigger closes it. Suppresses
+     background re-renders while open (the _inlineEdit guard) so a sync poll can't
+     wipe the half-filled panel. */
+  _openStuckPanel(t, anchor) {
+    if (!App.can('tasks.write')) return;
+    const existing = this.pane.querySelector('.td2-stuck-panel');
+    if (existing) { this._closeStuckPanel && this._closeStuckPanel(); return; }
+
+    this._inlineEdit = { taskId: t.id, field: 'stuck' };
+    const token = this._inlineEdit;
+
+    const people = App.utils.peopleInCompany(t.company, t.assignee)
+      .filter(p => p.id !== this.currentUser);
+
+    let chosen = null;
+    const panel = document.createElement('div');
+    panel.className = 'td2-stuck-panel';
+    panel.innerHTML = `
+      <div class="td2-am-h">I'm stuck</div>
+      <textarea class="td2-stuck-input" rows="2" maxlength="500" placeholder="What's blocking this?"></textarea>
+      <div class="td2-stuck-pick-lbl">Blocked on</div>
+      <div class="td2-am-list td2-stuck-people">
+        ${people.map(p => `<button class="td2-am-item" data-id="${App.utils.escapeHtml(p.id)}" type="button">
+          ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
+          <i class="ti ti-check td2-am-check td2-stuck-check" aria-hidden="true"></i>
+        </button>`).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
+      </div>
+      <div class="td2-stuck-panel-actions">
+        <button class="td2-stuck-btn td2-stuck-btn-primary td2-stuck-confirm" type="button" disabled><i class="ti ti-flag"></i>Confirm</button>
+      </div>`;
+
+    const host = anchor.parentElement || this.pane;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    host.appendChild(panel);
+
+    const ta = panel.querySelector('.td2-stuck-input');
+    const confirm = panel.querySelector('.td2-stuck-confirm');
+    const refresh = () => {
+      const ready = ta.value.trim().length > 0 && !!chosen;
+      confirm.disabled = !ready;
+    };
+    panel.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chosen = b.dataset.id;
+      panel.querySelectorAll('.td2-am-item').forEach(x => x.classList.toggle('is-on', x === b));
+      refresh();
+    }));
+    ta.addEventListener('input', refresh);
+    ta.addEventListener('click', (e) => e.stopPropagation());
+
+    const cleanup = () => {
+      panel.remove();
+      document.removeEventListener('click', onDoc);
+      if (this._inlineEdit === token) { this._inlineEdit = null; }
+      this._closeStuckPanel = null;
+    };
+    this._closeStuckPanel = () => { cleanup(); this.render(); };
+    confirm.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const reason = ta.value.trim();
+      if (!reason || !chosen) return;
+      cleanup();
+      this.controller.flagStuck(t.id, reason, chosen);
+    });
+    const onDoc = (e) => {
+      if (panel.contains(e.target) || (anchor && anchor.contains(e.target))) return;
+      this._closeStuckPanel && this._closeStuckPanel();
+    };
+    setTimeout(() => { document.addEventListener('click', onDoc); ta.focus(); }, 0);
+  }
+
+  /* "Request help" teammate picker (excluding self). Picking a person calls
+     controller.requestHelp and closes. Same menu vocabulary as the assignee
+     picker. */
+  _openHelpPicker(t, anchor) {
+    if (!App.can('tasks.write')) return;
+    const existing = this.pane.querySelector('.td2-help-menu');
+    if (existing) { existing.remove(); if (this._closeHelpMenu) this._closeHelpMenu(); return; }
+
+    const people = App.utils.peopleInCompany(t.company, t.assignee)
+      .filter(p => p.id !== this.currentUser);
+
+    const menu = document.createElement('div');
+    menu.className = 'td2-assignee-menu td2-help-menu';
+    menu.innerHTML = `
+      <div class="td2-am-h">Request help from</div>
+      <div class="td2-am-list">
+        ${people.map(p => `<button class="td2-am-item" data-id="${App.utils.escapeHtml(p.id)}" type="button">
+          ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
+        </button>`).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
+      </div>`;
+
+    const host = anchor.parentElement || this.pane;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    host.appendChild(menu);
+
+    const cleanup = () => {
+      menu.remove();
+      document.removeEventListener('click', onDoc);
+      this._closeHelpMenu = null;
+    };
+    this._closeHelpMenu = cleanup;
+    menu.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = b.dataset.id;
+      cleanup();
+      if (id) this.controller.requestHelp(t.id, id);
+    }));
+    const onDoc = (e) => {
+      if (menu.contains(e.target) || (anchor && anchor.contains(e.target))) return;
+      cleanup();
+    };
+    setTimeout(() => document.addEventListener('click', onDoc), 0);
   }
 
   _formatDue(due) {

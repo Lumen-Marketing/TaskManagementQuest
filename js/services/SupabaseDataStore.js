@@ -317,7 +317,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
     const EDITABLE = [
       'title', 'description', 'type', 'label', 'company', 'creator',
       'assignee', 'assigneeIds', 'project', 'due', 'dueTime', 'reminderAt', 'reminderOffset',
-      'priority', 'status', 'watchers', 'subtasks', 'activity',
+      'priority', 'status', 'watchers', 'subtasks', 'activity', 'stuck',
       'clearedAt', 'completedAt', 'focusSeq', 'woNumber',
     ];
     const merged = { ...serverTask };
@@ -376,6 +376,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
       watchers: task.watchers || [],
       subtasks: task.subtasks || [],
       activity: task.activity || [],
+      // "Stuck" / blocked-on state (migration 063). null = not stuck; else
+      // { reason, on, at }. Written back on flagStuck / unblock.
+      stuck: task.stuck || null,
       cleared_at: task.clearedAt || null,
       completed_at: task.completedAt || null,
       focus_seq: (task.focusSeq === null || task.focusSeq === undefined) ? null : task.focusSeq,
@@ -781,6 +784,8 @@ App.SupabaseDataStore = class SupabaseDataStore {
       watchers: Array.isArray(row.watchers) ? row.watchers : [],
       subtasks: Array.isArray(row.subtasks) ? row.subtasks : [],
       activity: Array.isArray(row.activity) ? row.activity : [],
+      // "Stuck" / blocked-on state (migration 063); null when not stuck.
+      stuck: row.stuck || null,
       clearedAt: row.cleared_at || null,
       createdAt: row.created_at || null,
       completedAt: row.completed_at || null,

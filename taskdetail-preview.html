@@ -87,6 +87,8 @@ const SAMPLE = {
   assignee: 'alkeith', assigneeIds: ['alkeith', 'andres', 'kristin'],
   due: App.utils.todayISO(-1), dueTime: '14:00', reminderAt: null,
   watchers: ['sean'],
+  // Sample stuck state (Slice B) so the stuck card renders in the preview.
+  stuck: { reason: 'Waiting on the HOA to email the stamped color approval.', on: 'kristin', at: '2026-07-03T15:00:00Z' },
   subtasks: [{ t: 'Order materials', d: true }, { t: 'Schedule crew', d: true }, { t: 'Pull permit', d: false }, { t: 'Final inspection', d: false }],
   activity: [{ who: 'Abraham Q.', what: 'created this task', at: null, when: '3d ago' }, { who: 'Alkeith R.', what: 'changed status To do → In progress', at: '1' }],
   comments: [
@@ -112,6 +114,11 @@ App.controller = {
   updateTaskField: (id, f, v) => alert(`set ${f} = ${v} (preview)`),
   setAssignees: (id, ids) => alert('setAssignees: ' + ids.join(', ') + ' (preview)'),
   reassignTask: () => {},
+  // Slice B engagement actions (stubbed no-ops for the preview).
+  flagStuck: (id, reason, on) => { console.log('[flagStuck]', { id, reason, on }); alert(`flagStuck: blocked on ${on}\n"${reason}" (preview)`); },
+  unblock: (id) => { console.log('[unblock]', id); alert('unblock (preview)'); },
+  nudge: (id) => { console.log('[nudge]', id); alert('nudge assignees (preview)'); },
+  requestHelp: (id, helperId) => { console.log('[requestHelp]', { id, helperId }); alert('requestHelp from ' + helperId + ' (preview)'); },
   toastView: { show: ({ title }) => console.log('[toast]', title) },
 };
 App.projectPicker = { open: () => alert('project picker (preview)') };

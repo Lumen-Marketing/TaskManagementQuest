@@ -339,6 +339,96 @@
   100% { box-shadow: none; }
 }
 
+/* ---------- Slice B: stuck card + engagement actions ---------- */
+/* Stuck card — rust accent (color + contrast, no borders) sits above Quick
+   actions. The whole card reads as blocked without a hairline. */
+#taskDetailWrap .td2-stuck {
+  background: var(--rust-bg);
+  box-shadow: var(--shadow-sm);
+}
+#taskDetailWrap .td2-stuck-h {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-size: var(--text-xs); font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--rust-ink);
+  margin-bottom: var(--space-sm);
+}
+#taskDetailWrap .td2-stuck-h i { font-size: 16px; color: var(--rust-ink); }
+#taskDetailWrap .td2-stuck-reason {
+  font-size: var(--text-sm); font-weight: 600; color: var(--ink);
+  line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+  margin-bottom: var(--space-sm);
+}
+#taskDetailWrap .td2-stuck-on {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-bottom: var(--space-sm);
+}
+#taskDetailWrap .td2-stuck-lbl {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--rust-ink);
+}
+#taskDetailWrap .td2-stuck-person {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--text-xs); font-weight: 700; color: var(--ink);
+  background: var(--surface); border-radius: var(--radius-pill);
+  padding: 4px 11px 4px 4px; box-shadow: var(--shadow-sm);
+}
+#taskDetailWrap .td2-stuck-person .avatar-xs { width: 18px; height: 18px; font-size: 9px; }
+#taskDetailWrap .td2-stuck-age {
+  margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--rust-ink);
+}
+#taskDetailWrap .td2-stuck-actions { display: flex; gap: 8px; }
+#taskDetailWrap .td2-stuck-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex: 1; justify-content: center;
+  font-family: var(--font-body); font-size: var(--text-xs); font-weight: 700;
+  color: var(--ink-2); background: var(--surface); border: none;
+  border-radius: var(--radius-sm); padding: 9px 12px; cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+#taskDetailWrap .td2-stuck-btn:hover { color: var(--ink); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+#taskDetailWrap .td2-stuck-btn i { font-size: 15px; }
+#taskDetailWrap .td2-stuck-btn-primary { background: var(--rust); color: #fff; box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--rust) 60%, transparent); }
+#taskDetailWrap .td2-stuck-btn-primary:hover { color: #fff; }
+#taskDetailWrap .td2-stuck-btn-primary[disabled] { opacity: 0.5; cursor: default; box-shadow: none; transform: none; }
+
+/* Engagement row (I'm stuck / Nudge / Request help) above the quick-action grid */
+#taskDetailWrap .td2-qa-engage { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+#taskDetailWrap .td2-qa-engage .td2-qa { justify-content: flex-start; }
+#taskDetailWrap .td2-qa-stuck { background: var(--rust-bg); color: var(--rust-ink); }
+#taskDetailWrap .td2-qa-stuck i { color: var(--rust-ink); }
+#taskDetailWrap .td2-qa-stuck:hover { background: var(--rust-bg); color: var(--rust-ink); box-shadow: var(--shadow-sm); }
+
+/* "I'm stuck" inline panel (anchored to the trigger) — menu vocabulary */
+#taskDetailWrap .td2-stuck-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; left: 0; z-index: 70;
+  background: var(--surface); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg); padding: 10px;
+  animation: td2-menu-in var(--dur-fast) var(--ease-out);
+}
+#taskDetailWrap .td2-stuck-input {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  font-family: var(--font-body); font-size: var(--text-sm); color: var(--ink);
+  background: var(--bg-2); border: none; border-radius: var(--radius-sm);
+  padding: 9px 11px; margin-bottom: 8px;
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+#taskDetailWrap .td2-stuck-input:focus {
+  outline: none; background: var(--surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rust) 22%, transparent), var(--shadow-sm);
+}
+#taskDetailWrap .td2-stuck-pick-lbl {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
+  padding: 2px 4px 6px;
+}
+#taskDetailWrap .td2-stuck-people { max-height: 200px; }
+#taskDetailWrap .td2-stuck-check { visibility: hidden; color: var(--rust); }
+#taskDetailWrap .td2-stuck-people .td2-am-item.is-on { color: var(--ink); background: var(--rust-bg); }
+#taskDetailWrap .td2-stuck-people .td2-am-item.is-on .td2-stuck-check { visibility: visible; }
+#taskDetailWrap .td2-stuck-panel-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+#taskDetailWrap .td2-stuck-panel-actions .td2-stuck-btn { flex: none; }
+
 /* inline editor inputs reuse the legacy .tdp-ie-input styling from taskmanagement.css */
 
 /* ---------- responsive: 3 → 2 → 1 columns ---------- */

@@ -1819,6 +1819,176 @@ App.AppController = class AppController {
     }
   }
 
+  /* ---------- Task Detail engagement actions (Slice B) ---------- */
+
+  /* Flag a task STUCK on a reason + a blocked-on person. Mutates task.stuck
+     ({ reason, on, at }), logs activity, saves, then notifies the blocked-on
+     person (in-app + email) that they're blocking this task. Reuses the
+     save-before-notify ordering (setAssignees/createTask) so the notification
+     FK/RLS check sees a saved task. */
+  async flagStuck(taskId, reason, blockedOnId) {
+    if (!App.can('tasks.write')) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot change this task.' });
+      return;
+    }
+    const task = this.taskModel.find(taskId);
+    if (!task) return;
+    const cleanReason = String(reason || '').trim().slice(0, 500);
+    if (!cleanReason || !blockedOnId) return;
+
+    const stuck = { reason: cleanReason, on: blockedOnId, at: new Date().toISOString() };
+    this.taskModel.update(taskId, { stuck });
+    const blockedName = this.getUserName(blockedOnId);
+    this.taskModel.addActivity(taskId, {
+      who: this.getUserName(this.currentUser),
+      what: `flagged this stuck — blocked on ${blockedName}`,
+      at: new Date().toISOString(),
+      when: 'just now',
+    });
+
+    const fromName = this.getUserName(this.currentUser);
+    const titleEsc = App.utils.escapeHtml(task.title);
+    const person = App.PEOPLE[blockedOnId] || { name: blockedOnId, email: '' };
+
+    const saved = this.saveNow ? await this.saveNow() : true;
+    if (saved && blockedOnId !== this.currentUser) {
+      this._deliver(
+        [{
+          memberId: blockedOnId,
+          taskId,
+          meta: 'Blocking a task',
+          html: `<strong>${App.utils.escapeHtml(fromName)}</strong> is stuck on <em>${titleEsc}</em> — waiting on you: “${App.utils.escapeHtml(cleanReason)}”`,
+        }],
+        person.email ? [person.email] : [],
+        { subject: `Quest HQ — you're blocking ${task.title}`, html: this._emailBody(`<strong>${App.utils.escapeHtml(fromName)}</strong> flagged <strong>${titleEsc}</strong> as stuck, blocked on you:<br/>“${App.utils.escapeHtml(cleanReason)}”`, task) }
+      );
+    }
+    if (this.toastView) {
+      this.toastView.show({
+        title: 'Flagged as stuck',
+        sub: blockedOnId !== this.currentUser
+          ? (person.email ? `Notifying ${person.name}` : `${person.name} notified in-app`)
+          : `Blocked on ${person.name}`,
+      });
+    }
+  }
+
+  /* Clear a task's stuck state (Unblock). No notification. */
+  async unblock(taskId) {
+    if (!App.can('tasks.write')) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot change this task.' });
+      return;
+    }
+    const task = this.taskModel.find(taskId);
+    if (!task || !task.stuck) return;
+    this.taskModel.update(taskId, { stuck: null });
+    this.taskModel.addActivity(taskId, {
+      who: this.getUserName(this.currentUser),
+      what: 'marked this unblocked',
+      at: new Date().toISOString(),
+      when: 'just now',
+    });
+    if (this.saveNow) await this.saveNow();
+    if (this.toastView) this.toastView.show({ title: 'Unblocked' });
+  }
+
+  /* Nudge every assignee (excluding the current user) with a short reminder.
+     No schema change — logs activity, saves, then fans out in-app + email. */
+  async nudge(taskId) {
+    const task = this.taskModel.find(taskId);
+    if (!task) return;
+    const assigneeIds = (Array.isArray(task.assigneeIds) && task.assigneeIds.length)
+      ? task.assigneeIds
+      : (task.assignee ? [task.assignee] : []);
+    const targets = Array.from(new Set(assigneeIds.filter(id => id && id !== this.currentUser)));
+    if (!targets.length) {
+      if (this.toastView) this.toastView.show({ title: 'Nobody to nudge', sub: 'No other assignees on this task.' });
+      return;
+    }
+
+    const fromName = this.getUserName(this.currentUser);
+    const titleEsc = App.utils.escapeHtml(task.title);
+    const names = targets.map(id => this.getUserName(id)).join(' + ');
+    this.taskModel.addActivity(taskId, {
+      who: fromName,
+      what: `nudged ${names}`,
+      at: new Date().toISOString(),
+      when: 'just now',
+    });
+
+    const inapp = [];
+    const emails = [];
+    targets.forEach(id => {
+      inapp.push({
+        memberId: id,
+        taskId,
+        meta: 'Nudge',
+        html: `<strong>${App.utils.escapeHtml(fromName)}</strong> sent a reminder about <em>${titleEsc}</em>`,
+      });
+      if (App.PEOPLE[id] && App.PEOPLE[id].email) emails.push(App.PEOPLE[id].email);
+    });
+
+    const saved = this.saveNow ? await this.saveNow() : true;
+    if (saved) {
+      this._deliver(inapp, emails, {
+        subject: `Quest HQ — reminder: ${task.title}`,
+        html: this._emailBody(`<strong>${App.utils.escapeHtml(fromName)}</strong> sent a reminder about <strong>${titleEsc}</strong>.`, task),
+      });
+    }
+    if (this.toastView) {
+      this.toastView.show({
+        title: `Nudged ${names}`,
+        sub: emails.length ? `Notifying ${names}` : 'In-app reminder sent',
+      });
+    }
+  }
+
+  /* Request help from a teammate: add them as a watcher (if not already), save,
+     then notify them (in-app + email) that help was requested on this task. */
+  async requestHelp(taskId, helperId) {
+    if (!App.can('tasks.write')) {
+      if (this.toastView) this.toastView.show({ title: 'No access', sub: 'Your role cannot change this task.' });
+      return;
+    }
+    const task = this.taskModel.find(taskId);
+    if (!task || !helperId) return;
+
+    const watchers = (task.watchers || []).slice();
+    if (!watchers.includes(helperId)) {
+      watchers.push(helperId);
+      this.taskModel.update(taskId, { watchers });
+    }
+    const fromName = this.getUserName(this.currentUser);
+    const titleEsc = App.utils.escapeHtml(task.title);
+    const person = App.PEOPLE[helperId] || { name: helperId, email: '' };
+    this.taskModel.addActivity(taskId, {
+      who: fromName,
+      what: `asked ${person.name} for help`,
+      at: new Date().toISOString(),
+      when: 'just now',
+    });
+
+    const saved = this.saveNow ? await this.saveNow() : true;
+    if (saved && helperId !== this.currentUser) {
+      this._deliver(
+        [{
+          memberId: helperId,
+          taskId,
+          meta: 'Help requested',
+          html: `<strong>${App.utils.escapeHtml(fromName)}</strong> asked for your help on <em>${titleEsc}</em>`,
+        }],
+        person.email ? [person.email] : [],
+        { subject: `Quest HQ — help requested: ${task.title}`, html: this._emailBody(`<strong>${App.utils.escapeHtml(fromName)}</strong> requested your help on <strong>${titleEsc}</strong>.`, task) }
+      );
+    }
+    if (this.toastView) {
+      this.toastView.show({
+        title: `Help requested from ${person.name}`,
+        sub: person.email ? `Notifying ${person.name}` : `${person.name} notified in-app`,
+      });
+    }
+  }
+
   /* Deliver notifications (in-app + best-effort email) to recipients other than
      the current user. In-app failures surface a toast; email is best-effort. */
   async _deliver(inappRecipients, emails, emailContent) {
