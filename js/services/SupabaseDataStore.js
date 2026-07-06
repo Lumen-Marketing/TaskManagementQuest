@@ -6,7 +6,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this.supabase = supabase;
     this.currentUser = currentUser;
     this.role = role || 'member';
-    this._profileColumns = 'id, email, full_name, approved, role, email_verified, member_id, supervisor_id, company_ids, avatar_url, created_at';
+    this._profileColumns = 'id, email, full_name, approved, role, email_verified, member_id, supervisor_id, company_ids, avatar_url, position, created_at';
     // Last-seen updated_at per task id — used as an optimistic-concurrency guard
     // so a save can't silently clobber an edit made elsewhere.
     this._taskVersions = {};
@@ -844,6 +844,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
         // picker for non-manager sessions, which can't read profiles directly
         // (migration 039). Absent column (pre-migration) -> treat as active.
         active: row.active !== false,
+        position: row.position || null,
       };
       return acc;
     }, {});

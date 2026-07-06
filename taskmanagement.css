@@ -330,7 +330,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none !important
 .watcher-dropdown:not(.hidden),
 .proj-picker:not(.hidden),
 .cm-mention-menu:not(.hidden),
-.tdp-status-menu {
+.tdp-status-menu,
+.pp-list:not(.hidden) {
   animation: statusMenuIn var(--dur-short) var(--ease-out);
   transform-origin: top;
 }
@@ -393,7 +394,7 @@ input:not([type="checkbox"]):not([type="radio"]), textarea, select {
     transition: none;
   }
   .pnav-menu, .tdp-overflow-menu, .watcher-dropdown, .proj-picker,
-  .cm-mention-menu, .tdp-status-menu, .view-enter {
+  .cm-mention-menu, .tdp-status-menu, .pp-list, .view-enter {
     animation: none;
   }
   .pv-new:active, .pv-chev:active, .swipe-act:active, .status-menu-item:active,
@@ -1765,6 +1766,36 @@ button.tdp-chip:hover { border-color: var(--ink-3); }
 .watcher-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); z-index: 10; padding: 4px; }
 .watcher-dropdown-item { padding: 6px 10px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .watcher-dropdown-item:hover { background: var(--bg-2); }
+
+/* Custom person picker — assignee field in New Task page.
+   Hidden input carries the value; trigger button + listbox handle display. */
+.pp-wrap { position: relative; }
+.pp-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  width: 100%; padding: 5px 8px; background: var(--bg-input, var(--bg-2));
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--ink); font-size: 13px; cursor: pointer; text-align: left;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.pp-trigger:hover, .pp-trigger:focus-visible { border-color: var(--ink-3); outline: none; }
+.pp-trigger[aria-expanded="true"] { border-color: var(--accent, var(--orange)); }
+.pp-chev { font-size: 12px; color: var(--ink-3); flex-shrink: 0; pointer-events: none; transition: transform var(--dur-fast) var(--ease-out); }
+.pp-trigger[aria-expanded="true"] .pp-chev { transform: rotate(180deg); }
+.pp-list {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+  z-index: 20; padding: 4px; max-height: 220px; overflow-y: auto;
+}
+.pp-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.pp-item:hover, .pp-item-selected { background: var(--bg-2); }
+.pp-item-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pp-item-name { font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-item-pos { font-size: 10.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Toast notification */
 .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }

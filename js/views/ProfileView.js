@@ -66,6 +66,11 @@ App.ProfileView = class ProfileView {
             <input type="text" id="pf-name" value="${App.utils.escapeHtml(currentName)}" placeholder="Your name" maxlength="80" />
           </div>
 
+          <div class="field" style="margin-top:12px;">
+            <label class="field-label" for="pf-position">Job title / position <span class="field-optional">Optional</span></label>
+            <input type="text" id="pf-position" value="${App.utils.escapeHtml(profile.position || '')}" placeholder="e.g. Drafting Lead" maxlength="80" />
+          </div>
+
           <button type="button" class="btn-link pf-pw-toggle" id="pf-pw-toggle" style="margin-top:14px;font-size:13px;">Change password</button>
 
           <div id="pf-pw-section" style="display:none;">
@@ -231,7 +236,8 @@ App.ProfileView = class ProfileView {
         avatarChanged = true;
       }
 
-      await this._saveProfile(nameRaw, avatarUrl, avatarChanged);
+      const positionRaw = (document.getElementById('pf-position').value || '').trim();
+      await this._saveProfile(nameRaw, positionRaw, avatarUrl, avatarChanged);
 
       // Update the auth credential last. Verify the CURRENT password first
       // (Supabase's updateUser would otherwise let anyone on an unlocked session
@@ -332,12 +338,12 @@ App.ProfileView = class ProfileView {
     });
   }
 
-  async _saveProfile(fullName, avatarUrl, avatarChanged) {
+  async _saveProfile(fullName, position, avatarUrl, avatarChanged) {
     const profile = App.currentProfile;
     const memberId = profile && profile.member_id;
     const firstName = fullName.split(/\s+/)[0] || fullName;
 
-    const profileUpdate = { full_name: fullName };
+    const profileUpdate = { full_name: fullName, position: position || null };
     if (avatarChanged) profileUpdate.avatar_url = avatarUrl;
 
     const profileRes = await App.supabase
@@ -347,12 +353,12 @@ App.ProfileView = class ProfileView {
     if (profileRes.error) throw profileRes.error;
 
     if (memberId) {
-      const memberUpdate = { name: firstName, full_name: fullName };
+      const memberUpdate = { name: firstName, full_name: fullName, position: position || null };
       if (avatarChanged) memberUpdate.avatar_url = avatarUrl;
 
       // Best-effort: only managers can write team_members (RLS). For everyone
       // else this is rejected — that's fine, the profile is the source of truth
-      // and the UI overlays profile name/avatar onto the roster anyway.
+      // and the trigger (migration 065) syncs position automatically.
       const memberRes = await App.supabase
         .from('team_members')
         .update(memberUpdate)
@@ -372,6 +378,7 @@ App.ProfileView = class ProfileView {
     if (memberId && App.PEOPLE && App.PEOPLE[memberId]) {
       App.PEOPLE[memberId].name = firstName;
       App.PEOPLE[memberId].full = fullName;
+      App.PEOPLE[memberId].position = position || null;
       if (avatarChanged) App.PEOPLE[memberId].avatar_url = avatarUrl;
     }
 
