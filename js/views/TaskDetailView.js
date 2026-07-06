@@ -1502,70 +1502,68 @@ App.TaskDetailView = class TaskDetailView {
        </div>`
     ).join('') : `<div style="font-size:11.5px; color:var(--ink-3);">No subtasks yet</div>`;
 
+    const sel = (id, entries, selected, extraAttr = '') =>
+      `<div class="te-selwrap"><select id="${id}" ${extraAttr}>${opts(entries, selected)}</select><i class="ti ti-chevron-down te-car"></i></div>`;
+
     this.pane.innerHTML = `
-      <div class="detail-head detail-head-edit" style="max-width:1040px; margin:0 auto 18px;">
-        <div class="detail-head-top">
-          <span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>
-          <div class="detail-head-actions">
-            <button class="icon-btn" data-action="cancel-edit" aria-label="Cancel" title="Cancel" type="button"><i class="ti ti-x"></i></button>
-          </div>
-        </div>
-        <div class="detail-title">Edit task</div>
-      </div>
-      <div class="detail-body taf-edit" style="max-width:1040px; margin-left:auto; margin-right:auto; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none;">
-        <div class="field field-title">
-          <input type="text" id="edit-title" class="taf-title-input" value="${App.utils.escapeHtml(d.title)}" maxlength="200" placeholder="Task title" aria-label="Task title" />
+      <div class="te-mode">
+        <div class="te-topbar">
+          <button class="te-back" data-action="cancel-edit" aria-label="Back to task" type="button"><i class="ti ti-arrow-left"></i> Back to task</button>
+          <span class="te-crumb">/</span><span class="te-tag">EDIT TASK</span>
+          <span class="te-byline"><span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span></span>
         </div>
 
-        <div class="tdp-body">
-          <div class="tdp-col-main">
-            <div class="tdp-card">
-              <div class="tdp-card-title">Details</div>
-              <div class="taf-meta" style="background:transparent; padding:0; border-radius:0;">
-              <label class="taf-field"><span class="taf-field-lbl">Company</span><select id="edit-company">${opts(Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Type</span><select id="edit-type" data-action="type-change">${opts(App.taxonomy.activeTypes(d.company).map(tp => [tp.key, tp.label]), d.type)}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Status</span><select id="edit-status">${opts(this._statusOpts(d.company, d.type, d.status), d.status)}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Label</span><select id="edit-label">${opts([['none', (App.TASK_LABELS.none && App.TASK_LABELS.none.label) || 'No label'], ...App.taxonomy.activeLabels(d.company).map(l => [l.key, l.label])], d.label || 'none')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Priority</span><select id="edit-priority">${opts(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), d.priority)}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Assignee</span><select id="edit-assignee">${App.utils.peopleInCompany(d.company, d.assignee).map(p => { const lbl = p.name + (p.position ? ` — ${p.position}` : ''); return `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(lbl)}</option>`; }).join('')}</select></label>
-              <label class="taf-field"><span class="taf-field-lbl">Due</span><input type="date" id="edit-due" value="${App.utils.escapeHtml(d.due)}" class="picker-input" /></label>
-              <label class="taf-field"><span class="taf-field-lbl">Time <span class="field-optional">Optional</span></span><input type="time" id="edit-dueTime" value="${App.utils.escapeHtml(d.dueTime)}" class="picker-input" /></label>
-              <div class="taf-field"><span class="taf-field-lbl">Reminder <span class="field-optional">Optional</span></span><button type="button" id="edit-reminderAt" class="rp-trigger ${d.reminderAt ? '' : 'rp-trigger-empty'}" value="${App.utils.escapeHtml(d.reminderAt)}" aria-haspopup="dialog"><i class="ti ti-bell"></i><span class="rp-trigger-lbl">${d.reminderAt ? App.utils.escapeHtml(App.reminderPicker.format(d.reminderAt)) : 'Set a reminder'}</span></button></div>
-              <div class="taf-field"><span class="taf-field-lbl">Project</span>${(() => {
-                const p = d.project && App.projects ? App.projects[d.project] : null;
-                return `<button type="button" id="edit-project" class="projtag projtag-btn ${p ? '' : 'projtag-empty'}" data-action="edit-open-project" aria-haspopup="listbox" ${p ? `style="--pc:${App.utils.escapeHtml(p.color)}"` : ''}><i class="ti ${p ? 'ti-folder' : 'ti-folder-plus'}"></i>${p ? App.utils.escapeHtml(p.name) : 'No project'}</button>`;
-              })()}</div>
+        <div class="te-cols">
+          <div class="te-sheet">
+            <div class="te-titlebox">
+              <input type="text" id="edit-title" class="te-title-in" value="${App.utils.escapeHtml(d.title)}" maxlength="200" placeholder="What needs to get done?" aria-label="Task title" />
+            </div>
+
+            <div class="te-sec">
+              <div class="te-sec-h"><span class="te-n">01</span><span class="te-t">Details</span></div>
+              <div class="te-frow">
+                <div class="te-f"><label>Company</label>${sel('edit-company', Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}</div>
+                <div class="te-f"><label>Type</label>${sel('edit-type', App.taxonomy.activeTypes(d.company).map(tp => [tp.key, tp.label]), d.type, 'data-action="type-change"')}</div>
+                <div class="te-f"><label>Status</label>${sel('edit-status', this._statusOpts(d.company, d.type, d.status), d.status)}</div>
+                <div class="te-f"><label>Label</label>${sel('edit-label', [['none', (App.TASK_LABELS.none && App.TASK_LABELS.none.label) || 'No label'], ...App.taxonomy.activeLabels(d.company).map(l => [l.key, l.label])], d.label || 'none')}</div>
+                <div class="te-f"><label>Priority</label>${sel('edit-priority', Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), d.priority)}</div>
+                <div class="te-f"><label>Assignee</label><div class="te-selwrap"><select id="edit-assignee">${App.utils.peopleInCompany(d.company, d.assignee).map(p => { const lbl = p.name + (p.position ? ` — ${p.position}` : ''); return `<option value="${App.utils.escapeHtml(p.id)}" ${p.id === d.assignee ? 'selected' : ''}>${App.utils.escapeHtml(lbl)}</option>`; }).join('')}</select><i class="ti ti-chevron-down te-car"></i></div></div>
+                <div class="te-f"><label>Due</label><input type="date" id="edit-due" value="${App.utils.escapeHtml(d.due)}" class="te-input picker-input" /></div>
+                <div class="te-f"><label>Time <span class="te-opt">Optional</span></label><input type="time" id="edit-dueTime" value="${App.utils.escapeHtml(d.dueTime)}" class="te-input picker-input" /></div>
+                <div class="te-f"><label>Reminder <span class="te-opt">Optional</span></label><button type="button" id="edit-reminderAt" class="te-btn rp-trigger ${d.reminderAt ? '' : 'rp-trigger-empty'}" value="${App.utils.escapeHtml(d.reminderAt)}" aria-haspopup="dialog"><i class="ti ti-bell"></i><span class="rp-trigger-lbl">${d.reminderAt ? App.utils.escapeHtml(App.reminderPicker.format(d.reminderAt)) : 'Set a reminder'}</span></button></div>
+                <div class="te-f"><label>Project</label>${(() => {
+                  const p = d.project && App.projects ? App.projects[d.project] : null;
+                  return `<button type="button" id="edit-project" class="te-btn projtag-btn ${p ? '' : 'projtag-empty'}" data-action="edit-open-project" aria-haspopup="listbox" ${p ? `style="--pc:${App.utils.escapeHtml(p.color)}"` : ''}><i class="ti ${p ? 'ti-folder' : 'ti-folder-plus'}"></i>${p ? App.utils.escapeHtml(p.name) : 'No project'}</button>`;
+                })()}</div>
               </div>
             </div>
 
-            <div class="tdp-card">
-              <div class="tdp-card-title">Description</div>
-              <textarea id="edit-desc" class="taf-desc" rows="5" maxlength="5000" placeholder="Add a description…">${App.utils.escapeHtml(d.description)}</textarea>
+            <div class="te-sec">
+              <div class="te-sec-h"><span class="te-n">02</span><span class="te-t">Description</span></div>
+              <textarea id="edit-desc" class="te-desc" rows="5" maxlength="5000" placeholder="Add context, links, scope…">${App.utils.escapeHtml(d.description)}</textarea>
             </div>
 
-            <div class="tdp-card">
-              <div class="tdp-card-title">Subtasks</div>
-              ${subtaskRows}
-              <div class="subtask-add-row" style="margin-top:8px;">
+            <div class="te-sec">
+              <div class="te-sec-h"><span class="te-n">03</span><span class="te-t">Subtasks</span></div>
+              <div class="te-subs">${subtaskRows}</div>
+              <div class="te-subadd">
                 <input type="text" id="edit-subtask-input" maxlength="200" placeholder="Add a step and press Enter" />
-                <button class="btn btn-sm" data-action="add-subtask" type="button">Add</button>
+                <button class="te-addbtn" data-action="add-subtask" type="button">Add</button>
               </div>
             </div>
           </div>
 
-          <aside class="tdp-col-right">
-            <div class="tdp-card">
-              <div class="tdp-card-title"><i class="ti ti-users"></i> Watchers</div>
-              <div class="watchers-cell">${watcherChips}${watcherAdd}</div>
+          <aside class="te-side">
+            <div class="te-sec te-sec-side">
+              <div class="te-sec-h"><span class="te-t"><i class="ti ti-users"></i> Watchers</span></div>
+              <div class="te-watchers">${watcherChips}${watcherAdd}</div>
             </div>
           </aside>
         </div>
 
-        <div class="taf-foot" style="justify-content:flex-end;">
-          <div class="taf-foot-btns">
-            <button class="btn" data-action="cancel-edit" type="button">Cancel</button>
-            <button class="btn btn-primary" data-action="save-edit" type="button">Save</button>
-          </div>
+        <div class="te-foot">
+          <button class="te-fbtn" data-action="cancel-edit" type="button">Cancel</button>
+          <button class="te-fbtn te-fbtn-primary" data-action="save-edit" type="button">Save changes</button>
         </div>
       </div>
     `;
