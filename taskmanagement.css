@@ -2976,7 +2976,11 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 14px;
-  padding: 14px 24px 24px;
+  /* No side padding: this grid is nested inside .watching-view (which already
+     insets the column), so the old 24px gutter pushed team cards out of line
+     with the watched-task cards above. The 10px .watch-section gap handles the
+     space under the section head; .watching-view's bottom padding handles below. */
+  padding: 0;
 }
 .team-card {
   background: var(--surface);
@@ -7236,6 +7240,15 @@ body.ui-command-center .controls-card .btn {
     margin-right: auto;
     padding-left: 0;
     padding-right: 0;
+  }
+  /* The Watching view's stacked panels aren't a .task-group, so they never got
+     the shared band and sat flush-left in the widened column while the header
+     card was centered. Give them the SAME centered box so the watched-task and
+     team cards line up under the "Watching" title. */
+  body.ui-command-center .watching-view {
+    max-width: min(1720px, calc(100% - 64px));
+    margin-left: auto;
+    margin-right: auto;
   }
   /* The table lives in #taskViewWrap, which adds 24px side padding — drop it on
      wide screens so the list bands share the header's containing box, and the
