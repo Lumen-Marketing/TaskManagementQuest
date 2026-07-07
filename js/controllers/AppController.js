@@ -635,59 +635,21 @@ App.AppController = class AppController {
     if (box) box.value = '';
   }
 
-  _personName(id) {
-    const p = App.PEOPLE && App.directory.person(id);
-    return (p && (p.full || p.name)) || id || '';
-  }
-
-  /* ----- CSV export (respects current view + filters) ----- */
+  /* ----- CSV export (respects current view + filters) -----
+     Row assembly lives in App.csvExport (unit-tested); this keeps only the
+     app-side concerns: which tasks are visible, the download, the toast. */
   exportTasksCsv() {
     const tasks = this.getVisibleTasks();
-    const rows = [['Title', 'Type', 'Label', 'Company', 'Assignee', 'Priority', 'Status', 'Due', 'Created by', 'Subtasks', 'Description']];
-    tasks.forEach(t => {
-      const label = (t.label && t.label !== 'none' && App.TASK_LABELS[t.label]) ? App.TASK_LABELS[t.label].label : '';
-      const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
-      const subDone = subs.filter(s => s.d).length;
-      rows.push([
-        t.title || '',
-        (App.TASK_TYPES[t.type] || {}).label || t.type || '',
-        label,
-        (App.directory.company(t.company) || {}).label || t.company || '',
-        this._personName(t.assignee),
-        (App.PRIORITIES[t.priority] || {}).label || t.priority || '',
-        (App.STATUSES[t.status] || {}).label || t.status || '',
-        t.due || '',
-        this._personName(t.creator),
-        subs.length ? `${subDone}/${subs.length}` : '',
-        t.description || '',
-      ]);
-    });
-    App.utils.downloadFile(`quest-hq-tasks-${App.utils.todayISO(0)}.csv`, App.utils.toCsv(rows));
+    App.utils.downloadFile(`quest-hq-tasks-${App.utils.todayISO(0)}.csv`, App.utils.toCsv(App.csvExport.tasksRows(tasks)));
     if (this.toastView) this.toastView.show({ title: 'Exported', sub: `${tasks.length} task${tasks.length === 1 ? '' : 's'} → CSV` });
   }
 
   exportTimeCsv() {
     const tasks = this.getVisibleTasks();
-    const byId = new Map(tasks.map(t => [t.id, t]));
-    const ids = new Set(tasks.map(t => t.id));
-    const entries = (this.timeModel.entries || [])
-      .filter(e => ids.has(e.taskId))
-      .slice()
-      .sort((a, b) => (a.start || 0) - (b.start || 0));
-    const rows = [['Date', 'Person', 'Task', 'Company', 'Hours', 'Note']];
-    entries.forEach(e => {
-      const t = byId.get(e.taskId) || {};
-      rows.push([
-        e.start ? App.utils.toISODate(new Date(e.start)) : '',
-        this._personName(e.userId),
-        t.title || e.taskTitle || e.taskId || '',
-        (App.directory.company(t.company) || {}).label || '',
-        ((e.durationMs || 0) / 3600000).toFixed(2),
-        e.note || '',
-      ]);
-    });
+    const rows = App.csvExport.timeRows(tasks, this.timeModel.entries || []);
     App.utils.downloadFile(`quest-hq-time-${App.utils.todayISO(0)}.csv`, App.utils.toCsv(rows));
-    if (this.toastView) this.toastView.show({ title: 'Exported', sub: `${entries.length} time ${entries.length === 1 ? 'entry' : 'entries'} → CSV` });
+    const n = rows.length - 1;
+    if (this.toastView) this.toastView.show({ title: 'Exported', sub: `${n} time ${n === 1 ? 'entry' : 'entries'} → CSV` });
   }
 
   selectTask(id) {
