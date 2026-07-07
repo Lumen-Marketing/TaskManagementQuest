@@ -58,6 +58,12 @@ App.AppController = class AppController {
     // Views are attached after construction by app.js
     this.toastView = null;
     this.newTaskPage = null;
+
+    // Visible-tasks memo (see getVisibleTasks). Parameter changes are caught by
+    // the fingerprint key; task-DATA changes invalidate here — tasks:changed is
+    // the single mutation signal every TaskModel write emits.
+    this._visibleCache = { key: null, value: null };
+    App.EventBus.on('tasks:changed', () => { this._visibleCache.key = null; });
   }
 
   attachViews({ toastView, newTaskPage, profileView, reportProblemView }) {
@@ -544,7 +550,7 @@ App.AppController = class AppController {
 
   getVisibleTasks() {
     const role = App.effectiveRole();
-    return this.taskModel.getFiltered({
+    const params = {
       view: this.uiState.view,
       scope: this.uiState.scope,
       searchQuery: this.uiState.searchQuery,
@@ -553,7 +559,18 @@ App.AppController = class AppController {
       currentCompany: this.uiState.currentCompany,
       role,
       reportMemberIds: this._reportMemberIds(role),
-    });
+    };
+    // Fingerprint-keyed memo: every caller (list renders, badgeCounts, prev/next
+    // task arrows, CSV export) shares one computation per state change instead
+    // of re-filtering per call. Any parameter change flips the key; task-data
+    // changes invalidate via the tasks:changed listener in the constructor.
+    // Callers must NOT mutate the returned array in place (audited 2026-07-08:
+    // none do — the execution list sorts a .filter() copy).
+    const key = App.utils.fingerprint(params);
+    if (this._visibleCache.key === key) return this._visibleCache.value;
+    const value = this.taskModel.getFiltered(params);
+    this._visibleCache = { key, value };
+    return value;
   }
 
   /* Badge counts for the nav (top-bar Tasks dropdown + mobile drawer), computed

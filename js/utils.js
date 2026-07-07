@@ -481,4 +481,10 @@ App.utils = {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
+
+  /* Stable string key for memo caches: JSON-safe values plus Sets (serialized
+     as sorted arrays so membership, not insertion order, defines equality). */
+  fingerprint(value) {
+    return JSON.stringify(value, (k, v) => (v instanceof Set ? [...v].sort() : v));
+  },
 };
