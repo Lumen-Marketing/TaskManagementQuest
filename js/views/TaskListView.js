@@ -1660,7 +1660,7 @@ App.TaskListView = class TaskListView {
       <div class="quick-sheet-title">${App.utils.escapeHtml(t.title)}</div>
       <button type="button" class="quick-sheet-item" data-q="status"><i class="ti ti-circle-dot"></i><span>Change status</span></button>
       <button type="button" class="quick-sheet-item" data-q="done"><i class="ti ti-circle-check"></i><span>${isDone ? 'Mark not done' : 'Mark done'}</span></button>
-      ${App.can('clock.use') ? `<button type="button" class="quick-sheet-item" data-q="clock"><i class="ti ti-player-${onThis ? 'pause' : 'play'}"></i><span>${onThis ? 'Clock out' : 'Clock in'}</span></button>` : ''}
+      ${App.can('clock.use') ? `<button type="button" class="quick-sheet-item" data-q="clock"><i class="ti ${onThis ? 'ti-player-pause' : 'ti-player-play'}"></i><span>${onThis ? 'Clock out' : 'Clock in'}</span></button>` : ''}
       <button type="button" class="quick-sheet-item" data-q="reassign"><i class="ti ti-user"></i><span>Reassign</span></button>
       <button type="button" class="quick-sheet-item" data-q="due"><i class="ti ti-calendar"></i><span>Set due date</span></button>
       <div class="quick-sheet-foot"><button type="button" class="quick-sheet-item quick-sheet-cancel" data-q="cancel"><span>Cancel</span></button></div>

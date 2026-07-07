@@ -5,12 +5,14 @@
   "description": "Quest HQ — static SPA (Supabase backend). package.json exists only for Playwright dev tooling; runtime is a zero-build static site.",
   "scripts": {
     "dev": "node tools/dev-server.mjs",
+    "icons:subset": "node tools/subset-icons.mjs",
     "test": "playwright test",
     "test:local": "playwright test --project=local",
     "test:smoke": "playwright test --project=preview-smoke"
   },
   "devDependencies": {
-    "@playwright/test": "1.49.1"
+    "@playwright/test": "1.49.1",
+    "subset-font": "^2.5.0"
   },
   "engines": {
     "node": ">=20"

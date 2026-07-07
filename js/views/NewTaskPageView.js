@@ -652,10 +652,10 @@ App.NewTaskPageView = class NewTaskPageView {
     this._setPickLabel('type', App.taxonomy.typeLabel(this.S.company, this.S.type));
     this._setPickLabel('status', App.taxonomy.statusLabel(this.S.company, this.S.type, this.S.status), { swatch: this._statusColor() });
     this._setPickLabel('label', this.S.label ? App.taxonomy.labelLabel(this.S.company, this.S.label) : 'None', this.S.label ? { swatch: this._labelColor() } : { placeholder: true });
-    this._setPickLabel('project', this.S.project && App.projects[this.S.project] ? App.projects[this.S.project].name : 'No project', this.S.project ? { icon: 'folder' } : { icon: 'folder', placeholder: true });
-    this._setPickLabel('date', this._fmtDateShort(this.S.date), this.S.date ? { icon: 'calendar-event' } : { icon: 'calendar-event', placeholder: true });
-    this._setPickLabel('time', this._fmtTime(this.S.time), this.S.time ? { icon: 'clock' } : { icon: 'clock', placeholder: true });
-    this._setPickLabel('remind', this._reminderText(), { icon: 'bell' });
+    this._setPickLabel('project', this.S.project && App.projects[this.S.project] ? App.projects[this.S.project].name : 'No project', this.S.project ? { icon: 'ti-folder' } : { icon: 'ti-folder', placeholder: true });
+    this._setPickLabel('date', this._fmtDateShort(this.S.date), this.S.date ? { icon: 'ti-calendar-event' } : { icon: 'ti-calendar-event', placeholder: true });
+    this._setPickLabel('time', this._fmtTime(this.S.time), this.S.time ? { icon: 'ti-clock' } : { icon: 'ti-clock', placeholder: true });
+    this._setPickLabel('remind', this._reminderText(), { icon: 'ti-bell' });
     this._renderWatchTags();
 
     // Preview card owns the Create button + its disabled state.
@@ -679,7 +679,7 @@ App.NewTaskPageView = class NewTaskPageView {
     let lead = '';
     if (opts.square) lead = `<span class="nt-sq" style="background:${opts.square}"></span>`;
     else if (opts.swatch) lead = `<span class="nt-dot" style="background:${opts.swatch}"></span>`;
-    else if (opts.icon) lead = `<i class="ti ti-${opts.icon}"></i>`;
+    else if (opts.icon) lead = `<i class="ti ${opts.icon}"></i>`; // opts.icon is the FULL ti-* class — the icon-subset scanner needs whole literals at call sites
     val.innerHTML = lead + `<span class="nt-pick-txt">${App.utils.escapeHtml(text || '')}</span>`;
   }
   _setAssigneeLabel() {

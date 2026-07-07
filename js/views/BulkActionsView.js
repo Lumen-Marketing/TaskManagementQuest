@@ -33,7 +33,7 @@ App.BulkActionsView = class BulkActionsView {
       </div>
       <div class="bulk-bar-actions">
         <button class="btn btn-sm" data-bulk="all">
-          <i class="ti ti-${allSelected ? 'square-off' : 'checkbox'}"></i>${allSelected ? 'Clear' : 'Select all'}
+          <i class="ti ${allSelected ? 'ti-square-off' : 'ti-checkbox'}"></i>${allSelected ? 'Clear' : 'Select all'}
         </button>
         ${canWrite ? `<button class="btn btn-sm" data-bulk="complete" ${count ? '' : 'disabled'}><i class="ti ti-circle-check"></i>Complete</button>` : ''}
         ${canWrite ? `<button class="btn btn-sm" data-bulk="focus" ${count ? '' : 'disabled'}><i class="ti ti-list-numbers"></i>Add to Focus</button>` : ''}
