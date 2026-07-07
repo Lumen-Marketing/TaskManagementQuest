@@ -115,6 +115,7 @@ App.utils = {
   safeColor: (c) => c, uid: (p) => p + Math.floor(Math.random() * 1e9),
   makeActivatable: (el) => el,
   stripHtml: (s) => String(s || '').replace(/<[^>]+>/g, ''),
+  peopleInCompany: () => Object.values(App.PEOPLE),
 };
 App.Motion = { check: () => {}, pop: () => {}, shake: () => {}, busy: () => (() => {}) };
 

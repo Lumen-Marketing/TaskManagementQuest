@@ -566,42 +566,24 @@ App.TaskListView = class TaskListView {
   // ---- Mobile quick-actions bottom sheet -----------------------------------
   // A thumb-friendly menu on each task card. Surfaces the two actions that
   // aren't already reachable from the card — Reassign and Set due — plus
-  // Status / Mark done / Clock for one consolidated menu. Mounted on <body>
-  // (like the status menu) so the frequent list re-renders can't tear it down
-  // mid-interaction.
-  _ensureQuickSheet() {
-    if (this._quickSheetBackdrop) return this._quickSheetBackdrop;
-    const backdrop = document.createElement('div');
-    backdrop.className = 'quick-sheet-backdrop hidden';
-    const sheet = document.createElement('div');
-    sheet.className = 'quick-sheet';
-    sheet.setAttribute('role', 'dialog');
-    sheet.setAttribute('aria-modal', 'true');
-    sheet.setAttribute('aria-label', 'Task quick actions');
-    backdrop.appendChild(sheet);
-    document.body.appendChild(backdrop);
-    // Tap the dimmed area (outside the sheet) to dismiss; Esc closes too.
-    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) this._closeQuickSheet(); });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this._quickSheetBackdrop && !this._quickSheetBackdrop.classList.contains('hidden')) {
-        this._closeQuickSheet();
-      }
-    });
-    this._quickSheetBackdrop = backdrop;
-    this._quickSheetEl = sheet;
-    return backdrop;
-  }
-
+  // Status / Mark done / Clock for one consolidated menu. App.Menu's 'sheet'
+  // presentation owns the backdrop / Esc / dismissal choreography; the sub-
+  // screens (root, status, reassign, due) render into the handle's element.
   _openQuickSheet(taskId) {
-    this._ensureQuickSheet();
+    if (this._quickSheetHandle) this._quickSheetHandle.close('api');
     this._quickSheetTaskId = taskId;
+    this._quickSheetHandle = App.Menu.open({
+      present: 'sheet',
+      className: 'quick-sheet',
+      onClose: () => { this._quickSheetHandle = null; this._quickSheetTaskId = null; },
+      build: (el) => { el.setAttribute('aria-label', 'Task quick actions'); },
+    });
+    this._quickSheetEl = this._quickSheetHandle.el;
     this._renderQuickRoot();
-    this._quickSheetBackdrop.classList.remove('hidden');
   }
 
   _closeQuickSheet() {
-    if (this._quickSheetBackdrop) this._quickSheetBackdrop.classList.add('hidden');
-    this._quickSheetTaskId = null;
+    if (this._quickSheetHandle) this._quickSheetHandle.close('api');
   }
 
   _renderQuickRoot() {
