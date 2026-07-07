@@ -601,24 +601,32 @@ App.TaskDetailView = class TaskDetailView {
       });
     }
 
-    // Overflow (⋯) menu toggle.
-    const overflowBtn = q('[data-action="overflow"]');
-    const overflowMenu = q('#tdpOverflow');
-    if (overflowBtn && overflowMenu) {
-      overflowBtn.addEventListener('click', (e) => { e.stopPropagation(); overflowMenu.classList.toggle('hidden'); });
-    }
-    // Close the overflow menu on any outside click — bound ONCE for the view's
-    // lifetime (the menu node is re-queried each click, since render replaces it).
-    if (!this._docClickBound) {
-      this._docClickBound = true;
-      document.addEventListener('click', (e) => {
-        const menu = this.pane && this.pane.querySelector('#tdpOverflow');
-        if (!menu || menu.classList.contains('hidden')) return;
-        const btn = this.pane.querySelector('[data-action="overflow"]');
-        if (menu.contains(e.target) || (btn && btn.contains(e.target))) return;
+    // Overflow (⋯) menu toggle. The menu is an inline sibling whose items are
+    // wired by this render pass, so it stays a .hidden toggle rather than an
+    // App.Menu — but the document dismiss listener is now added per-open and
+    // removed on close (the old once-per-lifetime binding leaked).
+    const wireInlineToggle = (btnSel, menuSel, closeOnItemClick) => {
+      const btn = q(btnSel);
+      const menu = q(menuSel);
+      if (!btn || !menu) return;
+      let onDoc = null;
+      const close = () => {
         menu.classList.add('hidden');
+        if (onDoc) { document.removeEventListener('click', onDoc); onDoc = null; }
+      };
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!menu.classList.contains('hidden')) { close(); return; }
+        menu.classList.remove('hidden');
+        onDoc = (e2) => {
+          if (menu.contains(e2.target) || btn.contains(e2.target)) return;
+          close();
+        };
+        setTimeout(() => document.addEventListener('click', onDoc), 0);
       });
-    }
+      if (closeOnItemClick) menu.addEventListener('click', close);
+    };
+    wireInlineToggle('[data-action="overflow"]', '#tdpOverflow', false);
 
     // Prev/next task side-arrow chevrons reuse the controller's existing
     // selectAdjacentTask — same walk order as the arrow-key / j/k shortcuts.
@@ -627,22 +635,7 @@ App.TaskDetailView = class TaskDetailView {
 
     // Quick-actions "More" dropdown (Add subtask / Log call / Add note / Duplicate).
     // The items carry the same data-actions bound elsewhere; this only toggles.
-    const qaMoreBtn = q('[data-action="qa-more"]');
-    const qaMoreMenu = q('#td2QaMore');
-    if (qaMoreBtn && qaMoreMenu) {
-      qaMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); qaMoreMenu.classList.toggle('hidden'); });
-      qaMoreMenu.addEventListener('click', () => qaMoreMenu.classList.add('hidden'));
-    }
-    if (!this._qaMoreDocBound) {
-      this._qaMoreDocBound = true;
-      document.addEventListener('click', (e) => {
-        const menu = this.pane && this.pane.querySelector('#td2QaMore');
-        if (!menu || menu.classList.contains('hidden')) return;
-        const btn = this.pane.querySelector('[data-action="qa-more"]');
-        if (menu.contains(e.target) || (btn && btn.contains(e.target))) return;
-        menu.classList.add('hidden');
-      });
-    }
+    wireInlineToggle('[data-action="qa-more"]', '#td2QaMore', true);
 
     // Status chip → quick status menu.
     const statusBtn = q('[data-action="status-menu"]');
