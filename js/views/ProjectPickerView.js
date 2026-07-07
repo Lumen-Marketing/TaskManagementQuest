@@ -1,49 +1,40 @@
 window.App = window.App || {};
 
-/* Shared folder picker popover. One instance (App.projectPicker), mounted on
-   <body>, position:fixed so it escapes row clipping. Search + "No project" +
-   company-scoped folder list + inline "Create '<query>'". Reports the choice
-   via onSelect(projectIdOrNull). */
+/* Shared folder picker (App.projectPicker). Search + "No project" + company-
+   scoped folder list + inline "Create '<query>'". Reports the choice via
+   onSelect(projectIdOrNull). App.Menu owns the choreography (fixed positioning
+   + flip, click-away, Esc, close-on-scroll, aria-expanded); this class owns
+   the searchable content. */
 App.ProjectPickerView = class ProjectPickerView {
   constructor({ controller }) {
     this.controller = controller;
-    this.el = null;
-    this._onDocDown = (e) => {
-      if (!this.el || this.el.classList.contains('hidden')) return;
-      if (this.el.contains(e.target)) return;
-      if (this._anchor && this._anchor.contains(e.target)) return;
-      this.close();
-    };
-    document.addEventListener('pointerdown', this._onDocDown, true);
-    window.addEventListener('resize', () => this.close());
-    window.addEventListener('scroll', () => this.close(), true);
-  }
-
-  _ensure() {
-    if (this.el) return this.el;
-    const el = document.createElement('div');
-    el.className = 'proj-picker status-menu hidden';
-    el.setAttribute('role', 'listbox');
-    el.setAttribute('aria-label', 'Set project');
-    document.body.appendChild(el);
-    this.el = el;
-    return el;
+    this._handle = null;
+    this._anchor = null;
   }
 
   open({ anchor, companyId, currentId, onSelect }) {
-    const el = this._ensure();
-    if (this._anchor === anchor && !el.classList.contains('hidden')) { this.close(); return; }
+    // Re-clicking the open anchor toggles it shut.
+    if (this._handle && this._anchor === anchor) { this._handle.close('api'); return; }
     this._anchor = anchor;
     this._companyId = companyId;
     this._currentId = currentId || null;
     this._onSelect = onSelect;
     this._query = '';
-    this._render();
-    el.classList.remove('hidden');
-    this._position(anchor);
-    if (anchor) anchor.setAttribute('aria-expanded', 'true');
-    const input = el.querySelector('.proj-picker-search');
-    if (input) input.focus();
+    this._handle = App.Menu.open({
+      anchor,
+      className: 'proj-picker status-menu',
+      repositionOnScroll: false,
+      onClose: () => { this._handle = null; this._anchor = null; },
+      build: (el) => {
+        el.setAttribute('role', 'listbox');
+        el.setAttribute('aria-label', 'Set project');
+        el.style.minWidth = Math.max(anchor.getBoundingClientRect().width, 220) + 'px';
+        this._render(el);
+        const input = el.querySelector('.proj-picker-search');
+        if (input) input.focus();
+      },
+    });
+    this._handle.reposition();
   }
 
   _options() {
@@ -53,8 +44,7 @@ App.ProjectPickerView = class ProjectPickerView {
     return q ? all.filter(p => p.name.toLowerCase().includes(q)) : all;
   }
 
-  _render() {
-    const el = this.el;
+  _render(el) {
     const q = this._query.trim();
     const opts = this._options();
     const exact = opts.some(p => p.name.toLowerCase() === q.toLowerCase());
@@ -78,10 +68,16 @@ App.ProjectPickerView = class ProjectPickerView {
       ${rows}${createRow}`;
 
     const input = el.querySelector('.proj-picker-search');
-    input.addEventListener('input', () => { this._query = input.value; this._render(); this._position(this._anchor); const i = this.el.querySelector('.proj-picker-search'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } });
+    input.addEventListener('input', () => {
+      this._query = input.value;
+      this._render(el);
+      if (this._handle) this._handle.reposition();
+      const i = el.querySelector('.proj-picker-search');
+      if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+    });
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); this.close(); }
-      else if (e.key === 'Enter') {
+      // Escape is handled by App.Menu.
+      if (e.key === 'Enter') {
         e.preventDefault();
         const c = el.querySelector('.proj-picker-create');
         if (c) this._create(this._query.trim());
@@ -106,24 +102,7 @@ App.ProjectPickerView = class ProjectPickerView {
     if (cb) cb(id || null);
   }
 
-  _position(anchor) {
-    const el = this.el;
-    if (!anchor) return;
-    const r = anchor.getBoundingClientRect();
-    el.style.minWidth = Math.max(r.width, 220) + 'px';
-    const mh = el.offsetHeight, mw = el.offsetWidth, gap = 6;
-    let top = r.bottom + gap;
-    if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - gap - mh);
-    let left = r.left;
-    if (left + mw > window.innerWidth - 8) left = window.innerWidth - 8 - mw;
-    el.style.top = top + 'px';
-    el.style.left = Math.max(8, left) + 'px';
-  }
-
   close() {
-    if (!this.el || this.el.classList.contains('hidden')) return;
-    this.el.classList.add('hidden');
-    if (this._anchor && document.contains(this._anchor)) this._anchor.setAttribute('aria-expanded', 'false');
-    this._anchor = null;
+    if (this._handle) this._handle.close('api');
   }
 };

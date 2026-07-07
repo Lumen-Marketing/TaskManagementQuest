@@ -78,8 +78,7 @@ App.timeField = {
 };
 
 App.reminderPicker = {
-  _el: null,
-  _cleanup: null,
+  _handle: null,
 
   /* "YYYY-MM-DDTHH:MM" → "Jul 8, 9:00 AM" (wall-clock text, no zone math). */
   format(v) {
@@ -92,7 +91,9 @@ App.reminderPicker = {
 
   /* Open the popover near `anchor`. onCommit(value|null) fires once, on Enter /
      click-away (value changed) or Clear (null). onCancel fires on Escape or
-     click-away with nothing changed. */
+     click-away with nothing changed. App.Menu owns positioning/repositioning
+     and Escape; click-away is overridden (onAway) to COMMIT — the auto-save
+     contract — and an unreadable typed time vetoes the close. */
   open({ anchor, value = null, onCommit, onCancel }) {
     this.close();
 
@@ -105,15 +106,25 @@ App.reminderPicker = {
       viewM: initial ? +initial[2] - 1 : today.getMonth(), // 0-based
     };
 
-    const el = document.createElement('div');
-    el.className = 'rp-pop';
-    el.setAttribute('role', 'dialog');
-    el.setAttribute('aria-label', 'Set reminder');
-    document.body.appendChild(el);
-    this._el = el;
-
     let settled = false;
+    let el = null;
     const settle = (fn) => { if (settled) return; settled = true; this.close(); fn && fn(); };
+
+    this._handle = App.Menu.open({
+      anchor,
+      className: 'rp-pop',
+      onAway: () => commit(), // commit may veto (unreadable time keeps it open)
+      onClose: (reason) => {
+        this._handle = null;
+        // Escape (or an external closeCurrent) with nothing settled = cancel.
+        if (!settled) { settled = true; onCancel && onCancel(); }
+      },
+      build: (menuEl) => {
+        menuEl.setAttribute('role', 'dialog');
+        menuEl.setAttribute('aria-label', 'Set reminder');
+        el = menuEl;
+      },
+    });
 
     const commit = () => {
       const timeInput = el.querySelector('.rp-time');
@@ -196,7 +207,7 @@ App.reminderPicker = {
       });
       timeInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commit(); }
-        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); settle(onCancel); }
+        // Escape is handled by App.Menu (→ onClose → cancel).
       });
       el.querySelector('.rp-clear').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -205,48 +216,13 @@ App.reminderPicker = {
     };
 
     render();
-
-    // Position: below the anchor, clamped to the viewport (fixed, so it works
-    // inside any scrolling pane). On very narrow screens it hugs the edges.
-    const place = () => {
-      const r = anchor.getBoundingClientRect();
-      const w = el.offsetWidth, h = el.offsetHeight, pad = 8;
-      let left = Math.min(Math.max(pad, r.left), window.innerWidth - w - pad);
-      let top = r.bottom + 6;
-      if (top + h > window.innerHeight - pad) top = Math.max(pad, r.top - h - 6);
-      el.style.left = `${Math.round(left)}px`;
-      el.style.top = `${Math.round(top)}px`;
-    };
-    place();
-
-    // Click-away commits (auto-save contract); Escape cancels (bound on the
-    // popover's inputs above, and document-wide here for day-grid focus).
-    const onDocClick = (e) => {
-      if (el.contains(e.target) || (anchor && anchor.contains(e.target))) return;
-      commit();
-      // commit() may keep the popover open on an unreadable time; if it
-      // settled, listeners are already gone.
-    };
-    const onDocKey = (e) => {
-      if (e.key === 'Escape') { e.stopPropagation(); settle(onCancel); }
-    };
-    setTimeout(() => {
-      document.addEventListener('mousedown', onDocClick, true);
-      document.addEventListener('keydown', onDocKey, true);
-    }, 0);
-    window.addEventListener('resize', place);
-    this._cleanup = () => {
-      document.removeEventListener('mousedown', onDocClick, true);
-      document.removeEventListener('keydown', onDocKey, true);
-      window.removeEventListener('resize', place);
-    };
+    this._handle.reposition(); // content just landed — re-fit to its real size
 
     const ti = el.querySelector('.rp-time');
     if (ti) ti.focus();
   },
 
   close() {
-    if (this._cleanup) { this._cleanup(); this._cleanup = null; }
-    if (this._el) { this._el.remove(); this._el = null; }
+    if (this._handle) this._handle.close('api');
   },
 };

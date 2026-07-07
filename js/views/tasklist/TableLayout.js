@@ -154,8 +154,8 @@
      that open a dropdown to filter by that column. They drive the SAME filter
      state as the toolbar Filter panel (uiState.filters via toggleFilterValue /
      setFilterDueRange), so the two stay in sync and the list re-renders on the
-     existing 'filters:changed' event. Menu state lives on the view instance
-     (view._cfMenu etc.) so unmount can tear it down. */
+     existing 'filters:changed' event. The open handle lives on the view
+     instance (view._cfHandle) so unmount can tear it down. */
   function columnFilterModel(view, col) {
     const f = view.controller.uiState.filters || {};
     if (col === 'assignees') {
@@ -193,36 +193,33 @@
       options: ranges.map(r => ({ value: r.value, label: r.label, selected: (f.dueRange || 'all') === r.value })) };
   }
 
+  /* App.Menu owns the choreography (positioning, click-away, Esc, aria); this
+     site owns the option list. Multi-select keeps the menu open —
+     filters:changed re-renders the content in place (see mount below). */
   function openColumnFilter(view, btn) {
-    closeColumnFilter(view);
-    const col = btn.dataset.filterCol;
-    view._cfMenuCol = col;
-    view._cfAnchor = btn;
-    const menu = document.createElement('div');
-    menu.className = 'col-filter-menu';
-    menu.setAttribute('role', 'listbox');
-    document.body.appendChild(menu);
-    view._cfMenu = menu;
+    // Re-clicking the open column's button toggles it shut.
+    if (view._cfHandle && view._cfMenuCol === btn.dataset.filterCol) {
+      view._cfHandle.close('api');
+      return;
+    }
+    view._cfMenuCol = btn.dataset.filterCol;
+    view._cfHandle = App.Menu.open({
+      anchor: btn,
+      className: 'col-filter-menu',
+      repositionOnScroll: false,
+      onClose: () => { view._cfHandle = null; view._cfMenuCol = null; },
+      build: (el) => { el.setAttribute('role', 'listbox'); },
+    });
     renderColumnFilterMenu(view);
-
-    // Position under the header button.
-    const r = btn.getBoundingClientRect();
-    menu.style.top = `${Math.round(r.bottom + 6)}px`;
-    menu.style.left = `${Math.round(Math.min(r.left, window.innerWidth - menu.offsetWidth - 12))}px`;
-    btn.setAttribute('aria-expanded', 'true');
-
-    // Close on outside click / Esc.
-    view._cfOnDocClick = (e) => { if (view._cfMenu && !view._cfMenu.contains(e.target) && e.target !== btn) closeColumnFilter(view); };
-    view._cfOnKey = (e) => { if (e.key === 'Escape') closeColumnFilter(view); };
-    setTimeout(() => document.addEventListener('click', view._cfOnDocClick), 0);
-    document.addEventListener('keydown', view._cfOnKey);
+    view._cfHandle.reposition(); // content just landed — re-fit to its real size
   }
 
   function renderColumnFilterMenu(view) {
-    if (!view._cfMenu || !view._cfMenuCol) return;
+    if (!view._cfHandle || !view._cfMenuCol) return;
+    const menuEl = view._cfHandle.el;
     const model = columnFilterModel(view, view._cfMenuCol);
     const esc = App.utils.escapeHtml;
-    view._cfMenu.innerHTML =
+    menuEl.innerHTML =
       model.options.map(o => `
         <div class="cf-item ${o.selected ? 'selected' : ''}" data-value="${esc(String(o.value))}" role="option" aria-selected="${o.selected}">
           <span class="cf-check"><i class="ti ti-check"></i></span>
@@ -230,7 +227,7 @@
         </div>`).join('') +
       `<div class="cf-clear" data-action="cf-clear">Clear filter</div>`;
 
-    view._cfMenu.querySelectorAll('.cf-item').forEach(item => {
+    menuEl.querySelectorAll('.cf-item').forEach(item => {
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         const value = item.dataset.value;
@@ -239,15 +236,15 @@
           // multi-select: keep the menu open; filters:changed re-renders it.
         } else {
           view.controller.setFilterDueRange(value);
-          closeColumnFilter(view);
+          view._cfHandle.close('api');
         }
       });
     });
-    const clear = view._cfMenu.querySelector('[data-action="cf-clear"]');
+    const clear = menuEl.querySelector('[data-action="cf-clear"]');
     if (clear) clear.addEventListener('click', (e) => {
       e.stopPropagation();
       clearColumnFilter(view, model);
-      if (!model.multi) closeColumnFilter(view);
+      if (!model.multi && view._cfHandle) view._cfHandle.close('api');
     });
   }
 
@@ -255,15 +252,6 @@
     if (model.group === 'due') { view.controller.setFilterDueRange('all'); return; }
     const arr = (view.controller.uiState.filters[model.group] || []).slice();
     arr.forEach(v => view.controller.toggleFilterValue(model.group, v));
-  }
-
-  function closeColumnFilter(view) {
-    if (view._cfAnchor) view._cfAnchor.setAttribute('aria-expanded', 'false');
-    if (view._cfMenu) { view._cfMenu.remove(); view._cfMenu = null; }
-    view._cfMenuCol = null;
-    view._cfAnchor = null;
-    if (view._cfOnDocClick) { document.removeEventListener('click', view._cfOnDocClick); view._cfOnDocClick = null; }
-    if (view._cfOnKey) { document.removeEventListener('keydown', view._cfOnKey); view._cfOnKey = null; }
   }
 
   // Highlight a static-header button whenever its filter group is active.
@@ -292,8 +280,7 @@
         header.querySelectorAll('.col-filter').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (view._cfMenu && view._cfMenuCol === btn.dataset.filterCol) { closeColumnFilter(view); return; }
-            openColumnFilter(view, btn);
+            openColumnFilter(view, btn); // toggles shut when already open on this column
           });
         });
       }
@@ -302,7 +289,7 @@
     },
 
     unmount(view) {
-      closeColumnFilter(view);
+      if (view._cfHandle) view._cfHandle.close('api');
     },
 
     render(view, tasks) {

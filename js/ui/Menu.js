@@ -19,14 +19,18 @@
     // Measure after content render.
     const mw = el.offsetWidth, mh = el.offsetHeight;
     let top = r.bottom + opts.offset;
+    let flipped = false;
     if (top + mh > window.innerHeight - 8 && r.top - opts.offset - mh > 8) {
       top = r.top - opts.offset - mh; // flip above
+      flipped = true;
     }
     let left = r.left;
     left = Math.min(left, window.innerWidth - mw - 12);
     left = Math.max(8, left);
     el.style.top = `${Math.round(top)}px`;
     el.style.left = `${Math.round(left)}px`;
+    // Menus animate from the anchor edge (.status-menu et al read this var).
+    el.style.setProperty('--menu-origin', flipped ? 'bottom' : 'top');
   }
 
   function openAnchored(opts) {
@@ -45,6 +49,9 @@
 
     const onAway = (e) => {
       if (el.contains(e.target) || (opts.anchor && opts.anchor.contains(e.target))) return;
+      // Sites with commit-on-away semantics (the reminder picker's auto-save
+      // contract) override the default close; they may veto by not closing.
+      if (opts.onAway) { opts.onAway(handle); return; }
       close('away');
     };
     const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close('esc'); } };
@@ -129,7 +136,7 @@
     open(userOpts) {
       const opts = Object.assign({
         present: 'anchored', className: '', placement: 'bottom-start', offset: 6,
-        matchAnchorWidth: false, onClose: null, repositionOnScroll: true,
+        matchAnchorWidth: false, onClose: null, onAway: null, repositionOnScroll: true,
         returnFocus: true, backdropTitle: '',
       }, userOpts);
       if (current) current.handle.close('reopen');
