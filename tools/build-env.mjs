@@ -63,20 +63,23 @@ const target = resolve(process.cwd(), 'env.json');
 await writeFile(target, payload, 'utf8');
 console.log(`[build-env] Wrote ${target} (${payload.length} bytes, sentry=${sentryDsn ? 'on' : 'off'}, captcha=${turnstileSiteKey ? 'on' : 'off'}, release=${release || '<none>'}).`);
 
-// Stamp a build id into sw.js so the service-worker CACHE_VERSION changes on
+// One build id per deploy, shared by the sw.js cache-version stamp and the
+// asset-URL version stamp below. Prefer the commit SHA (stable, traceable);
+// off-Vercel (no release) fall back to a per-run hash.
+const buildId = (
+  release ||
+  createHash('sha256').update(String(Date.now())).digest('hex')
+).slice(0, 12);
+
+// Stamp the build id into sw.js so the service-worker CACHE_VERSION changes on
 // every deploy and the activate-purge actually drops the previous deploy's
-// caches. Prefer the commit SHA (stable, traceable); otherwise hash the SW
-// source itself so an unchanged worker keeps a stable id. We rewrite the
-// __BUILD_ID__ placeholder in place — if it's already been stamped (or sw.js
-// is missing) we no-op so re-running the build stays idempotent and safe.
+// caches. We rewrite the __BUILD_ID__ placeholder in place — if it's already
+// been stamped (or sw.js is missing) we no-op so re-running the build stays
+// idempotent and safe.
 try {
   const swPath = resolve(process.cwd(), 'sw.js');
   const sw = await readFile(swPath, 'utf8');
   if (sw.includes("'__BUILD_ID__'")) {
-    const buildId = (
-      release ||
-      createHash('sha256').update(sw).digest('hex')
-    ).slice(0, 12);
     const stamped = sw.replace("'__BUILD_ID__'", `'${buildId}'`);
     await writeFile(swPath, stamped, 'utf8');
     console.log(`[build-env] Stamped sw.js BUILD_ID=${buildId}.`);
@@ -86,4 +89,28 @@ try {
 } catch (err) {
   // A missing sw.js or write failure must not fail the whole build.
   console.warn(`[build-env] Could not stamp sw.js: ${err && err.message ? err.message : err}`);
+}
+
+// Stamp ?v=BUILD_ID onto same-origin static asset URLs so the service worker
+// can serve them cache-first as immutable (ADR-0001,
+// docs/adr/0001-cache-first-versioned-static-assets.md). Idempotent: the
+// [^"?] in the pattern skips URLs that already carry a query. Only local
+// css/js/woff2 are stamped — CDN URLs, env.json, and the manifest are left
+// alone. Dev never runs this file, so local URLs stay unversioned.
+for (const name of ['app.html', 'index.html']) {
+  try {
+    const p = resolve(process.cwd(), name);
+    let html = await readFile(p, 'utf8');
+    const before = html;
+    html = html.replace(
+      /((?:href|src)=")((?!https?:\/\/|\/\/)[^"?]+\.(?:css|js|woff2))(")/g,
+      (_, pre, url, post) => `${pre}${url}?v=${buildId}${post}`
+    );
+    if (html !== before) {
+      await writeFile(p, html, 'utf8');
+      console.log(`[build-env] Stamped asset versions in ${name} (v=${buildId}).`);
+    }
+  } catch (err) {
+    console.warn(`[build-env] Could not stamp ${name}: ${err && err.message ? err.message : err}`);
+  }
 }
