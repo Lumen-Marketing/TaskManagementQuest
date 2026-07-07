@@ -1,9 +1,14 @@
 /* Quest HQ service worker.
-   Goal: installable + offline-capable WITHOUT serving stale assets. We use a
-   NETWORK-FIRST strategy for same-origin GETs — the latest deploy always wins
-   when online; the cache is only a fallback when the network is unavailable.
-   (Deliberately not precaching/cache-first: this app has been bitten by stale
-   CSS/JS before, so freshness is prioritized over a few ms of load time.)
+   Strategy (ADR-0001, docs/adr/0001-cache-first-versioned-static-assets.md):
+   - VERSIONED static assets (same-origin URLs carrying ?v=BUILD_ID, stamped by
+     tools/build-env.mjs at deploy) are immutable → CACHE-FIRST. A new deploy
+     changes the URL, so freshness is guaranteed by the version, not by
+     revalidation — repeat mobile visits stop re-validating ~60 assets.
+   - Everything else same-origin (HTML/navigations, un-versioned dev assets)
+     stays NETWORK-FIRST with conditional revalidation — the latest deploy
+     always wins when online; the cache is only an offline fallback. This app
+     has been bitten by stale CSS/JS before; do NOT "restore" network-first-
+     everything or loosen the versioned rule without reading the ADR.
 
    Not handled here: cross-origin requests (Supabase, Sentry, CDN, fonts) pass
    straight through, and `env.json` is never cached (runtime config must be
@@ -44,6 +49,20 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   // Never cache runtime config — it must always be current.
   if (url.pathname.endsWith('/env.json')) return;
+
+  // Immutable versioned assets (?v= stamped at deploy): cache-first (ADR-0001).
+  if (url.searchParams.has('v')) {
+    event.respondWith(
+      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+        if (res && res.ok && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy)).catch(() => {});
+        }
+        return res;
+      }))
+    );
+    return;
+  }
 
   // App-logic assets must never be silently stale: a plain fetch(req) is
   // answered by the HTTP cache within its max-age, so "network-first" quietly
