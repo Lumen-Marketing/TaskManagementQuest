@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task List — Preview (stubbed)</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/tabler-icons/tabler-icons-subset.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="taskmanagement.css">
+<link rel="stylesheet" href="css/tasks.css">
+<style>
+  /* Preview-only chrome. Not part of the app. */
+  body { margin: 0; background: var(--bg); }
+  #previewbar { position: fixed; top: 0; right: 0; z-index: 200; display: flex; gap: 6px; padding: 8px 12px; font-family: var(--font-body); flex-wrap: wrap; max-width: 60vw; justify-content: flex-end; }
+  #previewbar button, #previewbar a { font-size: 11px; font-weight: 700; border: none; box-shadow: var(--shadow-sm); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 5px 9px; cursor: pointer; text-decoration: none; }
+  #previewbar a.active { background: var(--accent, #ED4E0D); color: #fff; }
+  .list-pane { height: 100vh; overflow: auto; padding: 48px 16px 16px; }
+</style>
+</head>
+<body class="ui-command-center">
+<div id="previewbar">
+  <a href="?layout=table">table</a>
+  <a href="?layout=kanban">kanban</a>
+  <a href="?layout=cards">cards</a>
+  <a href="?layout=calendar">calendar</a>
+  <a href="?layout=watching">watching</a>
+  <a href="?layout=execution">execution</a>
+  <button onclick="document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')">Theme</button>
+</div>
+
+<section id="taskViewWrap" class="qhq-page" aria-label="Tasks">
+  <div class="list-pane">
+    <div class="page-head">
+      <span id="pageEyebrow" hidden>This week</span>
+      <h1 id="pageTitle">All tasks</h1>
+      <div id="layoutSwitcher">
+        <button data-layout="table" hidden></button><button data-layout="kanban" hidden></button>
+        <button data-layout="cards" hidden></button><button data-layout="calendar" hidden></button>
+      </div>
+      <span id="stat-open" hidden></span><span id="stat-today" hidden></span>
+      <span id="stat-review" hidden></span><span id="stat-done" hidden></span>
+      <button id="newTaskBtn" hidden></button><button id="filterBtn" hidden></button>
+      <button id="selectBtn" hidden></button><button id="clearDoneBtn" hidden></button>
+    </div>
+    <div class="list-header"></div>
+    <div id="listBody"></div>
+  </div>
+</section>
+
+<script>
+window.App = { errors: {} };
+App.can = () => true;
+App.previewMode = true;
+App.CURRENT_USER = 'abraham';
+App.MAX_SHIFT_MS = 12 * 3600 * 1000;
+App.EventBus = (function () { const m = {}; return { on: (e, f) => { (m[e] = m[e] || []).push(f); }, emit: (e, ...a) => { (m[e] || []).forEach(f => f(...a)); } }; })();
+
+App.PEOPLE = {
+  abraham: { id: 'abraham', name: 'Abraham', full: 'Abraham Q.', email: 'a@x.com', color: '#16325C' },
+  kristin: { id: 'kristin', name: 'Kristin', full: 'Kristin M.', email: 'k@x.com', color: '#0F6E56' },
+  alkeith: { id: 'alkeith', name: 'Alkeith', full: 'Alkeith R.', email: 'al@x.com', color: '#185FA5' },
+  andres:  { id: 'andres',  name: 'Andres',  full: 'Andres V.',  email: 'an@x.com', color: '#534AB7' },
+  sean:    { id: 'sean',    name: 'Sean',    full: 'Sean D.',    email: 's@x.com',  color: '#444441' },
+};
+// Array-of-rows, like the real profiles table load.
+App.PROFILES = [
+  { member_id: 'abraham', full_name: 'Abraham Q.', role: 'admin', approved: true },
+  { member_id: 'kristin', full_name: 'Kristin M.', role: 'worker', approved: true, supervisor_id: 'abraham' },
+  { member_id: 'alkeith', full_name: 'Alkeith R.', role: 'worker', approved: true, supervisor_id: 'abraham' },
+];
+App.ROLES = { admin: { label: 'Admin' }, manager: { label: 'Manager' }, worker: { label: 'Worker' } };
+App.COMPANIES = {
+  roofing:  { id: 'roofing',  label: 'Quest Roofing', pill: '' },
+  drafting: { id: 'drafting', label: 'Quest Drafting', pill: '' },
+};
+App.PRIORITIES = {
+  critical: { label: 'Critical', cls: 'priority-critical' }, urgent: { label: 'Urgent', cls: 'priority-urgent' },
+  high: { label: 'High', cls: 'priority-high' }, medium: { label: 'Medium', cls: 'priority-medium' }, low: { label: 'Low', cls: 'priority-low' },
+};
+App.TASK_TYPES = { admin: { label: 'Admin' }, bid: { label: 'Bid / Estimate' }, field: { label: 'Field' } };
+App.TASK_LABELS = { none: { id: 'none', label: 'No label' }, roof: { id: 'roof', label: 'Roof' } };
+App.STATUSES = { todo: { label: 'To do', cls: '' }, prog: { label: 'In progress', cls: '' }, review: { label: 'Review', cls: '' }, done: { label: 'Done', cls: '' } };
+App.projects = { p1: { id: 'p1', name: 'Ramirez Re-roof', color: '#ED4E0D', companyId: 'roofing' } };
+
+const STATUSES_ALL = [
+  { key: 'todo', label: 'To do', isDefault: true }, { key: 'prog', label: 'In progress' },
+  { key: 'review', label: 'Review' }, { key: 'done', label: 'Done', isDone: true },
+];
+App.taxonomy = {
+  statusLabel: (co, ty, s) => (STATUSES_ALL.find(x => x.key === s) || {}).label || s,
+  typeLabel: (co, t) => (App.TASK_TYPES[t] || {}).label || t,
+  labelLabel: (co, l) => (App.TASK_LABELS[l] || {}).label || l,
+  chipStyle: () => ({ cls: '', style: '' }),
+  isDone: (t) => t.status === 'done',
+  doneStatus: () => 'done',
+  defaultStatus: () => 'todo',
+  activeStatuses: () => STATUSES_ALL.map(s => ({ ...s })),
+  activeTypes: () => Object.keys(App.TASK_TYPES).map(k => ({ key: k, label: App.TASK_TYPES[k].label })),
+  activeLabels: () => Object.keys(App.TASK_LABELS).map(k => ({ key: k, label: App.TASK_LABELS[k].label })),
+};
+
+App.utils = {
+  escapeHtml: (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
+  avatarHtml: (p, extra) => { const cls = 'avatar-xs' + (extra ? ' ' + extra : ''); const bg = (p && p.color) || 'var(--ink-3)'; const nm = (p && (p.full || p.name)) || '?'; const ini = nm.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(); return `<span class="${cls}" style="background:${bg};">${ini}</span>`; },
+  initials: (s) => String(s || '').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(),
+  todayISO: (o = 0) => { const d = new Date(2026, 6, 8); d.setDate(d.getDate() + o); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; },
+  toISODate: (d) => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; },
+  hqDateOf: (x) => new Date(x),
+  formatDue: (iso) => { if (!iso) return { cls: '', text: '—' }; const today = App.utils.todayISO(0); if (iso < today) return { cls: 'overdue', text: 'Overdue' }; if (iso === today) return { cls: 'due-today', text: 'Today' }; return { cls: '', text: iso.slice(5) }; },
+  formatClock: (t) => t, formatClockTz: (t) => t,
+  formatDuration: (ms) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`; },
+  formatHours: (ms) => `${(ms / 3600000).toFixed(1)}h`,
+  timeAgo: () => '2h ago', formatInstant: () => 'Jul 1, 2026',
+  safeColor: (c) => c, uid: (p) => p + Math.floor(Math.random() * 1e9),
+  makeActivatable: (el) => el,
+  stripHtml: (s) => String(s || '').replace(/<[^>]+>/g, ''),
+};
+App.Motion = { check: () => {}, pop: () => {}, shake: () => {}, busy: () => (() => {}) };
+
+// ---- sample data: 10 tasks across statuses/priorities/dues -----------------
+const T = (i, over) => Object.assign({
+  id: 't' + i, title: 'Sample task #' + i, description: 'Preview row',
+  type: 'admin', label: 'roof', company: i % 3 ? 'roofing' : 'drafting', project: i % 4 === 1 ? 'p1' : null,
+  status: 'todo', priority: 'medium', creator: 'abraham',
+  assignee: ['alkeith', 'kristin', 'andres', 'abraham'][i % 4],
+  assigneeIds: [['alkeith', 'kristin', 'andres', 'abraham'][i % 4]],
+  due: App.utils.todayISO(i - 3), dueTime: i % 5 === 0 ? '14:00' : null,
+  watchers: i % 2 ? ['abraham'] : [], subtasks: i % 4 === 2 ? [{ t: 'Step one', d: true }, { t: 'Step two', d: false }] : [],
+  comments: [], activity: [], createdAt: '2026-07-01T10:00:00Z', focusSeq: null,
+}, over);
+const SAMPLES = [
+  T(1, { priority: 'critical', status: 'prog', focusSeq: 1 }),
+  T(2, { priority: 'urgent', focusSeq: 2 }),
+  T(3, { priority: 'high', status: 'review' }),
+  T(4, {}), T(5, { status: 'prog' }),
+  T(6, { status: 'done' }), T(7, { priority: 'low' }),
+  T(8, { status: 'done', priority: 'high' }),
+  T(9, { stuck: { reason: 'Waiting on HOA', on: 'kristin', at: '2026-07-03T15:00:00Z' } }),
+  T(10, { priority: 'urgent', status: 'prog' }),
+];
+
+const qs = new URLSearchParams(location.search);
+const LAYOUT = qs.get('layout') || 'table';
+
+const taskModel = {
+  tasks: SAMPLES,
+  all: () => SAMPLES,
+  find: (id) => SAMPLES.find(t => t.id === id) || null,
+  dirtyIds: () => [],
+  focusList: () => SAMPLES.filter(t => t.focusSeq != null && t.status !== 'done').sort((a, b) => a.focusSeq - b.focusSeq),
+  // One bucket per due-state, enough for the table's grouped rendering.
+  groupTasks: (tasks, { groupBy = 'due' } = {}) => {
+    const today = App.utils.todayISO(0);
+    const buckets = [
+      { key: 'overdue', label: 'Overdue', color: '#D92B2B', order: 0, items: [] },
+      { key: 'today', label: 'Today', color: '#ED4E0D', order: 1, items: [] },
+      { key: 'later', label: 'Later', color: '#888780', order: 2, items: [] },
+    ];
+    tasks.forEach(t => {
+      if (t.due && t.due < today) buckets[0].items.push(t);
+      else if (t.due === today) buckets[1].items.push(t);
+      else buckets[2].items.push(t);
+    });
+    return buckets.filter(b => b.items.length);
+  },
+};
+const timeModel = {
+  activeFor: () => null, totalForTask: () => 0, entriesForTask: () => [],
+  activeTimers: [], autoCloseStaleForUser: () => null,
+};
+
+App.controller = {
+  uiState: {
+    view: LAYOUT === 'watching' ? 'watching' : 'all',
+    scope: 'all', searchQuery: '', selectedTaskId: null, creatingTask: false,
+    layout: ['kanban', 'cards', 'calendar'].includes(LAYOUT) ? LAYOUT : 'table',
+    calendarMode: 'month', calendarAnchor: null, calendarSelectedDay: null,
+    filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' },
+    filtersOpen: false,
+    sortBy: LAYOUT === 'execution' ? 'focus' : 'priority',
+    sortDir: 'asc', groupBy: 'due', collapsedGroups: new Set(),
+    bulkMode: false, bulkSelected: new Set(),
+    currentCompany: null, companies: ['roofing', 'drafting'],
+  },
+  taskModel, timeModel,
+  getVisibleTasks: () => SAMPLES.slice(),
+  isBulkSelected: (id) => App.controller.uiState.bulkSelected.has(id),
+  canView: () => true, canDeleteTask: () => true,
+  // alert-stubs — clicking things in the preview should be visible, not fatal
+  selectTask: (id) => console.log('[preview] selectTask', id),
+  toggleTaskDone: (id) => console.log('[preview] toggleTaskDone', id),
+  completeTask: (id) => console.log('[preview] completeTask', id),
+  toggleTimerForTask: (id) => console.log('[preview] toggleTimerForTask', id),
+  toggleSubtask: (id, i) => console.log('[preview] toggleSubtask', id, i),
+  toggleBulkSelect: (id) => console.log('[preview] toggleBulkSelect', id),
+  toggleBulkMode: () => console.log('[preview] toggleBulkMode'),
+  toggleFilters: () => console.log('[preview] toggleFilters'),
+  toggleFilterValue: (g, v) => console.log('[preview] toggleFilterValue', g, v),
+  setFilterDueRange: (v) => console.log('[preview] setFilterDueRange', v),
+  clearFilters: () => console.log('[preview] clearFilters'),
+  setLayout: (l) => { location.search = '?layout=' + (l || 'table'); },
+  setSortBy: (s) => console.log('[preview] setSortBy', s),
+  setCompanyScopeFilter: (c) => console.log('[preview] setCompanyScopeFilter', c),
+  toggleGroupCollapsed: (k) => console.log('[preview] toggleGroupCollapsed', k),
+  clearDoneTasks: () => console.log('[preview] clearDoneTasks'),
+  clearProjectScope: () => console.log('[preview] clearProjectScope'),
+  openNewTaskPage: () => console.log('[preview] openNewTaskPage'),
+  updateTaskField: (id, f, v) => console.log('[preview] updateTaskField', id, f, v),
+  setTaskProject: (id, p) => console.log('[preview] setTaskProject', id, p),
+  removeFromFocus: (id) => console.log('[preview] removeFromFocus', id),
+  setFocusOrder: (id, seq) => console.log('[preview] setFocusOrder', id, seq),
+  pingTeamMember: (id) => console.log('[preview] pingTeamMember', id),
+  setView: (v) => console.log('[preview] setView', v),
+  setCalendarMode: (m) => console.log('[preview] setCalendarMode', m),
+  shiftCalendar: (d) => console.log('[preview] shiftCalendar', d),
+  openCalendarOn: (iso) => console.log('[preview] openCalendarOn', iso),
+  resetCalendarToToday: () => console.log('[preview] resetCalendarToToday'),
+  toastView: { show: (o) => console.log('[toast]', o && o.title) },
+};
+</script>
+<script src="js/views/dragOrder.js"></script>
+<script src="js/views/TaskListView.js"></script>
+<script>
+  new App.TaskListView({ taskModel, timeModel, controller: App.controller, currentUser: 'abraham' });
+  document.querySelectorAll('#previewbar a').forEach(a => {
+    if (a.getAttribute('href') === '?layout=' + LAYOUT) a.classList.add('active');
+  });
+</script>
+</body>
+</html>
