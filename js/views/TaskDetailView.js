@@ -188,9 +188,13 @@ App.TaskDetailView = class TaskDetailView {
     // Read-only watcher chips — editing watchers lives in the Edit form.
     const watcherIds = t.watchers || [];
 
-    // Read-only subtasks — toggling moved into the Edit form.
-    const subtasksHtml = (t.subtasks || []).map((s) =>
-      `<div class="td2-step ${s.d ? 'done' : ''}">
+    // Each step toggles its done-state on click (or Enter/Space) when the user
+    // can write — persisted via controller.toggleSubtask, and the resulting
+    // tasks:changed re-render refreshes the icon + progress bar. Read-only
+    // (no handler) otherwise. Adding/removing steps still lives in Edit mode.
+    const canToggleSteps = App.can('tasks.write');
+    const subtasksHtml = (t.subtasks || []).map((s, i) =>
+      `<div class="td2-step ${s.d ? 'done' : ''}"${canToggleSteps ? ` data-action="toggle-step" data-idx="${i}" role="checkbox" aria-checked="${s.d ? 'true' : 'false'}" tabindex="0"` : ''}>
          <i class="ti ${s.d ? 'ti-circle-check-filled' : 'ti-circle'}"></i><span>${App.utils.escapeHtml(s.t)}</span>
        </div>`
     ).join('') || `<div class="td2-empty">No steps yet</div>`;
@@ -543,6 +547,16 @@ App.TaskDetailView = class TaskDetailView {
     // "Add subtask" (Quick actions) AND "Add step" (Checklist card) share this
     // action, so bind every match, not just the first.
     qa('[data-action="qa-subtask"]').forEach(el => el.addEventListener('click', () => enterEdit('edit-subtask-input')));
+    // Checklist steps toggle done-state inline (click or keyboard, role=checkbox)
+    // — no need to enter Edit mode. Shares the model's toggleSubtask, so the
+    // tasks:changed re-render refreshes the icon + progress bar.
+    qa('[data-action="toggle-step"]').forEach(el => {
+      const toggle = () => this.controller.toggleSubtask(t.id, parseInt(el.dataset.idx, 10));
+      el.addEventListener('click', toggle);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+    });
     const qaSetdue = q('[data-action="qa-setdue"]');
     if (qaSetdue) qaSetdue.addEventListener('click', () => this._openInlineEdit(t, 'due'));
     const qaLogcall = q('[data-action="qa-logcall"]');
