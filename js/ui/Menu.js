@@ -24,7 +24,9 @@
       top = r.top - opts.offset - mh; // flip above
       flipped = true;
     }
-    let left = r.left;
+    // 'bottom-start' (default) left-aligns to the anchor; 'bottom-end' right-
+    // aligns (top-right chrome like the account menu, so it never runs off-screen).
+    let left = opts.placement === 'bottom-end' ? r.right - mw : r.left;
     left = Math.min(left, window.innerWidth - mw - 12);
     left = Math.max(8, left);
     el.style.top = `${Math.round(top)}px`;

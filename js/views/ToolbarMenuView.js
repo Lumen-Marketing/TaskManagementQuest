@@ -24,11 +24,7 @@ App.ToolbarMenuView = class ToolbarMenuView {
     [sortBtn, groupBtn, viewBtn, viewsBtn, exportBtn, moreBtn].forEach(btn => {
       if (btn) { btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false'); }
     });
-    document.addEventListener('click', (e) => {
-      if (!this.menu) return;
-      if (this.menu.contains(e.target)) return;
-      this.close();
-    });
+    // Dismissal (click-away / Esc) is App.Menu's job.
     App.EventBus.on('sort:changed',   () => { if (this.menuFor === 'sort')  this.render(); });
     App.EventBus.on('group:changed',  () => { if (this.menuFor === 'group') this.render(); });
     App.EventBus.on('layout:changed', () => { if (this.menuFor === 'view')  this.render(); });
@@ -40,31 +36,41 @@ App.ToolbarMenuView = class ToolbarMenuView {
   }
 
   toggle(kind, anchor) {
-    if (this.menu && this.menuFor === kind) { this.close(); return; }
-    this.close();
-    this.menuFor = kind;
-    this.anchor = anchor;
-    this.menu = document.createElement('div');
-    this.menu.className = 'toolbar-menu';
-    document.body.appendChild(this.menu);
-    this.render();
-    this.position();
+    if (this._handle && this.menuFor === kind) { this.close(); return; }
+    // App.Menu closes any open menu first ('reopen'), and that close's onClose
+    // clears our state — so the new kind/anchor are set inside build, which
+    // runs AFTER the old menu has fully closed.
+    let mine = null;
+    mine = App.Menu.open({
+      anchor,
+      className: 'toolbar-menu',
+      onClose: () => {
+        anchor.classList.remove('active');
+        anchor.setAttribute('aria-expanded', 'false');
+        if (this._handle === mine) {
+          this._handle = null;
+          this.menu = null;
+          this.menuFor = null;
+          this.anchor = null;
+        }
+      },
+      build: (menu) => {
+        this.menuFor = kind;
+        this.anchor = anchor;
+        this.menu = menu;
+        this.render();
+        menu.addEventListener('keydown', (e) => this._onKey(e));
+        this._focusItem(0, true);
+      },
+    });
+    this._handle = mine;
+    mine.reposition(); // content just landed — re-fit to its real size
     anchor.classList.add('active');
     anchor.setAttribute('aria-expanded', 'true');
-    this._onKey = this._onKey.bind(this);
-    this.menu.addEventListener('keydown', this._onKey);
-    this._focusItem(0, true);
   }
 
   close() {
-    if (this.anchor) {
-      this.anchor.classList.remove('active');
-      this.anchor.setAttribute('aria-expanded', 'false');
-    }
-    if (this.menu) this.menu.remove();
-    this.menu = null;
-    this.menuFor = null;
-    this.anchor = null;
+    if (this._handle) this._handle.close('api');
   }
 
   _items() { return this.menu ? [...this.menu.querySelectorAll('.toolbar-menu-item')] : []; }
@@ -86,16 +92,8 @@ App.ToolbarMenuView = class ToolbarMenuView {
     else if (e.key === 'Home')      { e.preventDefault(); items[0] && items[0].focus(); }
     else if (e.key === 'End')       { e.preventDefault(); items[items.length - 1] && items[items.length - 1].focus(); }
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.activeElement && document.activeElement.click(); }
-    else if (e.key === 'Escape')    { e.preventDefault(); const a = this.anchor; this.close(); a && a.focus(); }
+    // Escape is handled by App.Menu (closes + returns focus to the anchor).
     else if (e.key === 'Tab')       { this.close(); }
-  }
-
-  position() {
-    if (!this.menu || !this.anchor) return;
-    const r = this.anchor.getBoundingClientRect();
-    this.menu.style.position = 'fixed';
-    this.menu.style.top  = (r.bottom + 6) + 'px';
-    this.menu.style.left = r.left + 'px';
   }
 
   render() {
@@ -246,6 +244,8 @@ App.ToolbarMenuView = class ToolbarMenuView {
     // If a re-render (e.g. flipping sort direction by keyboard) dropped focus to
     // <body>, pull it back to the active item so keyboard nav continues.
     if (document.activeElement === document.body) this._focusItem(0, true);
+    // Content may have grown/shrunk (saved views list, More rows) — re-fit.
+    if (this._handle) this._handle.reposition();
   }
 
   /* Keep the deck buttons informative — show the active option inline. */

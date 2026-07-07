@@ -31,7 +31,6 @@ App.TopbarView = class TopbarView {
     this.searchInput = document.getElementById('searchInput');
     this.viewAsSwitcher = document.getElementById('viewAsSwitcher');
     this.avatar = document.getElementById('userAvatar');
-    this.userMenu = null;
 
     this.tbTitle = document.getElementById('tbTitle');
     this.scopeSeg = document.getElementById('scopeSeg');
@@ -39,7 +38,6 @@ App.TopbarView = class TopbarView {
     this.tbViews = document.getElementById('tbViews');
     this.companySwitcher = document.getElementById('companySwitcher');
     this.userChip = document.getElementById('userChip');
-    this.teamMenu = null;
 
     this.bindEvents();
     this.bindTopbarViews();
@@ -68,51 +66,49 @@ App.TopbarView = class TopbarView {
     this.clockWidget.addEventListener('click', () => this.controller.toggleGlobalClock());
 
     // The whole account chip (avatar + name) opens the menu, not just the avatar.
+    // Dismissal (click-away / Esc / focus return) is App.Menu's job now.
     const chipTrigger = this.userChip || this.avatar;
     if (chipTrigger) {
       chipTrigger.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleUserMenu();
       });
-      document.addEventListener('click', (e) => {
-        if (this.userMenu && !this.userMenu.contains(e.target) && !chipTrigger.contains(e.target)) {
-          this.closeUserMenu();
-        }
-      });
     }
 
+    // Notification panel: an inline sibling in the topbar markup, so it stays a
+    // .hidden toggle rather than an App.Menu — but its document dismiss/Escape
+    // listeners are now added per-open and removed on close (the old bindings
+    // were attached once and lived forever).
     this.notifBtn.setAttribute('aria-haspopup', 'menu');
     this.notifBtn.setAttribute('aria-expanded', 'false');
+    let notifOnDoc = null, notifOnKey = null;
+    const closeNotif = (refocus) => {
+      this.notifPanel.classList.add('hidden');
+      this.notifBtn.setAttribute('aria-expanded', 'false');
+      if (notifOnDoc) { document.removeEventListener('click', notifOnDoc); notifOnDoc = null; }
+      if (notifOnKey) { document.removeEventListener('keydown', notifOnKey); notifOnKey = null; }
+      if (refocus) this.notifBtn.focus();
+    };
     this.notifBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const open = !this.notifPanel.classList.toggle('hidden');
-      this.notifBtn.setAttribute('aria-expanded', String(open));
-      if (open) {
-        const first = this.notifList.querySelector('.notif-item');
-        if (first) first.focus();
-      }
+      if (!this.notifPanel.classList.contains('hidden')) { closeNotif(false); return; }
+      this.notifPanel.classList.remove('hidden');
+      this.notifBtn.setAttribute('aria-expanded', 'true');
+      const first = this.notifList.querySelector('.notif-item');
+      if (first) first.focus();
+      notifOnDoc = (e2) => {
+        if (this.notifPanel.contains(e2.target) || this.notifBtn.contains(e2.target)) return;
+        closeNotif(false);
+      };
+      notifOnKey = (e2) => { if (e2.key === 'Escape') closeNotif(true); };
+      setTimeout(() => {
+        document.addEventListener('click', notifOnDoc);
+        document.addEventListener('keydown', notifOnKey);
+      }, 0);
     });
     this.markAllReadBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.controller.markAllNotifsRead();
-    });
-    document.addEventListener('click', (e) => {
-      if (!this.notifPanel.contains(e.target) && !this.notifBtn.contains(e.target)) {
-        this.notifPanel.classList.add('hidden');
-        this.notifBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
-
-    // Esc closes whichever topbar popover is open and returns focus to its trigger.
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return;
-      if (this.teamMenu) this._closeTeamMenu();
-      if (this.userMenu) { this.closeUserMenu(); if (this.avatar) this.avatar.focus(); }
-      if (!this.notifPanel.classList.contains('hidden')) {
-        this.notifPanel.classList.add('hidden');
-        this.notifBtn.setAttribute('aria-expanded', 'false');
-        this.notifBtn.focus();
-      }
     });
 
     this.searchInput.addEventListener('input', (e) => {
@@ -204,36 +200,23 @@ App.TopbarView = class TopbarView {
   }
 
   _toggleTeamMenu(anchor, subItems) {
-    if (this.teamMenu) { this._closeTeamMenu(); return; }
-    const menu = document.createElement('div');
-    menu.className = 'pnav-menu';
-    menu.setAttribute('role', 'menu');
-    menu.innerHTML = subItems.map(it => {
-      const count = (it.count != null && it.count > 0)
-        ? `<span class="pnav-menu-count">${App.utils.escapeHtml(String(it.count))}</span>` : '';
-      return `<button type="button" class="pnav-menu-item" role="menuitem" data-view="${App.utils.escapeHtml(it.view)}"><i class="ti ${it.icon}"></i><span class="pnav-menu-label">${App.utils.escapeHtml(it.label)}</span>${count}</button>`;
-    }).join('');
-    document.body.appendChild(menu);
-    const rect = anchor.getBoundingClientRect();
-    menu.style.position = 'fixed';
-    menu.style.top = (rect.bottom + 6) + 'px';
-    menu.style.left = rect.left + 'px';
-    this.teamMenu = menu;
-    anchor.classList.add('open');
-    menu.querySelectorAll('.pnav-menu-item').forEach(mi => {
-      mi.addEventListener('click', () => { this._closeTeamMenu(); this.controller.setView(mi.dataset.view); });
+    if (this._teamMenuHandle) { this._teamMenuHandle.close('api'); return; }
+    this._teamMenuHandle = App.Menu.open({
+      anchor,
+      className: 'pnav-menu',
+      onClose: () => { this._teamMenuHandle = null; anchor.classList.remove('open'); },
+      build: (menu, h) => {
+        menu.innerHTML = subItems.map(it => {
+          const count = (it.count != null && it.count > 0)
+            ? `<span class="pnav-menu-count">${App.utils.escapeHtml(String(it.count))}</span>` : '';
+          return `<button type="button" class="pnav-menu-item" role="menuitem" data-view="${App.utils.escapeHtml(it.view)}"><i class="ti ${it.icon}"></i><span class="pnav-menu-label">${App.utils.escapeHtml(it.label)}</span>${count}</button>`;
+        }).join('');
+        menu.querySelectorAll('.pnav-menu-item').forEach(mi => {
+          mi.addEventListener('click', () => { h.close('api'); this.controller.setView(mi.dataset.view); });
+        });
+      },
     });
-    this._teamMenuOutside = (e) => { if (!menu.contains(e.target) && e.target !== anchor) this._closeTeamMenu(); };
-    setTimeout(() => document.addEventListener('click', this._teamMenuOutside), 0);
-    this._teamMenuAnchor = anchor;
-  }
-
-  _closeTeamMenu() {
-    if (!this.teamMenu) return;
-    this.teamMenu.remove();
-    this.teamMenu = null;
-    if (this._teamMenuAnchor) this._teamMenuAnchor.classList.remove('open');
-    document.removeEventListener('click', this._teamMenuOutside);
+    anchor.classList.add('open');
   }
 
   /* ---------- Top-bar quick-view icons (filters + My time + Wallboard) ---------- */
@@ -283,7 +266,7 @@ App.TopbarView = class TopbarView {
     App.EventBus.on('notifs:refreshed', () => this.renderNotifs());
     App.EventBus.on('clock:tick', () => this.tickLive());
     App.EventBus.on('role:changed', () => { this.renderPrimaryNav(); this.renderTopbarViews(); this.renderCompanySwitcher(); });
-    App.EventBus.on('view:changed', () => { this._closeTeamMenu(); this.renderTopbarTitleAndScope(); this.renderPrimaryNav(); this.renderTopbarViews(); });
+    App.EventBus.on('view:changed', () => { if (this._teamMenuHandle) this._teamMenuHandle.close('api'); this.renderTopbarTitleAndScope(); this.renderPrimaryNav(); this.renderTopbarViews(); });
     App.EventBus.on('scope:changed', () => this.renderTopbarTitleAndScope());
     App.EventBus.on('company:changed', () => this.renderCompanySwitcher());
   }
@@ -403,7 +386,7 @@ App.TopbarView = class TopbarView {
   }
 
   toggleUserMenu() {
-    if (this.userMenu) { this.closeUserMenu(); return; }
+    if (this._userMenuHandle) { this._userMenuHandle.close('api'); return; }
     const person = App.PEOPLE[this.currentUser] || {};
     const profile = App.currentProfile || {};
     const currentName = person.full || profile.full_name || person.name || '';
@@ -441,126 +424,118 @@ App.TopbarView = class TopbarView {
     const myTimeHtml = this.controller.canView('time:mine')
       ? `<div class="user-menu-item" data-action="my-time"><i class="ti ti-clock"></i>My time</div>` : '';
 
-    const menu = document.createElement('div');
-    menu.className = 'user-menu';
-    menu.innerHTML = `
-      <div class="user-menu-head">
-        <div class="user-menu-name">${App.utils.escapeHtml(currentName)}</div>
-        <div class="user-menu-meta">${App.utils.escapeHtml(profile.email || '')} · ${App.utils.escapeHtml(roleLabel)}</div>
-      </div>
-      <div class="user-menu-section">
-        <div class="field-label" style="margin-bottom:6px;">Theme</div>
-        <div class="theme-toggle" role="group" aria-label="Theme">
-          <button class="theme-opt ${currentTheme === 'dark' ? 'active' : ''}" data-theme-set="dark" aria-pressed="${currentTheme === 'dark'}"><i class="ti ti-moon"></i>Dark</button>
-          <button class="theme-opt ${currentTheme === 'light' ? 'active' : ''}" data-theme-set="light" aria-pressed="${currentTheme === 'light'}"><i class="ti ti-sun"></i>Light</button>
-        </div>
-      </div>
-      ${workspaceHtml}
-      ${viewAsHtml}
-      ${myTimeHtml}
-      <div class="user-menu-item" data-action="scale"><i class="ti ti-zoom-scan"></i>Display size</div>
-      <div class="user-menu-item" data-action="edit-profile"><i class="ti ti-user-edit"></i>Edit profile</div>
-      <div class="user-menu-item" data-action="show-tour"><i class="ti ti-help"></i>Show tour again</div>
-      <div class="user-menu-item" data-action="report-problem"><i class="ti ti-bug"></i>Report a problem</div>
-      <div class="user-menu-item" data-action="sign-out"><i class="ti ti-logout"></i>Sign out</div>
-    `;
-    document.body.appendChild(menu);
-
-    // The account chip lives in the top bar (top-right), so drop the menu down
-    // from it, right-aligned to the chip so it never runs off-screen.
+    // The account chip lives in the top bar (top-right), so the menu drops
+    // right-aligned from it (App.Menu 'bottom-end') and never runs off-screen.
     const anchor = this.userChip || this.avatar;
-    const rect = anchor.getBoundingClientRect();
-    menu.style.position = 'fixed';
-    menu.style.top = (rect.bottom + 6) + 'px';
-    menu.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
-    menu.style.left = 'auto';
-    menu.style.bottom = 'auto';
+    this._userMenuHandle = App.Menu.open({
+      anchor,
+      className: 'user-menu',
+      placement: 'bottom-end',
+      onClose: () => {
+        this._userMenuHandle = null;
+        if (this.avatar) this.avatar.setAttribute('aria-expanded', 'false');
+      },
+      build: (menu, h) => {
+        const close = () => h.close('api');
+        menu.innerHTML = `
+          <div class="user-menu-head">
+            <div class="user-menu-name">${App.utils.escapeHtml(currentName)}</div>
+            <div class="user-menu-meta">${App.utils.escapeHtml(profile.email || '')} · ${App.utils.escapeHtml(roleLabel)}</div>
+          </div>
+          <div class="user-menu-section">
+            <div class="field-label" style="margin-bottom:6px;">Theme</div>
+            <div class="theme-toggle" role="group" aria-label="Theme">
+              <button class="theme-opt ${currentTheme === 'dark' ? 'active' : ''}" data-theme-set="dark" aria-pressed="${currentTheme === 'dark'}"><i class="ti ti-moon"></i>Dark</button>
+              <button class="theme-opt ${currentTheme === 'light' ? 'active' : ''}" data-theme-set="light" aria-pressed="${currentTheme === 'light'}"><i class="ti ti-sun"></i>Light</button>
+            </div>
+          </div>
+          ${workspaceHtml}
+          ${viewAsHtml}
+          ${myTimeHtml}
+          <div class="user-menu-item" data-action="scale"><i class="ti ti-zoom-scan"></i>Display size</div>
+          <div class="user-menu-item" data-action="edit-profile"><i class="ti ti-user-edit"></i>Edit profile</div>
+          <div class="user-menu-item" data-action="show-tour"><i class="ti ti-help"></i>Show tour again</div>
+          <div class="user-menu-item" data-action="report-problem"><i class="ti ti-bug"></i>Report a problem</div>
+          <div class="user-menu-item" data-action="sign-out"><i class="ti ti-logout"></i>Sign out</div>
+        `;
 
-    this.userMenu = menu;
-
-    menu.querySelector('[data-action="edit-profile"]').addEventListener('click', () => {
-      this.closeUserMenu();
-      if (this.controller && this.controller.openProfile) this.controller.openProfile();
-    });
-    menu.querySelector('[data-action="show-tour"]').addEventListener('click', () => {
-      this.closeUserMenu();
-      if (App.startTour) App.startTour();
-    });
-    menu.querySelector('[data-action="report-problem"]').addEventListener('click', () => {
-      this.closeUserMenu();
-      if (this.controller && this.controller.openReportProblem) this.controller.openReportProblem();
-    });
-    menu.querySelector('[data-action="sign-out"]').addEventListener('click', () => {
-      this.closeUserMenu();
-      if (App.signOut) App.signOut();
-    });
-    // Display size: open the scale popover anchored to the account chip (the
-    // menu item is gone after close, so anchor to the persistent chip).
-    menu.querySelector('[data-action="scale"]').addEventListener('click', () => {
-      const anchorEl = this.userChip || this.avatar;
-      this.closeUserMenu();
-      if (App.uiScale) App.uiScale.openAt(anchorEl);
-    });
-    // Workspace / company switch.
-    const companySel = menu.querySelector('#menuCompany');
-    if (companySel) {
-      companySel.addEventListener('click', (e) => e.stopPropagation());
-      companySel.addEventListener('change', (e) => {
-        this.closeUserMenu();
-        this.controller.setCompany(e.target.value);
-      });
-    }
-    // "My time" navigates to the personal time view.
-    const myTimeItem = menu.querySelector('[data-action="my-time"]');
-    if (myTimeItem) myTimeItem.addEventListener('click', () => {
-      this.closeUserMenu();
-      this.controller.setView('time:mine');
-    });
-    // Developer "View as" role preview.
-    const viewAsSel = menu.querySelector('#menuViewAs');
-    if (viewAsSel) {
-      viewAsSel.addEventListener('click', (e) => e.stopPropagation());
-      viewAsSel.addEventListener('change', (e) => {
-        this.closeUserMenu();
-        this.controller.setViewAs(e.target.value);
-      });
-    }
-    menu.querySelectorAll('[data-theme-set]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const next = btn.dataset.themeSet;
-        document.documentElement.setAttribute('data-theme', next);
-        try { localStorage.setItem('questhq:theme', next); } catch (e) {}
-        // Sync the PWA / mobile chrome band to the chosen theme.
-        try {
-          const m = document.querySelector('meta[name="theme-color"]');
-          if (m) m.setAttribute('content', next === 'dark' ? '#08090A' : '#FBFAF8');
-        } catch (e) {}
-        menu.querySelectorAll('[data-theme-set]').forEach(b => {
-          const on = b === btn;
-          b.classList.toggle('active', on);
-          b.setAttribute('aria-pressed', String(on));
+        menu.querySelector('[data-action="edit-profile"]').addEventListener('click', () => {
+          close();
+          if (this.controller && this.controller.openProfile) this.controller.openProfile();
         });
-      });
-    });
+        menu.querySelector('[data-action="show-tour"]').addEventListener('click', () => {
+          close();
+          if (App.startTour) App.startTour();
+        });
+        menu.querySelector('[data-action="report-problem"]').addEventListener('click', () => {
+          close();
+          if (this.controller && this.controller.openReportProblem) this.controller.openReportProblem();
+        });
+        menu.querySelector('[data-action="sign-out"]').addEventListener('click', () => {
+          close();
+          if (App.signOut) App.signOut();
+        });
+        // Display size: open the scale popover anchored to the account chip (the
+        // menu item is gone after close, so anchor to the persistent chip).
+        menu.querySelector('[data-action="scale"]').addEventListener('click', () => {
+          const anchorEl = this.userChip || this.avatar;
+          close();
+          if (App.uiScale) App.uiScale.openAt(anchorEl);
+        });
+        // Workspace / company switch.
+        const companySel = menu.querySelector('#menuCompany');
+        if (companySel) {
+          companySel.addEventListener('click', (e) => e.stopPropagation());
+          companySel.addEventListener('change', (e) => {
+            close();
+            this.controller.setCompany(e.target.value);
+          });
+        }
+        // "My time" navigates to the personal time view.
+        const myTimeItem = menu.querySelector('[data-action="my-time"]');
+        if (myTimeItem) myTimeItem.addEventListener('click', () => {
+          close();
+          this.controller.setView('time:mine');
+        });
+        // Developer "View as" role preview.
+        const viewAsSel = menu.querySelector('#menuViewAs');
+        if (viewAsSel) {
+          viewAsSel.addEventListener('click', (e) => e.stopPropagation());
+          viewAsSel.addEventListener('change', (e) => {
+            close();
+            this.controller.setViewAs(e.target.value);
+          });
+        }
+        menu.querySelectorAll('[data-theme-set]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const next = btn.dataset.themeSet;
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('questhq:theme', next); } catch (e) {}
+            // Sync the PWA / mobile chrome band to the chosen theme.
+            try {
+              const m = document.querySelector('meta[name="theme-color"]');
+              if (m) m.setAttribute('content', next === 'dark' ? '#08090A' : '#FBFAF8');
+            } catch (e) {}
+            menu.querySelectorAll('[data-theme-set]').forEach(b => {
+              const on = b === btn;
+              b.classList.toggle('active', on);
+              b.setAttribute('aria-pressed', String(on));
+            });
+          });
+        });
 
-    // Keyboard/AT: expose the menu + items and pull focus into it on open.
-    menu.setAttribute('role', 'menu');
-    menu.querySelectorAll('.user-menu-item').forEach(it => {
-      it.setAttribute('role', 'menuitem');
-      it.setAttribute('tabindex', '0');
-      it.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); it.click(); }
-      });
+        // Keyboard/AT: expose the menu + items and pull focus into it on open.
+        menu.querySelectorAll('.user-menu-item').forEach(it => {
+          it.setAttribute('role', 'menuitem');
+          it.setAttribute('tabindex', '0');
+          it.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); it.click(); }
+          });
+        });
+        if (this.avatar) this.avatar.setAttribute('aria-expanded', 'true');
+        const firstItem = menu.querySelector('.user-menu-item');
+        if (firstItem) firstItem.focus();
+      },
     });
-    if (this.avatar) this.avatar.setAttribute('aria-expanded', 'true');
-    const firstItem = menu.querySelector('.user-menu-item');
-    if (firstItem) firstItem.focus();
-  }
-
-  closeUserMenu() {
-    if (!this.userMenu) return;
-    this.userMenu.remove();
-    this.userMenu = null;
-    if (this.avatar) this.avatar.setAttribute('aria-expanded', 'false');
   }
 };
