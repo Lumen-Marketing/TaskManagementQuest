@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node tools/dev-server.mjs",
     "icons:subset": "node tools/subset-icons.mjs",
+    "test:unit": "node --test \"tests/unit/*.test.mjs\"",
     "test": "playwright test",
     "test:local": "playwright test --project=local",
     "test:smoke": "playwright test --project=preview-smoke"
