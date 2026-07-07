@@ -6220,7 +6220,6 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
    terracotta kept as the single accent. Serif headlines kept. Smooth
    hover lift via transitions.dev easing. Scoped to LIGHT — dark = Linear.
    ============================================================ */
-:root { --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif; }
 html:not([data-theme="dark"]) body.ui-command-center {
   /* One canvas for every section — the warm near-white the All-tasks page uses
      (boss-table reskin palette). White cards + warm hairlines float on it. */
