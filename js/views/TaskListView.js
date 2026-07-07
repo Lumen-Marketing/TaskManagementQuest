@@ -34,7 +34,7 @@ App.TaskListView = class TaskListView {
     });
     const clearDoneBtn = document.getElementById('clearDoneBtn');
     if (clearDoneBtn) clearDoneBtn.addEventListener('click', () => this.controller.clearDoneTasks());
-    this._bindColumnFilters();
+    // Column-filter wiring is table-specific — TableLayout.mount() owns it.
   }
 
   /* "Clear done" lives in the toolbar (outside the table). Show it only when
@@ -45,151 +45,6 @@ App.TaskListView = class TaskListView {
     const hasDone = App.can('tasks.write') &&
       this.getFilteredTasks().some(t => App.taxonomy.isDone(t));
     btn.hidden = !hasDone;
-  }
-
-  /* ---- Column-header filter dropdowns -------------------------------------
-     The Table header's Assignee / Priority / Status / Due labels are buttons
-     that open a dropdown to filter by that column. They drive the SAME filter
-     state as the toolbar Filter panel (uiState.filters via toggleFilterValue /
-     setFilterDueRange), so the two stay in sync and the list re-renders on the
-     existing 'filters:changed' event. */
-  _bindColumnFilters() {
-    const header = document.querySelector('#taskViewWrap .list-header');
-    if (!header) return;
-    header.querySelectorAll('.col-filter').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (this._cfMenu && this._cfMenuCol === btn.dataset.filterCol) { this._closeColumnFilter(); return; }
-        this._openColumnFilter(btn);
-      });
-    });
-    App.EventBus.on('filters:changed', () => { this._syncColumnFilterState(); this._renderColumnFilterMenu(); });
-    this._syncColumnFilterState();
-  }
-
-  // Options for a given column, reading current selection from uiState.filters.
-  _columnFilterModel(col) {
-    const f = this.controller.uiState.filters || {};
-    if (col === 'assignees') {
-      const people = (App.utils.activePeople ? App.utils.activePeople() : Object.values(App.PEOPLE || {}));
-      return { multi: true, group: 'assignees', title: 'Filter assignee',
-        options: people.map(p => ({ value: p.id, label: p.name || p.full || p.id, selected: (f.assignees || []).includes(p.id) })) };
-    }
-    if (col === 'priorities') {
-      return { multi: true, group: 'priorities', title: 'Filter priority',
-        options: Object.entries(App.PRIORITIES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.priorities || []).includes(k) })) };
-    }
-    if (col === 'types') {
-      return { multi: true, group: 'types', title: 'Filter type',
-        options: Object.entries(App.TASK_TYPES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.types || []).includes(k) })) };
-    }
-    if (col === 'statuses') {
-      return { multi: true, group: 'statuses', title: 'Filter status',
-        options: Object.entries(App.STATUSES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.statuses || []).includes(k) })) };
-    }
-    if (col === 'companies') {
-      return { multi: true, group: 'companies', title: 'Filter company',
-        options: Object.entries(App.COMPANIES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.companies || []).includes(k) })) };
-    }
-    if (col === 'labels') {
-      return { multi: true, group: 'labels', title: 'Filter label',
-        options: Object.entries(App.TASK_LABELS || {}).map(([k, v]) => ({ value: k, label: v.label, selected: (f.labels || []).includes(k) })) };
-    }
-    // Due is a single-select range (mirrors FilterBarView's options).
-    const ranges = [
-      { value: 'all', label: 'Any' }, { value: 'overdue', label: 'Overdue' },
-      { value: 'today', label: 'Today' }, { value: 'tomorrow', label: 'Tomorrow' },
-      { value: 'week', label: 'This week' }, { value: 'month', label: 'This month' },
-    ];
-    return { multi: false, group: 'due', title: 'Filter due',
-      options: ranges.map(r => ({ value: r.value, label: r.label, selected: (f.dueRange || 'all') === r.value })) };
-  }
-
-  _openColumnFilter(btn) {
-    this._closeColumnFilter();
-    const col = btn.dataset.filterCol;
-    this._cfMenuCol = col;
-    this._cfAnchor = btn;
-    const menu = document.createElement('div');
-    menu.className = 'col-filter-menu';
-    menu.setAttribute('role', 'listbox');
-    document.body.appendChild(menu);
-    this._cfMenu = menu;
-    this._renderColumnFilterMenu();
-
-    // Position under the header button.
-    const r = btn.getBoundingClientRect();
-    menu.style.top = `${Math.round(r.bottom + 6)}px`;
-    menu.style.left = `${Math.round(Math.min(r.left, window.innerWidth - menu.offsetWidth - 12))}px`;
-    btn.setAttribute('aria-expanded', 'true');
-
-    // Close on outside click / Esc.
-    this._cfOnDocClick = (e) => { if (this._cfMenu && !this._cfMenu.contains(e.target) && e.target !== btn) this._closeColumnFilter(); };
-    this._cfOnKey = (e) => { if (e.key === 'Escape') this._closeColumnFilter(); };
-    setTimeout(() => document.addEventListener('click', this._cfOnDocClick), 0);
-    document.addEventListener('keydown', this._cfOnKey);
-  }
-
-  _renderColumnFilterMenu() {
-    if (!this._cfMenu || !this._cfMenuCol) return;
-    const model = this._columnFilterModel(this._cfMenuCol);
-    const esc = App.utils.escapeHtml;
-    this._cfMenu.innerHTML =
-      model.options.map(o => `
-        <div class="cf-item ${o.selected ? 'selected' : ''}" data-value="${esc(String(o.value))}" role="option" aria-selected="${o.selected}">
-          <span class="cf-check"><i class="ti ti-check"></i></span>
-          <span class="cf-label">${esc(o.label)}</span>
-        </div>`).join('') +
-      `<div class="cf-clear" data-action="cf-clear">Clear filter</div>`;
-
-    this._cfMenu.querySelectorAll('.cf-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const value = item.dataset.value;
-        if (model.multi) {
-          this.controller.toggleFilterValue(model.group, value);
-          // multi-select: keep the menu open; filters:changed re-renders it.
-        } else {
-          this.controller.setFilterDueRange(value);
-          this._closeColumnFilter();
-        }
-      });
-    });
-    const clear = this._cfMenu.querySelector('[data-action="cf-clear"]');
-    if (clear) clear.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this._clearColumnFilter(model);
-      if (!model.multi) this._closeColumnFilter();
-    });
-  }
-
-  _clearColumnFilter(model) {
-    if (model.group === 'due') { this.controller.setFilterDueRange('all'); return; }
-    const arr = (this.controller.uiState.filters[model.group] || []).slice();
-    arr.forEach(v => this.controller.toggleFilterValue(model.group, v));
-  }
-
-  _closeColumnFilter() {
-    if (this._cfAnchor) this._cfAnchor.setAttribute('aria-expanded', 'false');
-    if (this._cfMenu) { this._cfMenu.remove(); this._cfMenu = null; }
-    this._cfMenuCol = null;
-    this._cfAnchor = null;
-    if (this._cfOnDocClick) { document.removeEventListener('click', this._cfOnDocClick); this._cfOnDocClick = null; }
-    if (this._cfOnKey) { document.removeEventListener('keydown', this._cfOnKey); this._cfOnKey = null; }
-  }
-
-  // Highlight a header button whenever its filter group is active.
-  _syncColumnFilterState() {
-    const f = this.controller.uiState.filters || {};
-    const header = document.querySelector('#taskViewWrap .list-header');
-    if (!header) return;
-    header.querySelectorAll('.col-filter').forEach(btn => {
-      const col = btn.dataset.filterCol;
-      const active = col === 'due'
-        ? (f.dueRange && f.dueRange !== 'all')
-        : ((f[col] || []).length > 0);
-      btn.classList.toggle('active', !!active);
-    });
   }
 
   subscribe() {
@@ -292,27 +147,37 @@ App.TaskListView = class TaskListView {
     return out;
   }
 
+  /* Which Layout (CONTEXT.md) presents the visible tasks right now. Watching is
+     a *view* (not a layout); "execution order" rides the sort key — both beat
+     the layout switcher. */
+  _layoutKey() {
+    if (this.controller.uiState.view === 'watching') return 'watching';
+    const l = this.controller.uiState.layout;
+    if (l === 'kanban' || l === 'cards' || l === 'calendar') return l;
+    // "Execution order" sort shows the owner's tasks as a single drag-rankable
+    // list: ranked tasks on top, the rest below to drag up into the order.
+    if (this.controller.uiState.sortBy === 'focus') return 'execution';
+    return 'table';
+  }
+
   _renderListInner() {
     // Reflect bulk-select mode on <body> so CSS can reveal the row checkboxes.
     document.body.classList.toggle('is-bulk', !!this.controller.uiState.bulkMode);
     // The prototype "qt" skin (css/tasks.css) is scoped to the Table layout via
     // #taskViewWrap.qt-skin. Drop it for every other layout so their CSS isn't
-    // scoped away; renderTable() re-adds it.
+    // scoped away; the table adapter re-adds it.
     this.wrap.classList.remove('qt-skin');
-    // The Watching view stacks two panels: the tasks you're watching, and
-    // (for managers) a team dashboard of your direct reports.
     // Tear down any Focus-list drag listeners from the previous render — the
     // #listBody element is reused, so they'd otherwise stack and double-fire.
     if (this._focusCleanup) { this._focusCleanup(); this._focusCleanup = null; }
-    if (this.controller.uiState.view === 'watching') return this.renderWatching();
-    const layout = this.controller.uiState.layout;
-    if (layout === 'kanban') return this.renderKanban();
-    if (layout === 'cards') return this.renderCards();
-    if (layout === 'calendar') return this.renderCalendar();
-    // "Execution order" sort shows the owner's tasks as a single drag-rankable
-    // list: ranked tasks on top, the rest below to drag up into the order.
-    if (this.controller.uiState.sortBy === 'focus') return this.renderExecutionList();
-    return this.renderTable();
+    // Dispatch to the active layout adapter (App.TaskListLayouts — one file per
+    // layout under js/views/tasklist/). unmount/mount fire on layout SWITCHES,
+    // not on every re-render.
+    const adapter = App.TaskListLayouts[this._layoutKey()];
+    if (this._activeAdapter && this._activeAdapter !== adapter && this._activeAdapter.unmount) this._activeAdapter.unmount(this);
+    if (adapter !== this._activeAdapter && adapter.mount) adapter.mount(this);
+    this._activeAdapter = adapter;
+    return adapter.render(this, this.getFilteredTasks());
   }
 
   /* Selecting a task only changes which row is highlighted — toggle the class
@@ -646,296 +511,6 @@ App.TaskListView = class TaskListView {
       this.controller.selectTask(t.id);
     });
     return row;
-  }
-
-  renderWorkerList() {
-    const tasks = this.getFilteredTasks();
-    this.body.className = 'worker-task-list';
-    this.body.innerHTML = '';
-
-    const header = document.querySelector('#taskViewWrap .list-header');
-    if (header) header.classList.add('hidden');
-
-    if (tasks.length === 0) {
-      this._renderEmpty({ icon: 'ti-coffee', title: 'Nothing scheduled', sub: 'No tasks are assigned to you right now.' });
-      return;
-    }
-
-    const groups = this.taskModel.groupByDue(tasks);
-    const sections = [
-      { key: 'overdue',  label: 'Overdue',   icon: 'ti-alert-triangle',     danger: true  },
-      { key: 'today',    label: 'Today',     icon: 'ti-flame' },
-      { key: 'tomorrow', label: 'Tomorrow',  icon: 'ti-arrow-narrow-right' },
-      { key: 'thisWeek', label: 'This week', icon: 'ti-calendar' },
-      { key: 'later',    label: 'Later',     icon: 'ti-clock' },
-      { key: 'done',     label: 'Done',      icon: 'ti-circle-check' },
-    ];
-
-    sections.forEach(s => {
-      if (groups[s.key].length === 0) return;
-      const head = document.createElement('div');
-      head.className = 'group-head' + (s.danger ? ' danger' : '');
-      head.innerHTML = `<i class="ti ${s.icon}"></i>${s.label} <span class="group-count">· ${groups[s.key].length}</span>`;
-      this.body.appendChild(head);
-      groups[s.key]
-        .slice()
-        .sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'))
-        .forEach(t => this.body.appendChild(this.renderWorkerRow(t)));
-    });
-  }
-
-  renderWorkerRow(t) {
-    const isDone = App.taxonomy.isDone(t);
-    const myActive = this.timeModel.activeFor(this.currentUser);
-    const myTimerOnThis = myActive && myActive.taskId === t.id;
-    const selected = this.controller.uiState.selectedTaskId === t.id;
-    const timeLabel = t.dueTime ? App.utils.formatClockTz(t.dueTime) : 'All day';
-
-    const row = document.createElement('div');
-    row.className = 'worker-row' + (selected ? ' selected' : '') + (isDone ? ' done' : '');
-    row.dataset.id = t.id;
-    row.innerHTML = `
-      <div class="worker-time ${t.dueTime ? '' : 'all-day'}">${App.utils.escapeHtml(timeLabel)}</div>
-      <div class="worker-task">
-        <div class="worker-task-title">${App.utils.escapeHtml(t.title)}</div>
-        ${t.description ? `<div class="worker-task-desc">${App.utils.escapeHtml(t.description)}</div>` : ''}
-      </div>
-      <button class="timer-btn ${myTimerOnThis ? 'active' : ''} ${App.can('clock.use') ? '' : 'hidden'}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}">
-        <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i>
-      </button>
-    `;
-
-    row.addEventListener('click', (e) => {
-      const target = e.target.closest('[data-action]');
-      if (target) {
-        e.stopPropagation();
-        if (target.dataset.action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
-        return;
-      }
-      if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
-      this.controller.selectTask(t.id);
-    });
-    App.utils.makeActivatable(row, null, `Open task: ${t.title}`);
-    return row;
-  }
-
-  /* ===== Table layout — the boss's locked "Tasks board" prototype, ported to
-     live data (css/tasks.css, .qt-* classes). Company → top filter chips, a
-     rendered column header (Status/Priority/Label/Assignee/Due), due-bucket
-     groups, and rows that reuse the existing inline menus + actions. The static
-     app.html .list-header is hidden by CSS under #taskViewWrap.qt-skin. */
-  renderTable() {
-    const tasks = this.getFilteredTasks();
-    this.wrap.classList.add('qt-skin');
-    this.body.className = 'qt-body';
-    this.body.innerHTML = '';
-
-    const wrap = document.createElement('div');
-    wrap.className = 'qt-wrap';
-    wrap.appendChild(this._qtChipRow());
-    wrap.appendChild(this._qtColsHeader());
-
-    if (tasks.length === 0) {
-      const cfg = this._emptyConfig();
-      const showCta = cfg.cta && App.can('tasks.write');
-      const e = document.createElement('div');
-      e.className = 'empty';
-      e.innerHTML = `
-        <i class="ti ${cfg.icon}"></i>
-        <div class="empty-title">${App.utils.escapeHtml(cfg.title)}</div>
-        <div class="empty-sub">${App.utils.escapeHtml(cfg.sub)}</div>
-        ${showCta ? `<div class="empty-actions"><button class="btn btn-primary empty-cta" type="button" data-action="empty-new-task"><i class="ti ti-plus"></i>New task</button></div>` : ''}`;
-      const cta = e.querySelector('[data-action="empty-new-task"]');
-      if (cta) cta.addEventListener('click', () => this.controller.openNewTaskPage());
-      wrap.appendChild(e);
-      this.body.appendChild(wrap);
-      this._prependProjectHeader();
-      return;
-    }
-
-    const { groupBy, sortBy, sortDir, collapsedGroups } = this.controller.uiState;
-    const groups = this.taskModel.groupTasks(tasks, { groupBy, sortBy, sortDir });
-
-    groups.forEach(g => {
-      const collapsed = collapsedGroups.has(g.key);
-      const section = document.createElement('div');
-      section.className = 'qt-group' + (collapsed ? ' collapsed' : '');
-
-      const headCls = g.key === 'overdue' ? 'overdue' : g.key === 'today' ? 'today' : 'plain';
-      const head = document.createElement('div');
-      head.className = 'qt-ghead ' + headCls;
-      head.dataset.groupKey = g.key;
-      head.innerHTML = `
-        <span class="qt-chev"><i class="ti ti-chevron-down"></i></span>
-        <span class="qt-gicon"><i class="ti ${this._qtGroupIcon(g.key)}"></i></span>
-        <span class="qt-gname">${App.utils.escapeHtml(g.label)}</span>
-        <span class="qt-gcount">${g.items.length}</span>`;
-      head.addEventListener('click', () => this.controller.toggleGroupCollapsed(g.key));
-      section.appendChild(head);
-
-      if (!collapsed) {
-        const body = document.createElement('div');
-        body.className = 'qt-gbody';
-        g.items.forEach(t => body.appendChild(this._qtRow(t)));
-        section.appendChild(body);
-      }
-
-      wrap.appendChild(section);
-    });
-
-    this.body.appendChild(wrap);
-    this._prependProjectHeader();
-  }
-
-  _qtGroupIcon(key) {
-    return ({
-      overdue: 'ti-alert-triangle', today: 'ti-flame', tomorrow: 'ti-arrow-narrow-right',
-      thisWeek: 'ti-calendar', later: 'ti-clock', done: 'ti-circle-check',
-    })[key] || 'ti-layout-rows';
-  }
-
-  // Company filter chips (prototype's top row). Single-select: "All" clears the
-  // companies filter; a company narrows to just it. Drives the same filter state
-  // as everything else via the controller (table-local, no global scope change).
-  _qtChipRow() {
-    const row = document.createElement('div');
-    row.className = 'qt-chiprow';
-    const active = (this.controller.uiState.filters && this.controller.uiState.filters.companies) || [];
-    const accessible = (this.controller.uiState.companies || []).filter(id => App.COMPANIES[id]);
-    const ids = accessible.length ? accessible : Object.keys(App.COMPANIES);
-    const chips = [{ id: 'all', label: 'All' }].concat(ids.map(id => ({ id, label: App.COMPANIES[id].label })));
-    row.innerHTML = chips.map(c => {
-      const on = c.id === 'all' ? active.length === 0 : (active.length === 1 && active[0] === c.id);
-      return `<button type="button" class="qt-chip ${on ? 'on' : ''}" data-company="${App.utils.escapeHtml(c.id)}">${c.id === 'all' ? '' : '<span class="sq"></span>'}${App.utils.escapeHtml(c.label)}</button>`;
-    }).join('');
-    row.querySelectorAll('[data-company]').forEach(btn =>
-      btn.addEventListener('click', () => this.controller.setCompanyScopeFilter(btn.dataset.company)));
-    return row;
-  }
-
-  // The rendered column header. Each label is a filter button wired to the same
-  // dropdown machinery as the old header (_openColumnFilter → _columnFilterModel).
-  _qtColsHeader() {
-    const cols = document.createElement('div');
-    cols.className = 'qt-cols';
-    const f = this.controller.uiState.filters || {};
-    const btn = (label, col, extraClass = '') => {
-      const on = col === 'due' ? (f.dueRange && f.dueRange !== 'all') : ((f[col] || []).length > 0);
-      const n = col === 'due' ? 1 : (f[col] || []).length;
-      return `<button type="button" class="qt-colbtn ${on ? 'filtered' : ''} ${extraClass}" data-filter-col="${col}" aria-haspopup="listbox" aria-expanded="false">${label}${on ? ` (${n})` : ''} <i class="ti ti-chevron-down"></i></button>`;
-    };
-    cols.innerHTML = `
-      <span class="qt-colcell"></span>
-      <span class="qt-colcell"></span>
-      <span class="qt-colcell" style="font-weight:600">TASK</span>
-      ${btn('STATUS', 'statuses')}
-      ${btn('PRIORITY', 'priorities')}
-      ${btn('LABEL', 'labels', 'qt-col-label')}
-      ${btn('ASSIGNEE', 'assignees', 'qt-col-assignee')}
-      ${btn('DUE', 'due')}`;
-    cols.querySelectorAll('.qt-colbtn').forEach(b =>
-      b.addEventListener('click', (e) => { e.stopPropagation(); this._openColumnFilter(b); }));
-    return cols;
-  }
-
-  _qtRow(t) {
-    const esc = App.utils.escapeHtml;
-    const t0 = App.utils.todayISO(0);
-    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#8a857e' };
-    const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
-    const statusKey = t.status || 'todo';
-    const stLabel = App.taxonomy.statusLabel(t.company, t.type, t.status);
-    const lblKey = t.label || 'none';
-    const lblLabel = App.taxonomy.labelLabel(t.company, lblKey);
-    const lblColor = (App.taxonomy.color && App.taxonomy.color('label', t.company, lblKey, t.type)) || '#8a857e';
-    const isDone = App.taxonomy.isDone(t);
-    const isStuck = statusKey === 'hold' && !isDone;
-    const selected = this.controller.uiState.selectedTaskId === t.id;
-    const bulkSel = this.controller.isBulkSelected(t.id);
-    const canWrite = App.can('tasks.write');
-    const canClock = App.can('clock.use');
-    const myActive = this.timeModel.activeFor(this.currentUser);
-    const myTimerOnThis = myActive && myActive.taskId === t.id;
-    const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
-    const subCount = subs.length;
-    const subDone = subs.filter(s => s.d).length;
-
-    let dueText = '—', dueCls = '';
-    if (t.due) {
-      dueText = App.utils.formatDue(t.due).text;
-      dueCls = isDone ? 'done' : (t.due < t0 ? 'late' : (t.due === t0 ? 'today' : ''));
-    } else if (isDone) { dueText = 'Done'; dueCls = 'done'; }
-
-    const initials = App.utils.initials(person.full || person.name || t.assignee || '?');
-    const avColor = App.utils.safeColor(person.color);
-    const firstName = String(person.name || person.full || 'Unassigned').split(' ')[0];
-
-    const row = document.createElement('div');
-    row.className = 'qt-row' + (selected ? ' selected' : '') + (bulkSel ? ' bulk-selected' : '') + (isStuck ? ' qt-stuckrow' : '') + (isDone ? ' qt-done' : '');
-    row.dataset.id = t.id;
-    row.innerHTML = `
-      <span class="qt-ck"><input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${canWrite ? '' : 'disabled'} aria-label="Complete task"></span>
-      <span class="qt-pdot ${priority.cls}" title="${esc(priority.label)}"></span>
-      <div class="qt-tcell">
-        <span class="qt-ttitle">${esc(t.title)}${subCount ? `<span class="qt-steps">${subDone}/${subCount}</span>` : ''}</span>
-        ${isStuck ? `<div><span class="qt-stuckbadge"><i class="ti ti-alert-hexagon"></i>STUCK · ${esc(stLabel)}</span></div>` : ''}
-      </div>
-      <div class="qt-cell-status">${canWrite
-        ? `<button class="qt-cellbtn status-${statusKey}" data-action="open-status" data-current="${statusKey}" title="Change status" aria-haspopup="listbox" aria-expanded="false"><span class="dot"></span><span class="nm">${esc(stLabel)}</span><span class="chv"><i class="ti ti-chevron-down"></i></span></button>`
-        : `<span class="qt-cellbtn status-${statusKey}"><span class="dot"></span><span class="nm">${esc(stLabel)}</span></span>`}</div>
-      <div class="qt-cell-priority">${canWrite
-        ? `<span class="qt-pcell"><button class="qt-pbadge ${priority.cls}" data-action="open-priority" data-current="${t.priority || 'medium'}" title="Change priority" aria-haspopup="listbox" aria-expanded="false">${esc(priority.label.toUpperCase())}</button><span class="chv"><i class="ti ti-chevron-down"></i></span></span>`
-        : `<span class="qt-pbadge ${priority.cls}">${esc(priority.label.toUpperCase())}</span>`}</div>
-      <div class="qt-cell-label">${lblKey !== 'none'
-        ? `<span class="qt-cellbtn"><span class="dot" style="background:${lblColor}"></span><span class="nm">${esc(lblLabel)}</span></span>`
-        : `<span class="qt-cellbtn" style="color:#a8a39b"><span class="nm">—</span></span>`}</div>
-      <div class="qt-cell-assignee"><span class="qt-cellbtn"><span class="qt-avatar" style="background:${avColor}">${esc(initials)}</span><span class="nm">${esc(firstName)}</span></span></div>
-      <div class="qt-due ${dueCls}">${esc(dueText)}${t.dueTime ? `<span class="qt-duetime">${esc(App.utils.formatClockTz(t.dueTime))}</span>` : ''}</div>
-      <div class="qt-actions">
-        ${canClock ? `<button class="timer-btn ${myTimerOnThis ? 'active' : ''}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i></button>` : ''}
-        ${canWrite ? `<button class="finish-btn ${isDone ? 'is-done' : ''}" data-action="finish-task" title="${isDone ? 'Mark as not done' : 'Finish this task'}"><i class="ti ${isDone ? 'ti-check' : 'ti-circle-check'}"></i></button>` : ''}
-        ${canWrite ? `<button class="quick-actions-btn" data-action="open-quick" aria-label="Quick actions"><i class="ti ti-dots-vertical"></i></button>` : ''}
-      </div>`;
-
-    row.addEventListener('click', (e) => {
-      const target = e.target.closest('[data-action]');
-      if (target) {
-        e.stopPropagation();
-        const action = target.dataset.action;
-        if (action === 'toggle-done') { if (target.checked && App.Motion) App.Motion.pop(target); this.controller.toggleTaskDone(t.id); }
-        else if (action === 'open-status') this._openStatusMenu(t.id, target);
-        else if (action === 'open-priority') this._openStatusMenu(t.id, target, 'priority');
-        else if (action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
-        else if (action === 'finish-task') { if (!target.classList.contains('is-done') && App.Motion) App.Motion.check(target.querySelector('i')); this.controller.completeTask(t.id); }
-        else if (action === 'open-quick') this._openQuickSheet(t.id);
-        return;
-      }
-      if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
-      this.controller.selectTask(t.id);
-    });
-    return row;
-  }
-
-  /* Prepend the project-detail folder header when the list is scoped to one
-     folder (filters.projectId). Self-wires its own buttons. */
-  _prependProjectHeader() {
-    const pid = this.controller.uiState.filters && this.controller.uiState.filters.projectId;
-    if (!pid) return;
-    const proj = App.projects ? App.projects[pid] : null;
-    if (!proj) return;
-    const esc = App.utils.escapeHtml;
-    const head = document.createElement('div');
-    head.className = 'proj-detail-head';
-    head.style.setProperty('--pc', proj.color);
-    head.innerHTML = `
-      <button class="btn btn-sm" data-action="clear-project" type="button"><i class="ti ti-arrow-left"></i> Projects</button>
-      <span class="pdh-folder"><i class="ti ti-folder"></i>${esc(proj.name)}</span>
-      ${proj.client ? `<span class="pdh-client">${esc(proj.client)}</span>` : ''}
-      ${App.can('tasks.write') ? `<button class="btn btn-primary btn-sm" data-action="new-task-in-project" type="button"><i class="ti ti-plus"></i> New task</button>` : ''}`;
-    head.querySelector('[data-action="clear-project"]').addEventListener('click', () => this.controller.clearProjectScope());
-    const nt = head.querySelector('[data-action="new-task-in-project"]');
-    if (nt) nt.addEventListener('click', () => this.controller.openNewTaskPage({ project: pid, company: proj.companyId }));
-    this.body.insertAdjacentElement('afterbegin', head);
   }
 
   renderKanban() {
@@ -1741,3 +1316,13 @@ App.TaskListView = class TaskListView {
     el.querySelector('[data-q="back"]').addEventListener('click', () => this._renderQuickRoot());
   }
 };
+
+// TEMPORARY passthroughs — each is deleted when its layout moves to its own
+// adapter file under js/views/tasklist/ (C3 tasks 4–7). Registered here (after
+// the class) so a missing adapter file can never break dispatch mid-migration.
+App.TaskListLayouts = App.TaskListLayouts || {};
+App.TaskListLayouts.kanban = App.TaskListLayouts.kanban || { render: (v) => v.renderKanban() };
+App.TaskListLayouts.cards = App.TaskListLayouts.cards || { render: (v) => v.renderCards() };
+App.TaskListLayouts.calendar = App.TaskListLayouts.calendar || { render: (v) => v.renderCalendar() };
+App.TaskListLayouts.watching = App.TaskListLayouts.watching || { render: (v) => v.renderWatching() };
+App.TaskListLayouts.execution = App.TaskListLayouts.execution || { render: (v) => v.renderExecutionList() };
