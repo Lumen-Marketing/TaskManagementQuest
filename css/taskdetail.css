@@ -694,7 +694,22 @@
 #taskDetailWrap .td2-pager-btn i { font-size: 18px; }
 #taskDetailWrap .td2-pager-pos { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--ink-3); min-width: 44px; text-align: center; }
 #taskDetailWrap .td2-back-row { display: flex; align-items: center; gap: var(--space-sm); }
-@media (max-width: 1240px) { #taskDetailWrap .td2-nav { display: none; } }
+/* Below 1240px the content column fills the width, so the gutter-floating arrows
+   would overlap it. Drop them out of the vertical centre into the lower thumb
+   zone (above the edit-mode Save/Cancel footer), shrink them, and let content
+   read through a translucent surface. Left = prev, right = next stays intact. */
+@media (max-width: 1240px) {
+  #taskDetailWrap .td2-nav {
+    top: auto; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: none;
+    width: 40px; height: 40px;
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  #taskDetailWrap .td2-nav i { font-size: 20px; }
+  #taskDetailWrap .td2-nav-prev { left: 10px; }
+  #taskDetailWrap .td2-nav-next { right: 10px; }
+  #taskDetailWrap .td2-nav:active { transform: scale(.94); }
+}
 
 /* ---- chip row → bordered pills ---- */
 #taskDetailWrap .td2-chip {

@@ -326,6 +326,9 @@ App.TaskDetailView = class TaskDetailView {
 
     this.pane.innerHTML = `
       <div class="td2" data-tdid="${App.utils.escapeHtml(t.id)}">
+      ${canNav ? `
+        <button class="td2-nav td2-nav-prev" data-action="nav-prev" aria-label="Previous task" type="button"><i class="ti ti-chevron-left"></i></button>
+        <button class="td2-nav td2-nav-next" data-action="nav-next" aria-label="Next task" type="button"><i class="ti ti-chevron-right"></i></button>` : ''}
       <div class="td2-head">
         <div class="td2-back-row">
           <button class="td2-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Tasks</button>
@@ -617,8 +620,8 @@ App.TaskDetailView = class TaskDetailView {
       });
     }
 
-    // Prev/next task arrows (side chevrons + header pager) reuse the controller's
-    // existing selectAdjacentTask — same walk order as the j/k shortcuts.
+    // Prev/next task side-arrow chevrons reuse the controller's existing
+    // selectAdjacentTask — same walk order as the arrow-key / j/k shortcuts.
     qa('[data-action="nav-prev"]').forEach(el => el.addEventListener('click', () => this.controller.selectAdjacentTask && this.controller.selectAdjacentTask(-1)));
     qa('[data-action="nav-next"]').forEach(el => el.addEventListener('click', () => this.controller.selectAdjacentTask && this.controller.selectAdjacentTask(1)));
 
