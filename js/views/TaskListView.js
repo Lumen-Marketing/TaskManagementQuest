@@ -513,51 +513,6 @@ App.TaskListView = class TaskListView {
     return row;
   }
 
-  renderKanban() {
-    const tasks = this.getFilteredTasks();
-    this.body.className = 'kanban-board';
-    this.body.innerHTML = '';
-
-    if (tasks.length === 0) {
-      this._renderEmpty(this._emptyConfig());
-      return;
-    }
-
-    const columns = [
-      { key: 'todo',    label: 'Active',  cls: 'col-todo' },
-      { key: 'pending', label: 'Pending', cls: 'col-pending' },
-      { key: 'hold',    label: 'On hold', cls: 'col-hold' },
-      { key: 'review',  label: 'Review',  cls: 'col-review' },
-      { key: 'done',    label: 'Done',    cls: 'col-done' },
-    ];
-    // Per-type taxonomies (e.g. the Bid pipeline: queue/started/…) carry status keys
-    // outside the generic set above. Append a column for any status actually present
-    // on a task so nothing is dropped from the board; its label + colour come from the
-    // taxonomy (via the first task carrying that status).
-    const known = new Set(columns.map(c => c.key));
-    tasks.forEach(t => {
-      const k = t.status || 'todo';
-      if (known.has(k)) return;
-      known.add(k);
-      columns.push({ key: k, label: App.taxonomy.statusLabel(t.company, t.type, k), cls: '', chip: App.taxonomy.chipStyle('status', t.company, k, t.type) });
-    });
-
-    columns.forEach(col => {
-      const colTasks = tasks.filter(t => (t.status || 'todo') === col.key);
-      const column = document.createElement('div');
-      column.className = `kanban-col ${col.cls}`;
-      column.innerHTML = `
-        <div class="kanban-col-head">
-          <span class="kanban-col-title"${col.chip && col.chip.style ? ` style="${col.chip.style}"` : ''}>${App.utils.escapeHtml(col.label)}</span>
-          <span class="kanban-col-count">${colTasks.length}</span>
-        </div>
-        <div class="kanban-col-body"></div>
-      `;
-      const colBody = column.querySelector('.kanban-col-body');
-      colTasks.forEach(t => colBody.appendChild(this.renderKanbanCard(t)));
-      this.body.appendChild(column);
-    });
-  }
 
   renderKanbanCard(t) {
     const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
@@ -595,70 +550,6 @@ App.TaskListView = class TaskListView {
     return card;
   }
 
-  /* ===== Cards view — Panze-style task cards (additive; Table is unchanged).
-     A flat responsive grid of the same filtered task set the table uses; each
-     card reuses the task data, click-to-open, finish action, and the bulk /
-     selection plumbing (data-id, .selected, .bulk-check via the row's classes).
-     Grouping is intentionally flattened here (Table keeps group-by). */
-  renderCards() {
-    const tasks = this.getFilteredTasks();
-    this.body.className = 'cards-view';
-    this.body.innerHTML = '';
-    // The table column header is meaningless for cards — hide it like kanban does.
-    const listHeader = document.querySelector('#taskViewWrap .list-header');
-    if (listHeader) listHeader.classList.add('hidden');
-    if (tasks.length === 0) { this._renderEmpty(this._emptyConfig()); return; }
-    const grid = document.createElement('div');
-    grid.className = 'cards-grid';
-    tasks.forEach(t => grid.appendChild(this.renderTaskCard(t)));
-    this.body.appendChild(grid);
-  }
-
-  renderTaskCard(t) {
-    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
-    const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
-    const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
-    const due = App.utils.formatDue(t.due);
-    const selected = this.controller.uiState.selectedTaskId === t.id;
-    const isDone = App.taxonomy.isDone(t);
-    const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
-    const subDone = subs.filter(s => s.d).length;
-
-    const card = document.createElement('div');
-    card.className = 'task-card prio-' + (priority.cls || 'medium') + (selected ? ' selected' : '') + (isDone ? ' done' : '');
-    card.dataset.id = t.id;
-    card.innerHTML = `
-      <span class="task-card-edge"></span>
-      <div class="task-card-top">
-        <span class="task-card-type"><i class="ti ${type.icon || 'ti-file-text'}"></i>${App.utils.escapeHtml(App.taxonomy.typeLabel(t.company, t.type))}</span>
-        <button class="task-card-check ${isDone ? 'is-done' : ''} ${App.can('tasks.write') ? '' : 'hidden'}" data-action="finish-task" title="${isDone ? 'Mark as not done' : 'Finish this task'}" aria-label="${isDone ? 'Mark as not done' : 'Finish this task'}">
-          <i class="ti ${isDone ? 'ti-check' : 'ti-circle-check'}"></i>
-        </button>
-      </div>
-      <div class="task-card-title">${App.utils.escapeHtml(t.title)}</div>
-      ${t.description ? `<div class="task-card-desc">${App.utils.escapeHtml(t.description)}</div>` : ''}
-      <div class="task-card-foot">
-        <span class="task-card-who">${App.utils.avatarHtml(person)}<span>${App.utils.escapeHtml(person.name)}</span></span>
-        ${subs.length ? `<span class="task-card-subs" title="${subDone}/${subs.length} subtasks done"><i class="ti ti-checklist"></i>${subDone}/${subs.length}</span>` : ''}
-        <span class="due-cell ${due.cls}">${due.text}</span>
-      </div>
-    `;
-    card.addEventListener('click', (e) => {
-      const action = e.target.closest('[data-action]');
-      if (action) {
-        e.stopPropagation();
-        if (action.dataset.action === 'finish-task') {
-          if (!action.classList.contains('is-done') && App.Motion) App.Motion.check(action.querySelector('i'));
-          this.controller.completeTask(t.id);
-        }
-        return;
-      }
-      if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
-      this.controller.selectTask(t.id);
-    });
-    App.utils.makeActivatable(card, null, `Open task: ${t.title}`);
-    return card;
-  }
 
   /* ===== Calendar view (month / week) — tasks placed on their due date ===== */
   renderCalendar() {
@@ -1321,8 +1212,6 @@ App.TaskListView = class TaskListView {
 // adapter file under js/views/tasklist/ (C3 tasks 4–7). Registered here (after
 // the class) so a missing adapter file can never break dispatch mid-migration.
 App.TaskListLayouts = App.TaskListLayouts || {};
-App.TaskListLayouts.kanban = App.TaskListLayouts.kanban || { render: (v) => v.renderKanban() };
-App.TaskListLayouts.cards = App.TaskListLayouts.cards || { render: (v) => v.renderCards() };
 App.TaskListLayouts.calendar = App.TaskListLayouts.calendar || { render: (v) => v.renderCalendar() };
 App.TaskListLayouts.watching = App.TaskListLayouts.watching || { render: (v) => v.renderWatching() };
 App.TaskListLayouts.execution = App.TaskListLayouts.execution || { render: (v) => v.renderExecutionList() };
