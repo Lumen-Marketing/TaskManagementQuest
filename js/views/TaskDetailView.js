@@ -925,31 +925,29 @@ App.TaskDetailView = class TaskDetailView {
   // watchers and logs a specific "from → to" activity line). Re-clicking the
   // chip closes it.
   _openStatusMenu(t, anchor) {
-    const existing = this.pane.querySelector('.tdp-status-menu');
-    if (existing) { existing.remove(); return; }
-    const menu = document.createElement('div');
-    menu.className = 'tdp-status-menu';
-    const list = App.taxonomy.activeStatuses(t.company, t.type);
-    const entries = (list && list.length) ? list.map(s => [s.key, s.label]) : Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]);
-    menu.innerHTML = entries.map(([k, label]) =>
-      `<button class="tdp-status-opt ${k === t.status ? 'is-cur' : ''}" data-status="${App.utils.escapeHtml(k)}" type="button">${App.utils.escapeHtml(label)}</button>`
-    ).join('');
-    anchor.parentElement.appendChild(menu);
-    menu.querySelectorAll('[data-status]').forEach(b => b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const status = b.dataset.status;
-      menu.remove();
-      if (status && status !== t.status) {
-        this._justSaved = 'status';
-        this.controller.updateTaskField(t.id, 'status', status, this._activityTextFor(t, 'status', status));
-      }
-    }));
-    const close = (e) => {
-      if (menu.contains(e.target) || (anchor && anchor.contains(e.target))) return;
-      menu.remove();
-      document.removeEventListener('click', close);
-    };
-    setTimeout(() => document.addEventListener('click', close), 0);
+    // Re-clicking the chip toggles it shut.
+    if (this._tdpStatusHandle) { this._tdpStatusHandle.close('api'); return; }
+    this._tdpStatusHandle = App.Menu.open({
+      anchor,
+      className: 'tdp-status-menu',
+      onClose: () => { this._tdpStatusHandle = null; },
+      build: (menu, h) => {
+        const list = App.taxonomy.activeStatuses(t.company, t.type);
+        const entries = (list && list.length) ? list.map(s => [s.key, s.label]) : Object.entries(App.STATUSES).map(([k, v]) => [k, v.label]);
+        menu.innerHTML = entries.map(([k, label]) =>
+          `<button class="tdp-status-opt ${k === t.status ? 'is-cur' : ''}" data-status="${App.utils.escapeHtml(k)}" type="button">${App.utils.escapeHtml(label)}</button>`
+        ).join('');
+        menu.querySelectorAll('[data-status]').forEach(b => b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const status = b.dataset.status;
+          h.close('api');
+          if (status && status !== t.status) {
+            this._justSaved = 'status';
+            this.controller.updateTaskField(t.id, 'status', status, this._activityTextFor(t, 'status', status));
+          }
+        }));
+      },
+    });
   }
 
   /* ---------- multi-assignee ---------- */
@@ -993,9 +991,8 @@ App.TaskDetailView = class TaskDetailView {
   // controller.setAssignees, which fans out notifications to newly-added people.
   _openAssigneePicker(t, anchor) {
     if (!App.can('tasks.write')) return;
-    // Toggle: re-clicking the trigger closes an open menu.
-    const existing = this.pane.querySelector('.td2-assignee-menu');
-    if (existing) { existing.remove(); if (this._closeAssigneeMenu) this._closeAssigneeMenu(); return; }
+    // Toggle: re-clicking the trigger closes (and commits) an open menu.
+    if (this._assigneeHandle) { this._assigneeHandle.close('api'); return; }
 
     // Suppress background re-renders while the picker is open (same guard the
     // inline editors use) so a sync poll can't wipe the menu mid-edit.
@@ -1008,47 +1005,12 @@ App.TaskDetailView = class TaskDetailView {
     const selected = startIds.slice(); // ordered working set (lead = index 0)
     const people = App.utils.peopleInCompany(t.company, selected);
 
-    const menu = document.createElement('div');
-    menu.className = 'td2-assignee-menu';
-    const renderRows = () => {
-      menu.innerHTML = `
-        <div class="td2-am-h">Assignees${selected.length ? ` <span class="td2-am-lead">lead: ${App.utils.escapeHtml((App.PEOPLE[selected[0]] || { name: selected[0] }).name)}</span>` : ''}</div>
-        <div class="td2-am-list">
-          ${people.map(p => {
-            const on = selected.includes(p.id);
-            return `<button class="td2-am-item ${on ? 'is-on' : ''}" data-id="${App.utils.escapeHtml(p.id)}" type="button">
-              ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
-              ${on ? '<i class="ti ti-check td2-am-check"></i>' : ''}
-            </button>`;
-          }).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
-        </div>`;
-      menu.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const id = b.dataset.id;
-        const i = selected.indexOf(id);
-        if (i === -1) selected.push(id);
-        else if (selected.length > 1) selected.splice(i, 1); // keep at least one
-        renderRows();
-      }));
-    };
-    renderRows();
-
-    // Anchor the menu to the trigger's positioned parent.
-    const host = anchor.parentElement || this.pane;
-    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
-    host.appendChild(menu);
-    if (anchor.classList) anchor.classList.add('is-editing');
-
-    const cleanup = () => {
-      menu.remove();
-      document.removeEventListener('click', close);
-      if (anchor.classList) anchor.classList.remove('is-editing');
-      this._closeAssigneeMenu = null;
-    };
-    const commitAndClose = () => {
-      const changed = selected.length !== startIds.length || selected.some((v, i) => v !== startIds[i]);
-      cleanup();
+    // Multi-select commits on ANY dismissal (away-click, Esc, toggle, reopen):
+    // the working set is the user's answer; there is no cancel gesture (parity
+    // with the old picker, which committed on away/toggle and had no Esc path).
+    const commit = () => {
       if (this._inlineEdit === token) this._inlineEdit = null;
+      const changed = selected.length !== startIds.length || selected.some((v, i) => v !== startIds[i]);
       if (changed) {
         this._justSaved = 'assignee';
         this.controller.setAssignees(t.id, selected);
@@ -1056,12 +1018,41 @@ App.TaskDetailView = class TaskDetailView {
         this.render();
       }
     };
-    this._closeAssigneeMenu = commitAndClose;
-    const close = (e) => {
-      if (menu.contains(e.target) || (anchor && anchor.contains(e.target))) return;
-      commitAndClose();
-    };
-    setTimeout(() => document.addEventListener('click', close), 0);
+
+    this._assigneeHandle = App.Menu.open({
+      anchor,
+      className: 'td2-assignee-menu',
+      onClose: () => {
+        this._assigneeHandle = null;
+        if (anchor.classList) anchor.classList.remove('is-editing');
+        commit();
+      },
+      build: (menu) => {
+        const renderRows = () => {
+          menu.innerHTML = `
+            <div class="td2-am-h">Assignees${selected.length ? ` <span class="td2-am-lead">lead: ${App.utils.escapeHtml((App.PEOPLE[selected[0]] || { name: selected[0] }).name)}</span>` : ''}</div>
+            <div class="td2-am-list">
+              ${people.map(p => {
+                const on = selected.includes(p.id);
+                return `<button class="td2-am-item ${on ? 'is-on' : ''}" data-id="${App.utils.escapeHtml(p.id)}" type="button">
+                  ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
+                  ${on ? '<i class="ti ti-check td2-am-check"></i>' : ''}
+                </button>`;
+              }).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
+            </div>`;
+          menu.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = b.dataset.id;
+            const i = selected.indexOf(id);
+            if (i === -1) selected.push(id);
+            else if (selected.length > 1) selected.splice(i, 1); // keep at least one
+            renderRows();
+          }));
+        };
+        renderRows();
+      },
+    });
+    if (anchor.classList) anchor.classList.add('is-editing');
   }
 
   /* ---------- comments ---------- */
@@ -1382,8 +1373,7 @@ App.TaskDetailView = class TaskDetailView {
      wipe the half-filled panel. */
   _openStuckPanel(t, anchor) {
     if (!App.can('tasks.write')) return;
-    const existing = this.pane.querySelector('.td2-stuck-panel');
-    if (existing) { this._closeStuckPanel && this._closeStuckPanel(); return; }
+    if (this._stuckHandle) { this._stuckHandle.close('api'); return; }
 
     this._inlineEdit = { taskId: t.id, field: 'stuck' };
     const token = this._inlineEdit;
@@ -1392,60 +1382,55 @@ App.TaskDetailView = class TaskDetailView {
       .filter(p => p.id !== this.currentUser);
 
     let chosen = null;
-    const panel = document.createElement('div');
-    panel.className = 'td2-stuck-panel';
-    panel.innerHTML = `
-      <div class="td2-am-h">I'm stuck</div>
-      <textarea class="td2-stuck-input" rows="2" maxlength="500" placeholder="What's blocking this?"></textarea>
-      <div class="td2-stuck-pick-lbl">Blocked on</div>
-      <div class="td2-am-list td2-stuck-people">
-        ${people.map(p => `<button class="td2-am-item" data-id="${App.utils.escapeHtml(p.id)}" type="button">
-          ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
-          <i class="ti ti-check td2-am-check td2-stuck-check" aria-hidden="true"></i>
-        </button>`).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
-      </div>
-      <div class="td2-stuck-panel-actions">
-        <button class="td2-stuck-btn td2-stuck-btn-primary td2-stuck-confirm" type="button" disabled><i class="ti ti-flag"></i>Confirm</button>
-      </div>`;
+    let confirmed = false;
+    this._stuckHandle = App.Menu.open({
+      anchor,
+      className: 'td2-stuck-panel',
+      onClose: () => {
+        this._stuckHandle = null;
+        if (this._inlineEdit === token) this._inlineEdit = null;
+        // Dismissal without Confirm = cancel; re-render restores the pill row.
+        if (!confirmed) this.render();
+      },
+      build: (panel, h) => {
+        panel.innerHTML = `
+          <div class="td2-am-h">I'm stuck</div>
+          <textarea class="td2-stuck-input" rows="2" maxlength="500" placeholder="What's blocking this?"></textarea>
+          <div class="td2-stuck-pick-lbl">Blocked on</div>
+          <div class="td2-am-list td2-stuck-people">
+            ${people.map(p => `<button class="td2-am-item" data-id="${App.utils.escapeHtml(p.id)}" type="button">
+              ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
+              <i class="ti ti-check td2-am-check td2-stuck-check" aria-hidden="true"></i>
+            </button>`).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
+          </div>
+          <div class="td2-stuck-panel-actions">
+            <button class="td2-stuck-btn td2-stuck-btn-primary td2-stuck-confirm" type="button" disabled><i class="ti ti-flag"></i>Confirm</button>
+          </div>`;
 
-    const host = anchor.parentElement || this.pane;
-    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
-    host.appendChild(panel);
-
-    const ta = panel.querySelector('.td2-stuck-input');
-    const confirm = panel.querySelector('.td2-stuck-confirm');
-    const refresh = () => {
-      const ready = ta.value.trim().length > 0 && !!chosen;
-      confirm.disabled = !ready;
-    };
-    panel.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      chosen = b.dataset.id;
-      panel.querySelectorAll('.td2-am-item').forEach(x => x.classList.toggle('is-on', x === b));
-      refresh();
-    }));
-    ta.addEventListener('input', refresh);
-    ta.addEventListener('click', (e) => e.stopPropagation());
-
-    const cleanup = () => {
-      panel.remove();
-      document.removeEventListener('click', onDoc);
-      if (this._inlineEdit === token) { this._inlineEdit = null; }
-      this._closeStuckPanel = null;
-    };
-    this._closeStuckPanel = () => { cleanup(); this.render(); };
-    confirm.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const reason = ta.value.trim();
-      if (!reason || !chosen) return;
-      cleanup();
-      this.controller.flagStuck(t.id, reason, chosen);
+        const ta = panel.querySelector('.td2-stuck-input');
+        const confirm = panel.querySelector('.td2-stuck-confirm');
+        const refresh = () => {
+          confirm.disabled = !(ta.value.trim().length > 0 && !!chosen);
+        };
+        panel.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          chosen = b.dataset.id;
+          panel.querySelectorAll('.td2-am-item').forEach(x => x.classList.toggle('is-on', x === b));
+          refresh();
+        }));
+        ta.addEventListener('input', refresh);
+        ta.addEventListener('click', (e) => e.stopPropagation());
+        confirm.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const reason = ta.value.trim();
+          if (!reason || !chosen) return;
+          confirmed = true;
+          h.close('api');
+          this.controller.flagStuck(t.id, reason, chosen);
+        });
+        setTimeout(() => ta.focus(), 0);
+      },
     });
-    const onDoc = (e) => {
-      if (panel.contains(e.target) || (anchor && anchor.contains(e.target))) return;
-      this._closeStuckPanel && this._closeStuckPanel();
-    };
-    setTimeout(() => { document.addEventListener('click', onDoc); ta.focus(); }, 0);
   }
 
   /* "Request help" teammate picker (excluding self). Picking a person calls
@@ -1453,43 +1438,31 @@ App.TaskDetailView = class TaskDetailView {
      picker. */
   _openHelpPicker(t, anchor) {
     if (!App.can('tasks.write')) return;
-    const existing = this.pane.querySelector('.td2-help-menu');
-    if (existing) { existing.remove(); if (this._closeHelpMenu) this._closeHelpMenu(); return; }
+    if (this._helpHandle) { this._helpHandle.close('api'); return; }
 
     const people = App.utils.peopleInCompany(t.company, t.assignee)
       .filter(p => p.id !== this.currentUser);
 
-    const menu = document.createElement('div');
-    menu.className = 'td2-assignee-menu td2-help-menu';
-    menu.innerHTML = `
-      <div class="td2-am-h">Request help from</div>
-      <div class="td2-am-list">
-        ${people.map(p => `<button class="td2-am-item" data-id="${App.utils.escapeHtml(p.id)}" type="button">
-          ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
-        </button>`).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
-      </div>`;
-
-    const host = anchor.parentElement || this.pane;
-    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
-    host.appendChild(menu);
-
-    const cleanup = () => {
-      menu.remove();
-      document.removeEventListener('click', onDoc);
-      this._closeHelpMenu = null;
-    };
-    this._closeHelpMenu = cleanup;
-    menu.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = b.dataset.id;
-      cleanup();
-      if (id) this.controller.requestHelp(t.id, id);
-    }));
-    const onDoc = (e) => {
-      if (menu.contains(e.target) || (anchor && anchor.contains(e.target))) return;
-      cleanup();
-    };
-    setTimeout(() => document.addEventListener('click', onDoc), 0);
+    this._helpHandle = App.Menu.open({
+      anchor,
+      className: 'td2-assignee-menu td2-help-menu',
+      onClose: () => { this._helpHandle = null; },
+      build: (menu, h) => {
+        menu.innerHTML = `
+          <div class="td2-am-h">Request help from</div>
+          <div class="td2-am-list">
+            ${people.map(p => `<button class="td2-am-item" data-id="${App.utils.escapeHtml(p.id)}" type="button">
+              ${App.utils.avatarHtml(p)}<span class="td2-am-name">${App.utils.escapeHtml(p.full || p.name)}</span>
+            </button>`).join('') || '<div class="td2-am-empty">No teammates in this company</div>'}
+          </div>`;
+        menu.querySelectorAll('.td2-am-item').forEach(b => b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = b.dataset.id;
+          h.close('api');
+          if (id) this.controller.requestHelp(t.id, id);
+        }));
+      },
+    });
   }
 
   _formatDue(due) {
