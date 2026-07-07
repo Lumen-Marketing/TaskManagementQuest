@@ -30,6 +30,7 @@ App.LoaderView = (function () {
     const root = document.getElementById('appLoader');
     if (!root || root.dataset.built) return;
     root.dataset.built = '1';
+    root.innerHTML = ''; // drop the static first frame (app.html); the animated grid replaces it
     mountAt = Date.now();
 
     const intro = document.createElement('section');

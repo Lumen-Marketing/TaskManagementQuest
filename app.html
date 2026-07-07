@@ -27,7 +27,19 @@
 <!-- Boot loading screen (GridMotion port). Painted dark instantly, filled + animated
      by LoaderView.js, then faded out by app.js once data has loaded. GSAP is loaded
      from the CDN (allowed by our CSP); LoaderView guards if it's unavailable. -->
-<div id="appLoader" aria-hidden="true"></div>
+<div id="appLoader" aria-hidden="true">
+  <!-- Static first frame: identical to LoaderView's brand block so the loader
+       is visible from first paint, before ANY script runs. LoaderView.build()
+       replaces this wholesale with the animated grid version once the deferred
+       scripts execute. -->
+  <section class="ldr-intro">
+    <div class="ldr-brand">
+      <div class="ldr-logo"><i class="ti ti-bolt"></i></div>
+      <div class="ldr-name">Quest HQ</div>
+      <div class="ldr-dots"><span></span><span></span><span></span></div>
+    </div>
+  </section>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="js/views/LoaderView.js"></script>
 
