@@ -56,7 +56,7 @@
 
     reports.forEach(p => {
       const memberId = p.member_id;
-      const person = App.PEOPLE[memberId] || { name: p.full_name || memberId, full: p.full_name || memberId, color: '#888' };
+      const person = App.directory.person(memberId) || { name: p.full_name || memberId, full: p.full_name || memberId, color: '#888' };
       const tasks = view.taskModel.all().filter(t => t.assignee === memberId);
       const open = tasks.filter(t => !App.taxonomy.isDone(t));
       const overdue = open.filter(t => t.due && t.due < today);

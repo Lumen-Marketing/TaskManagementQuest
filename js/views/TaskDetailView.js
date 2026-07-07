@@ -168,14 +168,14 @@ App.TaskDetailView = class TaskDetailView {
     // longer exists (e.g. a removed company or a deleted member). Without these
     // guards a single missing lookup throws while building the template and the
     // detail pane renders blank.
-    const creator = App.PEOPLE[t.creator] || { name: t.creator || 'Unknown', full: t.creator || 'Unknown', color: 'var(--ink-3)' };
-    const assignee = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: 'var(--ink-3)' };
+    const creator = App.directory.person(t.creator) || { name: t.creator || 'Unknown', full: t.creator || 'Unknown', color: 'var(--ink-3)' };
+    const assignee = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: 'var(--ink-3)' };
     // Ordered multi-assignee (lead = index 0). Falls back to the single assignee
     // for rows created before multi-assignee.
     const assigneeIds = (Array.isArray(t.assigneeIds) && t.assigneeIds.length)
       ? t.assigneeIds
       : (t.assignee ? [t.assignee] : []);
-    const assignees = assigneeIds.map(id => App.PEOPLE[id] || { id, name: id || 'Unassigned', full: id || 'Unassigned', color: 'var(--ink-3)' });
+    const assignees = assigneeIds.map(id => App.directory.person(id) || { id, name: id || 'Unassigned', full: id || 'Unassigned', color: 'var(--ink-3)' });
     const assigneeLabel = assignees.length
       ? (assignees.length === 1 ? assignees[0].name : `${assignees[0].name} +${assignees.length - 1}`)
       : 'Unassigned';
@@ -214,7 +214,7 @@ App.TaskDetailView = class TaskDetailView {
     const entriesHtml = recentEntries.length
       ? recentEntries.map(e =>
           `<div class="td2-feed-item"><i class="ti ti-clock td2-feed-dot"></i><span>
-             <span class="td2-feed-who">${App.utils.escapeHtml(App.PEOPLE[e.userId] ? App.PEOPLE[e.userId].name : e.userId)}</span> logged
+             <span class="td2-feed-who">${App.utils.escapeHtml(App.directory.person(e.userId) ? App.directory.person(e.userId).name : e.userId)}</span> logged
              <strong>${App.utils.formatHours(e.durationMs)}</strong>
              · ${App.utils.escapeHtml(App.utils.timeAgo(e.end))}
            </span></div>`
@@ -302,7 +302,7 @@ App.TaskDetailView = class TaskDetailView {
     // Unblock clears it, Comment jumps to the composer.
     const stuck = t.stuck || null;
     const stuckHtml = stuck ? (() => {
-      const blocker = App.PEOPLE[stuck.on] || { name: stuck.on || 'Someone', full: stuck.on || 'Someone', color: 'var(--ink-3)' };
+      const blocker = App.directory.person(stuck.on) || { name: stuck.on || 'Someone', full: stuck.on || 'Someone', color: 'var(--ink-3)' };
       const days = this._daysSince(stuck.at);
       const ageLabel = days <= 0 ? 'today' : `${days} day${days === 1 ? '' : 's'}`;
       return `
@@ -349,7 +349,7 @@ App.TaskDetailView = class TaskDetailView {
         <div class="td2-chiprow">
           <button class="td2-chip td2-chip-status ${statusChip.cls}" style="${statusChip.style}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
           <button class="td2-chip td2-chip-due ${dueState}"${canWrite ? ' data-action="chip-due"' : ''} type="button">${dueInner}</button>
-          <button class="td2-chip td2-chip-assignee"${canWrite ? ' data-action="chip-assignee"' : ''} type="button">${this._avatarStack(assignees)}<span class="td2-chip-name">${App.utils.escapeHtml(assigneeLabel)}</span></button>
+          <button class="td2-chip td2-chip-assignee"${canWrite ? ' data-action="chip-assignee"' : ''} type="button">${App.directory.avatarStack(assignees)}<span class="td2-chip-name">${App.utils.escapeHtml(assigneeLabel)}</span></button>
         </div>
       </div>
 
@@ -429,7 +429,7 @@ App.TaskDetailView = class TaskDetailView {
           <div class="td2-card">
             <div class="td2-card-h">Watchers${watcherIds.length ? `<span class="td2-count">${watcherIds.length}</span>` : ''}</div>
             <div class="td2-wstack">
-              ${watcherIds.map(w => { const p = App.PEOPLE[w]; return p ? App.utils.avatarHtml(p) : ''; }).join('')}
+              ${watcherIds.map(w => { const p = App.directory.person(w); return p ? App.utils.avatarHtml(p) : ''; }).join('')}
               <button class="td2-watch-add" data-action="toggle-watch" title="${isWatching ? 'Stop watching' : 'Watch this task'}" aria-label="Toggle watch" type="button"><i class="ti ${isWatching ? 'ti-eye-off' : 'ti-plus'}"></i></button>
             </div>
           </div>
@@ -945,19 +945,6 @@ App.TaskDetailView = class TaskDetailView {
 
   /* ---------- multi-assignee ---------- */
 
-  // Stacked-avatar cluster (lead first) mirroring the New Task assignee stack.
-  // Overlapping circles with a ring so they read as one group.
-  _avatarStack(people) {
-    if (!people || !people.length) {
-      return `<span class="td2-av-stack"><span class="avatar-xs td2-av" style="background:var(--ink-3);">?</span></span>`;
-    }
-    const shown = people.slice(0, 4);
-    const extra = people.length - shown.length;
-    const avs = shown.map(p => App.utils.avatarHtml(p, 'td2-av')).join('');
-    const more = extra > 0 ? `<span class="avatar-xs td2-av td2-av-more">+${extra}</span>` : '';
-    return `<span class="td2-av-stack">${avs}${more}</span>`;
-  }
-
   // Inline-editable title via contenteditable. Enter commits (no newline),
   // Escape reverts, blur commits. Saves through updateTaskField('title'), which
   // marks the row dirty and logs activity. Empty titles revert to the original.
@@ -1023,7 +1010,7 @@ App.TaskDetailView = class TaskDetailView {
       build: (menu) => {
         const renderRows = () => {
           menu.innerHTML = `
-            <div class="td2-am-h">Assignees${selected.length ? ` <span class="td2-am-lead">lead: ${App.utils.escapeHtml((App.PEOPLE[selected[0]] || { name: selected[0] }).name)}</span>` : ''}</div>
+            <div class="td2-am-h">Assignees${selected.length ? ` <span class="td2-am-lead">lead: ${App.utils.escapeHtml((App.directory.person(selected[0]) || { name: selected[0] }).name)}</span>` : ''}</div>
             <div class="td2-am-list">
               ${people.map(p => {
                 const on = selected.includes(p.id);
@@ -1111,7 +1098,7 @@ App.TaskDetailView = class TaskDetailView {
 
   _commentRow(c) {
     const esc = App.utils.escapeHtml;
-    const person = App.PEOPLE[c.authorId] || { name: c.authorId || 'Someone', full: c.authorId || 'Someone', color: 'var(--ink-3)' };
+    const person = App.directory.person(c.authorId) || { name: c.authorId || 'Someone', full: c.authorId || 'Someone', color: 'var(--ink-3)' };
     const ago = (c.createdAt && App.utils.timeAgo(c.createdAt)) || '';
     // Kind tag (migration 064). `kind` is authoritative: 'call' → CALL LOG,
     // 'note' → NOTE. Legacy rows saved before 064 are all kind 'comment', so
@@ -1159,8 +1146,8 @@ App.TaskDetailView = class TaskDetailView {
 
   // People who can be @mentioned (id + names), from the known directory.
   _mentionCandidates() {
-    return Object.keys(App.PEOPLE || {}).map(id => {
-      const p = App.PEOPLE[id] || {};
+    return App.directory.people().map(x => x.id).map(id => {
+      const p = App.directory.person(id) || {};
       const full = p.full || p.name || id;
       return { id, full, first: String(full).trim().split(/\s+/)[0] };
     });
@@ -1529,7 +1516,7 @@ App.TaskDetailView = class TaskDetailView {
       .join('');
 
     const watcherChips = d.watchers.map(w => {
-      const p = App.PEOPLE[w] || App.utils.unknownPerson(w);
+      const p = App.directory.person(w) || App.utils.unknownPerson(w);
       return `<span class="watcher-chip-detail" data-watcher-id="${App.utils.escapeHtml(w)}">
         ${App.utils.avatarHtml(p)}${App.utils.escapeHtml(p.name)}
         <button class="watcher-remove" data-action="remove-watcher" data-member-id="${App.utils.escapeHtml(w)}" aria-label="Remove ${App.utils.escapeHtml(p.name)}" type="button">×</button>
