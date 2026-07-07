@@ -224,3 +224,10 @@
   #taskViewWrap.qt-skin .qt-cellbtn { padding: 2px 4px; }
   #taskViewWrap.qt-skin .qt-actions { display: none; }
 }
+
+/* Toolbar cleanup (per boss): the "Filter" button is redundant now that every
+   column header (Status / Priority / Label / Assignee / Due) is a filter
+   dropdown. Hide it — the node stays so its click handler + the saved-filter
+   plumbing remain wired — while Sort and Group by are untouched. ID specificity
+   (1,0,0) beats .btn's display rule, and this file loads last. */
+#filterBtn { display: none !important; }
