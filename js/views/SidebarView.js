@@ -280,7 +280,7 @@ App.SidebarView = class SidebarView {
         key: 'company', label: 'Workspaces',
         items: companies.map(id => ({
           company: id,
-          label: id === '*' ? 'All companies' : (App.COMPANIES[id] || { label: id }).label,
+          label: id === '*' ? 'All companies' : (App.directory.company(id) || { label: id }).label,
           dot: id === '*' ? null : dotMap[id],
           icon: id === '*' ? 'ti-building' : null,
           active: id === cur,

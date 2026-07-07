@@ -375,11 +375,11 @@ App.ProfileView = class ProfileView {
     }
 
     App.currentProfile = Object.assign({}, profile, profileUpdate);
-    if (memberId && App.PEOPLE && App.PEOPLE[memberId]) {
-      App.PEOPLE[memberId].name = firstName;
-      App.PEOPLE[memberId].full = fullName;
-      App.PEOPLE[memberId].position = position || null;
-      if (avatarChanged) App.PEOPLE[memberId].avatar_url = avatarUrl;
+    if (memberId && App.PEOPLE && App.directory.person(memberId)) {
+      App.directory.person(memberId).name = firstName;
+      App.directory.person(memberId).full = fullName;
+      App.directory.person(memberId).position = position || null;
+      if (avatarChanged) App.directory.person(memberId).avatar_url = avatarUrl;
     }
 
     this._repaintTopbarAvatar(fullName, avatarChanged ? avatarUrl : (App.currentProfile.avatar_url || null));

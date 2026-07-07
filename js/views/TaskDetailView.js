@@ -179,7 +179,7 @@ App.TaskDetailView = class TaskDetailView {
     const assigneeLabel = assignees.length
       ? (assignees.length === 1 ? assignees[0].name : `${assignees[0].name} +${assignees.length - 1}`)
       : 'Unassigned';
-    const company = App.COMPANIES[t.company] || { pill: '', label: t.company || '—' };
+    const company = App.directory.company(t.company) || { pill: '', label: t.company || '—' };
     const delegated = t.creator !== t.assignee;
     const myActive = this.timeModel.activeFor(this.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
@@ -268,7 +268,7 @@ App.TaskDetailView = class TaskDetailView {
     const subtaskCount = (t.subtasks || []).length;
     const canDelete = this.controller.canDeleteTask(t);
     // Project folder chip — a picker trigger for writers, read-only otherwise.
-    const proj = t.project && App.projects ? App.projects[t.project] : null;
+    const proj = App.directory.project(t.project);
     const projectChipHtml = proj
       ? (App.can('tasks.write')
           ? `<button class="projtag projtag-btn" data-action="open-project" aria-haspopup="listbox" aria-expanded="false" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</button>`
@@ -830,9 +830,9 @@ App.TaskDetailView = class TaskDetailView {
       case 'label':
         return `changed label to ${(App.TASK_LABELS[value] || {}).label || value}`;
       case 'company':
-        return `moved this to ${(App.COMPANIES[value] || {}).label || value}`;
+        return `moved this to ${(App.directory.company(value) || {}).label || value}`;
       case 'project': {
-        const p = value && App.projects ? App.projects[value] : null;
+        const p = App.directory.project(value);
         return p ? `filed this under ${p.name}` : 'removed this from its project';
       }
       case 'description':
@@ -1510,7 +1510,7 @@ App.TaskDetailView = class TaskDetailView {
      draft via the controller; Cancel throws it away. */
   renderEditMode(t, { focusTitle = false } = {}) {
     const d = this.editDraft;
-    const company = App.COMPANIES[d.company] || { pill: '', label: d.company || '—' };
+    const company = App.directory.company(d.company) || { pill: '', label: d.company || '—' };
     const opts = (entries, selected) => entries
       .map(([k, label]) => `<option value="${App.utils.escapeHtml(k)}" ${k === selected ? 'selected' : ''}>${App.utils.escapeHtml(label)}</option>`)
       .join('');
@@ -1568,7 +1568,7 @@ App.TaskDetailView = class TaskDetailView {
                 <div class="te-f"><label>Time <span class="te-opt">Optional</span></label><input type="time" id="edit-dueTime" value="${App.utils.escapeHtml(d.dueTime)}" class="te-input picker-input" /></div>
                 <div class="te-f"><label>Reminder <span class="te-opt">Optional</span></label><button type="button" id="edit-reminderAt" class="te-btn rp-trigger ${d.reminderAt ? '' : 'rp-trigger-empty'}" value="${App.utils.escapeHtml(d.reminderAt)}" aria-haspopup="dialog"><i class="ti ti-bell"></i><span class="rp-trigger-lbl">${d.reminderAt ? App.utils.escapeHtml(App.reminderPicker.format(d.reminderAt)) : 'Set a reminder'}</span></button></div>
                 <div class="te-f"><label>Project</label>${(() => {
-                  const p = d.project && App.projects ? App.projects[d.project] : null;
+                  const p = App.directory.project(d.project);
                   return `<button type="button" id="edit-project" class="te-btn projtag-btn ${p ? '' : 'projtag-empty'}" data-action="edit-open-project" aria-haspopup="listbox" ${p ? `style="--pc:${App.utils.escapeHtml(p.color)}"` : ''}><i class="ti ${p ? 'ti-folder' : 'ti-folder-plus'}"></i>${p ? App.utils.escapeHtml(p.name) : 'No project'}</button>`;
                 })()}</div>
               </div>

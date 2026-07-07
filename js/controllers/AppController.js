@@ -83,7 +83,7 @@ App.AppController = class AppController {
 
   /* ---------- helpers ---------- */
   getTask(id) { return this.taskModel.find(id); }
-  getUserName(userId) { return App.PEOPLE[userId] ? App.PEOPLE[userId].name : userId; }
+  getUserName(userId) { return App.directory.person(userId) ? App.directory.person(userId).name : userId; }
   can(permission) { return App.can(permission); }
 
   // The tasks this user may see right now (active company + role row-scope),
@@ -636,7 +636,7 @@ App.AppController = class AppController {
   }
 
   _personName(id) {
-    const p = App.PEOPLE && App.PEOPLE[id];
+    const p = App.PEOPLE && App.directory.person(id);
     return (p && (p.full || p.name)) || id || '';
   }
 
@@ -652,7 +652,7 @@ App.AppController = class AppController {
         t.title || '',
         (App.TASK_TYPES[t.type] || {}).label || t.type || '',
         label,
-        (App.COMPANIES[t.company] || {}).label || t.company || '',
+        (App.directory.company(t.company) || {}).label || t.company || '',
         this._personName(t.assignee),
         (App.PRIORITIES[t.priority] || {}).label || t.priority || '',
         (App.STATUSES[t.status] || {}).label || t.status || '',
@@ -681,7 +681,7 @@ App.AppController = class AppController {
         e.start ? App.utils.toISODate(new Date(e.start)) : '',
         this._personName(e.userId),
         t.title || e.taskTitle || e.taskId || '',
-        (App.COMPANIES[t.company] || {}).label || '',
+        (App.directory.company(t.company) || {}).label || '',
         ((e.durationMs || 0) / 3600000).toFixed(2),
         e.note || '',
       ]);
@@ -1258,7 +1258,7 @@ App.AppController = class AppController {
 
   _celebrateCompletion(task) {
     if (!this.toastView) return;
-    const name = (App.PEOPLE[this.currentUser] && App.PEOPLE[this.currentUser].name) || 'you';
+    const name = (App.directory.person(this.currentUser) && App.directory.person(this.currentUser).name) || 'you';
     const cheers = [
       `Congrats, ${name}!`,
       `Nice work, ${name}!`,
@@ -1298,7 +1298,7 @@ App.AppController = class AppController {
     const watchers = Array.isArray(task.watchers) ? task.watchers : [];
     if (watchers.includes(memberId)) return;
     this.taskModel.update(taskId, { watchers: [...watchers, memberId] });
-    const person = App.PEOPLE[memberId];
+    const person = App.directory.person(memberId);
     if (person) {
       this.taskModel.addActivity(taskId, {
         who: this.getUserName(this.currentUser),
@@ -1316,7 +1316,7 @@ App.AppController = class AppController {
     const watchers = Array.isArray(task.watchers) ? task.watchers : [];
     if (!watchers.includes(memberId)) return;
     this.taskModel.update(taskId, { watchers: watchers.filter(w => w !== memberId) });
-    const person = App.PEOPLE[memberId];
+    const person = App.directory.person(memberId);
     if (person) {
       this.taskModel.addActivity(taskId, {
         who: this.getUserName(this.currentUser),
@@ -1774,7 +1774,7 @@ App.AppController = class AppController {
     if (newAssignee !== this.currentUser) {
       const task = this.taskModel.find(id);
       const creatorName = this.getUserName(this.currentUser);
-      const person = App.PEOPLE[newAssignee] || { name: newAssignee, email: '' };
+      const person = App.directory.person(newAssignee) || { name: newAssignee, email: '' };
       const titleEsc = App.utils.escapeHtml(task.title);
       this._deliver(
         [{
@@ -1824,7 +1824,7 @@ App.AppController = class AppController {
     // Keep watcher/assignee exclusivity: a person can't be both.
     const watchers = (task.watchers || []).filter(w => !ids.includes(w));
 
-    const names = ids.map(x => (App.PEOPLE[x] ? App.PEOPLE[x].name : x)).join(' + ');
+    const names = ids.map(x => (App.directory.person(x) ? App.directory.person(x).name : x)).join(' + ');
     this.taskModel.update(id, { assigneeIds: ids, assignee: lead, watchers });
     this.taskModel.addActivity(id, {
       who: this.getUserName(this.currentUser),
@@ -1847,7 +1847,7 @@ App.AppController = class AppController {
         meta: 'Task assigned',
         html: `<strong>${App.utils.escapeHtml(creatorName)}</strong> assigned <em>${titleEsc}</em> to you`,
       });
-      if (App.PEOPLE[x] && App.PEOPLE[x].email) emails.push(App.PEOPLE[x].email);
+      if (App.directory.person(x) && App.directory.person(x).email) emails.push(App.directory.person(x).email);
     });
 
     // Save BEFORE delivering (see createTask for the FK/RLS-race rationale).
@@ -1895,7 +1895,7 @@ App.AppController = class AppController {
 
     const fromName = this.getUserName(this.currentUser);
     const titleEsc = App.utils.escapeHtml(task.title);
-    const person = App.PEOPLE[blockedOnId] || { name: blockedOnId, email: '' };
+    const person = App.directory.person(blockedOnId) || { name: blockedOnId, email: '' };
 
     const saved = this.saveNow ? await this.saveNow() : true;
     if (saved && blockedOnId !== this.currentUser) {
@@ -1972,7 +1972,7 @@ App.AppController = class AppController {
         meta: 'Nudge',
         html: `<strong>${App.utils.escapeHtml(fromName)}</strong> sent a reminder about <em>${titleEsc}</em>`,
       });
-      if (App.PEOPLE[id] && App.PEOPLE[id].email) emails.push(App.PEOPLE[id].email);
+      if (App.directory.person(id) && App.directory.person(id).email) emails.push(App.directory.person(id).email);
     });
 
     const saved = this.saveNow ? await this.saveNow() : true;
@@ -2007,7 +2007,7 @@ App.AppController = class AppController {
     }
     const fromName = this.getUserName(this.currentUser);
     const titleEsc = App.utils.escapeHtml(task.title);
-    const person = App.PEOPLE[helperId] || { name: helperId, email: '' };
+    const person = App.directory.person(helperId) || { name: helperId, email: '' };
     this.taskModel.addActivity(taskId, {
       who: fromName,
       what: `asked ${person.name} for help`,
@@ -2171,7 +2171,7 @@ App.AppController = class AppController {
         // an honest first history entry instead of the generic "created" one.
         what: payload.activityWhat || (lead === this.currentUser
           ? 'created this task'
-          : `assigned this to ${App.PEOPLE[lead] ? App.PEOPLE[lead].name : lead}`),
+          : `assigned this to ${App.directory.person(lead) ? App.directory.person(lead).name : lead}`),
         at: new Date().toISOString(),
         when: 'just now',
       }],
@@ -2179,12 +2179,12 @@ App.AppController = class AppController {
     this.taskModel.add(task);
 
     const creatorName = this.getUserName(this.currentUser);
-    const creatorEmail = App.PEOPLE[this.currentUser] ? App.PEOPLE[this.currentUser].email : '';
-    const leadName = App.PEOPLE[lead] ? App.PEOPLE[lead].name : lead;
-    const leadEmail = App.PEOPLE[lead] ? App.PEOPLE[lead].email : '';
+    const creatorEmail = App.directory.person(this.currentUser) ? App.directory.person(this.currentUser).email : '';
+    const leadName = App.directory.person(lead) ? App.directory.person(lead).name : lead;
+    const leadEmail = App.directory.person(lead) ? App.directory.person(lead).email : '';
     const titleEsc = App.utils.escapeHtml(task.title);
     const delegated = assigneeIds.some(id => id !== this.currentUser);
-    const assigneeNames = assigneeIds.map(id => (App.PEOPLE[id] ? App.PEOPLE[id].name : id)).join(' + ');
+    const assigneeNames = assigneeIds.map(id => (App.directory.person(id) ? App.directory.person(id).name : id)).join(' + ');
 
     const inapp = [];
     const emails = [];
@@ -2204,7 +2204,7 @@ App.AppController = class AppController {
           html: `<strong>${App.utils.escapeHtml(creatorName)}</strong> assigned <em>${titleEsc}</em> to you`,
         });
       }
-      if (App.PEOPLE[id] && App.PEOPLE[id].email) emails.push(App.PEOPLE[id].email);
+      if (App.directory.person(id) && App.directory.person(id).email) emails.push(App.directory.person(id).email);
     });
 
     (payload.watchers || []).forEach(w => {
@@ -2216,7 +2216,7 @@ App.AppController = class AppController {
           html: `You're now watching <em>${titleEsc}</em> (assigned to ${App.utils.escapeHtml(leadName)})`,
         });
       }
-      if (App.PEOPLE[w] && App.PEOPLE[w].email) emails.push(App.PEOPLE[w].email);
+      if (App.directory.person(w) && App.directory.person(w).email) emails.push(App.directory.person(w).email);
     });
 
     // Persist the new task to Supabase BEFORE delivering its in-app notifications.
@@ -2326,8 +2326,8 @@ App.AppController = class AppController {
   /* ---------- team-watching: ping a direct report ---------- */
   async pingTeamMember(memberId, info = {}) {
     if (!memberId || memberId === this.currentUser) return;
-    const person = App.PEOPLE[memberId] || { full: memberId, name: memberId };
-    const fromName = (App.PEOPLE[this.currentUser] && App.PEOPLE[this.currentUser].full) || 'Your supervisor';
+    const person = App.directory.person(memberId) || { full: memberId, name: memberId };
+    const fromName = (App.directory.person(this.currentUser) && App.directory.person(this.currentUser).full) || 'Your supervisor';
 
     const reasons = [];
     if (info.overdue > 0) reasons.push(`${info.overdue} overdue task${info.overdue > 1 ? 's' : ''}`);

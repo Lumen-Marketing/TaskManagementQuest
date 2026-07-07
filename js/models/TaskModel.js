@@ -172,15 +172,16 @@ App.TaskModel = class TaskModel {
       tasks = tasks.filter(t => {
         if (t.title.toLowerCase().includes(q)) return true;
         if ((t.description || '').toLowerCase().includes(q)) return true;
-        const person = App.PEOPLE[t.assignee];
+        const person = App.directory.person(t.assignee);
         if (person && (
           (person.name || '').toLowerCase().includes(q) ||
           (person.full || '').toLowerCase().includes(q) ||
           (person.email || '').toLowerCase().includes(q)
         )) return true;
-        const projName = (App.projects && App.projects[t.project] && App.projects[t.project].name) || '';
+        const proj = App.directory.project(t.project);
+        const projName = (proj && proj.name) || '';
         if (projName.toLowerCase().includes(q)) return true;
-        const company = App.COMPANIES[t.company];
+        const company = App.directory.company(t.company);
         if (company && (company.label || '').toLowerCase().includes(q)) return true;
         return false;
       });
@@ -256,11 +257,11 @@ App.TaskModel = class TaskModel {
         ensure(k, s.label, colorVar(colorMap[s.cls.replace('status-', '')] || '--ink-3'), Object.keys(App.STATUSES).indexOf(k)).items.push(t);
       } else if (groupBy === 'assignee') {
         const k = t.assignee || 'unassigned';
-        const p = App.PEOPLE[k];
+        const p = App.directory.person(k);
         ensure(k, p ? p.name : 'Unassigned', p ? p.color : 'var(--ink-3)', k).items.push(t);
       } else if (groupBy === 'company') {
         const k = t.company || 'none';
-        const c = App.COMPANIES[k];
+        const c = App.directory.company(k);
         const cMap = { roofing: '--rust', drafting: '--green', lumen: '--blue' };
         ensure(k, c ? c.label : 'No company', colorVar(cMap[k] || '--ink-3'), Object.keys(App.COMPANIES).indexOf(k)).items.push(t);
       } else if (groupBy === 'priority') {
@@ -286,7 +287,7 @@ App.TaskModel = class TaskModel {
     const dir = sortDir === 'desc' ? -1 : 1;
     const prioOrd = (t) => (App.PRIORITIES[t.priority] || App.PRIORITIES.medium).order;
     const statusOrd = (t) => Object.keys(App.STATUSES).indexOf(t.status || 'todo');
-    const assigneeName = (t) => (App.PEOPLE[t.assignee] && App.PEOPLE[t.assignee].name) || t.assignee || '';
+    const assigneeName = (t) => (App.directory.person(t.assignee) && App.directory.person(t.assignee).name) || t.assignee || '';
     const dueKey = (t) => t.due || '9999-12-31';
     return (a, b) => {
       let c = 0;
@@ -404,7 +405,7 @@ App.TaskModel = class TaskModel {
     if (!t || t.assignee === newAssignee) return null;
     const oldAssignee = t.assignee;
     t.assignee = newAssignee;
-    this.pushActivity(t, userName, `reassigned this from ${App.PEOPLE[oldAssignee].name} to ${App.PEOPLE[newAssignee].name}`);
+    this.pushActivity(t, userName, `reassigned this from ${App.directory.person(oldAssignee).name} to ${App.directory.person(newAssignee).name}`);
     this._markDirty(id);
     App.EventBus.emit('tasks:changed');
     return { oldAssignee, newAssignee };

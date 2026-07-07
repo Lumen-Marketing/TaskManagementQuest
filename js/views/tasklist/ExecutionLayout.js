@@ -79,7 +79,7 @@
     const stLabel = App.taxonomy.statusLabel(t.company, t.type, t.status);
     const stChip = App.taxonomy.chipStyle('status', t.company, t.status, t.type);
     const due = App.utils.formatDue(t.due);
-    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', color: 'var(--ink-3)' };
+    const person = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', color: 'var(--ink-3)' };
     const myActive = view.timeModel.activeFor(view.currentUser);
     const myTimerOnThis = myActive && myActive.taskId === t.id;
     const selected = view.controller.uiState.selectedTaskId === t.id;

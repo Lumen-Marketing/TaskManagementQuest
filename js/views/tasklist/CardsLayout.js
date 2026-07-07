@@ -6,7 +6,7 @@
   const layouts = (App.TaskListLayouts = App.TaskListLayouts || {});
 
   function renderTaskCard(view, t) {
-    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
+    const person = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const due = App.utils.formatDue(t.due);

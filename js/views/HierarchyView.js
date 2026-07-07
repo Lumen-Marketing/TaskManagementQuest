@@ -25,7 +25,7 @@ App.HierarchyView = class HierarchyView {
   }
 
   person(memberId) {
-    return App.PEOPLE[memberId] || { name: memberId, full: memberId, email: '', color: '#E8A03A' };
+    return App.directory.person(memberId) || { name: memberId, full: memberId, email: '', color: '#E8A03A' };
   }
 
   roleLabel(role) {
@@ -35,7 +35,7 @@ App.HierarchyView = class HierarchyView {
   companyChips(companyIds) {
     if (!Array.isArray(companyIds) || !companyIds.length) return '';
     return companyIds
-      .map(id => App.COMPANIES[id])
+      .map(id => App.directory.company(id))
       .filter(Boolean)
       .map(co => `<span class="pill ${co.pill}">${App.utils.escapeHtml(co.label)}</span>`)
       .join(' ');

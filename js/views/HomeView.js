@@ -51,7 +51,7 @@ App.HomeView = class HomeView {
 
   _firstName() {
     const p = App.currentProfile || {};
-    const full = p.full_name || (App.PEOPLE[this.controller.currentUser] || {}).name || 'there';
+    const full = p.full_name || (App.directory.person(this.controller.currentUser) || {}).name || 'there';
     return String(full).trim().split(/\s+/)[0];
   }
 

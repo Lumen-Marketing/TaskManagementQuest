@@ -92,7 +92,7 @@ App.utils = {
     const rosterIds = new Set(roster.map(p => p.id));
     const orphans = [...activityIds]
       .filter(id => !rosterIds.has(id))
-      .map(id => App.PEOPLE[id] || App.utils.unknownPerson(id));
+      .map(id => App.directory.person(id) || App.utils.unknownPerson(id));
     return [...roster, ...orphans];
   },
 

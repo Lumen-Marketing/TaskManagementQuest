@@ -102,7 +102,7 @@ App.NewTaskPageView = class NewTaskPageView {
 
   /* ---------------- template ---------------- */
   template() {
-    const me = App.PEOPLE[this.currentUser] || { name: 'you', color: '#444441' };
+    const me = App.directory.person(this.currentUser) || { name: 'you', color: '#444441' };
     const meInit = App.utils.escapeHtml((me.name || '?').slice(0, 2).toUpperCase());
     return `
       <div id="nt-root" class="nt-page">
@@ -220,7 +220,7 @@ App.NewTaskPageView = class NewTaskPageView {
 
   _companyItems() {
     return this._menuHead('COMPANY') + this._companyChoices().ids.map(id => {
-      const c = App.COMPANIES[id] || { label: id };
+      const c = App.directory.company(id) || { label: id };
       return `<button class="nt-mitem" data-v="${id}"><span class="nt-sq" style="background:${this._companyColor(id)}"></span>${App.utils.escapeHtml(c.label)}${this._check(this.S.company === id)}</button>`;
     }).join('');
   }
@@ -488,7 +488,8 @@ App.NewTaskPageView = class NewTaskPageView {
     this.S.whos = this.S.whos.filter(w => allowed.has(w));
     if (!this.S.whos.length) this.S.whos = [this.currentUser];
     this.watchers = this.watchers.filter(w => allowed.has(w));
-    if (this.S.project && App.projects[this.S.project] && App.projects[this.S.project].companyId !== this.S.company) this.S.project = null;
+    const _proj = App.directory.project(this.S.project);
+    if (this.S.project && _proj && _proj.companyId !== this.S.company) this.S.project = null;
     this.sync('co');
   }
   _toggleWho(id) {
@@ -583,7 +584,7 @@ App.NewTaskPageView = class NewTaskPageView {
       atEnd: !!atEnd,
       today: App.utils.todayISO(0),
       team: this._peopleFor(this.S.company).map(p => ({ id: p.id, name: p.name })),
-      companies: this._companyChoices().ids.map(id => ({ id, label: (App.COMPANIES[id] || { label: id }).label })),
+      companies: this._companyChoices().ids.map(id => ({ id, label: (App.directory.company(id) || { label: id }).label })),
     };
   }
   _applyParse(atEnd) {
@@ -647,12 +648,12 @@ App.NewTaskPageView = class NewTaskPageView {
     document.querySelectorAll('#nt-seg-pri button').forEach(b => b.classList.toggle('on', b.dataset.p === this.S.pri));
 
     // Picker button labels (pro1: company square, status/label dots, folder/cal/clock/bell icons).
-    this._setPickLabel('company', (App.COMPANIES[this.S.company] || { label: this.S.company }).label, { square: this._companyColor(this.S.company) });
+    this._setPickLabel('company', (App.directory.company(this.S.company) || { label: this.S.company }).label, { square: this._companyColor(this.S.company) });
     this._setAssigneeLabel();
     this._setPickLabel('type', App.taxonomy.typeLabel(this.S.company, this.S.type));
     this._setPickLabel('status', App.taxonomy.statusLabel(this.S.company, this.S.type, this.S.status), { swatch: this._statusColor() });
     this._setPickLabel('label', this.S.label ? App.taxonomy.labelLabel(this.S.company, this.S.label) : 'None', this.S.label ? { swatch: this._labelColor() } : { placeholder: true });
-    this._setPickLabel('project', this.S.project && App.projects[this.S.project] ? App.projects[this.S.project].name : 'No project', this.S.project ? { icon: 'ti-folder' } : { icon: 'ti-folder', placeholder: true });
+    this._setPickLabel('project', App.directory.project(this.S.project) ? App.directory.project(this.S.project).name : 'No project', this.S.project ? { icon: 'ti-folder' } : { icon: 'ti-folder', placeholder: true });
     this._setPickLabel('date', this._fmtDateShort(this.S.date), this.S.date ? { icon: 'ti-calendar-event' } : { icon: 'ti-calendar-event', placeholder: true });
     this._setPickLabel('time', this._fmtTime(this.S.time), this.S.time ? { icon: 'ti-clock' } : { icon: 'ti-clock', placeholder: true });
     this._setPickLabel('remind', this._reminderText(), { icon: 'ti-bell' });
@@ -686,7 +687,7 @@ App.NewTaskPageView = class NewTaskPageView {
     const btn = document.getElementById('nt-pick-assignee');
     if (!btn) return;
     const roster = this._peopleFor(this.S.company);
-    const people = this.S.whos.map(id => (roster.find(p => p.id === id) || App.PEOPLE[id] || { name: id, color: '#444441' }));
+    const people = this.S.whos.map(id => (roster.find(p => p.id === id) || App.directory.person(id) || { name: id, color: '#444441' }));
     const val = btn.querySelector('.nt-pick-val');
     val.classList.toggle('ph', !people.length);
     if (!people.length) { val.innerHTML = '<span class="nt-pick-txt">Assign…</span>'; return; }
@@ -698,7 +699,7 @@ App.NewTaskPageView = class NewTaskPageView {
     const box = document.getElementById('nt-watch-tags');
     if (!box) return;
     box.innerHTML = this.watchers.map(id => {
-      const p = App.PEOPLE[id] || { name: id, color: '#444441' };
+      const p = App.directory.person(id) || { name: id, color: '#444441' };
       const init = App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase());
       return `<span class="nt-wtag"><span class="nt-mini" style="background:${p.color || '#444441'}">${init}</span>${App.utils.escapeHtml(p.name)}<button type="button" data-rm="${id}" aria-label="Remove watcher"><i class="ti ti-x"></i></button></span>`;
     }).join('');
@@ -715,11 +716,11 @@ App.NewTaskPageView = class NewTaskPageView {
     if (!el) return;
     const esc = App.utils.escapeHtml;
     const roster = this._peopleFor(this.S.company);
-    const people = this.S.whos.map(id => (roster.find(p => p.id === id) || App.PEOPLE[id] || { name: id, color: '#444441' }));
+    const people = this.S.whos.map(id => (roster.find(p => p.id === id) || App.directory.person(id) || { name: id, color: '#444441' }));
     const title = ((document.getElementById('nt-title') || {}).value || '').trim();
     const no = (this.woNumber === null || this.woNumber === undefined) ? '—' : 'QH-' + String(this.woNumber).padStart(4, '0');
 
-    const coLabel = (App.COMPANIES[this.S.company] || { label: this.S.company }).label.replace(/^Quest\s+/, '');
+    const coLabel = (App.directory.company(this.S.company) || { label: this.S.company }).label.replace(/^Quest\s+/, '');
     const priText = { low: 'LOW', medium: 'MED', high: 'HIGH', critical: 'CRITICAL' }[this.S.pri] || String(this.S.pri).toUpperCase();
     const priCls = { low: 'low', medium: 'med', high: 'high', critical: 'critical' }[this.S.pri] || 'low';
     const dueTxt = this.S.date ? (this._fmtDateShort(this.S.date).toUpperCase() + (this.S.time ? ' · ' + this._fmtTime(this.S.time) : '')) : '';
@@ -737,12 +738,12 @@ App.NewTaskPageView = class NewTaskPageView {
     rows += row('REMINDER', `<span class="mono">${esc(this._reminderText().toUpperCase())}</span>`);
     const labelTxt = this.S.label ? App.taxonomy.labelLabel(this.S.company, this.S.label) : null;
     if (labelTxt) rows += row('LABEL', esc(labelTxt));
-    const projTxt = (this.S.project && App.projects[this.S.project]) ? App.projects[this.S.project].name : null;
+    const projTxt = App.directory.project(this.S.project) ? App.directory.project(this.S.project).name : null;
     if (projTxt) rows += row('PROJECT', esc(projTxt));
     const typeTxt = App.taxonomy.typeLabel(this.S.company, this.S.type);
     if (typeTxt) rows += row('TYPE', esc(typeTxt));
     if (this.subtasks.length) rows += row('CHECKLIST', `<span class="mono">${this.subtasks.length} STEP${this.subtasks.length === 1 ? '' : 'S'}</span>`);
-    if (this.watchers.length) rows += row('WATCHERS', this.watchers.map(id => av(App.PEOPLE[id] || { name: id }, false)).join(' '));
+    if (this.watchers.length) rows += row('WATCHERS', this.watchers.map(id => av(App.directory.person(id) || { name: id }, false)).join(' '));
 
     const hi = this._isHigh(this.S.pri);
     if (!hi) this.S.channels.wa = false;

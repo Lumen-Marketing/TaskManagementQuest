@@ -72,7 +72,7 @@ App.TimeView = class TimeView {
 
     const rows = myEntries.map(e => {
       const t = this.taskModel.find(e.taskId);
-      const company = t ? App.COMPANIES[t.company] : null;
+      const company = t ? App.directory.company(t.company) : null;
       return `
         <tr>
           <td>${t ? App.utils.escapeHtml(t.title) : '<em>unknown task</em>'}</td>
@@ -154,12 +154,12 @@ App.TimeView = class TimeView {
     const active = this.timeModel.allActive().filter(timer => inTeam(timer.userId));
 
     const liveRows = active.map(timer => {
-      const p = App.PEOPLE[timer.userId] || App.utils.unknownPerson(timer.userId);
+      const p = App.directory.person(timer.userId) || App.utils.unknownPerson(timer.userId);
       // Prefer the loaded task; fall back to the label snapshotted on the timer
       // at clock-in so a task the viewer can't load still shows its name.
       const t = this.taskModel.find(timer.taskId);
       const title = t ? t.title : timer.taskTitle;
-      const company = App.COMPANIES[t ? t.company : timer.taskCompany];
+      const company = App.directory.company(t ? t.company : timer.taskCompany);
       return `
         <tr class="live">
           <td>

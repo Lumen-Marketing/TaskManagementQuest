@@ -20,7 +20,7 @@ App.ApprovalView = class ApprovalView {
     return (App.PROFILES || [])
       .filter(p => p.member_id && p.member_id !== excludeMemberId && overseeing.includes(p.role))
       .map(p => {
-        const person = App.PEOPLE[p.member_id];
+        const person = App.directory.person(p.member_id);
         return { id: p.member_id, name: (person && person.full) || p.full_name || p.email || p.member_id };
       });
   }
@@ -59,7 +59,7 @@ App.ApprovalView = class ApprovalView {
   renderRow(profile) {
     // You can't delete your own account — hide the button and RLS blocks it too.
     const isSelf = !!(App.currentAuthUser && App.currentAuthUser.id === profile.id);
-    const person = App.PEOPLE[profile.member_id] || {
+    const person = App.directory.person(profile.member_id) || {
       name: profile.full_name || profile.email || 'Member',
       full: profile.full_name || profile.email || 'Member',
       email: profile.email || '',
@@ -150,7 +150,7 @@ App.ApprovalView = class ApprovalView {
           // Mirror position into App.PEOPLE immediately so the picker reflects it
           // without waiting for a full data reload (team_members trigger runs async).
           const memberId = row.dataset.memberId;
-          if (memberId && App.PEOPLE && App.PEOPLE[memberId]) App.PEOPLE[memberId].position = position;
+          if (memberId && App.PEOPLE && App.directory.person(memberId)) App.directory.person(memberId).position = position;
           this.controller.toastView.show({ title: 'Access updated', sub: approved ? 'Account approved' : 'Account set to pending' });
           // Reload from the server so the table reflects the saved state without a manual refresh.
           await this.reloadAndRender();

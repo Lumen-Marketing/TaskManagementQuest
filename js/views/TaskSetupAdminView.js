@@ -84,7 +84,7 @@ App.TaskSetupAdminView = class TaskSetupAdminView {
           </div>
           <label class="tsetup-company-wrap">Workspace
             <select class="tsetup-company" data-act="company">
-              ${this.companies().map(c => `<option value="${this._esc(c)}" ${c === company ? 'selected' : ''}>${this._esc((App.COMPANIES[c] || {}).label || c)}</option>`).join('')}
+              ${this.companies().map(c => `<option value="${this._esc(c)}" ${c === company ? 'selected' : ''}>${this._esc((App.directory.company(c) || {}).label || c)}</option>`).join('')}
             </select>
           </label>
         </div>

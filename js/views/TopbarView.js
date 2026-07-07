@@ -53,7 +53,7 @@ App.TopbarView = class TopbarView {
      real profile. (The avatar is already painted from profile.avatar_url.) */
   paintAccountChip() {
     const profile = App.currentProfile || {};
-    const person = App.PEOPLE[this.currentUser] || {};
+    const person = App.directory.person(this.currentUser) || {};
     const name = profile.full_name || person.full || person.name || 'Member';
     const roleLabel = (App.ROLES[profile.role] || { label: profile.role || 'Member' }).label;
     const nameEl = document.querySelector('.userchip .uc-name');
@@ -252,7 +252,7 @@ App.TopbarView = class TopbarView {
       <i class="ti ti-building" aria-hidden="true"></i>
       <select id="companySelect" aria-label="Workspace">
         ${companies.map(id => {
-          const label = id === '*' ? 'All companies' : (App.COMPANIES[id] || { label: id }).label;
+          const label = id === '*' ? 'All companies' : (App.directory.company(id) || { label: id }).label;
           return `<option value="${App.utils.escapeHtml(id)}" ${id === cur ? 'selected' : ''}>${App.utils.escapeHtml(label)}</option>`;
         }).join('')}
       </select>`;
@@ -387,7 +387,7 @@ App.TopbarView = class TopbarView {
 
   toggleUserMenu() {
     if (this._userMenuHandle) { this._userMenuHandle.close('api'); return; }
-    const person = App.PEOPLE[this.currentUser] || {};
+    const person = App.directory.person(this.currentUser) || {};
     const profile = App.currentProfile || {};
     const currentName = person.full || profile.full_name || person.name || '';
     const roleLabel = (App.ROLES[profile.role] || { label: profile.role || 'Member' }).label;
@@ -414,7 +414,7 @@ App.TopbarView = class TopbarView {
         <div class="field-label" style="margin-bottom:6px;">Workspace</div>
         <select id="menuCompany" class="user-menu-select" aria-label="Workspace">
           ${companies.map(id => {
-            const label = id === '*' ? 'All companies' : (App.COMPANIES[id] || { label: id }).label;
+            const label = id === '*' ? 'All companies' : (App.directory.company(id) || { label: id }).label;
             return `<option value="${App.utils.escapeHtml(id)}" ${id === curCompany ? 'selected' : ''}>${App.utils.escapeHtml(label)}</option>`;
           }).join('')}
         </select>

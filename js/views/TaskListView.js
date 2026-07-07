@@ -139,12 +139,12 @@ App.TaskListView = class TaskListView {
     let t = titles[view];
     if (!t && view.startsWith('company:')) {
       const id = view.split(':')[1];
-      const c = App.COMPANIES[id];
+      const c = App.directory.company(id);
       t = { eyebrow: 'Company', title: (c && c.label) || id };
     }
     if (!t && view.startsWith('person:')) {
       const id = view.split(':')[1];
-      const p = App.PEOPLE[id];
+      const p = App.directory.person(id);
       t = { eyebrow: 'Assigned to', title: (p && p.name) || id };
     }
     if (t) {
@@ -257,8 +257,8 @@ App.TaskListView = class TaskListView {
 
 
   renderKanbanCard(t) {
-    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
-    const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
+    const person = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
+    const company = App.directory.company(t.company) || App.COMPANIES.roofing;
     const tyLabel = App.taxonomy.typeLabel(t.company, t.type);
     const lblLabel = (t.label && t.label !== 'none') ? App.taxonomy.labelLabel(t.company, t.label) : null;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
@@ -294,9 +294,9 @@ App.TaskListView = class TaskListView {
 
 
   renderRow(t) {
-    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
+    const person = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
-    const company = App.COMPANIES[t.company] || App.COMPANIES.roofing;
+    const company = App.directory.company(t.company) || App.COMPANIES.roofing;
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const stLabel = App.taxonomy.statusLabel(t.company, t.type, t.status);
     const stChip = App.taxonomy.chipStyle('status', t.company, t.status, t.type);
@@ -329,7 +329,7 @@ App.TaskListView = class TaskListView {
         <span class="tt-text">${App.utils.escapeHtml(t.title)}</span>
         ${subCount ? `<span class="subtask-badge">${subDone}/${subCount}</span>` : ''}
         ${(() => {
-          const proj = t.project && App.projects ? App.projects[t.project] : null;
+          const proj = App.directory.project(t.project);
           if (proj) return `<button class="projtag projtag-btn" data-action="open-project" data-current="${App.utils.escapeHtml(t.project)}" title="Change project" aria-haspopup="listbox" aria-expanded="false" style="--pc:${App.utils.escapeHtml(proj.color)}"><i class="ti ti-folder"></i>${App.utils.escapeHtml(proj.name)}</button>`;
           if (App.can('tasks.write')) return `<button class="projtag projtag-btn projtag-empty" data-action="open-project" data-current="" title="Add to project" aria-haspopup="listbox" aria-expanded="false"><i class="ti ti-folder-plus"></i>Project</button>`;
           return '';

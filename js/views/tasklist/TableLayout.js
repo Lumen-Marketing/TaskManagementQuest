@@ -26,9 +26,9 @@
     const row = document.createElement('div');
     row.className = 'qt-chiprow';
     const active = (view.controller.uiState.filters && view.controller.uiState.filters.companies) || [];
-    const accessible = (view.controller.uiState.companies || []).filter(id => App.COMPANIES[id]);
+    const accessible = (view.controller.uiState.companies || []).filter(id => App.directory.company(id));
     const ids = accessible.length ? accessible : Object.keys(App.COMPANIES);
-    const chips = [{ id: 'all', label: 'All' }].concat(ids.map(id => ({ id, label: App.COMPANIES[id].label })));
+    const chips = [{ id: 'all', label: 'All' }].concat(ids.map(id => ({ id, label: App.directory.company(id).label })));
     row.innerHTML = chips.map(c => {
       const on = c.id === 'all' ? active.length === 0 : (active.length === 1 && active[0] === c.id);
       return `<button type="button" class="qt-chip ${on ? 'on' : ''}" data-company="${App.utils.escapeHtml(c.id)}">${c.id === 'all' ? '' : '<span class="sq"></span>'}${App.utils.escapeHtml(c.label)}</button>`;
@@ -66,7 +66,7 @@
   function qtRow(view, t) {
     const esc = App.utils.escapeHtml;
     const t0 = App.utils.todayISO(0);
-    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#8a857e' };
+    const person = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#8a857e' };
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
     const statusKey = t.status || 'todo';
     const stLabel = App.taxonomy.statusLabel(t.company, t.type, t.status);
@@ -132,7 +132,7 @@
   function prependProjectHeader(view) {
     const pid = view.controller.uiState.filters && view.controller.uiState.filters.projectId;
     if (!pid) return;
-    const proj = App.projects ? App.projects[pid] : null;
+    const proj = App.directory.project(pid);
     if (!proj) return;
     const esc = App.utils.escapeHtml;
     const head = document.createElement('div');
