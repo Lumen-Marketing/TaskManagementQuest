@@ -105,18 +105,8 @@
       ${ordered && canEdit ? `<button type="button" class="focus-remove" data-action="remove-focus" aria-label="Remove from order" title="Remove from order"><i class="ti ti-x"></i></button>` : ''}
     `;
 
-    row.addEventListener('click', (e) => {
-      const target = e.target.closest('[data-action]');
-      if (target) {
-        e.stopPropagation();
-        if (target.dataset.action === 'toggle-timer') view.controller.toggleTimerForTask(t.id);
-        else if (target.dataset.action === 'remove-focus') view.controller.removeFromFocus(t.id);
-        return;
-      }
-      // A click that isn't part of a drag opens the detail.
-      if (row.classList.contains('dragging')) return;
-      view.controller.selectTask(t.id);
-    });
+    // Row clicks (timer, remove-focus, select) are handled by the module's
+    // delegated _onRowClick; it also honours the .dragging no-select guard.
     return row;
   }
 

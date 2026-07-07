@@ -16,9 +16,59 @@ App.TaskListView = class TaskListView {
     // the task) so it survives the frequent full re-renders without persisting.
     this.expandedRows = new Set();
 
+    // ONE delegated listener serves every layout's task rows/cards: zero
+    // re-attach cost across re-renders, one place for shared row behavior.
+    // Layout-specific controls (calendar nav/cells, kanban columns, group
+    // headers, team cards) bind in their adapters and stopPropagation, so
+    // they never reach this handler.
+    this.body.addEventListener('click', (e) => this._onRowClick(e));
+
     this.bindStaticButtons();
     this.subscribe();
     this.render();
+  }
+
+  /* The shared row-action vocabulary, delegated from #listBody. Anything not in
+     the known set falls through to the layout's own bindings; clicks outside a
+     [data-id] row (calendar cells, team cards) are ignored entirely. */
+  _onRowClick(e) {
+    const actionEl = e.target.closest('[data-action]');
+    // Subtask drawer checkboxes live in a sibling drawer keyed by data-for.
+    if (actionEl && actionEl.dataset.action === 'toggle-subtask') {
+      const drawer = actionEl.closest('.subtask-drawer');
+      if (!drawer) return;
+      e.stopPropagation();
+      this.controller.toggleSubtask(drawer.dataset.for, parseInt(actionEl.dataset.idx, 10));
+      return;
+    }
+    const rowEl = e.target.closest('[data-id]');
+    if (!rowEl) return;
+    const id = rowEl.dataset.id;
+    if (actionEl) {
+      const action = actionEl.dataset.action;
+      const known = {
+        'bulk-toggle': 1, 'toggle-done': 1, 'open-status': 1, 'open-priority': 1,
+        'toggle-timer': 1, 'finish-task': 1, 'toggle-subtasks': 1, 'open-project': 1,
+        'open-quick': 1, 'remove-focus': 1,
+      };
+      if (!known[action]) return; // layout-specific — its adapter's binding handles it
+      e.stopPropagation();
+      if (action === 'bulk-toggle') this.controller.toggleBulkSelect(id);
+      else if (action === 'toggle-done') { if (actionEl.checked && App.Motion) App.Motion.pop(actionEl); this.controller.toggleTaskDone(id); }
+      else if (action === 'open-status') this._openStatusMenu(id, actionEl);
+      else if (action === 'open-priority') this._openStatusMenu(id, actionEl, 'priority');
+      else if (action === 'toggle-timer') this.controller.toggleTimerForTask(id);
+      else if (action === 'finish-task') { if (!actionEl.classList.contains('is-done') && App.Motion) App.Motion.check(actionEl.querySelector('i')); this.controller.completeTask(id); }
+      else if (action === 'toggle-subtasks') this._toggleSubtaskDrawer(id, rowEl, actionEl);
+      else if (action === 'open-project') { const t = this.taskModel.find(id); if (t) this._openProjectMenu(t, actionEl); }
+      else if (action === 'open-quick') this._openQuickSheet(id);
+      else if (action === 'remove-focus') this.controller.removeFromFocus(id);
+      return;
+    }
+    // Row-body click: select (bulk-toggle in bulk mode). Drag clicks don't select.
+    if (rowEl.classList.contains('dragging')) return;
+    if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(id); return; }
+    this.controller.selectTask(id);
   }
 
   bindStaticButtons() {
@@ -237,7 +287,7 @@ App.TaskListView = class TaskListView {
         ${subs.length ? `<span class="kanban-subtask-badge" title="${subDone}/${subs.length} subtasks done"><i class="ti ti-checklist"></i>${subDone}/${subs.length}</span>` : ''}
       </div>
     `;
-    card.addEventListener('click', () => this.controller.selectTask(t.id));
+    // Click-to-select is handled by the delegated _onRowClick (card has data-id).
     App.utils.makeActivatable(card, null, `Open task: ${t.title}`);
     return card;
   }
@@ -308,32 +358,7 @@ App.TaskListView = class TaskListView {
       <button type="button" class="quick-actions-btn ${App.can('tasks.write') ? '' : 'hidden'}" data-action="open-quick" aria-label="Quick actions" aria-haspopup="dialog"><i class="ti ti-dots-vertical"></i></button>
     `;
 
-    row.addEventListener('click', (e) => {
-      const target = e.target.closest('[data-action]');
-      if (target) {
-        e.stopPropagation();
-        const action = target.dataset.action;
-        if (action === 'bulk-toggle') this.controller.toggleBulkSelect(t.id);
-        else if (action === 'toggle-done') {
-          if (target.checked && App.Motion) App.Motion.pop(target);
-          this.controller.toggleTaskDone(t.id);
-        }
-        else if (action === 'open-priority') this._openStatusMenu(t.id, target, 'priority');
-        else if (action === 'toggle-timer') this.controller.toggleTimerForTask(t.id);
-        else if (action === 'finish-task') {
-          if (!target.classList.contains('is-done') && App.Motion) App.Motion.check(target.querySelector('i'));
-          this.controller.completeTask(t.id);
-        }
-        else if (action === 'toggle-subtasks') this._toggleSubtaskDrawer(t.id, row, target);
-        else if (action === 'open-status') this._openStatusMenu(t.id, target);
-        else if (action === 'open-project') this._openProjectMenu(t, target);
-        else if (action === 'open-quick') this._openQuickSheet(t.id);
-        return;
-      }
-      // In bulk mode the whole row toggles selection instead of opening detail.
-      if (this.controller.uiState.bulkMode) { this.controller.toggleBulkSelect(t.id); return; }
-      this.controller.selectTask(t.id);
-    });
+    // Row clicks (actions + select) are handled by the delegated _onRowClick.
 
     // Swipe-to-reveal actions: wrap the row in a horizontal scroll-snap
     // container with Done/Delete buttons that the user swipes left to expose
@@ -353,12 +378,8 @@ App.TaskListView = class TaskListView {
         <span>${App.utils.escapeHtml(s.t)}</span>
       </label>`
     ).join('');
-    drawer.addEventListener('click', (e) => {
-      const cb = e.target.closest('[data-action="toggle-subtask"]');
-      if (!cb) return;
-      e.stopPropagation();
-      this.controller.toggleSubtask(t.id, parseInt(cb.dataset.idx, 10));
-    });
+    // Drawer checkbox clicks are handled by the delegated _onRowClick
+    // (toggle-subtask resolves the task id from the drawer's data-for).
 
     const frag = document.createDocumentFragment();
     frag.appendChild(node);

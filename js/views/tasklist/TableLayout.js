@@ -122,22 +122,8 @@
         ${canWrite ? `<button class="quick-actions-btn" data-action="open-quick" aria-label="Quick actions"><i class="ti ti-dots-vertical"></i></button>` : ''}
       </div>`;
 
-    row.addEventListener('click', (e) => {
-      const target = e.target.closest('[data-action]');
-      if (target) {
-        e.stopPropagation();
-        const action = target.dataset.action;
-        if (action === 'toggle-done') { if (target.checked && App.Motion) App.Motion.pop(target); view.controller.toggleTaskDone(t.id); }
-        else if (action === 'open-status') view._openStatusMenu(t.id, target);
-        else if (action === 'open-priority') view._openStatusMenu(t.id, target, 'priority');
-        else if (action === 'toggle-timer') view.controller.toggleTimerForTask(t.id);
-        else if (action === 'finish-task') { if (!target.classList.contains('is-done') && App.Motion) App.Motion.check(target.querySelector('i')); view.controller.completeTask(t.id); }
-        else if (action === 'open-quick') view._openQuickSheet(t.id);
-        return;
-      }
-      if (view.controller.uiState.bulkMode) { view.controller.toggleBulkSelect(t.id); return; }
-      view.controller.selectTask(t.id);
-    });
+    // Row clicks (actions + select) are handled by the module's delegated
+    // _onRowClick — rows carry data-id + data-action, nothing to bind here.
     return row;
   }
 

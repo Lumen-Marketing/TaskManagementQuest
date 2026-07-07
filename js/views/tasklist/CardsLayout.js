@@ -34,19 +34,8 @@
         <span class="due-cell ${due.cls}">${due.text}</span>
       </div>
     `;
-    card.addEventListener('click', (e) => {
-      const action = e.target.closest('[data-action]');
-      if (action) {
-        e.stopPropagation();
-        if (action.dataset.action === 'finish-task') {
-          if (!action.classList.contains('is-done') && App.Motion) App.Motion.check(action.querySelector('i'));
-          view.controller.completeTask(t.id);
-        }
-        return;
-      }
-      if (view.controller.uiState.bulkMode) { view.controller.toggleBulkSelect(t.id); return; }
-      view.controller.selectTask(t.id);
-    });
+    // Card clicks (finish-task + select) are handled by the module's delegated
+    // _onRowClick; makeActivatable's synthesized click bubbles into it too.
     App.utils.makeActivatable(card, null, `Open task: ${t.title}`);
     return card;
   }
