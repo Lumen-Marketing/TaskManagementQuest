@@ -246,10 +246,7 @@ App.AppController = class AppController {
   // navigates — it narrows the current task view to the viewer's own tasks.
   setScope(scope) {
     if (scope !== 'mine' && scope !== 'all') return;
-    if (this.uiState.scope === scope) return;
-    this.uiState.scope = scope;
-    this._persistUiState();
-    App.EventBus.emit('scope:changed', scope);
+    this._commit({ scope });
   }
 
   /* The Panze re-skin (Home + All Tasks only) is gated by a body class so its
@@ -373,6 +370,23 @@ App.AppController = class AppController {
     }, 0);
   }
 
+  /* Apply a uiState patch through UiStatePolicy: diff against current state,
+     assign only real changes, then persist / emit / route-sync exactly as the
+     policy table dictates — one emit per event, only when a value changed.
+     opts.onApply runs after the patch lands but before events fire (setView
+     uses it for _togglePanes so listeners see the right pane visibility).
+     Returns false (and does nothing) when the patch changes nothing. */
+  _commit(patch, opts = {}) {
+    const plan = App.uiStatePolicy.planCommit(this.uiState, patch);
+    if (!plan.dirty) return false;
+    Object.assign(this.uiState, plan.changed);
+    if (opts.onApply) opts.onApply();
+    if (plan.persist) this._persistUiState();
+    plan.events.forEach(ev => App.EventBus.emit(ev.name, ev.payload));
+    if (plan.route) this._syncRoute();
+    return true;
+  }
+
   _parseHashParts(hash) {
     if (!hash || !hash.startsWith('#/')) return null;
     return hash.slice(2).split('/').map(s => {
@@ -473,17 +487,12 @@ App.AppController = class AppController {
   }
 
   setSearchQuery(q) {
-    this.uiState.searchQuery = q;
-    App.EventBus.emit('search:changed', q);
+    this._commit({ searchQuery: q });
   }
 
   setLayout(layout) {
     if (!['table', 'calendar', 'kanban', 'cards'].includes(layout)) return;
-    if (this.uiState.layout === layout) return;
-    this.uiState.layout = layout;
-    this._persistUiState();
-    App.EventBus.emit('layout:changed', layout);
-    this._syncRoute();
+    this._commit({ layout });
   }
 
   /* ----- Calendar view controls ----- */
@@ -2497,28 +2506,26 @@ App.AppController = class AppController {
   setSortBy(key) {
     if (!App.SORT_OPTIONS[key]) return;
     if (this.uiState.sortBy === key) {
-      this.uiState.sortDir = this.uiState.sortDir === 'asc' ? 'desc' : 'asc';
+      this._commit({ sortDir: this.uiState.sortDir === 'asc' ? 'desc' : 'asc' });
     } else {
-      this.uiState.sortBy = key;
-      this.uiState.sortDir = 'asc';
+      this._commit({ sortBy: key, sortDir: 'asc' });
     }
-    App.EventBus.emit('sort:changed');
-    this._persistUiState();
   }
 
   setGroupBy(key) {
     if (!App.GROUP_OPTIONS[key]) return;
     if (this.uiState.groupBy === key) return;
-    this.uiState.groupBy = key;
-    this.uiState.collapsedGroups = new Set();
-    App.EventBus.emit('group:changed');
-    this._persistUiState();
+    const patch = { groupBy: key };
+    // Fresh-instance contract: only include the reset when groups are actually
+    // collapsed, so group:collapsed-changed doesn't fire for an empty→empty swap.
+    if (this.uiState.collapsedGroups.size) patch.collapsedGroups = new Set();
+    this._commit(patch);
   }
 
   toggleGroupCollapsed(key) {
-    const s = this.uiState.collapsedGroups;
-    if (s.has(key)) s.delete(key); else s.add(key);
-    App.EventBus.emit('group:collapsed-changed');
+    const next = new Set(this.uiState.collapsedGroups);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    this._commit({ collapsedGroups: next });
   }
 
   /* ---------- misc ---------- */
