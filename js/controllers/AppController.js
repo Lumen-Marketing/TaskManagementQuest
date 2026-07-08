@@ -1736,7 +1736,7 @@ App.AppController = class AppController {
     if (newAssignee !== this.currentUser) {
       const task = this.taskModel.find(id);
       const creatorName = this.getUserName(this.currentUser);
-      const person = App.directory.person(newAssignee) || { name: newAssignee, email: '' };
+      const person = App.directory.person(newAssignee) || App.directory.personFallback(newAssignee);
       const titleEsc = App.utils.escapeHtml(task.title);
       this._deliver(
         [{

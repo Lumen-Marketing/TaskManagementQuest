@@ -257,8 +257,8 @@ App.TaskListView = class TaskListView {
 
 
   renderKanbanCard(t) {
-    const person = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
-    const company = App.directory.company(t.company) || App.COMPANIES.roofing;
+    const person = App.directory.person(t.assignee) || App.directory.personFallback(t.assignee);
+    const company = App.directory.company(t.company) || App.directory.companyFallback(t.company);
     const tyLabel = App.taxonomy.typeLabel(t.company, t.type);
     const lblLabel = (t.label && t.label !== 'none') ? App.taxonomy.labelLabel(t.company, t.label) : null;
     const priority = App.PRIORITIES[t.priority] || App.PRIORITIES.medium;
@@ -294,9 +294,9 @@ App.TaskListView = class TaskListView {
 
 
   renderRow(t) {
-    const person = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#E8A03A' };
+    const person = App.directory.person(t.assignee) || App.directory.personFallback(t.assignee);
     const type = App.TASK_TYPES[t.type] || App.TASK_TYPES.admin;
-    const company = App.directory.company(t.company) || App.COMPANIES.roofing;
+    const company = App.directory.company(t.company) || App.directory.companyFallback(t.company);
     const status = App.STATUSES[t.status] || App.STATUSES.todo;
     const stLabel = App.taxonomy.statusLabel(t.company, t.type, t.status);
     const stChip = App.taxonomy.chipStyle('status', t.company, t.status, t.type);

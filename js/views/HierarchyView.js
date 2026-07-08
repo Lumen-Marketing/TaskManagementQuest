@@ -25,7 +25,7 @@ App.HierarchyView = class HierarchyView {
   }
 
   person(memberId) {
-    return App.directory.person(memberId) || { name: memberId, full: memberId, email: '', color: '#E8A03A' };
+    return App.directory.person(memberId) || App.directory.personFallback(memberId);
   }
 
   roleLabel(role) {
