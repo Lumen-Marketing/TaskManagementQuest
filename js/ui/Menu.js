@@ -16,7 +16,16 @@
     const r = anchor.getBoundingClientRect();
     el.style.position = 'fixed';
     if (opts.matchAnchorWidth) el.style.minWidth = `${Math.round(r.width)}px`;
-    // Measure after content render.
+    // Measure after content render. A menu taller than the window (short
+    // windows, tall account menu) scrolls internally instead of running
+    // off-screen — otherwise its far items are unreachable.
+    el.style.maxHeight = '';
+    el.style.overflowY = '';
+    const maxH = window.innerHeight - 16;
+    if (el.offsetHeight > maxH) {
+      el.style.maxHeight = `${maxH}px`;
+      el.style.overflowY = 'auto';
+    }
     const mw = el.offsetWidth, mh = el.offsetHeight;
     let top = r.bottom + opts.offset;
     let flipped = false;
@@ -24,6 +33,10 @@
       top = r.top - opts.offset - mh; // flip above
       flipped = true;
     }
+    // Whichever side won, keep the menu inside the viewport: slide up as far
+    // as needed, never past the top edge.
+    top = Math.min(top, window.innerHeight - mh - 8);
+    top = Math.max(8, top);
     // 'bottom-start' (default) left-aligns to the anchor; 'bottom-end' right-
     // aligns (top-right chrome like the account menu, so it never runs off-screen).
     let left = opts.placement === 'bottom-end' ? r.right - mw : r.left;
@@ -39,6 +52,15 @@
     const el = document.createElement('div');
     el.className = opts.className;
     if (!el.getAttribute('role')) el.setAttribute('role', 'menu');
+    // Park the element out of flow BEFORE build() runs. While static it sits
+    // in normal flow below the 100vh app, and a focus() inside build() (menus
+    // pull focus for keyboard/AT) scroll-into-views it — scrolling the
+    // document so the anchor rect place() measures next is shifted up by
+    // scrollY, which put the account menu above the viewport (permanently so
+    // under --ui-scale zoom, where the document stays overflowed).
+    el.style.position = 'fixed';
+    el.style.top = '0';
+    el.style.left = '-9999px';
     document.body.appendChild(el);
 
     let closed = false;
