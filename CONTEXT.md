@@ -31,5 +31,9 @@ _Avoid_: unsaved, pending
 The one pipeline through which dirty rows reach storage — nothing saves around it.
 _Avoid_: save loop, autosave, doSave
 
+**Commit (UI state)**:
+The single step where a uiState patch becomes observable — diffed, persisted, emitted (one event per field group), and route-synced per the UiStatePolicy table. Setters assemble patches; `_commit` applies them.
+_Avoid_: dispatch, setState, reducer
+
 **Taxonomy**:
 The per-company catalogue of task types, statuses, and labels. (Already modeled in code as `App.taxonomy`.)

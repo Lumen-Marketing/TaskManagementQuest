@@ -280,6 +280,8 @@ App.AppController = class AppController {
   // view the user could open last session but not now (role change) falls back
   // to the default instead of opening a forbidden screen.
   restoreUiState() {
+    // Deliberately bypasses _commit: this is a silent bulk restore that runs
+    // before views first render — nothing may emit or route-sync here.
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(this._uiStateKey()) || 'null'); }
     catch (e) { saved = null; }
