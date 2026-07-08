@@ -16,10 +16,11 @@ App.ProjectsView = class ProjectsView {
     this.expanded = new Set();   // folder ids with their task drawer open
     this.collapsed = new Set();  // due-group keys the user has collapsed
     this._seenDone = new Set();  // done-group keys already auto-collapsed once
-    App.EventBus.on('view:changed', (v) => { if (v === 'projects') this.render(); });
-    App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); });
-    App.EventBus.on('tasks:changed', () => { if (this._visible()) this.render(); });
-    App.EventBus.on('company:changed', () => { if (this._visible()) this.render(); });
+    this._ac = new AbortController();
+    App.EventBus.on('view:changed',    (v) => { if (v === 'projects') this.render(); }, { signal: this._ac.signal });
+    App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); }, { signal: this._ac.signal });
+    App.EventBus.on('tasks:changed',    () => { if (this._visible()) this.render(); }, { signal: this._ac.signal });
+    App.EventBus.on('company:changed',  () => { if (this._visible()) this.render(); }, { signal: this._ac.signal });
   }
 
   _visible() { return this.wrap && !this.wrap.classList.contains('hidden'); }
@@ -78,7 +79,7 @@ App.ProjectsView = class ProjectsView {
   _taskRow(t) {
     const esc = App.utils.escapeHtml;
     const st = App.STATUSES[t.status] || { label: t.status || '' };
-    const person = App.PEOPLE[t.assignee] || { name: t.assignee || 'Unassigned' };
+    const person = App.directory.person(t.assignee) || App.directory.personFallback(t.assignee);
     const due = App.utils.formatDue ? (App.utils.formatDue(t.due) || {}) : {};
     const dueText = (due && due.text) ? due.text : '';
     const done = App.taxonomy.isDone(t);
@@ -139,10 +140,14 @@ App.ProjectsView = class ProjectsView {
     if (!this.wrap) this.wrap = document.getElementById('projectsWrap');
     if (!this.wrap) return;
     const base = this._baseFolders();
-    const openTotal = base.reduce((n, p) => n + this._counts(p.id).open, 0);
-    const doneTotal = base.reduce((n, p) => n + this._counts(p.id).done, 0);
-    const overall = openTotal + doneTotal;
-    const pct = overall ? Math.round((doneTotal / overall) * 100) : 0;
+    const counts = base.map(p => this._counts(p.id));
+    const openTotal = counts.reduce((n, c) => n + c.open, 0);
+    const doneTotal = counts.reduce((n, c) => n + c.done, 0);
+    // The "Complete" ring tracks folders, not tasks: checking a project off
+    // (setProjectStatus → 'complete') is what should move it. A folder counts
+    // as complete once its lifecycle status is closed (anything but active).
+    const doneFolders = base.filter(p => !this._isActive(p)).length;
+    const pct = base.length ? Math.round((doneFolders / base.length) * 100) : 0;
     const companies = new Set(base.map(p => p.companyId)).size;
 
     this.wrap.innerHTML = `
@@ -179,8 +184,8 @@ App.ProjectsView = class ProjectsView {
           <div class="pv-kpi-body"><div class="pv-kpi-num">${companies}</div><div class="pv-kpi-lbl">Companies</div></div>
         </div>
         <div class="pv-kpi pv-kpi-ring">
-          <div class="pv-ring" style="--p:${pct}%"><b>${overall ? pct + '%' : '—'}</b></div>
-          <div class="pv-kpi-body"><div class="pv-kpi-cmplbl">Complete</div><div class="pv-kpi-lbl">${overall ? 'across all folders' : 'no tasks filed yet'}</div></div>
+          <div class="pv-ring" style="--p:${pct}%"><b>${base.length ? pct + '%' : '—'}</b></div>
+          <div class="pv-kpi-body"><div class="pv-kpi-cmplbl">Complete</div><div class="pv-kpi-lbl">${base.length ? 'across all folders' : 'no folders yet'}</div></div>
         </div>
       </div>
 
@@ -243,7 +248,7 @@ App.ProjectsView = class ProjectsView {
 
     let html = '';
     Object.keys(byCo).forEach(cid => {
-      const co = App.COMPANIES[cid] || { label: cid };
+      const co = App.directory.company(cid) || App.directory.companyFallback(cid);
       const list = byCo[cid];
       const byBucket = {};
       list.forEach(p => {
