@@ -1619,17 +1619,13 @@ App.AppController = class AppController {
   /* Scope the task list to a single folder (project detail). Sets a single-value
      projectId filter and switches to the list; the list renders a folder header. */
   openProject(projectId) {
-    this.uiState.filters = this.uiState.filters || {};
-    this.uiState.filters.projectId = projectId || null;
+    this._commit({ filters: { ...(this.uiState.filters || {}), projectId: projectId || null } });
     this.setView('all');
-    App.EventBus.emit('filters:changed');
-    this._syncRoute();
   }
 
   clearProjectScope() {
-    if (this.uiState.filters) this.uiState.filters.projectId = null;
-    App.EventBus.emit('filters:changed');
-    this._syncRoute();
+    if (!this.uiState.filters) return;
+    this._commit({ filters: { ...this.uiState.filters, projectId: null } });
   }
 
   /* Batch-save every editable detail field from the task detail pane's Edit
@@ -2371,38 +2367,33 @@ App.AppController = class AppController {
 
   /* ---------- filters ---------- */
   toggleFilters() {
-    this.uiState.filtersOpen = !this.uiState.filtersOpen;
-    App.EventBus.emit('filters:toggled', this.uiState.filtersOpen);
+    this._commit({ filtersOpen: !this.uiState.filtersOpen });
   }
 
   toggleFilterValue(group, value) {
     const arr = this.uiState.filters[group];
     if (!Array.isArray(arr)) return;
-    const i = arr.indexOf(value);
-    if (i === -1) arr.push(value); else arr.splice(i, 1);
-    App.EventBus.emit('filters:changed');
-    this._persistUiState();
+    const next = arr.includes(value) ? arr.filter(x => x !== value) : [...arr, value];
+    this._commit({ filters: { ...this.uiState.filters, [group]: next } });
   }
 
   setFilterDueRange(range) {
-    this.uiState.filters.dueRange = range || 'all';
-    App.EventBus.emit('filters:changed');
-    this._persistUiState();
+    this._commit({ filters: { ...this.uiState.filters, dueRange: range || 'all' } });
   }
 
   /* Single-select company filter behind the Tasks board's top chip row. Table-
      local (drives the `companies` filter group), so it does NOT change the app-
      wide company scope (setCompany). 'all' / falsy clears it. */
   setCompanyScopeFilter(id) {
-    this.uiState.filters.companies = (id && id !== 'all') ? [id] : [];
-    App.EventBus.emit('filters:changed');
-    this._persistUiState();
+    this._commit({
+      filters: { ...this.uiState.filters, companies: (id && id !== 'all') ? [id] : [] },
+    });
   }
 
   clearFilters() {
-    this.uiState.filters = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' };
-    App.EventBus.emit('filters:changed');
-    this._persistUiState();
+    // Full replacement (drops projectId too) — matches the pre-seam behavior;
+    // the route policy now also heals the stale #/folder hash this used to leave.
+    this._commit({ filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' } });
   }
 
   activeFilterCount() {
@@ -2452,22 +2443,19 @@ App.AppController = class AppController {
     this._writeSavedViews(views);
   }
 
-  // Apply a saved view: restore its state and re-render every dependent surface.
+  // Apply a saved view: restore its state; _commit re-renders only the
+  // surfaces whose state actually changed.
   applySavedView(id) {
     const v = this.getSavedViews().find(x => x.id === id);
     if (!v) return;
-    if (v.filters && typeof v.filters === 'object') this.uiState.filters = JSON.parse(JSON.stringify(v.filters));
-    if (v.sortBy && App.SORT_OPTIONS[v.sortBy]) this.uiState.sortBy = v.sortBy;
-    if (v.sortDir === 'asc' || v.sortDir === 'desc') this.uiState.sortDir = v.sortDir;
-    if (v.groupBy && App.GROUP_OPTIONS[v.groupBy]) this.uiState.groupBy = v.groupBy;
-    if (['table', 'calendar', 'kanban', 'cards'].includes(v.layout)) this.uiState.layout = v.layout;
-    this.uiState.collapsedGroups = new Set();
-    this._persistUiState();
-    App.EventBus.emit('filters:changed');
-    App.EventBus.emit('sort:changed');
-    App.EventBus.emit('group:changed');
-    App.EventBus.emit('layout:changed', this.uiState.layout);
-    this._syncRoute();
+    const patch = {};
+    if (v.filters && typeof v.filters === 'object') patch.filters = JSON.parse(JSON.stringify(v.filters));
+    if (v.sortBy && App.SORT_OPTIONS[v.sortBy]) patch.sortBy = v.sortBy;
+    if (v.sortDir === 'asc' || v.sortDir === 'desc') patch.sortDir = v.sortDir;
+    if (v.groupBy && App.GROUP_OPTIONS[v.groupBy]) patch.groupBy = v.groupBy;
+    if (['table', 'calendar', 'kanban', 'cards'].includes(v.layout)) patch.layout = v.layout;
+    if (this.uiState.collapsedGroups.size) patch.collapsedGroups = new Set();
+    this._commit(patch);
   }
 
   deleteSavedView(id) {
