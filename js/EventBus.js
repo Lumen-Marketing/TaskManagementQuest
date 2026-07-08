@@ -1,14 +1,16 @@
 /* Simple pub/sub used for one-way data flow:
    Models mutate and emit. Views subscribe and re-render.
    Controllers call model methods in response to user input. */
-window.App = window.App || {};
 
-App.EventBus = (function () {
+function makeEventBus() {
   const listeners = {};
   return {
-    on(event, fn) {
+    on(event, fn, { signal } = {}) {
+      if (signal && signal.aborted) return () => {};
       (listeners[event] = listeners[event] || []).push(fn);
-      return () => this.off(event, fn);
+      const unsub = () => this.off(event, fn);
+      if (signal) signal.addEventListener('abort', unsub, { once: true });
+      return unsub;
     },
     off(event, fn) {
       if (!listeners[event]) return;
@@ -20,4 +22,11 @@ App.EventBus = (function () {
       });
     },
   };
-})();
+}
+
+if (typeof window !== 'undefined') {
+  window.App = window.App || {};
+  App.EventBus = makeEventBus();
+}
+
+if (typeof module !== 'undefined') module.exports = { makeEventBus };
