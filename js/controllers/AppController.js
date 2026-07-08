@@ -219,27 +219,17 @@ App.AppController = class AppController {
     // covering it — the "I want to go home, I can't go home" dead end.
     if (this.uiState.creatingTask) this.closeNewTaskPage();
     if (this.uiState.view === view) return;
-    this.uiState.view = view;
-    this.uiState.selectedTaskId = null;
+    const patch = { view, selectedTaskId: null };
     // All Tasks always OPENS in table view, whatever mode it was left in.
     // Explicit switches after entry (View menu, openCalendarOn) still apply.
-    if (view === 'all' && this.uiState.layout !== 'table') {
-      this.uiState.layout = 'table';
-      App.EventBus.emit('layout:changed', 'table');
-    }
+    if (view === 'all' && this.uiState.layout !== 'table') patch.layout = 'table';
     // Focus is a shared cross-person list reached via the widget / Sort menu,
     // not tied to any view — so switching views exits Execution-order back to a
-    // normal sort rather than showing the shared list under a view's header.
-    const prevSort = this.uiState.sortBy;
-    if (this.uiState.sortBy === 'focus') this.uiState.sortBy = 'priority';
-    // Refresh the Sort button label / widget if we changed the sort under them
-    // (syncButtonLabels listens to sort:changed, not view:changed).
-    if (this.uiState.sortBy !== prevSort) App.EventBus.emit('sort:changed');
-    this._togglePanes();
-    this._persistUiState();
-    App.EventBus.emit('view:changed', view);
-    App.EventBus.emit('selection:changed');
-    this._syncRoute();
+    // normal sort. The diff emits sort:changed only when this actually fires.
+    if (this.uiState.sortBy === 'focus') patch.sortBy = 'priority';
+    // onApply: panes must be visible before view:changed lands — several views
+    // gate their render on !wrap.classList.contains('hidden').
+    this._commit(patch, { onApply: () => this._togglePanes() });
   }
 
   // The head-card "My work" / "Company" segment. Unlike setView this never
