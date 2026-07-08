@@ -13,19 +13,28 @@ App.FocusWidgetView = class FocusWidgetView {
     this.mount = document.getElementById('focusWidget');
     if (!this.mount) return;
     this.MAX = 2; // fits the 88px card next to Up next / Progress; rest = "+N more"
-    this.subscribe();
     this.render();
-  }
-
-  subscribe() {
-    App.EventBus.on('tasks:changed', () => this.render());
-    App.EventBus.on('view:changed',  () => this.render());
-    App.EventBus.on('sort:changed',  () => this.render());
   }
 
   render() {
     if (!this.mount) return;
-    if (this._cleanup) { this._cleanup(); this._cleanup = null; }
+
+    // Clean up drag-reorder handler from previous render (not signal-based —
+    // makeReorderable owns its own listener teardown).
+    this._reorderCleanup?.();
+    this._reorderCleanup = null;
+
+    // Abort all signal-based listeners from the previous render, then issue a
+    // fresh signal for this render's subscriptions.
+    this._ac?.abort();
+    this._ac = new AbortController();
+
+    // EventBus subscriptions — re-established each render via signal so exactly
+    // one set is active at any time; previous render's set is already aborted.
+    App.EventBus.on('tasks:changed', () => this.render(), { signal: this._ac.signal });
+    App.EventBus.on('view:changed',  () => this.render(), { signal: this._ac.signal });
+    App.EventBus.on('sort:changed',  () => this.render(), { signal: this._ac.signal });
+
     // When the list is already sorted by Execution order it shows the full
     // sequenced list — the widget becomes a compact "Close" toggle to exit
     // (rather than duplicating the rows).
@@ -63,7 +72,7 @@ App.FocusWidgetView = class FocusWidgetView {
       row.addEventListener('click', () => {
         if (row.classList.contains('dragging')) return;
         this.controller.selectTask(t.id);
-      });
+      }, { signal: this._ac.signal });
       rowsEl.appendChild(row);
     });
 
@@ -72,10 +81,10 @@ App.FocusWidgetView = class FocusWidgetView {
     this.mount.querySelector('[data-action="open-focus"]').addEventListener('click', () => {
       this.controller.setLayout('table');
       this.controller.setSortBy('focus');
-    });
+    }, { signal: this._ac.signal });
 
     if (canEdit && App.makeReorderable) {
-      this._cleanup = App.makeReorderable(rowsEl, {
+      this._reorderCleanup = App.makeReorderable(rowsEl, {
         onDrop: (movedId, newIndex) => {
           const ordered = this.taskModel.focusList().filter(t => t.id !== movedId);
           const before = ordered[newIndex - 1];
@@ -103,7 +112,10 @@ App.FocusWidgetView = class FocusWidgetView {
         <div class="focus-widget-hint">Showing execution order — drag rows to reorder.</div>
       </div>
     `;
-    this.mount.querySelector('[data-action="close-focus"]').addEventListener('click', () => this.controller.setSortBy('priority'));
+    this.mount.querySelector('[data-action="close-focus"]').addEventListener('click',
+      () => this.controller.setSortBy('priority'),
+      { signal: this._ac.signal }
+    );
   }
 
   // Empty-state prompt — keeps the widget visible so the execution-order view
@@ -121,6 +133,6 @@ App.FocusWidgetView = class FocusWidgetView {
     this.mount.querySelector('[data-action="open-focus"]').addEventListener('click', () => {
       this.controller.setLayout('table');
       this.controller.setSortBy('focus');
-    });
+    }, { signal: this._ac.signal });
   }
 };
