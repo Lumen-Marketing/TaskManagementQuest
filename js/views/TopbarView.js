@@ -424,6 +424,10 @@ App.TopbarView = class TopbarView {
     const myTimeHtml = this.controller.canView('time:mine')
       ? `<div class="user-menu-item" data-action="my-time"><i class="ti ti-clock"></i>My time</div>` : '';
 
+    // Roles & permissions reference matrix (admins/developers only).
+    const permsHtml = this.controller.canView('admin:permissions')
+      ? `<div class="user-menu-item" data-action="permissions"><i class="ti ti-key"></i>Roles &amp; permissions</div>` : '';
+
     // The account chip lives in the top bar (top-right), so the menu drops
     // right-aligned from it (App.Menu 'bottom-end') and never runs off-screen.
     const anchor = this.userChip || this.avatar;
@@ -452,6 +456,7 @@ App.TopbarView = class TopbarView {
           ${workspaceHtml}
           ${viewAsHtml}
           ${myTimeHtml}
+          ${permsHtml}
           <div class="user-menu-item" data-action="scale"><i class="ti ti-zoom-scan"></i>Display size</div>
           <div class="user-menu-item" data-action="edit-profile"><i class="ti ti-user-edit"></i>Edit profile</div>
           <div class="user-menu-item" data-action="show-tour"><i class="ti ti-help"></i>Show tour again</div>
@@ -496,6 +501,12 @@ App.TopbarView = class TopbarView {
         if (myTimeItem) myTimeItem.addEventListener('click', () => {
           close();
           this.controller.setView('time:mine');
+        });
+        // Roles & permissions matrix.
+        const permsItem = menu.querySelector('[data-action="permissions"]');
+        if (permsItem) permsItem.addEventListener('click', () => {
+          close();
+          this.controller.setView('admin:permissions');
         });
         // Developer "View as" role preview.
         const viewAsSel = menu.querySelector('#menuViewAs');

@@ -115,6 +115,7 @@ App.AppController = class AppController {
     if (view === 'approvals') return App.can('roles.manage');
     if (view === 'admin:clock') return App.can('clock.admin');
     if (view === 'admin:task-setup') return App.can('task-setup.manage');
+    if (view === 'admin:permissions') return App.can('roles.manage');
     if (view === 'admin:reports') return App.can('bug-reports.manage');
     if (view === 'team:hierarchy') return App.can('team.view');
     if (view === 'time:mine') return App.can('time.own') || App.can('clock.use');

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Preview — Roles &amp; permissions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/tabler-icons/tabler-icons-subset.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="taskmanagement.css">
+<style>
+  body { margin: 0; background: var(--bg); color: var(--ink); }
+  .preview-frame { max-width: 1200px; margin: 0 auto; padding: 24px; }
+</style>
+</head>
+<body>
+<div class="preview-frame">
+  <div id="timeViewWrap"></div>
+</div>
+
+<!-- Real modules the view depends on -->
+<script src="js/EventBus.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/constants.js"></script>
+<script src="js/views/PermissionsAdminView.js"></script>
+
+<!-- Preview stubs: fake profile roster for member counts, permissive can(),
+     minimal controller. This page loads the REAL view + CSS, so what renders
+     here is what production renders. -->
+<script>
+  App.PROFILES = [
+    { member_id: 'a', role: 'developer' },
+    { member_id: 'b', role: 'admin' }, { member_id: 'c', role: 'admin' },
+    { member_id: 'd', role: 'supervisor' }, { member_id: 'e', role: 'supervisor' },
+    { member_id: 'f', role: 'worker' }, { member_id: 'g', role: 'worker' },
+    { member_id: 'h', role: 'worker' }, { member_id: 'i', role: 'worker' },
+    { member_id: 'j', role: 'worker' }, { member_id: 'k', role: 'worker' },
+    { member_id: 'l', role: 'sales' }, { member_id: 'm', role: 'sales' },
+  ];
+  App.currentProfile = { role: 'developer' };
+
+  const controller = { uiState: { view: 'admin:permissions' } };
+  const view = new App.PermissionsAdminView({ controller });
+  view.render();
+</script>
+</body>
+</html>
