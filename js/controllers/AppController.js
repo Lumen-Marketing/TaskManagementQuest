@@ -498,12 +498,10 @@ App.AppController = class AppController {
   /* ----- Calendar view controls ----- */
   setCalendarMode(mode) {
     if (mode !== 'month' && mode !== 'week') return;
+    // Guard stays: without it, a same-mode call would still clear the selected
+    // day via the cascade below.
     if (this.uiState.calendarMode === mode) return;
-    this.uiState.calendarMode = mode;
-    this.uiState.calendarSelectedDay = null;
-    this._persistUiState();
-    App.EventBus.emit('calendar:changed');
-    this._syncRoute();
+    this._commit({ calendarMode: mode, calendarSelectedDay: null });
   }
 
   // Move the calendar by ±1 month (month mode) or ±1 week (week mode). delta is
@@ -517,36 +515,26 @@ App.AppController = class AppController {
     } else {
       base.setMonth(base.getMonth() + delta);
     }
-    this.uiState.calendarAnchor = App.utils.toISODate(base);
-    this.uiState.calendarSelectedDay = null;
-    App.EventBus.emit('calendar:changed');
-    this._syncRoute();
+    this._commit({ calendarAnchor: App.utils.toISODate(base), calendarSelectedDay: null });
   }
 
   resetCalendarToToday() {
-    this.uiState.calendarAnchor = null;
-    this.uiState.calendarSelectedDay = null;
-    App.EventBus.emit('calendar:changed');
-    this._syncRoute();
+    this._commit({ calendarAnchor: null, calendarSelectedDay: null });
   }
 
   selectCalendarDay(iso) {
-    this.uiState.calendarSelectedDay =
-      this.uiState.calendarSelectedDay === iso ? null : iso;
-    App.EventBus.emit('calendar:changed');
-    this._syncRoute();
+    this._commit({
+      calendarSelectedDay: this.uiState.calendarSelectedDay === iso ? null : iso,
+    });
   }
 
   // Jump straight to the All-tasks Calendar, anchored + pre-selected on a date
   // (used by the Home mini-calendar). The calendar layout already renders from
   // calendarAnchor and lists the selected day's tasks.
   openCalendarOn(iso) {
-    this.uiState.calendarAnchor = iso;
-    this.uiState.calendarSelectedDay = iso;
+    this._commit({ calendarAnchor: iso, calendarSelectedDay: iso });
     this.setView('all');
     this.setLayout('calendar');
-    App.EventBus.emit('calendar:changed');
-    this._syncRoute();
   }
 
   /* ----- The filtered task set the list/calendar/export all share ----- */
@@ -662,9 +650,7 @@ App.AppController = class AppController {
   }
 
   selectTask(id) {
-    this.uiState.selectedTaskId = (this.uiState.selectedTaskId === id) ? null : id;
-    App.EventBus.emit('selection:changed');
-    this._syncRoute();
+    this._commit({ selectedTaskId: (this.uiState.selectedTaskId === id) ? null : id });
   }
 
   // Keyboard j/k navigation: move the selection to the next/prev task in the
@@ -679,9 +665,7 @@ App.AppController = class AppController {
     if (cur === -1) next = delta > 0 ? 0 : ids.length - 1;
     else next = (cur + delta + ids.length) % ids.length;
     const id = ids[next];
-    this.uiState.selectedTaskId = id;
-    App.EventBus.emit('selection:changed');
-    this._syncRoute();
+    this._commit({ selectedTaskId: id });
     // Bring the row into view if it scrolled off.
     const safe = (window.CSS && CSS.escape) ? CSS.escape(String(id)) : String(id);
     const el = document.querySelector(`#listBody [data-id="${safe}"]`);
@@ -689,9 +673,7 @@ App.AppController = class AppController {
   }
 
   closeDetail() {
-    this.uiState.selectedTaskId = null;
-    App.EventBus.emit('selection:changed');
-    this._syncRoute();
+    this._commit({ selectedTaskId: null });
   }
 
   /* ---------- comments (migration 053) ---------- */
