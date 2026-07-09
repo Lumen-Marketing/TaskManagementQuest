@@ -607,9 +607,14 @@
 /* watchers */
 #taskDetailWrap .te-watchers { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* sticky footer */
-#taskDetailWrap .te-foot { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px; margin-top: var(--space-lg); padding: 14px 0; background: linear-gradient(to top, var(--bg) 72%, transparent); }
-#taskDetailWrap .te-fbtn { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: var(--radius-sm); padding: 10px 20px; font-weight: 700; font-size: var(--text-sm); cursor: pointer; }
+/* sticky footer — the buttons stay pinned to the bottom, but as a self-contained
+   floating cluster rather than a full-width gradient band. That band (a
+   var(--bg)→transparent fade) read as an ugly dark line where it overlapped the
+   cards in dark mode. Now the strip is transparent + pointer-events:none so it
+   passes clicks through to the content scrolling beneath; the buttons re-enable
+   pointer events and carry a soft shadow so they read as lifted. */
+#taskDetailWrap .te-foot { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px; margin-top: var(--space-lg); padding: 4px 0 var(--space-md); background: none; pointer-events: none; }
+#taskDetailWrap .te-fbtn { pointer-events: auto; border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: var(--radius-sm); padding: 10px 20px; font-weight: 700; font-size: var(--text-sm); cursor: pointer; box-shadow: var(--shadow-md); }
 #taskDetailWrap .te-fbtn:hover { border-color: var(--border-strong); }
 #taskDetailWrap .te-fbtn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 #taskDetailWrap .te-fbtn-primary:hover { filter: brightness(1.05); }
