@@ -53,19 +53,19 @@ App.NewFolderView = class NewFolderView {
     return `
       <div class="modal" data-stop role="dialog" aria-modal="true" aria-labelledby="nf-title">
         <div class="modal-head">
-          <div class="modal-title" id="nf-title">New folder</div>
+          <div class="modal-title" id="nf-title">New project</div>
           <button class="icon-btn" data-action="close" aria-label="Close"><i class="ti ti-x"></i></button>
         </div>
         <div class="modal-body">
           <div class="field">
-            <label class="field-label" for="nf-name">Folder name</label>
+            <label class="field-label" for="nf-name">Project name</label>
             <input id="nf-name" type="text" maxlength="80" autocomplete="off"
                    placeholder="e.g. Q3 Reroof — Maple St" />
           </div>
           ${companyField}
           <div class="modal-actions">
             <button class="btn" data-action="close">Cancel</button>
-            <button class="btn btn-primary" data-action="create" disabled>Create folder</button>
+            <button class="btn btn-primary" data-action="create" disabled>Create project</button>
           </div>
         </div>
       </div>

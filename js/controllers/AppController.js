@@ -1589,7 +1589,7 @@ App.AppController = class AppController {
       App.EventBus.emit('filters:changed');
     }
     App.EventBus.emit('projects:changed');
-    if (this.toastView) this.toastView.show({ title: 'Folder deleted', sub: 'Its tasks were kept and unfiled.' });
+    if (this.toastView) this.toastView.show({ title: 'Project deleted', sub: 'Its tasks were kept and unfiled.' });
   }
 
   /* Grid "New folder" button. Company defaults to the sidebar's current
@@ -1619,7 +1619,7 @@ App.AppController = class AppController {
     // folder (createProject already animates the card rising in).
     if (id && this.toastView) {
       this.toastView.show({
-        title: 'Folder created',
+        title: 'Project created',
         sub: name,
         action: { label: 'Open', onClick: () => this.openProject(id) },
       });

@@ -120,7 +120,7 @@ App.FilterBarView = class FilterBarView {
         </div>
         <div class="filter-group">
           <span class="filter-label">Project</span>
-          <div class="filter-chips">${projectChips || '<span class="filter-empty" style="font-size:11px;color:var(--ink-3);">No folders</span>'}</div>
+          <div class="filter-chips">${projectChips || '<span class="filter-empty" style="font-size:11px;color:var(--ink-3);">No projects</span>'}</div>
         </div>
         <div class="filter-group">
           <span class="filter-label">Due</span>

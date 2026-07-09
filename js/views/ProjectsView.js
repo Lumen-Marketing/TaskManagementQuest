@@ -107,12 +107,12 @@ App.ProjectsView = class ProjectsView {
       ? `<span class="pv-track"><span class="pv-fill" style="width:${pct}%"></span></span><span class="pv-progtxt"><b>${c.open}</b> open · ${c.done} done</span>`
       : `<span class="pv-progtxt pv-progtxt-empty">No tasks yet</span>`;
     const check = App.can('tasks.write')
-      ? `<button class="pv-check${done ? ' done' : ''}" data-done="${esc(p.id)}" type="button" aria-label="${done ? 'Reopen folder' : 'Mark folder complete'}" title="${done ? 'Reopen folder' : 'Mark complete'}"><i class="ti ti-check"></i></button>`
+      ? `<button class="pv-check${done ? ' done' : ''}" data-done="${esc(p.id)}" type="button" aria-label="${done ? 'Reopen project' : 'Mark project complete'}" title="${done ? 'Reopen project' : 'Mark complete'}"><i class="ti ti-check"></i></button>`
       : '';
     const actions = App.can('tasks.write')
       ? `<span class="pv-actions">
           <button class="pv-act" data-addtask="${esc(p.id)}" type="button" aria-label="Add task to ${esc(p.name)}" title="Add task"><i class="ti ti-plus"></i></button>
-          <button class="pv-act pv-act-del" data-del="${esc(p.id)}" type="button" aria-label="Delete ${esc(p.name)}" title="Delete folder"><i class="ti ti-trash"></i></button>
+          <button class="pv-act pv-act-del" data-del="${esc(p.id)}" type="button" aria-label="Delete ${esc(p.name)}" title="Delete project"><i class="ti ti-trash"></i></button>
         </span>`
       : '';
     let drawer = '';
@@ -120,7 +120,7 @@ App.ProjectsView = class ProjectsView {
       const tasks = this._folderTasks(p.id);
       drawer = `<div class="pv-tasks">${tasks.length
         ? tasks.map(t => this._taskRow(t)).join('')
-        : '<div class="pv-noTasks">No tasks in this folder yet.</div>'}</div>`;
+        : '<div class="pv-noTasks">No tasks in this project yet.</div>'}</div>`;
     }
     return `
       <div class="pv-rowwrap${open ? ' open' : ''}${done ? ' isdone' : ''}" style="--pc:${esc(color)}">
@@ -157,19 +157,19 @@ App.ProjectsView = class ProjectsView {
           <h1 class="pv-title">Projects</h1>
         </div>
         <div class="pv-head-r">
-          <select class="pv-sort" id="proj-sort" aria-label="Sort folders">
+          <select class="pv-sort" id="proj-sort" aria-label="Sort projects">
             <option value="recent"${this.sort === 'recent' ? ' selected' : ''}>Recently added</option>
             <option value="name"${this.sort === 'name' ? ' selected' : ''}>Name (A–Z)</option>
             <option value="active"${this.sort === 'active' ? ' selected' : ''}>Most active</option>
           </select>
-          ${App.can('tasks.write') ? `<button class="pv-new" data-action="new-folder" type="button"><i class="ti ti-plus"></i> New folder</button>` : ''}
+          ${App.can('tasks.write') ? `<button class="pv-new" data-action="new-folder" type="button"><i class="ti ti-plus"></i> New project</button>` : ''}
         </div>
       </div>
 
       <div class="pv-kpis">
         <div class="pv-kpi" style="--kc:var(--amber)">
           <span class="pv-kpi-ic"><i class="ti ti-folders"></i></span>
-          <div class="pv-kpi-body"><div class="pv-kpi-num">${base.length}</div><div class="pv-kpi-lbl">Folders</div></div>
+          <div class="pv-kpi-body"><div class="pv-kpi-num">${base.length}</div><div class="pv-kpi-lbl">Projects</div></div>
         </div>
         <div class="pv-kpi" style="--kc:var(--u-high)">
           <span class="pv-kpi-ic"><i class="ti ti-list-check"></i></span>
@@ -185,7 +185,7 @@ App.ProjectsView = class ProjectsView {
         </div>
         <div class="pv-kpi pv-kpi-ring">
           <div class="pv-ring" style="--p:${pct}%"><b>${base.length ? pct + '%' : '—'}</b></div>
-          <div class="pv-kpi-body"><div class="pv-kpi-cmplbl">Complete</div><div class="pv-kpi-lbl">${base.length ? 'across all folders' : 'no folders yet'}</div></div>
+          <div class="pv-kpi-body"><div class="pv-kpi-cmplbl">Complete</div><div class="pv-kpi-lbl">${base.length ? 'across all projects' : 'no projects yet'}</div></div>
         </div>
       </div>
 
@@ -227,7 +227,7 @@ App.ProjectsView = class ProjectsView {
     const esc = App.utils.escapeHtml;
     const folders = this._visibleFolders();
     if (!folders.length) {
-      host.innerHTML = `<div class="pv-blank">No folders yet — create one to group related tasks.</div>`;
+      host.innerHTML = `<div class="pv-blank">No projects yet — create one to group related tasks.</div>`;
       return;
     }
     const BUCKETS = [
@@ -316,9 +316,9 @@ App.ProjectsView = class ProjectsView {
         const c = this._counts(p.id);
         const n = c.open + c.done;
         const warn = n
-          ? `\n\n${n} task${n === 1 ? '' : 's'} filed here will be kept and unfiled (moved out of the folder), not deleted.`
+          ? `\n\n${n} task${n === 1 ? '' : 's'} filed here will be kept and unfiled (moved out of the project), not deleted.`
           : '';
-        if (window.confirm(`Delete folder "${p.name}"?${warn}`)) this.controller.deleteProject(p.id);
+        if (window.confirm(`Delete project "${p.name}"?${warn}`)) this.controller.deleteProject(p.id);
       }));
     host.querySelectorAll('.pv-chev').forEach(btn =>
       btn.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(btn.dataset.toggle); }));
