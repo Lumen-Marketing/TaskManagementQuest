@@ -161,7 +161,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newTaskPage = new App.NewTaskPageView({ controller, currentUser: App.CURRENT_USER });
   const profileView = new App.ProfileView({ controller });
   const reportProblemView = new App.ReportProblemView({ controller, dataStore });
-  controller.attachViews({ toastView, newTaskPage, profileView, reportProblemView });
+  const newFolderView = new App.NewFolderView();
+  controller.attachViews({ toastView, newTaskPage, profileView, reportProblemView, newFolderView });
 
   // Last-resort handlers: any error that escaped its own try/catch ends up
   // here as a clean toast instead of an unhandled rejection in the console.

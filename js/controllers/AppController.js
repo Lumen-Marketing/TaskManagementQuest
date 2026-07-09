@@ -66,11 +66,12 @@ App.AppController = class AppController {
     App.EventBus.on('tasks:changed', () => { this._visibleCache.key = null; });
   }
 
-  attachViews({ toastView, newTaskPage, profileView, reportProblemView }) {
+  attachViews({ toastView, newTaskPage, profileView, reportProblemView, newFolderView }) {
     this.toastView = toastView;
     this.newTaskPage = newTaskPage;
     this.profileView = profileView;
     this.reportProblemView = reportProblemView;
+    this.newFolderView = newFolderView;
   }
 
   openProfile() {
@@ -1595,18 +1596,24 @@ App.AppController = class AppController {
      company; if that's "All"/absent and the user has several, ask which. */
   async promptNewFolder() {
     if (!App.can('tasks.write')) return;
-    const name = (window.prompt('New folder name:') || '').trim();
-    if (!name) return;
+    // Resolve the company up front so the modal only shows a picker when the
+    // choice is genuinely ambiguous (multi-company user with "All" active).
     let companyId = this.uiState.currentCompany;
+    let options = null;
     if (!companyId || companyId === '*') {
       const ids = (this.uiState.companies || []).filter(c => c !== '*');
-      companyId = ids[0];
-      if (ids.length > 1) {
-        const pick = (window.prompt(`Company (${ids.join(', ')}):`, ids[0]) || '').trim();
-        if (ids.includes(pick)) companyId = pick;
-      }
+      companyId = ids[0] || '';
+      if (ids.length > 1) options = ids;
     }
-    if (!companyId) return;
+
+    const result = this.newFolderView
+      ? await this.newFolderView.open({ companies: options, defaultCompany: companyId })
+      : null;
+    if (!result) return; // cancelled / dismissed
+    const name = (result.name || '').trim();
+    if (name) companyId = result.companyId || companyId;
+    if (!name || !companyId) return;
+
     const id = await this.createProject({ name, companyId });
     // Confirm the creation with a toast that can jump straight into the new
     // folder (createProject already animates the card rising in).

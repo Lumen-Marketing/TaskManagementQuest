@@ -1358,6 +1358,10 @@ input:not([type="checkbox"]):not([type="radio"]), textarea, select {
 .modal-title { font-family: var(--font-display); font-size: 22px; letter-spacing: -0.01em; }
 .modal-body { padding: 18px 20px; overflow-y: auto; flex: 1; }
 .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); background: var(--bg-2); display: flex; justify-content: space-between; align-items: center; }
+/* In-body action row (Cancel / primary) used by modals whose buttons live
+   inside .modal-body rather than a bordered footer (Report a problem, New
+   folder). Right-aligned, primary last. */
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
 /* (The task detail is no longer a modal — it renders as a full page; see the
    "#taskDetailWrap" block below. The old #taskDetailModal / .modal-detail rules
