@@ -110,6 +110,14 @@
 #taskViewWrap.qt-skin .qt-row:last-child { border-bottom: none; }
 #taskViewWrap.qt-skin .qt-row:hover { background: #faf8f5; }
 #taskViewWrap.qt-skin .qt-row.selected { background: #FDF1EA; }
+/* Bulk-selected highlight — the re-skin never carried this over, so a task
+   picked in Select mode showed no visual change. Amber tint + a left accent
+   bar make the selected row unmistakable (echoes .list-row.bulk-selected). */
+#taskViewWrap.qt-skin .qt-row.bulk-selected,
+#taskViewWrap.qt-skin .qt-row.bulk-selected:hover {
+  background: var(--amber-bg);
+  box-shadow: inset 3px 0 0 var(--qt-orange, var(--amber));
+}
 #taskViewWrap.qt-skin .qt-row.qt-stuckrow { background: #FEF7F5; }
 #taskViewWrap.qt-skin .qt-row.qt-stuckrow:hover { background: #FDF0EC; }
 
@@ -276,6 +284,11 @@
 [data-theme="dark"] #taskViewWrap.qt-skin .qt-row { border-bottom-color: var(--qt-line); }
 [data-theme="dark"] #taskViewWrap.qt-skin .qt-row:hover { background: var(--bg-3); }
 [data-theme="dark"] #taskViewWrap.qt-skin .qt-row.selected { background: var(--amber-bg); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row.bulk-selected,
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row.bulk-selected:hover {
+  background: var(--amber-bg);
+  box-shadow: inset 3px 0 0 var(--qt-orange, var(--amber));
+}
 [data-theme="dark"] #taskViewWrap.qt-skin .qt-row.qt-stuckrow { background: var(--rust-bg); }
 [data-theme="dark"] #taskViewWrap.qt-skin .qt-row.qt-stuckrow:hover { background: oklch(31% 0.075 36); }
 
