@@ -14,6 +14,7 @@ window.App = window.App || {};
    Classes are prefixed `ldr-` so generic names can't clash with app styles. */
 App.LoaderView = (function () {
   const MIN_MS = 1000;   // keep it on screen long enough to be seen
+  const FINISH_MS = 400; // "loading complete" beat: ease the terminal to full
   const FADE_MS = 600;   // must match the #appLoader opacity transition
   const MAX_MS = 15000;  // safety: dismiss even if boot never signals
 
@@ -254,6 +255,11 @@ void main() {
   let rootEl = null;
   let onMouseMove = null;
   let resizeObs = null;
+  let animating = false;   // true only while the WebGL render loop is running
+  let finishing = false;   // hide() ramps the terminal to full before it fades
+  let finishStart = 0;
+  let progressAtFinish = 0;
+  let curProgress = 0;     // latest page-load progress the loop rendered
 
   function build() {
     const root = document.getElementById('appLoader');
@@ -434,12 +440,21 @@ void main() {
       if (stopped) return;
       rafId = requestAnimationFrame(tick);
 
-      if (CFG.pageLoadAnimation) {
+      let progress;
+      if (finishing) {
+        // Loading is done: ease the terminal up to its full, materialized state
+        // and hold there, so it reads as "complete" before the overlay fades.
+        const k = Math.min((now - finishStart) / FINISH_MS, 1);
+        const eased = 1 - Math.pow(1 - k, 3); // easeOutCubic
+        progress = progressAtFinish + (1 - progressAtFinish) * eased;
+      } else if (CFG.pageLoadAnimation) {
         if (loadStart === 0) loadStart = now;
-        gl.uniform1f(uni.uPageLoadProgress, Math.min((now - loadStart) / 2000, 1));
+        progress = Math.min((now - loadStart) / 2000, 1);
       } else {
-        gl.uniform1f(uni.uPageLoadProgress, 1);
+        progress = 1;
       }
+      curProgress = progress;
+      gl.uniform1f(uni.uPageLoadProgress, progress);
 
       gl.uniform1f(uni.iTime, (now * 0.001 + timeOffset) * CFG.timeScale);
 
@@ -452,6 +467,7 @@ void main() {
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
+    animating = true;
     rafId = requestAnimationFrame(tick);
   }
 
@@ -470,17 +486,34 @@ void main() {
     }
   }
 
-  // Graceful hide: enforce a minimum on-screen time, fade out, then remove.
+  // Graceful hide: enforce a minimum on-screen time, ease the terminal to its
+  // full/complete state, then fade the overlay out. The render loop keeps running
+  // through the fade and is only torn down afterwards — tearing the GL context
+  // down first would blank the canvas to flat black (the hard-cut "flash").
   function hide() {
     if (hiding) return;
     hiding = true;
     const root = document.getElementById('appLoader');
     if (!root) { stop(); return; }
     const wait = Math.max(0, MIN_MS - (Date.now() - mountAt));
-    setTimeout(() => {
-      stop();
+    const fadeThenRemove = () => {
       root.classList.add('is-hiding');
-      setTimeout(() => { if (root.parentNode) root.parentNode.removeChild(root); }, FADE_MS);
+      setTimeout(() => {
+        stop();
+        if (root.parentNode) root.parentNode.removeChild(root);
+      }, FADE_MS);
+    };
+    setTimeout(() => {
+      if (animating && !stopped) {
+        // Complete the terminal (ramp glyphs to full), hold, then fade.
+        progressAtFinish = curProgress;
+        finishStart = performance.now();
+        finishing = true;
+        setTimeout(fadeThenRemove, FINISH_MS);
+      } else {
+        // reduced-motion / no-WebGL fallback: already a full static frame.
+        fadeThenRemove();
+      }
     }, wait);
   }
 
