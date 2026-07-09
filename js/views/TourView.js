@@ -10,42 +10,23 @@ App.TourView = class TourView {
     this.index = 0;
     this.onFinish = null;
     this.els = null;
+    this._renderSeq = 0;     // guards stale navigate-and-wait callbacks
+    this._startView = null;  // view to restore when the tour ends
     this._reposition = () => this._render();
   }
 
-  /* ---------- step definitions (role-aware) ---------- */
+  /* ---------- step definitions (role-aware) ----------
+     The ordered step table + the pure inclusion logic live in TourSteps so they
+     can be unit-tested without a DOM. Here we just supply the three predicates
+     that decide inclusion: role permissions, per-view access, and — for the two
+     always-present chrome steps — live DOM visibility. */
   buildSteps() {
-    const can = (p) => App.can(p);
-    const defs = [];
-    defs.push({ sel: null, title: 'Welcome to Quest HQ', body: "Here's a 30-second tour of the basics. You can replay it anytime from the ? button up top." });
-
-    if (can('tasks.view')) {
-      defs.push({ sel: '.grp-views', title: 'Your views', body: "Switch between All tasks, the ones assigned to you (Mine), what's Urgent, and what's due Today." });
-    }
-    defs.push({ sel: '#listPane', title: 'Your task list', body: can('tasks.view')
-      ? 'Each row shows the task, its due date/time and status. Tap a task to open its details.'
-      : 'The work assigned to you shows up here, with the scheduled time on the left.' });
-
-    if (can('tasks.write')) {
-      defs.push({ sel: '#newTaskBtn', title: 'Create a task', body: 'Add a task, set a date and an optional time, choose who it’s for, and notify them.' });
-    }
-    if (can('clock.use')) {
-      defs.push({ sel: '#clockWidget', title: 'Clock in & out', body: 'Tap here to start and stop your timer. If you forget, it auto-closes after 12 hours.' });
-    }
-    if (can('tasks.view')) {
-      defs.push({ sel: '#moreViewsBtn', title: 'More views', body: 'Company filters (Roofing, Drafting, Lumen) and time reports are tucked in here to keep things tidy.' });
-    }
-    if (can('team.view')) {
-      defs.push({ sel: '[data-view="team:hierarchy"]', title: 'Team chart', body: 'See the people who report to you and the staff you oversee.' });
-    }
-    if (can('roles.manage')) {
-      defs.push({ sel: '[data-view="approvals"]', title: 'Approvals', body: 'Approve new accounts, set each person’s role, and choose who they report to.' });
-    }
-    defs.push({ sel: '#notifBtn', title: 'Notifications', body: 'When someone assigns you a task or adds you as a watcher, it shows up here.' });
-    defs.push({ sel: '#userAvatar', title: 'Your account', body: 'Switch between light and dark mode, or sign out, from this menu.' });
-    defs.push({ sel: null, title: "You're all set", body: 'That’s the tour. Reopen it anytime with the ? button. Welcome aboard!' });
-
-    return defs.filter(s => !s.sel || this._visible(s.sel));
+    const preds = {
+      can: (p) => App.can(p),
+      canView: (v) => !!(App.controller && App.controller.canView(v)),
+      isVisible: (sel) => this._visible(sel),
+    };
+    return App.TourSteps.selectSteps(App.TourSteps.STEPS, preds);
   }
 
   _visible(sel) {
@@ -59,6 +40,10 @@ App.TourView = class TourView {
   start({ onFinish } = {}) {
     if (this.els) this._teardown();
     this.onFinish = onFinish || null;
+    // Remember where the user was so we can return them there — the tour walks
+    // through other sections along the way.
+    this._startView = (App.controller && App.controller.uiState)
+      ? App.controller.uiState.view : null;
     this.steps = this.buildSteps();
     if (!this.steps.length) return;
     this.index = 0;
@@ -79,6 +64,12 @@ App.TourView = class TourView {
 
   end(completed) {
     this._teardown();
+    // Return to wherever the user started — completing and skipping both restore,
+    // so replaying from "Show tour again" never strands them in an admin view.
+    if (this._startView && App.controller && App.controller.uiState
+        && App.controller.uiState.view !== this._startView) {
+      try { App.controller.setView(this._startView); } catch (e) {}
+    }
     // Dismiss (Skip/Esc) counts the same as finishing — the user has seen it
     // and doesn't want it again. The `completed` flag is kept on the callback
     // in case a caller wants to distinguish, but it no longer gates the call.
@@ -143,12 +134,42 @@ App.TourView = class TourView {
     this.els.dots.innerHTML = this.steps.map((_, i) =>
       `<span class="tour-dot ${i === this.index ? 'on' : ''}"></span>`).join('');
 
-    const target = step.sel ? document.querySelector(step.sel) : null;
-    if (target && target.scrollIntoView) {
-      try { target.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {}
+    // Walk into the step's section first, if it isn't already open. Navigation
+    // is driven from _render (not next()), so Back and Next both re-navigate.
+    if (step.view && App.controller && App.controller.uiState.view !== step.view) {
+      try { App.controller.setView(step.view); } catch (e) {}
     }
-    // Position after any scroll settles.
-    requestAnimationFrame(() => this._place(target));
+
+    // The section may have just navigated, so wait for the spotlight target to
+    // lay out before measuring. Guard against a stale wait finishing after the
+    // user has already advanced to another step.
+    const seq = ++this._renderSeq;
+    this._waitForTarget(step.sel, (target) => {
+      if (seq !== this._renderSeq || !this.els) return;
+      if (target && target.scrollIntoView) {
+        try { target.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {}
+      }
+      requestAnimationFrame(() => { if (seq === this._renderSeq) this._place(target); });
+    });
+  }
+
+  /* Resolve a spotlight target once it's actually laid out. Polls a few frames
+     (a freshly-navigated view mounts async) then gives up — a null target makes
+     _place fall back to a centered card, so the tour never hangs. */
+  _waitForTarget(sel, cb) {
+    if (!sel) { cb(null); return; }
+    let frames = 0;
+    const tick = () => {
+      if (!this.els) return; // torn down mid-wait
+      const el = document.querySelector(sel);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) { cb(el); return; }
+      }
+      if (++frames > 20) { cb(el || null); return; } // ~330ms fallback
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   _place(target) {
