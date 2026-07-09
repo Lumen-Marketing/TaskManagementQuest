@@ -4467,9 +4467,15 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
 .rp-thanks-title { font-weight: 600; }
 
 /* ---------- Problem reports (developer triage) ---------- */
-.breports { display: flex; flex-direction: column; gap: 10px; max-width: 860px; padding: 4px; }
+/* Align the reports column with the page header. The header card + task list
+   share a responsive side gutter (24px < 1366px; a centered min(1720px,100%-64)
+   box ≥ 1366px) — #timeViewWrap was never enrolled in it, so the tabs + cards sat
+   flush against the far-left edge instead of under the "Problem reports" title.
+   Mirror that gutter here (base 24px; the ≤900 + ≥1366 rules add .breports to the
+   shared selectors) and cap the cards so they stay readable when the box widens. */
+.breports { display: flex; flex-direction: column; gap: 10px; max-width: 860px; padding: 8px 24px 40px; }
 .breports-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 92px)); gap: 6px; margin-bottom: 8px; }
-.breport-card { background: var(--surface); border-radius: 12px; padding: 14px 16px; }
+.breport-card { background: var(--surface); border-radius: 12px; padding: 14px 16px; max-width: 860px; }
 .breport-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .breport-type { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; color: var(--amber); }
 .breport-name { font-weight: 600; }
@@ -5523,6 +5529,7 @@ body.ui-command-center .detail-title {
   body.ui-command-center .page-head,
   body.ui-command-center .work-toolbar,
   body.ui-command-center #taskViewWrap,
+  body.ui-command-center .breports,
   body.ui-command-center .ai-brief {
     margin-left: 12px;
     margin-right: 12px;
@@ -7237,7 +7244,8 @@ body.ui-command-center .controls-card .btn {
    SAME max-width formula as the task list (see the ≥1366px rule near the list
    grid) so every band lines up edge-to-edge at any viewport width. */
 @media (min-width: 1366px) {
-  body.ui-command-center .page-head {
+  body.ui-command-center .page-head,
+  body.ui-command-center .breports {
     max-width: min(1720px, calc(100% - 64px));
     margin-left: auto;
     margin-right: auto;
