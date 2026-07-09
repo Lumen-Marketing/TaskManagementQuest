@@ -66,12 +66,13 @@ App.AppController = class AppController {
     App.EventBus.on('tasks:changed', () => { this._visibleCache.key = null; });
   }
 
-  attachViews({ toastView, newTaskPage, profileView, reportProblemView, newFolderView }) {
+  attachViews({ toastView, newTaskPage, profileView, reportProblemView, newFolderView, textPromptView }) {
     this.toastView = toastView;
     this.newTaskPage = newTaskPage;
     this.profileView = profileView;
     this.reportProblemView = reportProblemView;
     this.newFolderView = newFolderView;
+    this.textPromptView = textPromptView;
   }
 
   openProfile() {

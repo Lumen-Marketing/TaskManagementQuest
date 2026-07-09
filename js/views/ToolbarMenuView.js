@@ -177,10 +177,13 @@ App.ToolbarMenuView = class ToolbarMenuView {
         });
       });
       const saveEl = this.menu.querySelector('[data-save]');
-      if (saveEl) saveEl.addEventListener('click', () => {
-        const name = window.prompt('Name this view:');
-        if (name && name.trim()) this.controller.saveCurrentView(name);
+      if (saveEl) saveEl.addEventListener('click', async () => {
         this.close();
+        const view = this.controller.textPromptView;
+        const name = view
+          ? await view.open({ title: 'Save view', label: 'View name', placeholder: 'e.g. Overdue · Roofing', confirmLabel: 'Save view' })
+          : null;
+        if (name) this.controller.saveCurrentView(name);
       });
     } else if (this.menuFor === 'export') {
       const items = [
