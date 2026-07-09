@@ -219,3 +219,46 @@
   #newTaskWrap .nt-title-in { font-size: 19px; }
   #newTaskWrap .nt-frow { gap: 14px 16px; }
 }
+
+/* ============================================================
+   DARK MODE — pro1 shipped as a light-only island; this block gives
+   #newTaskWrap a first-class dark variant that tracks the app tokens
+   (tokens.css) so the New Task screen matches the rest of Quest HQ
+   under html[data-theme="dark"]. Additive only — every rule above is
+   untouched, so light rendering is byte-for-byte identical. The --*
+   vars re-point at --bg/--surface/--ink/…; --ink maps through the
+   app's own --color-ink alias (it can't reference the same-named
+   token directly). Rules that hardcoded a literal light hex (#FDF1EA
+   tint, #8a857e / #57544f / #a8a39b greys, the #fff-on-ink calendar
+   day, the disabled-create fill) are re-stated with a [data-theme]
+   prefix so they out-specify the light rules.
+   ============================================================ */
+[data-theme="dark"] #newTaskWrap { background: var(--bg); }
+[data-theme="dark"] #newTaskWrap .nt-page {
+  --orange: #ED4E0D; --orange-dark: #c2410c;   /* orange-dark stays a darker orange — only used as button-hover fill + on tinted chips (overridden below) */
+  --red: #E5484D;                              /* one red that works as a fill (white text) AND as text */
+  --green: var(--green-ink);                   /* light green — success flash + ready dot */
+  --ink: var(--color-ink);                     /* app ink via its alias (avoids a --ink self-reference) */
+  --ink-soft: var(--ink-2);
+  --canvas: var(--bg); --card: var(--surface); --chip: var(--bg-3);
+  --line: var(--border); --line-soft: var(--border); --line-strong: var(--border-strong);
+}
+
+/* Placeholders + ghost/empty pill text — were literal warm greys. */
+[data-theme="dark"] #newTaskWrap .nt-title-in::placeholder,
+[data-theme="dark"] #newTaskWrap .nt-desc::placeholder,
+[data-theme="dark"] #newTaskWrap .nt-pick.nt-ghost,
+[data-theme="dark"] #newTaskWrap .nt-pick:has(.nt-pick-val.ph),
+[data-theme="dark"] #newTaskWrap .nt-pv-title.empty,
+[data-theme="dark"] #newTaskWrap .nt-pv-table .dim { color: var(--ink-3); }
+
+/* Orange-tinted chips (kbd hint + active dispatch chip) — dark rust tint. */
+[data-theme="dark"] #newTaskWrap .nt-hint b,
+[data-theme="dark"] #newTaskWrap .dchip.on { background: var(--rust-bg); color: var(--rust-ink); }
+
+/* Calendar selected day: base is (light-in-dark) --ink fill + #fff text → flip
+   the text dark so it reads on the light chip. */
+[data-theme="dark"] #newTaskWrap .nt-cd.sel { color: var(--bg); }
+
+/* Disabled "Create & dispatch" — was a light-grey fill. */
+[data-theme="dark"] #newTaskWrap .nt-create:disabled { background: var(--bg-3); color: var(--ink-3); }
