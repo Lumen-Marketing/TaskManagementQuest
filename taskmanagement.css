@@ -2869,6 +2869,19 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 .tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); }
 .tour-dot.on { background: var(--amber); }
 .tour-actions { display: flex; gap: 6px; }
+/* Make the tour's primary action unmistakable in both themes. In the
+   ui-command-center skin a bare .btn-primary loses its fill to the later
+   `body.ui-command-center .btn` rule (equal specificity, wins on order), so it
+   renders as a pale secondary button that vanishes on the dark tooltip. Beat
+   that with a 3-class selector and paint it the orange accent. */
+.tour-actions .btn-primary,
+body.ui-command-center .tour-actions .btn-primary {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.tour-actions .btn-primary:hover,
+body.ui-command-center .tour-actions .btn-primary:hover {
+  background: var(--amber-ink); border-color: var(--amber-ink); color: #fff; filter: none;
+}
 
 @media (max-width: 460px) {
   /* On the smallest screens the search and the redundant sign-out icon

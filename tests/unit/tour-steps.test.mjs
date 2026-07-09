@@ -105,6 +105,28 @@ test('a task-only worker sees no admin/team/reports section steps', () => {
   }
 });
 
+test('the "getting around" step spotlights the real top nav and is visibility-gated', () => {
+  // Regression: the desktop layout has no sidebar — navigation is #primaryNav in
+  // the top bar (.grp-views is a mobile-drawer group, hidden on desktop). The
+  // step must be plain chrome (no forced view) so it is gated by live visibility
+  // and never renders a spotlight-less card where its target is absent.
+  const navStep = STEPS.find(s => s.sel === '#primaryNav');
+  assert.ok(navStep, 'expected a step spotlighting #primaryNav');
+  assert.equal(navStep.view, undefined, 'must not force a view');
+  assert.equal(navStep.gate, undefined, 'must be visibility-gated, not permission-gated');
+  const hidden = selectSteps(STEPS, { can: () => true, canView: () => true, isVisible: (sel) => sel !== '#primaryNav' });
+  assert.equal(hidden.some(s => s.sel === '#primaryNav'), false, 'hidden nav → step dropped');
+  const shown = selectSteps(STEPS, { can: () => true, canView: () => true, isVisible: () => true });
+  assert.equal(shown.some(s => s.sel === '#primaryNav'), true, 'visible nav → step kept');
+});
+
+test('no forced-view step targets the mobile-only .grp-views (would render target-less on desktop)', () => {
+  // The exact bug: a chrome selector gated by canView(view) shows even where the
+  // element is absent. Chrome must be visibility-gated (no `view`).
+  const bad = STEPS.filter(s => s.sel === '.grp-views' && s.view);
+  assert.equal(bad.length, 0);
+});
+
 test('includeStep: explicit gate wins over view (used by "Create a task")', () => {
   // A step with both a view and a gate: inclusion follows the gate, not the view.
   const step = { view: 'all', sel: '#x', title: 't', body: 'b', gate: ({ can }) => can('tasks.write') };

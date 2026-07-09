@@ -30,8 +30,11 @@
       body: 'Your dashboard — key numbers, what’s due, and what to do next.' },
     { view: 'all', sel: '#listPane', title: 'Your task list',
       body: 'Every task with its due date, time and status. Tap a row to open it.' },
-    { view: 'all', sel: '.grp-views', title: 'Your views',
-      body: 'Switch between All tasks, Mine, Urgent and Today.' },
+    // Desktop navigation lives in the top bar (#primaryNav). This is plain chrome
+    // — no forced view — so it's gated by live visibility and skips on layouts
+    // where the top nav isn't shown (e.g. the mobile drawer).
+    { sel: '#primaryNav', title: 'Getting around',
+      body: 'Your areas live up here — Home, Tasks, Projects and Reports. Quick views like Urgent and Today are under Tasks.' },
     { view: 'all', sel: '#newTaskBtn', title: 'Create a task',
       body: 'Add a task, set a date and optional time, choose who it’s for, and notify them.',
       gate: ({ can }) => can('tasks.write') },
