@@ -231,3 +231,79 @@
    plumbing remain wired — while Sort and Group by are untouched. ID specificity
    (1,0,0) beats .btn's display rule, and this file loads last. */
 #filterBtn { display: none !important; }
+
+/* ============================================================
+   DARK MODE — the qt-skin above shipped as a light-only island;
+   this block gives the Table layout a first-class dark variant.
+   It re-points the --qt-* vars at the app's token palette
+   (tokens.css: --bg/--surface/--ink/--border/…) so the table
+   reads as the same charcoal system as the rest of Quest HQ under
+   html[data-theme="dark"]. Purely additive — every rule above is
+   untouched, so light rendering is byte-for-byte identical. Rules
+   that hardcoded a literal (#fff card, #111 ink, #faf8f5 hover,
+   the cream/pink tints) are re-stated here because they can't be
+   reached by the variable swap alone; the extra selectors carry a
+   [data-theme="dark"] prefix so they out-specify the light rules.
+   ============================================================ */
+[data-theme="dark"] #taskViewWrap.qt-skin {
+  --qt-orange:#ED4E0D;
+  --qt-orange-dark: var(--rust-ink);   /* light warm rust — hover titles, filtered, due(today) */
+  --qt-red: #E5484D;                   /* one red that reads as a fill (white text) AND as text */
+  --qt-red-dark: #F1837E;              /* light red — overdue name + stuck-badge text */
+  --qt-green: var(--green-ink);        /* light green — done dot + due(done) */
+  --qt-ink: var(--ink);
+  --qt-ink-soft: var(--ink-2);
+  --qt-ink-3: var(--ink-3);
+  --qt-canvas: var(--bg);
+  --qt-card: var(--surface);
+  --qt-chip: var(--bg-3);
+  --qt-line: var(--border);
+  --qt-line-soft: var(--border);
+  --qt-line-strong: var(--border-strong);
+}
+
+/* Company chips — inactive sits on the card; active inverts to a light pill
+   (mirrors the light theme's near-black active pill, flipped). */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-chip { background: var(--qt-card); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-chip.on { background: var(--ink); color: var(--bg); }
+
+/* Surfaces pinned to literal #fff in light → the lifted card surface. */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-group,
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-ghead,
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row { background: var(--qt-card); }
+
+/* Row dividers + states (all were literal cream/pink in light). */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row { border-bottom-color: var(--qt-line); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row:hover { background: var(--bg-3); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row.selected { background: var(--amber-bg); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row.qt-stuckrow { background: var(--rust-bg); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row.qt-stuckrow:hover { background: oklch(31% 0.075 36); }
+
+/* Overdue group head — warm-red tint instead of the light pink. */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-ghead.overdue { background: var(--rust-bg); border-bottom-color: var(--rust); }
+
+/* Body text that was literal #111. */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-ttitle,
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-cellbtn,
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-pbadge.priority-low { color: var(--qt-ink); }
+/* …but keep the stateful title colours winning over that default. */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-row:hover .qt-ttitle { color: var(--qt-orange-dark); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-done .qt-ttitle { color: var(--qt-ink-3); }
+
+/* Due column — default ink, then re-assert late / today / done over it. */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-due { color: var(--qt-ink); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-due.late  { color: var(--qt-red); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-due.today { color: var(--qt-orange-dark); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-due.done  { color: var(--qt-green); }
+
+/* Column-header affordances (literal cream hover + pink "filtered" chip). */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-colbtn:hover { background: var(--qt-chip); }
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-colbtn.filtered { background: var(--amber-bg); }
+
+/* Stuck badge — warm-red tint + light-red text. */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-stuckbadge { background: var(--rust-bg); border-color: var(--rust); }
+
+/* Hover action cluster — fade over the dark hovered row, not cream. */
+[data-theme="dark"] #taskViewWrap.qt-skin .qt-actions {
+  background: linear-gradient(90deg, transparent, var(--bg-3) 22%, var(--bg-3));
+}
