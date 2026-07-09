@@ -2865,10 +2865,13 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 .tour-title { font-family: var(--font-display); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 .tour-body { font-size: 13px; line-height: 1.5; color: var(--ink-2); margin-top: 6px; }
 .tour-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; }
-.tour-dots { display: flex; gap: 5px; }
-.tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); }
+/* Dots must yield space to the buttons — with the tour now ~19 steps, a single
+   dot row exceeds the 320px tooltip and shoved the actions (Next) outside it.
+   Let the dots wrap and shrink; keep the actions at full size on the right. */
+.tour-dots { display: flex; gap: 5px; flex-wrap: wrap; min-width: 0; flex: 0 1 auto; }
+.tour-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); }
 .tour-dot.on { background: var(--amber); }
-.tour-actions { display: flex; gap: 6px; }
+.tour-actions { display: flex; gap: 6px; flex-shrink: 0; }
 /* Make the tour's primary action unmistakable in both themes. In the
    ui-command-center skin a bare .btn-primary loses its fill to the later
    `body.ui-command-center .btn` rule (equal specificity, wins on order), so it
