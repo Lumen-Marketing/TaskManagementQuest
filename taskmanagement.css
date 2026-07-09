@@ -6883,9 +6883,10 @@ body.wallboard-active #mainPane { padding: 0; }
 #taskViewWrap .list-row .row-dot.priority-low    { background: #b8b0a6; }
 
 /* ============================================================
-   Boot loading screen — GridMotion port (LoaderView.js). Full-screen
-   overlay shown while app.js loads data; fades out on boot. Classes are
-   ldr-* to avoid clashing with generic app class names.
+   Boot loading screen — FaultyTerminal port (LoaderView.js). Full-screen
+   overlay shown while app.js loads data; fades out on boot. A brand-tinted
+   WebGL CRT terminal fills the backdrop with the Quest HQ mark on top.
+   Classes are ldr-* to avoid clashing with generic app class names.
    ============================================================ */
 #appLoader {
   position: fixed;
@@ -6906,61 +6907,30 @@ body.wallboard-active #mainPane { padding: 0; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.15) 0%, #050505 78%);
+  background: radial-gradient(circle at 50% 45%, #0a0503 0%, #050505 80%);
 }
-.ldr-grid {
-  position: relative;
-  gap: 1rem;
-  width: 150vw;
-  height: 150vh;
-  display: grid;
-  grid-template-rows: repeat(4, 1fr);
-  grid-template-columns: 100%;
-  transform: rotate(-15deg);
-  transform-origin: center center;
-  z-index: 2;
-}
-.ldr-row {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(7, 1fr);
-  will-change: transform;
-}
-/* Fallback motion when GSAP isn't available (CDN blocked). When GSAP is present
-   it drives the rows via inline transforms instead, and this class is only added
-   when it's absent, so the two never fight. */
-.ldr-fallback .ldr-row { animation: ldr-drift 2.8s ease-in-out infinite alternate; }
-.ldr-fallback .ldr-row:nth-child(1) { animation-duration: 2.6s; }
-.ldr-fallback .ldr-row:nth-child(2) { animation-duration: 3.2s; animation-direction: alternate-reverse; }
-.ldr-fallback .ldr-row:nth-child(3) { animation-duration: 2.9s; }
-.ldr-fallback .ldr-row:nth-child(4) { animation-duration: 3.4s; animation-direction: alternate-reverse; }
-@keyframes ldr-drift {
-  from { transform: translateX(-120px); }
-  to   { transform: translateX(120px); }
-}
-.ldr-item { position: relative; }
-.ldr-item-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 10px;
-  background: #111;
-}
-.ldr-item-img {
+/* Full-bleed WebGL canvas driving the terminal effect. */
+.ldr-canvas {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: 50% 50%;
-  opacity: 0.9;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 1;
 }
-/* A subtle scrim over the grid so the centered brand mark stays readable. */
+/* No-WebGL fallback: a brand-tinted static wash so the loader never looks broken. */
+.ldr-intro.ldr-fallback {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(237, 78, 13, 0.20), transparent 62%),
+    radial-gradient(circle at 50% 45%, #0a0503 0%, #050505 80%);
+}
+/* A subtle scrim over the terminal so the centered brand mark stays readable. */
 .ldr-intro::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 3;
-  background: radial-gradient(circle at 50% 50%, rgba(5, 5, 5, 0.55) 0%, rgba(5, 5, 5, 0.15) 45%, transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(5, 5, 5, 0.62) 0%, rgba(5, 5, 5, 0.20) 46%, transparent 72%);
   pointer-events: none;
 }
 .ldr-brand {

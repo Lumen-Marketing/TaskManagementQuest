@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Loader preview — Quest HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/tabler-icons/tabler-icons-subset.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="taskmanagement.css">
+</head>
+<body class="ui-command-center">
+<!-- Mirror of the app.html boot loader block so we can screenshot the ported
+     FaultyTerminal effect in isolation. Not part of the app; dev harness only. -->
+<div id="appLoader" aria-hidden="true">
+  <section class="ldr-intro">
+    <div class="ldr-brand">
+      <div class="ldr-logo"><i class="ti ti-bolt"></i></div>
+      <div class="ldr-name">Quest HQ</div>
+      <div class="ldr-dots"><span></span><span></span><span></span></div>
+    </div>
+  </section>
+</div>
+<script defer src="js/views/LoaderView.js"></script>
+</body>
+</html>
