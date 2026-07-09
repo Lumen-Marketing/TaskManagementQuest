@@ -2411,6 +2411,32 @@ body.sidebar-minimized .app { grid-template-columns: 68px minmax(0, 1fr); }
 .quick-sheet-foot .quick-sheet-primary { background: var(--amber); color: #fff; }
 .quick-sheet-foot .quick-sheet-primary i { color: #fff; }
 
+/* On tablet/desktop the full-width bottom sheet stretches out and reads as an
+   empty band, so present the quick actions as a centered pop-up modal card
+   there instead — same dim/blur/shadow as .modal. Phones (≤720px) keep the
+   thumb-friendly bottom sheet. */
+@media (min-width: 721px) {
+  .quick-sheet-backdrop {
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(3px);
+    padding: 24px;
+  }
+  .quick-sheet {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    border-top-left-radius: var(--radius-sm);
+    border-top-right-radius: var(--radius-sm);
+    padding: 10px;
+    max-height: 84vh;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp var(--dur-mid) var(--ease-out);
+  }
+}
+
 @media (max-width: 720px) {
   /* Topbar: tighten, drop the sub-label, let search shrink */
   .topbar { padding: 0 12px; gap: 8px; }
