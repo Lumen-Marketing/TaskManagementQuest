@@ -22,6 +22,16 @@ App.utils = {
     return String(name || '').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   },
 
+  /* Uppercase a free-text field value on save. The user types normally; this is
+     applied at the save seams (createTask, updateTaskDetails, updateTaskField for
+     title/description, addTaskComment, createProject) so task/project titles,
+     descriptions, subtasks and notes are stored ALL CAPS. Non-strings pass
+     through untouched (null/undefined stay as-is), and it's idempotent — safe to
+     apply to an already-uppercased value (e.g. a duplicated task). */
+  upper(v) {
+    return typeof v === 'string' ? v.toUpperCase() : v;
+  },
+
   /* Trap Tab focus inside `container` (so it can't escape into the page behind a
      modal) and restore focus to whatever was focused before, when released.
      Returns a release() function to call on close. */

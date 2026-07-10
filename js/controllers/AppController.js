@@ -706,7 +706,7 @@ App.AppController = class AppController {
 
   async addTaskComment(taskId, body, mentions, kind) {
     if (!App.can('tasks.write') && !App.can('tasks.comment')) { /* fall through: comment allowed for any viewer of the task */ }
-    const text = String(body || '').trim();
+    const text = App.utils.upper(String(body || '').trim());
     if (!text) return;
     const t = this.taskModel.find(taskId);
     if (!t) return;
@@ -1529,6 +1529,10 @@ App.AppController = class AppController {
     if (!App.can('tasks.write')) return;
     const task = this.taskModel.find(id);
     if (!task) return;
+    // Auto-caps the free-text fields on save (title, description). Constrained
+    // fields (status, priority, due, project, …) carry keys/ISO values and must
+    // be left untouched.
+    if (field === 'title' || field === 'description') value = App.utils.upper(value);
     const prev = task[field];
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser), activityText);
     const doneKey = App.taxonomy.doneStatus(task.company, task.type);
@@ -1547,7 +1551,7 @@ App.AppController = class AppController {
      write to; RLS enforces it server-side regardless. */
   async createProject({ name, companyId, color }) {
     if (!App.can('tasks.write')) return null;
-    const clean = String(name || '').trim();
+    const clean = App.utils.upper(String(name || '').trim());
     if (!clean) return null;
     const id = App.utils.slugId(clean);
     await this.dataStore.createProject({
@@ -1621,7 +1625,7 @@ App.AppController = class AppController {
     if (id && this.toastView) {
       this.toastView.show({
         title: 'Project created',
-        sub: name,
+        sub: App.utils.upper(name),
         action: { label: 'Open', onClick: () => this.openProject(id) },
       });
     }
@@ -1653,8 +1657,8 @@ App.AppController = class AppController {
 
     let title, description, due, dueTime;
     try {
-      title = App.validate.nonEmpty(fields.title, 'Title', { field: 'title', max: App.validate.LIMITS.title });
-      description = String(fields.description == null ? '' : fields.description).trim().slice(0, App.validate.LIMITS.description);
+      title = App.utils.upper(App.validate.nonEmpty(fields.title, 'Title', { field: 'title', max: App.validate.LIMITS.title }));
+      description = App.utils.upper(String(fields.description == null ? '' : fields.description).trim().slice(0, App.validate.LIMITS.description));
       due = App.validate.isoDate(fields.due, { field: 'due', required: true });
       dueTime = fields.dueTime ? App.validate.isoTime(fields.dueTime, { field: 'dueTime' }) : null;
     } catch (err) {
@@ -1674,7 +1678,7 @@ App.AppController = class AppController {
     const assignee = fields.assignee || task.assignee;
     const watchers = Array.isArray(fields.watchers) ? [...new Set(fields.watchers)] : (task.watchers || []);
     const subtasks = Array.isArray(fields.subtasks)
-      ? fields.subtasks.map(s => ({ t: s.t, d: !!s.d }))
+      ? fields.subtasks.map(s => ({ t: App.utils.upper(s.t), d: !!s.d }))
       : (task.subtasks || []);
     // User-set reminder ("YYYY-MM-DDTHH:MM" local, or null to clear). Anything
     // not matching the datetime-local shape is treated as cleared.
@@ -2095,8 +2099,8 @@ App.AppController = class AppController {
       : null;
     const task = {
       id: App.utils.uid('t'),
-      title: payload.title,
-      description: payload.description,
+      title: App.utils.upper(payload.title),
+      description: App.utils.upper(payload.description),
       type: payload.type || 'admin',
       label: payload.label || 'roof',
       company: payload.company,
@@ -2113,7 +2117,7 @@ App.AppController = class AppController {
       reminderOffset: payload.reminderOffset || null,
       watchers: payload.watchers || [],
       subtasks: Array.isArray(payload.subtasks)
-        ? payload.subtasks.map(s => ({ t: s.t, d: !!s.d }))
+        ? payload.subtasks.map(s => ({ t: App.utils.upper(s.t), d: !!s.d }))
         : [],
       activity: [{
         who: this.getUserName(this.currentUser),

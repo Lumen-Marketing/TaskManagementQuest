@@ -564,7 +564,9 @@ App.NewTaskPageView = class NewTaskPageView {
     this._closeMenus(); this._flash('✓ label created → ' + val); this.sync('lab');
   }
   _createProject(val) {
-    // Reuse the existing project create path.
+    // Auto-caps the project name on save (this inline path calls the data store
+    // directly rather than controller.createProject, so it needs its own upper()).
+    val = App.utils.upper(val);
     const row = { name: val, company_id: this.S.company };
     if (this.controller.dataStore && this.controller.dataStore.createProject) {
       Promise.resolve(this.controller.dataStore.createProject(row)).then((res) => {
