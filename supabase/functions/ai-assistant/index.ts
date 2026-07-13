@@ -43,6 +43,12 @@ const MAX_DRAFT_TEXT = 500;
 const DRAFT_DAILY_CAP = 60; // drafting fires more often than the briefing
 const draftUsage = new Map<string, { day: string; n: number }>();
 
+const MAX_CHAT_TEXT = 500;      // per message (question + each history turn)
+const MAX_CHAT_HISTORY = 6;     // conversation turns kept for context
+const MAX_CHAT_TASKS = 200;     // snapshot lines accepted
+const CHAT_DAILY_CAP = 100;     // per user, per UTC day
+const chatUsage = new Map<string, { day: string; n: number }>();
+
 function corsHeadersFor(req: Request): Record<string, string> {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -102,7 +108,7 @@ Deno.serve(async (req: Request) => {
     let payload: { action?: unknown };
     try { payload = JSON.parse(raw || "{}"); } catch { return json(req, { error: "Invalid JSON body." }, 400); }
     const action = payload.action;
-    if (action !== "briefing" && action !== "draft_task") {
+    if (action !== "briefing" && action !== "draft_task" && action !== "chat") {
       return json(req, { error: "Unknown action." }, 400);
     }
 
@@ -157,6 +163,54 @@ Deno.serve(async (req: Request) => {
         console.error("[ai-assistant] draft fetch threw", e);
       }
       return json(req, { ok: true, draft });
+    }
+
+    // -------- chat: answer questions from the client's task snapshot ---------
+    if (action === "chat") {
+      const cday = new Date().toISOString().slice(0, 10);
+      const cu = chatUsage.get(uid);
+      const cn = cu && cu.day === cday ? cu.n : 0;
+      if (cn >= CHAT_DAILY_CAP) return json(req, { ok: false, error: "Daily chat limit reached. Try again tomorrow." }, 429);
+      chatUsage.set(uid, { day: cday, n: cn + 1 });
+
+      const p = payload as { question?: unknown; history?: unknown; tasks?: unknown; today?: unknown; truncated?: unknown };
+      const question = (typeof p.question === "string" ? p.question : "").slice(0, MAX_CHAT_TEXT).trim();
+      const history = (Array.isArray(p.history) ? p.history : [])
+        .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+        .slice(-MAX_CHAT_HISTORY)
+        .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, MAX_CHAT_TEXT) }));
+      const taskLines = (Array.isArray(p.tasks) ? p.tasks : [])
+        .filter((l: any) => typeof l === "string").slice(0, MAX_CHAT_TASKS);
+      const truncated = p.truncated === true || (Array.isArray(p.tasks) && p.tasks.length > MAX_CHAT_TASKS);
+      const today = typeof p.today === "string" ? p.today : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());
+      if (!question) return json(req, { ok: true, answer: "What would you like to know about your tasks?" });
+
+      const sys = "You are a helpful assistant inside a task manager. Answer the user's question using ONLY the TASKS list provided. Never invent tasks, people, dates, or companies. If the answer is not in the list, say you don't see it in their tasks. You cannot create, edit, complete, assign, or delete anything — you only answer questions. Be concise and specific, and name the tasks you refer to. Plain text only: no markdown headings, no emojis. If the NOTE says the list was truncated, mention your view may be partial.";
+      const taskBlock = `Today is ${today}.${truncated ? "\nNOTE: the task list was truncated; you may not see every task." : ""}\nTASKS:\n${taskLines.join("\n") || "(no tasks)"}`;
+      const messages = [
+        { role: "system", content: sys },
+        ...history,
+        { role: "user", content: `${question}\n\n${taskBlock}` },
+      ];
+
+      try {
+        const res = await fetch(GROQ_ENDPOINT, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: GROQ_MODEL, temperature: 0.3, max_tokens: 500, messages }),
+        });
+        if (!res.ok) {
+          console.error("[ai-assistant] chat provider rejected", { status: res.status });
+          return json(req, { ok: false, error: "The assistant is unavailable right now." }, 502);
+        }
+        const data = await res.json().catch(() => ({}));
+        const answer = data?.choices?.[0]?.message?.content ?? "";
+        if (!answer.trim()) return json(req, { ok: false, error: "No answer was produced." }, 502);
+        return json(req, { ok: true, answer });
+      } catch (e) {
+        console.error("[ai-assistant] chat fetch threw", e);
+        return json(req, { ok: false, error: "The assistant is unavailable right now." }, 502);
+      }
     }
 
     // -------- briefing (existing) -----------------------------------------
