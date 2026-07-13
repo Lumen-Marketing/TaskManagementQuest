@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         sendNotifications: async () => {},
         sendEmail: async () => ({ ok: false, skipped: true }),
+        getBriefing: async () => ({ ok: false, error: 'AI briefing is not available in preview mode.' }),
         deleteProfile: async (id) => {
           App.PROFILES = (App.PROFILES || []).filter(pr => pr.id !== id);
           return { emailFreed: true };

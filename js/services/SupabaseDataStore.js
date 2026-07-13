@@ -664,6 +664,26 @@ App.SupabaseDataStore = class SupabaseDataStore {
     }
   }
 
+  /* Daily AI briefing via the ai-assistant Edge Function. Returns
+     { ok, briefing?, error? } and never throws so Home degrades gracefully. */
+  async getBriefing() {
+    try {
+      const { data, error } = await this.supabase.functions.invoke('ai-assistant', {
+        body: { action: 'briefing' },
+      });
+      if (error) {
+        const status = (error.context && error.context.status) || null;
+        let msg = (error && error.message) || 'AI unavailable.';
+        try { const body = await error.context.json(); if (body && body.error) msg = body.error; }
+        catch (_e) { /* body already consumed or not JSON */ }
+        return { ok: false, status, error: msg };
+      }
+      return { ok: true, briefing: data && data.briefing };
+    } catch (err) {
+      return { ok: false, error: (err && err.message) || String(err) };
+    }
+  }
+
   /* Developer-only (RLS): every submitted report, newest first. */
   async listBugReports() {
     const res = await this.supabase
