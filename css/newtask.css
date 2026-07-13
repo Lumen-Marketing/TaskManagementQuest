@@ -262,3 +262,11 @@
 
 /* Disabled "Create & dispatch" — was a light-grey fill. */
 [data-theme="dark"] #newTaskWrap .nt-create:disabled { background: var(--bg-3); color: var(--ink-3); }
+
+/* AI-filled field marker on the New Task page */
+.nt-ai {
+  display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 6px;
+  font-size: 9px; font-weight: 800; letter-spacing: .04em; line-height: 1.4;
+  color: var(--amber); background: var(--amber-bg, rgba(237,78,13,.12));
+  border-radius: 999px; vertical-align: middle;
+}

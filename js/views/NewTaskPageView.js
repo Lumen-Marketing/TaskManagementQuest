@@ -57,6 +57,12 @@ App.NewTaskPageView = class NewTaskPageView {
     this.dispatched = false;
     this._calY = null; this._calM = null;
 
+    this._userSet = new Set();   // draft keys the user or token parser has set
+    this._aiSet = new Set();     // draft keys the AI filled (for the ✨ marker)
+    this._draftLast = '';        // last title text sent to the AI
+    this._draftTimer = null;
+    this._draftClient = App.TaskDraftClient ? new App.TaskDraftClient({ dataStore: this.controller.dataStore }) : null;
+
     this.wrap.innerHTML = this.template();
     this.bindEvents();
     this.sync();
@@ -183,7 +189,7 @@ App.NewTaskPageView = class NewTaskPageView {
   _priField() {
     // pro1 shows "Med" (not "Medium") and always-uppercase "CRITICAL".
     const PLABEL = { low: 'Low', medium: 'Med', high: 'High', critical: 'CRITICAL' };
-    return `<div class="nt-f"><label>PRIORITY<span class="nt-kk">P</span></label>
+    return `<div class="nt-f"><label>PRIORITY<span class="nt-kk">P</span><span id="nt-ai-pri"></span></label>
       <div class="nt-seg" id="nt-seg-pri">${this._priList().map(k =>
         `<button type="button" data-p="${k}">${PLABEL[k] || App.utils.escapeHtml(App.PRIORITIES[k].label)}</button>`).join('')}</div>
     </div>`;
@@ -360,7 +366,7 @@ App.NewTaskPageView = class NewTaskPageView {
 
     // Title parsing.
     const title = document.getElementById('nt-title');
-    title.addEventListener('input', () => { this._applyParse(false); this.sync(); });
+    title.addEventListener('input', () => { this._applyParse(false); this._scheduleDraft(); this.sync(); });
     title.addEventListener('blur', () => { this._applyParse(true); this.sync(); });
 
     // Description + subtasks.
@@ -371,8 +377,8 @@ App.NewTaskPageView = class NewTaskPageView {
     if (subAdd) subAdd.addEventListener('click', () => this._addSubtask());
 
     // Pickers.
-    this._bindPick('company', () => this._companyItems(), (v) => { this.S.company = v; this._afterCompany(); }, false);
-    this._bindPick('assignee', () => this._assigneeItems(), (v) => { this._toggleWho(v); }, true);
+    this._bindPick('company', () => this._companyItems(), (v) => { this.S.company = v; this._afterCompany(); this._lockField('company'); }, false);
+    this._bindPick('assignee', () => this._assigneeItems(), (v) => { this._toggleWho(v); this._lockField('assignee'); }, true);
     this._bindPick('type', () => this._typeItems(), (v) => { this.S.type = v; this.sync('type'); }, false);
     this._bindPick('status', () => this._statusItems(), (v) => { this.S.status = v; this.sync(); }, false);
     this._bindPick('label', () => this._labelItems(), (v) => { this.S.label = v || null; this.sync('lab'); }, false);
@@ -395,13 +401,13 @@ App.NewTaskPageView = class NewTaskPageView {
       const nav = e.target.closest('[data-cal]');
       if (nav) { this._calM += (nav.dataset.cal === 'next' ? 1 : -1); if (this._calM < 0) { this._calM = 11; this._calY--; } if (this._calM > 11) { this._calM = 0; this._calY++; } this._reopen('date', () => this._calMenu()); return; }
       const day = e.target.closest('[data-day]');
-      if (day) { this.S.date = day.dataset.day; this._closeMenus(); this.sync('due'); }
+      if (day) { this.S.date = day.dataset.day; this._lockField('due'); this._closeMenus(); this.sync('due'); }
     });
     const timeMenu = document.getElementById('nt-menu-time');
     timeMenu.addEventListener('click', (e) => {
       e.stopPropagation();
       const t = e.target.closest('[data-time]');
-      if (t) { this.S.time = t.dataset.time; this._closeMenus(); this.sync('due'); }
+      if (t) { this.S.time = t.dataset.time; this._lockField('dueTime'); this._closeMenus(); this.sync('due'); }
     });
 
     // Priority segmented.
@@ -506,6 +512,7 @@ App.NewTaskPageView = class NewTaskPageView {
   }
   _setPri(p) {
     this.S.pri = p;
+    this._lockField('priority');
     if (!this._isHigh(p)) this.S.channels.wa = false;
     else if (!this.S.channels.wa) this.S.channels.wa = true; // auto-arm on high+
     this.sync('pri');
@@ -595,16 +602,55 @@ App.NewTaskPageView = class NewTaskPageView {
     const r = App.parseTaskTitle(el.value, this._parseCtx(atEnd));
     if (!r.hits.length) return;
     const p = r.patches;
-    if (p.addWhos) p.addWhos.forEach(id => { if (!this.S.whos.includes(id)) this.S.whos.push(id); });
-    if (p.company) { this.S.company = p.company; this._afterCompany(); }
-    if (p.pri) this.S.pri = p.pri;
-    if (p.date) this.S.date = p.date;
-    if (p.time) this.S.time = p.time;
+    if (p.addWhos) { p.addWhos.forEach(id => { if (!this.S.whos.includes(id)) this.S.whos.push(id); }); this._userSet.add('assignee'); this._aiSet.delete('assignee'); }
+    if (p.company) { this.S.company = p.company; this._afterCompany(); this._userSet.add('company'); this._aiSet.delete('company'); }
+    if (p.pri) { this.S.pri = p.pri; this._userSet.add('priority'); this._aiSet.delete('priority'); }
+    if (p.date) { this.S.date = p.date; this._userSet.add('due'); this._aiSet.delete('due'); }
+    if (p.time) { this.S.time = p.time; this._userSet.add('dueTime'); this._aiSet.delete('dueTime'); }
     el.value = r.cleanTitle + (atEnd ? '' : ' ');
     this._flash('✓ ' + r.hits.map(h => `${h.kind} → ${h.label}`).join(' · '));
     r.hits.forEach(h => this._glow('nt-pick-' + this._hitToField(h.kind)));
     this.sync(this._hitToKey(r.hits[0].kind));
   }
+  // A user/token change to a field: never let the AI touch it again, and drop
+  // any ✨ marker it had.
+  _lockField(key) { if (this._userSet) { this._userSet.add(key); this._aiSet.delete(key); } }
+
+  // Small "AI" marker appended to the label of a field the AI filled.
+  _aiTag(key) { return this._aiSet && this._aiSet.has(key) ? '<span class="nt-ai" title="Filled by AI — edit to override">AI</span>' : ''; }
+
+  // Debounced natural-language draft. Called on each title input; fires ~800ms
+  // after typing stops, only when the sentence is substantial and changed.
+  _scheduleDraft() {
+    if (!this._draftClient) return;
+    if (this._draftTimer) clearTimeout(this._draftTimer);
+    this._draftTimer = setTimeout(() => {
+      const el = document.getElementById('nt-title');
+      const text = (el && el.value ? el.value : '').trim();
+      if (!App.TaskDraftClient.shouldRequest(text, this._draftLast, {})) return;
+      this._draftLast = text;
+      const ctx = this._parseCtx(false);
+      this._draftClient.fetchDraft({ text, team: ctx.team, companies: ctx.companies, today: ctx.today })
+        .then(({ draft }) => { if (draft) this._applyAiDraft(draft); });
+    }, 800);
+  }
+
+  // Apply the validated draft to fields the user/token parser hasn't set.
+  _applyAiDraft(draft) {
+    const { apply, aiFilled } = App.TaskDraftClient.mergeDraftIntoState(draft, this._userSet);
+    if (!aiFilled.length) return;
+    // Company first: it re-scopes the assignee roster.
+    if ('company' in apply) { this.S.company = apply.company; this._afterCompany(); this._aiSet.add('company'); }
+    if ('assignee' in apply) {
+      const roster = new Set(this._peopleFor(this.S.company).map(p => p.id));
+      if (roster.has(apply.assignee)) { this.S.whos = [apply.assignee]; this._aiSet.add('assignee'); }
+    }
+    if ('priority' in apply) { this.S.pri = apply.priority; this._aiSet.add('priority'); }
+    if ('due' in apply) { this.S.date = apply.due; this._aiSet.add('due'); }
+    if ('dueTime' in apply) { this.S.time = apply.dueTime; this._aiSet.add('dueTime'); }
+    this.sync();
+  }
+
   _hitToField(kind) { return { assignee: 'assignee', company: 'company', pri: 'pri', date: 'date', time: 'time' }[kind] || ''; }
   _hitToKey(kind) { return { assignee: 'who', company: 'co', pri: 'pri', date: 'due', time: 'due' }[kind]; }
   _flash(msg) {
@@ -648,6 +694,8 @@ App.NewTaskPageView = class NewTaskPageView {
 
     // Priority segmented active.
     document.querySelectorAll('#nt-seg-pri button').forEach(b => b.classList.toggle('on', b.dataset.p === this.S.pri));
+    const priMark = document.getElementById('nt-ai-pri');
+    if (priMark) priMark.innerHTML = this._aiTag('priority');
 
     // Picker button labels (pro1: company square, status/label dots, folder/cal/clock/bell icons).
     this._setPickLabel('company', (App.directory.company(this.S.company) || { label: this.S.company }).label, { square: this._companyColor(this.S.company) });
@@ -683,7 +731,9 @@ App.NewTaskPageView = class NewTaskPageView {
     if (opts.square) lead = `<span class="nt-sq" style="background:${opts.square}"></span>`;
     else if (opts.swatch) lead = `<span class="nt-dot" style="background:${opts.swatch}"></span>`;
     else if (opts.icon) lead = `<i class="ti ${opts.icon}"></i>`; // opts.icon is the FULL ti-* class — the icon-subset scanner needs whole literals at call sites
-    val.innerHTML = lead + `<span class="nt-pick-txt">${App.utils.escapeHtml(text || '')}</span>`;
+    const aiKey = { company: 'company', date: 'due', time: 'dueTime' }[key];
+    const tag = aiKey ? this._aiTag(aiKey) : '';
+    val.innerHTML = lead + `<span class="nt-pick-txt">${App.utils.escapeHtml(text || '')}</span>` + tag;
   }
   _setAssigneeLabel() {
     const btn = document.getElementById('nt-pick-assignee');
@@ -695,7 +745,7 @@ App.NewTaskPageView = class NewTaskPageView {
     if (!people.length) { val.innerHTML = '<span class="nt-pick-txt">Assign…</span>'; return; }
     const avatars = people.slice(0, 3).map(p => `<span class="nt-mini stack" style="background:${p.color || '#444441'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>`).join('');
     const label = people.length === 1 ? people[0].name : `${people[0].name} +${people.length - 1}`;
-    val.innerHTML = avatars + `<span class="nt-pick-txt">${App.utils.escapeHtml(label)}</span>`;
+    val.innerHTML = avatars + `<span class="nt-pick-txt">${App.utils.escapeHtml(label)}</span>` + this._aiTag('assignee');
   }
   _renderWatchTags() {
     const box = document.getElementById('nt-watch-tags');
