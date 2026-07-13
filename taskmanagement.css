@@ -7936,3 +7936,14 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
   }
   .chat-scrim.open .chat-drawer { transform: translateY(0); }
 }
+
+/* Today | This week toggle on the AI briefing card */
+.qhq-brief-seg { display: inline-flex; gap: 2px; margin-left: auto; margin-right: 6px;
+  background: var(--bg-3, rgba(0,0,0,.06)); border-radius: 999px; padding: 2px; }
+.qhq-seg-opt { border: 0; background: transparent; cursor: pointer; padding: 4px 10px;
+  border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--ink-3); line-height: 1.4; }
+.qhq-seg-opt.on { background: var(--bg-1, #fff); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+@media (max-width: 720px) {
+  .qhq-brief-seg { margin-left: 0; }
+  .qhq-card-h { flex-wrap: wrap; row-gap: 6px; }
+}

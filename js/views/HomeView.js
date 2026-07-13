@@ -561,33 +561,56 @@ App.HomeView = class HomeView {
       this._fetchBriefing();
     }
     const refreshBtn = this.wrap.querySelector('[data-brief="refresh"]');
-    if (refreshBtn) refreshBtn.addEventListener('click', () => this._fetchBriefing({ force: true }));
+    if (refreshBtn) refreshBtn.addEventListener('click', () => {
+      if ((this._briefMode || 'today') === 'week') this._fetchDigest({ force: true });
+      else this._fetchBriefing({ force: true });
+    });
+    this.wrap.querySelectorAll('[data-brief-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = btn.dataset.briefMode;
+        if (next === this._briefMode) return;
+        this._briefMode = next;
+        if (next === 'week' && !this._digestFetched) { this._digestFetched = true; this._fetchDigest(); }
+        this.render();
+      });
+    });
   }
 
-  // The AI daily briefing card. Renders whatever state we currently hold:
-  // skeleton while loading, the briefing once fetched, or a quiet muted line
-  // if the AI is unavailable (Home never shows a broken card).
+  // The AI card. Two modes behind a Today | This week toggle: "today" is the
+  // daily briefing (unchanged); "week" is the weekly digest. Each renders its
+  // own state (skeleton / narrative+bullets / muted-degrade) so Home never
+  // shows a broken card.
   _briefingCardHtml() {
     const esc = App.utils.escapeHtml;
+    const mode = (this._briefMode = this._briefMode || 'today');
+    const isWeek = mode === 'week';
     const icon = `<svg class="qhq-ic" viewBox="0 0 24 24" aria-hidden="true">${HOME_ICONS.fire}</svg>`;
+    const seg = `
+      <div class="qhq-brief-seg" role="group" aria-label="Briefing range">
+        <button type="button" class="qhq-seg-opt ${isWeek ? '' : 'on'}" data-brief-mode="today" aria-pressed="${!isWeek}">Today</button>
+        <button type="button" class="qhq-seg-opt ${isWeek ? 'on' : ''}" data-brief-mode="week" aria-pressed="${isWeek}">This week</button>
+      </div>`;
+    const title = isWeek ? 'Weekly digest' : 'Daily briefing';
+    const sub = isWeek ? 'this week in review' : 'your day at a glance';
     const head = `
       <div class="qhq-card-h">
         <span class="qhq-hicon tone-amber">${icon}</span>
-        <span class="qhq-htext"><span class="ct">Daily briefing</span><span class="meta">your day at a glance</span></span>
-        <button type="button" class="qhq-brief-refresh" data-brief="refresh" aria-label="Refresh briefing" title="Refresh"><i class="ti ti-refresh"></i></button>
+        <span class="qhq-htext"><span class="ct">${title}</span><span class="meta">${sub}</span></span>
+        ${seg}
+        <button type="button" class="qhq-brief-refresh" data-brief="refresh" aria-label="Refresh" title="Refresh"><i class="ti ti-refresh"></i></button>
       </div>`;
 
+    const state = isWeek ? this._digestState : this._briefState;
+    const data = isWeek ? this._digest : this._briefing;
     let body;
-    if (this._briefState === 'loading') {
+    if (state === 'loading') {
       body = `<div class="qhq-brief-skel"><span></span><span></span><span></span></div>`;
-    } else if (this._briefState === 'error' || !this._briefing) {
-      body = `<div class="qhq-brief-muted">Your AI briefing isn't available right now.</div>`;
+    } else if (state === 'error' || !data) {
+      body = `<div class="qhq-brief-muted">Your AI ${isWeek ? 'digest' : 'briefing'} isn't available right now.</div>`;
     } else {
-      const b = this._briefing;
-      const bullets = (b.bullets || []).map((x) =>
-        `<li>${esc(x.label || '')}</li>`).join('');
+      const bullets = (data.bullets || []).map((x) => `<li>${esc(x.label || '')}</li>`).join('');
       body = `
-        <p class="qhq-brief-text">${esc(b.text)}</p>
+        <p class="qhq-brief-text">${esc(data.text)}</p>
         ${bullets ? `<ul class="qhq-brief-bullets">${bullets}</ul>` : ''}`;
     }
     return `<div class="qhq-card qhq-brief">${head}<div class="qhq-brief-body">${body}</div></div>`;
@@ -600,6 +623,17 @@ App.HomeView = class HomeView {
     client.get(this.controller.currentUser, { force }).then((r) => {
       if (r.briefing) { this._briefing = r.briefing; this._briefState = 'ready'; }
       else { this._briefState = 'error'; }
+      if (this.visible()) this.render();
+    });
+  }
+
+  _fetchDigest({ force = false } = {}) {
+    if (!App.DigestClient || !this.controller.dataStore) { this._digestState = 'error'; return; }
+    this._digestState = 'loading';
+    const client = this._digestClient || (this._digestClient = new App.DigestClient({ dataStore: this.controller.dataStore }));
+    client.get(this.controller.currentUser, { force }).then((r) => {
+      if (r.digest) { this._digest = r.digest; this._digestState = 'ready'; }
+      else { this._digestState = 'error'; }
       if (this.visible()) this.render();
     });
   }
