@@ -39,6 +39,7 @@ App.HomeView = class HomeView {
       else {
         this._rendered = false;  // re-arm the entrance reveal for the next visit
         this._cmFetched = false; // refresh the comments feed on the next visit
+        this._briefFetched = false; // re-fetch the AI briefing on the next visit
       }
     };
     App.EventBus.on('view:changed', rerender);
@@ -439,6 +440,7 @@ App.HomeView = class HomeView {
 
         <div class="qhq-cc-shell">
           <div class="qhq-cc-main">
+            ${this._briefingCardHtml()}
             <div class="qhq-card qhq-col-up">
               ${cardHead('layers', 'tone-amber', 'Up next', 'your queue')}
               <div class="qhq-unlist">${unHtml}</div>
@@ -550,6 +552,55 @@ App.HomeView = class HomeView {
         if (this.visible()) this.render();
       });
     }
+
+    // Lazy-load the AI briefing once per Home visit (cache-first inside the
+    // client). Re-armed by subscribe() on leaving Home.
+    if (!this._briefFetched) {
+      this._briefFetched = true;
+      this._fetchBriefing();
+    }
+    const refreshBtn = this.wrap.querySelector('[data-brief="refresh"]');
+    if (refreshBtn) refreshBtn.addEventListener('click', () => this._fetchBriefing({ force: true }));
+  }
+
+  // The AI daily briefing card. Renders whatever state we currently hold:
+  // skeleton while loading, the briefing once fetched, or a quiet muted line
+  // if the AI is unavailable (Home never shows a broken card).
+  _briefingCardHtml() {
+    const esc = App.utils.escapeHtml;
+    const icon = `<svg class="qhq-ic" viewBox="0 0 24 24" aria-hidden="true">${HOME_ICONS.fire}</svg>`;
+    const head = `
+      <div class="qhq-card-h">
+        <span class="qhq-hicon tone-amber">${icon}</span>
+        <span class="qhq-htext"><span class="ct">Daily briefing</span><span class="meta">your day at a glance</span></span>
+        <button type="button" class="qhq-brief-refresh" data-brief="refresh" aria-label="Refresh briefing" title="Refresh"><i class="ti ti-refresh"></i></button>
+      </div>`;
+
+    let body;
+    if (this._briefState === 'loading') {
+      body = `<div class="qhq-brief-skel"><span></span><span></span><span></span></div>`;
+    } else if (this._briefState === 'error' || !this._briefing) {
+      body = `<div class="qhq-brief-muted">Your AI briefing isn't available right now.</div>`;
+    } else {
+      const b = this._briefing;
+      const bullets = (b.bullets || []).map((x) =>
+        `<li>${esc(x.label || '')}</li>`).join('');
+      body = `
+        <p class="qhq-brief-text">${esc(b.text)}</p>
+        ${bullets ? `<ul class="qhq-brief-bullets">${bullets}</ul>` : ''}`;
+    }
+    return `<div class="qhq-card qhq-brief">${head}<div class="qhq-brief-body">${body}</div></div>`;
+  }
+
+  _fetchBriefing({ force = false } = {}) {
+    if (!App.BriefingClient || !this.controller.dataStore) { this._briefState = 'error'; return; }
+    this._briefState = 'loading';
+    const client = this._briefClient || (this._briefClient = new App.BriefingClient({ dataStore: this.controller.dataStore }));
+    client.get(this.controller.currentUser, { force }).then((r) => {
+      if (r.briefing) { this._briefing = r.briefing; this._briefState = 'ready'; }
+      else { this._briefState = 'error'; }
+      if (this.visible()) this.render();
+    });
   }
 
   _reduceMotion() {

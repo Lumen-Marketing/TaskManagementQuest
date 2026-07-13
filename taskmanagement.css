@@ -7840,3 +7840,26 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
   .tdp-saved-flash::after { animation: none; }
   .rp-pop { animation: none; }
 }
+
+/* AI daily briefing card (Home) */
+.qhq-brief .qhq-card-h { align-items: center; }
+.qhq-brief-refresh {
+  margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--ink-3); padding: 4px; border-radius: 8px; line-height: 0;
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.qhq-brief-refresh:hover { color: var(--amber); background: var(--bg-3); }
+.qhq-brief-body { padding: 4px 2px 2px; }
+.qhq-brief-text { margin: 0; line-height: 1.55; color: var(--ink); }
+.qhq-brief-bullets { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.qhq-brief-bullets li { line-height: 1.4; color: var(--ink-2); }
+.qhq-brief-muted { color: var(--ink-3); font-size: 0.92em; }
+.qhq-brief-skel { display: grid; gap: 8px; }
+.qhq-brief-skel span { height: 12px; border-radius: 6px; background: var(--bg-3); }
+.qhq-brief-skel span:nth-child(1) { width: 92%; }
+.qhq-brief-skel span:nth-child(2) { width: 84%; }
+.qhq-brief-skel span:nth-child(3) { width: 60%; }
+@media (prefers-reduced-motion: no-preference) {
+  .qhq-brief-skel span { animation: qhq-brief-pulse 1.2s ease-in-out infinite; }
+}
+@keyframes qhq-brief-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
