@@ -87,8 +87,10 @@ Deno.serve(async (req: Request) => {
     const uid = userData.user.id;
 
     const { data: profile, error: profErr } = await userClient
-      .from("profiles").select("approved").eq("id", uid).single();
+      .from("profiles").select("approved, member_id").eq("id", uid).single();
     if (profErr || !profile || !profile.approved) return json(req, { error: "Not authorized." }, 403);
+    // Tasks are keyed by member id (e.g. "abraham"), not the auth UUID.
+    const memberId = profile.member_id || uid;
 
     const raw = await req.text();
     if (raw.length > MAX_PAYLOAD_BYTES) return json(req, { error: "Payload too large." }, 413);
@@ -107,8 +109,8 @@ Deno.serve(async (req: Request) => {
     // Pull a bounded slice of the caller's open + recently-completed tasks.
     const { data: rows, error: taskErr } = await userClient
       .from("tasks")
-      .select("id,title,company,due,status,priority,assignee,focus_seq,completed_at")
-      .eq("assignee", uid)
+      .select("id,title,company_id,due,status,priority,assignee_id,focus_seq,completed_at")
+      .eq("assignee_id", memberId)
       .order("due", { ascending: true })
       .limit(120);
     if (taskErr) {
@@ -116,12 +118,12 @@ Deno.serve(async (req: Request) => {
       return json(req, { error: "Could not load your tasks." }, 500);
     }
     const tasks = (rows ?? []).map((r) => ({
-      id: r.id, title: r.title, company: r.company, due: r.due, status: r.status,
-      priority: r.priority, assignee: r.assignee, focusSeq: r.focus_seq, completedAt: r.completed_at, activity: [],
+      id: r.id, title: r.title, company: r.company_id, due: r.due, status: r.status,
+      priority: r.priority, assignee: r.assignee_id, focusSeq: r.focus_seq, completedAt: r.completed_at, activity: [],
     }));
 
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());
-    const ctx = buildBriefingContext(tasks, { me: uid, today, maxItems: MAX_CONTEXT_ITEMS });
+    const ctx = buildBriefingContext(tasks, { me: memberId, today, maxItems: MAX_CONTEXT_ITEMS });
 
     // ---- call Groq ------------------------------------------------------
     const system = "You are a concise task assistant. Write a 2 to 4 sentence briefing describing what happened and what needs attention today, then up to 3 short bullet lines each naming one specific task. Only reference tasks in the provided context. Plain text, no emojis, no markdown headings.";
