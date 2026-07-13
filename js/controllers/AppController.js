@@ -66,13 +66,14 @@ App.AppController = class AppController {
     App.EventBus.on('tasks:changed', () => { this._visibleCache.key = null; });
   }
 
-  attachViews({ toastView, newTaskPage, profileView, reportProblemView, newFolderView, textPromptView }) {
+  attachViews({ toastView, newTaskPage, profileView, reportProblemView, newFolderView, textPromptView, chatDrawerView }) {
     this.toastView = toastView;
     this.newTaskPage = newTaskPage;
     this.profileView = profileView;
     this.reportProblemView = reportProblemView;
     this.newFolderView = newFolderView;
     this.textPromptView = textPromptView;
+    this.chatDrawerView = chatDrawerView;
   }
 
   openProfile() {
@@ -82,6 +83,8 @@ App.AppController = class AppController {
   openReportProblem() {
     if (this.reportProblemView) this.reportProblemView.open();
   }
+
+  toggleChat() { if (this.chatDrawerView) this.chatDrawerView.toggle(); }
 
   /* ---------- helpers ---------- */
   getTask(id) { return this.taskModel.find(id); }

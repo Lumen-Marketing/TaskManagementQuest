@@ -126,6 +126,9 @@ App.TopbarView = class TopbarView {
         });
       });
     }
+
+    const chatBtn = document.getElementById('chatBtn');
+    if (chatBtn) chatBtn.addEventListener('click', (e) => { e.stopPropagation(); this.controller.toggleChat(); });
   }
 
   // The redesigned topbar shows the active section's title and a Mine/Company
