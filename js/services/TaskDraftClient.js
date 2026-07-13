@@ -33,9 +33,9 @@ App.TaskDraftClient = class TaskDraftClient {
   }
 
   // Never throws. Returns { draft } or { draft: null }.
-  async fetchDraft({ text, team, companies, today }) {
+  async fetchDraft({ text, team, companies, today, types, labels, projects }) {
     let res;
-    try { res = await this.dataStore.draftTask({ text, team, companies, today }); }
+    try { res = await this.dataStore.draftTask({ text, team, companies, today, types, labels, projects }); }
     catch (_e) { return { draft: null }; }
     if (!res || !res.ok || !res.draft) return { draft: null };
     return { draft: res.draft };

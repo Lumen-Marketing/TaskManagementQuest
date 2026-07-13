@@ -42,6 +42,18 @@ test('mergeDraftIntoState skips an empty assignees array', () => {
   assert.deepEqual(aiFilled, ['company']);
 });
 
+test('fetchDraft forwards all option lists to the data store', async () => {
+  let received = null;
+  const client = new TDC({ dataStore: { draftTask: async (body) => { received = body; return { ok: true, draft: { assignees: [] } }; } } });
+  await client.fetchDraft({
+    text: 'x', team: [{ id: 'a' }], companies: [{ id: 'c' }], today: '2026-07-14',
+    types: [{ id: 't' }], labels: [{ id: 'l' }], projects: [{ id: 'p' }],
+  });
+  assert.deepEqual(received.types, [{ id: 't' }]);
+  assert.deepEqual(received.labels, [{ id: 'l' }]);
+  assert.deepEqual(received.projects, [{ id: 'p' }]);
+});
+
 test('mergeDraftIntoState with everything locked applies nothing', () => {
   const draft = { assignees: ['josh'], company: 'lumen', priority: 'high', due: null, dueTime: null };
   const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, ['assignees', 'company', 'priority', 'due', 'dueTime']);
