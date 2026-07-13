@@ -35,3 +35,10 @@ node_modules/
 playwright-report/
 test-results/
 playwright/.cache/
+
+# Local agent tooling / scratch (accidentally committed once, now ignored)
+.agents/
+.claude/
+.hallmark/
+verify_out/
+PASTE-INTO-SUPABASE-DASHBOARD.ts
