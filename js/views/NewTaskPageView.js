@@ -378,7 +378,7 @@ App.NewTaskPageView = class NewTaskPageView {
 
     // Pickers.
     this._bindPick('company', () => this._companyItems(), (v) => { this.S.company = v; this._afterCompany(); this._lockField('company'); }, false);
-    this._bindPick('assignee', () => this._assigneeItems(), (v) => { this._toggleWho(v); this._lockField('assignee'); }, true);
+    this._bindPick('assignee', () => this._assigneeItems(), (v) => { this._toggleWho(v); this._lockField('assignees'); }, true);
     this._bindPick('type', () => this._typeItems(), (v) => { this.S.type = v; this.sync('type'); }, false);
     this._bindPick('status', () => this._statusItems(), (v) => { this.S.status = v; this.sync(); }, false);
     this._bindPick('label', () => this._labelItems(), (v) => { this.S.label = v || null; this.sync('lab'); }, false);
@@ -602,7 +602,7 @@ App.NewTaskPageView = class NewTaskPageView {
     const r = App.parseTaskTitle(el.value, this._parseCtx(atEnd));
     if (!r.hits.length) return;
     const p = r.patches;
-    if (p.addWhos) { p.addWhos.forEach(id => { if (!this.S.whos.includes(id)) this.S.whos.push(id); }); this._userSet.add('assignee'); this._aiSet.delete('assignee'); }
+    if (p.addWhos) { p.addWhos.forEach(id => { if (!this.S.whos.includes(id)) this.S.whos.push(id); }); this._userSet.add('assignees'); this._aiSet.delete('assignees'); }
     if (p.company) { this.S.company = p.company; this._afterCompany(); this._userSet.add('company'); this._aiSet.delete('company'); }
     if (p.pri) { this.S.pri = p.pri; this._userSet.add('priority'); this._aiSet.delete('priority'); }
     if (p.date) { this.S.date = p.date; this._userSet.add('due'); this._aiSet.delete('due'); }
@@ -641,9 +641,10 @@ App.NewTaskPageView = class NewTaskPageView {
     if (!aiFilled.length) return;
     // Company first: it re-scopes the assignee roster.
     if ('company' in apply) { this.S.company = apply.company; this._afterCompany(); this._aiSet.add('company'); }
-    if ('assignee' in apply) {
+    if ('assignees' in apply) {
       const roster = new Set(this._peopleFor(this.S.company).map(p => p.id));
-      if (roster.has(apply.assignee)) { this.S.whos = [apply.assignee]; this._aiSet.add('assignee'); }
+      const valid = apply.assignees.filter(id => roster.has(id));
+      if (valid.length) { this.S.whos = valid; this._aiSet.add('assignees'); }
     }
     if ('priority' in apply) { this.S.pri = apply.priority; this._aiSet.add('priority'); }
     if ('due' in apply) { this.S.date = apply.due; this._aiSet.add('due'); }
@@ -745,7 +746,7 @@ App.NewTaskPageView = class NewTaskPageView {
     if (!people.length) { val.innerHTML = '<span class="nt-pick-txt">Assign…</span>'; return; }
     const avatars = people.slice(0, 3).map(p => `<span class="nt-mini stack" style="background:${p.color || '#444441'}">${App.utils.escapeHtml((p.name || '?').slice(0, 2).toUpperCase())}</span>`).join('');
     const label = people.length === 1 ? people[0].name : `${people[0].name} +${people.length - 1}`;
-    val.innerHTML = avatars + `<span class="nt-pick-txt">${App.utils.escapeHtml(label)}</span>` + this._aiTag('assignee');
+    val.innerHTML = avatars + `<span class="nt-pick-txt">${App.utils.escapeHtml(label)}</span>` + this._aiTag('assignees');
   }
   _renderWatchTags() {
     const box = document.getElementById('nt-watch-tags');

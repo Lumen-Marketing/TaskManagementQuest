@@ -89,14 +89,21 @@ const DRAFT_PRIORITIES = new Set(["low", "medium", "high", "critical"]);
 const DRAFT_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DRAFT_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+const MAX_ASSIGNEES = 10;
 function validateDraft(raw: any, opts: any) {
-  const out: any = { assignee: null, company: null, priority: null, due: null, dueTime: null };
+  const out: any = { assignees: [], company: null, priority: null, due: null, dueTime: null };
   if (!raw || typeof raw !== "object") return out;
   const team = (opts && opts.team) || [];
   const companies = (opts && opts.companies) || [];
   const teamIds = new Set(team.map((t: any) => t && t.id).filter(Boolean));
   const compIds = new Set(companies.map((c: any) => c && c.id).filter(Boolean));
-  if (typeof raw.assignee === "string" && teamIds.has(raw.assignee)) out.assignee = raw.assignee;
+  const candidates = Array.isArray(raw.assignees) ? raw.assignees
+    : (typeof raw.assignee === "string" ? [raw.assignee] : []);
+  const seenIds = new Set();
+  for (const id of candidates) {
+    if (typeof id === "string" && teamIds.has(id) && !seenIds.has(id)) { seenIds.add(id); out.assignees.push(id); }
+    if (out.assignees.length >= MAX_ASSIGNEES) break;
+  }
   if (typeof raw.company === "string" && compIds.has(raw.company)) out.company = raw.company;
   if (typeof raw.priority === "string" && DRAFT_PRIORITIES.has(raw.priority)) out.priority = raw.priority;
   if (typeof raw.due === "string" && DRAFT_DATE_RE.test(raw.due) && !Number.isNaN(Date.parse(raw.due))) out.due = raw.due;
@@ -178,12 +185,12 @@ Deno.serve(async (req: Request) => {
       const team = Array.isArray(p.team) ? p.team : [];
       const companies = Array.isArray(p.companies) ? p.companies : [];
       const today = typeof p.today === "string" ? p.today : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());
-      const emptyDraft = { assignee: null, company: null, priority: null, due: null, dueTime: null };
+      const emptyDraft = { assignees: [], company: null, priority: null, due: null, dueTime: null };
       if (!text) return json(req, { ok: true, draft: emptyDraft });
 
       const names = team.map((t: any) => `${t.id} = ${t.name}`).join("; ");
       const comps = companies.map((c: any) => `${c.id} = ${c.label}`).join("; ");
-      const sys = "You extract task fields from a short sentence. Respond ONLY with a JSON object with keys assignee, company, priority, due, dueTime. Use an id from the PEOPLE list for assignee, an id from the COMPANIES list for company, priority one of low|medium|high|critical, due as YYYY-MM-DD, dueTime as 24h HH:mm. Use null for anything not clearly present. Never invent ids.";
+      const sys = "You extract task fields from a short sentence. Respond ONLY with a JSON object with keys assignees, company, priority, due, dueTime. assignees is an ARRAY of ids from the PEOPLE list (include EVERY person named — one or more); company is an id from the COMPANIES list; priority one of low|medium|high|critical; due as YYYY-MM-DD; dueTime as 24h HH:mm. Use [] for assignees and null for other fields not clearly present. Never invent ids.";
       const usr = `Today is ${today}.\nPEOPLE: ${names || "(none)"}\nCOMPANIES: ${comps || "(none)"}\nSENTENCE: ${text}`;
 
       let draft = emptyDraft;

@@ -1,0 +1,384 @@
+diff --git a/js/views/TaskDetailView.js b/js/views/TaskDetailView.js
+index d9356d8..0c46eac 100644
+--- a/js/views/TaskDetailView.js
++++ b/js/views/TaskDetailView.js
+@@ -9,10 +9,11 @@ App.TaskDetailView = class TaskDetailView {
+ 
+     this.pane = document.getElementById('detailPane');
+     this.mainEl = document.getElementById('mainPane');
+-    // The detail pane is shown as a centered popup (same shell as the New task
+-    // modal). We relocate the existing #detailPane node into this backdrop on
+-    // open so all the render/query code below keeps targeting `this.pane`.
+-    this.backdrop = null;
++    // The detail pane is shown as a full-page surface (#taskDetailWrap) rather
++    // than a centered popup. We relocate the existing #detailPane node into that
++    // wrapper on open so all the render/query code below keeps targeting
++    // `this.pane`. _pageOpen guards against repeated mounts on re-render.
++    this._pageOpen = false;
+ 
+     // Id of the task currently open in the staged Edit form, or null. While set,
+     // background re-renders are suppressed so unsaved input survives. editDraft
+@@ -41,38 +42,34 @@ App.TaskDetailView = class TaskDetailView {
+     }
+   }
+ 
+-  /* Mount the detail pane inside a centered modal backdrop (idempotent — called
+-     on every re-render). The #detailPane node is moved into the panel so the
+-     rest of this view's innerHTML/querySelector code is unchanged. */
++  /* Mount the detail pane into the full-page #taskDetailWrap surface (idempotent
++     — called on every re-render). The #detailPane node is moved into the wrapper
++     so the rest of this view's innerHTML/querySelector code is unchanged. The
++     list pane behind it is hidden so the detail reads as its own page, with the
++     topbar + sidebar kept in place (the Home/Reports full-page pattern). */
+   _openModal() {
+-    if (this.backdrop) return;
+-    this.backdrop = document.createElement('div');
+-    this.backdrop.className = 'modal-backdrop';
+-    this.backdrop.id = 'taskDetailModal';
+-
+-    const panel = document.createElement('div');
+-    panel.className = 'modal modal-detail';
+-    panel.setAttribute('data-stop', '');
+-    panel.setAttribute('role', 'dialog');
+-    panel.setAttribute('aria-modal', 'true');
+-    panel.setAttribute('aria-label', 'Task details');
++    if (this._pageOpen) return;
++    const wrap = document.getElementById('taskDetailWrap');
++    if (!wrap) return;
++    this._wrap = wrap;
+ 
+     this.pane.classList.remove('hidden');
+-    panel.appendChild(this.pane);
+-    this.backdrop.appendChild(panel);
+-    document.body.appendChild(this.backdrop);
++    wrap.appendChild(this.pane);
++    wrap.classList.remove('hidden');
+ 
+-    // Click outside the panel closes, like the New task modal.
+-    this.backdrop.addEventListener('click', (e) => {
+-      if (e.target === this.backdrop) this.controller.closeDetail();
+-    });
+-    // Esc closes the detail in view mode (edit mode handles its own Esc to exit
+-    // editing first). Trap Tab focus inside the dialog and remember the trigger.
+-    this.backdrop.addEventListener('keydown', (e) => {
++    const listPane = document.getElementById('listPane');
++    if (listPane) listPane.classList.add('hidden');
++
++    // Esc returns to the list in view mode (edit mode handles its own Esc to
++    // exit editing first). Bound on document since there's no backdrop now.
++    this._escHandler = (e) => {
+       if (e.key === 'Escape' && !this.editingId) { e.preventDefault(); this.controller.closeDetail(); }
+-    });
+-    this._releaseTrap = App.utils.trapFocus(this.backdrop);
++    };
++    document.addEventListener('keydown', this._escHandler);
++
++    this._pageOpen = true;
+     this._justOpened = true;
++    try { window.scrollTo(0, 0); wrap.scrollTop = 0; } catch (e) { /* noop */ }
+   }
+ 
+   // Placeholder shown in the detail modal when a task is selected but its data
+@@ -84,11 +81,9 @@ App.TaskDetailView = class TaskDetailView {
+     ).join('');
+     return `
+       <div class="detail-head">
++        <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Back to tasks</button>
+         <div class="detail-head-top">
+           <span class="sk sk-pill" style="width:88px;"></span>
+-          <div class="detail-head-actions">
+-            <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
+-          </div>
+         </div>
+         <div class="sk sk-line" style="height:24px; width:75%; margin-top:8px;"></div>
+       </div>
+@@ -102,14 +97,18 @@ App.TaskDetailView = class TaskDetailView {
+   _closeModal() {
+     // Legacy side-panel layout class (no longer used, kept defensive).
+     this.mainEl.classList.remove('with-detail');
+-    if (this.backdrop) {
+-      // Removing the backdrop detaches #detailPane with it; we keep the JS
+-      // reference in this.pane and re-attach it on the next _openModal().
+-      if (this._releaseTrap) { this._releaseTrap(); this._releaseTrap = null; }
+-      this._justOpened = false;
+-      this.backdrop.remove();
+-      this.backdrop = null;
+-    }
++    if (!this._pageOpen) return;
++    if (this._escHandler) { document.removeEventListener('keydown', this._escHandler); this._escHandler = null; }
++    // Hide the full-page surface and the detail node (parked inside the hidden
++    // wrapper for reuse on the next open).
++    if (this._wrap) this._wrap.classList.add('hidden');
++    this.pane.classList.add('hidden');
++    this._pageOpen = false;
++    this._justOpened = false;
++    // Restore whichever pane the current view calls for (un-hides #listPane for
++    // task views; leaves Home/Reports as-is). Leaves the detail wrapper hidden.
++    if (typeof this.controller._togglePanes === 'function') this.controller._togglePanes();
++    else { const lp = document.getElementById('listPane'); if (lp) lp.classList.remove('hidden'); }
+   }
+ 
+   render() {
+@@ -199,125 +198,133 @@ App.TaskDetailView = class TaskDetailView {
+ 
+     this.pane.innerHTML = `
+       <div class="detail-head">
++        <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Back to tasks</button>
+         <div class="detail-head-top">
+           <span class="pill ${company.pill}">${App.utils.escapeHtml(company.label)}</span>
+           <div class="detail-head-actions">
+             ${App.can('tasks.write') ? `<button class="icon-btn" data-action="edit-task" aria-label="Edit task" title="Edit task" type="button"><i class="ti ti-pencil"></i></button>` : ''}
+-            <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
+           </div>
+         </div>
+         <div class="detail-title">${App.utils.escapeHtml(t.title)}</div>
+       </div>
+-      <div class="detail-body">
+-        ${delegated ? `
+-          <div class="delegation-banner">
+-            <i class="ti ti-send"></i>
+-            <span><strong>${App.utils.escapeHtml(assignee.name)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
++      <div class="detail-body detail-grid">
++        <aside class="detail-side">
++          ${delegated ? `
++            <div class="delegation-banner">
++              <i class="ti ti-send"></i>
++              <span><strong>${App.utils.escapeHtml(assignee.name)}</strong> assigned by <strong>${App.utils.escapeHtml(creator.name)}</strong></span>
++            </div>
++          ` : ''}
++
++          ${myTimerOnThis ? `
++            <div class="timer-banner">
++              <i class="ti ti-player-record-filled"></i>
++              <span>Tracking time on this task</span>
++              <span class="live-time" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
++            </div>
++          ` : ''}
++
++          <div class="detail-actions-row">
++            <button class="btn ${myTimerOnThis ? '' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
++              <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>
++              ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
++            </button>
+           </div>
+-        ` : ''}
+ 
+-        ${myTimerOnThis ? `
+-          <div class="timer-banner">
+-            <i class="ti ti-player-record-filled"></i>
+-            <span>Tracking time on this task</span>
+-            <span class="live-time" id="detail-live-timer">${App.utils.formatDuration(Date.now() - myActive.startedAt)}</span>
++          <div class="detail-card">
++            <div class="detail-card-title">Details</div>
++            <div class="detail-row">
++              <span class="label">Company</span>
++              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(company.label)}</span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Type</span>
++              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' }).label)}</span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Label</span>
++              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((t.label && t.label !== 'none' ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' }).label)}</span>
++            </div>
++            ${t.type === 'bid' ? `
++            <div class="detail-row">
++              <span class="label">Bid status</span>
++              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' }).label)}</span>
++            </div>` : ''}
++            <div class="detail-row">
++              <span class="label">Status</span>
++              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.STATUSES[t.status] || { label: t.status || '—' }).label)}</span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Assignee</span>
++              <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
++                ${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}
++              </span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Created by</span>
++              <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
++                ${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}
++              </span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Due</span>
++              <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(this._formatDue(t.due))}</span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Time</span>
++              <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Reminder</span>
++              <span style="font-size:12px; color:var(--ink-2);">${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Priority</span>
++              <span class="priority-block ${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).cls}">${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).label}</span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Time spent</span>
++              <span style="font-family:'SFMono-Regular',monospace; font-size:12px; color:var(--ink-2);">${App.utils.formatHours(totalMs)} total</span>
++            </div>
++            <div class="detail-row">
++              <span class="label">Watchers</span>
++              <div>${watchersHtml}</div>
++            </div>
+           </div>
+-        ` : ''}
+-
+-        <div style="display:flex; gap:6px; margin-bottom:14px;">
+-          <button class="btn ${myTimerOnThis ? '' : 'btn-primary'}" style="flex:1;" data-action="toggle-timer">
+-            <i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>
+-            ${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}
+-          </button>
+-        </div>
+-
+-        <div class="detail-row">
+-          <span class="label">Company</span>
+-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(company.label)}</span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Type</span>
+-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.TASK_TYPES[t.type] || App.TASK_TYPES.admin || { label: t.type || '—' }).label)}</span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Label</span>
+-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((t.label && t.label !== 'none' ? (App.TASK_LABELS[t.label] || { label: '—' }) : { label: '—' }).label)}</span>
+-        </div>
+-        ${t.type === 'bid' ? `
+-        <div class="detail-row">
+-          <span class="label">Bid status</span>
+-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.BID_STATUSES[t.bidStatus] || { label: t.bidStatus || '—' }).label)}</span>
+-        </div>` : ''}
+-        <div class="detail-row">
+-          <span class="label">Status</span>
+-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml((App.STATUSES[t.status] || { label: t.status || '—' }).label)}</span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Assignee</span>
+-          <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
+-            ${App.utils.avatarHtml(assignee)}${App.utils.escapeHtml(assignee.name)}
+-          </span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Created by</span>
+-          <span style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-2);">
+-            ${App.utils.avatarHtml(creator)}${App.utils.escapeHtml(creator.name)}
+-          </span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Due</span>
+-          <span style="font-size:12px; color:var(--ink-2);">${App.utils.escapeHtml(this._formatDue(t.due))}</span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Time</span>
+-          <span style="font-size:12px; color:var(--ink-2);">${t.dueTime ? App.utils.escapeHtml(App.utils.formatClockTz(t.dueTime)) : '—'}</span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Reminder</span>
+-          <span style="font-size:12px; color:var(--ink-2);">${t.reminderAt ? App.utils.escapeHtml(this._formatReminder(t.reminderAt)) : '—'}</span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Priority</span>
+-          <span class="priority-block ${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).cls}">${(App.PRIORITIES[t.priority] || App.PRIORITIES.medium).label}</span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Time spent</span>
+-          <span style="font-family:'SFMono-Regular',monospace; font-size:12px; color:var(--ink-2);">${App.utils.formatHours(totalMs)} total</span>
+-        </div>
+-        <div class="detail-row">
+-          <span class="label">Watchers</span>
+-          <div>${watchersHtml}</div>
+-        </div>
++        </aside>
+ 
+-        <div class="detail-section">
+-          <div class="detail-section-title">Description</div>
+-          <div class="detail-desc">${App.utils.escapeHtml(t.description || '—')}</div>
+-        </div>
++        <div class="detail-main">
++          <div class="detail-card">
++            <div class="detail-card-title">Description</div>
++            <div class="detail-desc">${App.utils.escapeHtml(t.description || '—')}</div>
++          </div>
+ 
+-        <div class="detail-section">
+-          <div class="detail-section-title">Subtasks</div>
+-          ${subtasksHtml}
+-        </div>
++          <div class="detail-card">
++            <div class="detail-card-title">Activity</div>
++            ${activityHtml}
++          </div>
+ 
+-        <div class="detail-section">
+-          <div class="detail-section-title">Time entries</div>
+-          ${entriesHtml}
+-        </div>
++          ${this._commentsSection(t)}
+ 
+-        <div class="detail-section">
+-          <div class="detail-section-title">Activity</div>
+-          ${activityHtml}
++          ${this.controller.canDeleteTask(t) ? `
++          <div class="detail-danger-zone">
++            <button class="btn-link-danger" data-action="delete-task" type="button">
++              <i class="ti ti-trash"></i> Delete task
++            </button>
++          </div>
++          ` : ''}
+         </div>
+ 
+-        ${this._commentsSection(t)}
+-
+-        ${this.controller.canDeleteTask(t) ? `
+-        <div class="detail-danger-zone">
+-          <button class="btn-link-danger" data-action="delete-task" type="button">
+-            <i class="ti ti-trash"></i> Delete task
+-          </button>
+-        </div>
+-        ` : ''}
++        <aside class="detail-rail">
++          <div class="detail-card">
++            <div class="detail-card-title">Subtasks</div>
++            ${subtasksHtml}
++          </div>
++          <div class="detail-card">
++            <div class="detail-card-title">Time entries</div>
++            ${entriesHtml}
++          </div>
++        </aside>
+       </div>
+     `;
+ 
+@@ -327,12 +334,9 @@ App.TaskDetailView = class TaskDetailView {
+       if (App.observability) App.observability.captureException(err, { source: 'TaskDetailView.render' });
+       console.error('[TaskDetailView] render failed', err);
+       this.pane.innerHTML = `
+-        <div class="detail-head"><div class="detail-head-top">
+-          <span></span>
+-          <div class="detail-head-actions">
+-            <button class="icon-btn" data-action="close" aria-label="Close" title="Close" type="button"><i class="ti ti-x"></i></button>
+-          </div>
+-        </div></div>
++        <div class="detail-head">
++          <button class="detail-back" data-action="close" aria-label="Back to tasks" type="button"><i class="ti ti-arrow-left"></i> Back to tasks</button>
++        </div>
+         <div style="padding:20px; font-size:13px; color:var(--ink-2); line-height:1.5;">
+           Couldn't open this task's details — it may reference a removed company or person.
+         </div>`;
+@@ -381,8 +385,8 @@ App.TaskDetailView = class TaskDetailView {
+           : `<div class="cm-empty">Loading comments…</div>`);
+     const draft = (this._commentDraft && this._commentDraft[t.id]) || '';
+     return `
+-      <div class="detail-section cm-section">
+-        <div class="detail-section-title">Comments${comments.length ? ` <span class="cm-count">${comments.length}</span>` : ''}</div>
++      <div class="detail-card cm-section">
++        <div class="detail-card-title">Comments${comments.length ? ` <span class="cm-count">${comments.length}</span>` : ''}</div>
+         <div class="cm-list">${rows}</div>
+         <div class="cm-composer">
+           <textarea id="cmInput" class="cm-input" rows="2" placeholder="Write a comment…  @ to mention">${esc(draft)}</textarea>

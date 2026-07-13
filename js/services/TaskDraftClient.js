@@ -19,11 +19,15 @@ App.TaskDraftClient = class TaskDraftClient {
 
   static mergeDraftIntoState(draft, locked) {
     const lockedSet = locked instanceof Set ? locked : new Set(locked || []);
-    const keys = ['assignee', 'company', 'priority', 'due', 'dueTime'];
+    const keys = ['assignees', 'company', 'priority', 'due', 'dueTime'];
     const apply = {};
     const aiFilled = [];
     for (const k of keys) {
-      if (draft && draft[k] != null && !lockedSet.has(k)) { apply[k] = draft[k]; aiFilled.push(k); }
+      if (!draft || lockedSet.has(k)) continue;
+      const v = draft[k];
+      if (v == null) continue;
+      if (Array.isArray(v) && v.length === 0) continue; // empty assignees → nothing to fill
+      apply[k] = v; aiFilled.push(k);
     }
     return { apply, aiFilled };
   }

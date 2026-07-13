@@ -1,0 +1,10 @@
+import { chromium } from '@playwright/test';
+const exe = 'C:/Users/tagal/AppData/Local/ms-playwright/chromium-1223/chrome-win64/chrome.exe';
+const browser = await chromium.launch({ executablePath: exe });
+const page = await (await browser.newContext({ viewport:{width:1280,height:850} })).newPage();
+await page.goto('http://localhost:4188/app.html?preview=1&role=developer&member=abraham', { waitUntil:'networkidle' });
+await page.waitForTimeout(900); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+const labels = await page.$$eval('.deck .side-label', els => els.map(e => e.textContent.trim()));
+console.log('GROUP_LABELS=', JSON.stringify(labels));
+await page.screenshot({ path:'verify_out/redesign_t4.png', clip:{x:0,y:0,width:248,height:850} });
+await browser.close();

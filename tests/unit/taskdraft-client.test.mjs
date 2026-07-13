@@ -22,15 +22,22 @@ test('shouldRequest dedups identical text', () => {
 });
 
 test('mergeDraftIntoState applies only non-null, unlocked keys', () => {
-  const draft = { assignee: 'josh', company: 'lumen', priority: null, due: '2026-07-17', dueTime: null };
+  const draft = { assignees: ['josh', 'shan'], company: 'lumen', priority: null, due: '2026-07-17', dueTime: null };
   const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, new Set(['company']));
-  assert.deepEqual(apply, { assignee: 'josh', due: '2026-07-17' }); // company locked, nulls skipped
-  assert.deepEqual(aiFilled.sort(), ['assignee', 'due']);
+  assert.deepEqual(apply, { assignees: ['josh', 'shan'], due: '2026-07-17' }); // company locked, nulls skipped
+  assert.deepEqual(aiFilled.sort(), ['assignees', 'due']);
+});
+
+test('mergeDraftIntoState skips an empty assignees array', () => {
+  const draft = { assignees: [], company: 'lumen', priority: null, due: null, dueTime: null };
+  const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, new Set());
+  assert.deepEqual(apply, { company: 'lumen' });
+  assert.deepEqual(aiFilled, ['company']);
 });
 
 test('mergeDraftIntoState with everything locked applies nothing', () => {
-  const draft = { assignee: 'josh', company: 'lumen', priority: 'high', due: null, dueTime: null };
-  const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, ['assignee', 'company', 'priority', 'due', 'dueTime']);
+  const draft = { assignees: ['josh'], company: 'lumen', priority: 'high', due: null, dueTime: null };
+  const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, ['assignees', 'company', 'priority', 'due', 'dueTime']);
   assert.deepEqual(apply, {});
   assert.deepEqual(aiFilled, []);
 });

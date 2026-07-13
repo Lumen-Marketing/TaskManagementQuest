@@ -1,0 +1,15 @@
+[
+  {
+    "date": "2026-05-29",
+    "scope": "app",
+    "macrostructure": "Command Console (app) + Split-Diptych (login)",
+    "theme": "Quest warm-dark (custom OKLCH)",
+    "theme_axes": "dark / condensed-grotesque / warm",
+    "genre": "utilitarian (industrial field-tool)",
+    "typography": "IBM Plex Sans / Condensed / Mono — no serif",
+    "enrichment": "none",
+    "design-system": "design.md",
+    "note": "Structural rebuild of the app: dropped the left sidebar + KPI stat cards entirely. Nav moved into a horizontal command deck (view segments + scope chips + actions); board is full-bleed. Earlier passes: editorial->industrial restyle (IBM Plex, squared, mono labels, outlined tags). All JS hooks (data-view items, count IDs, peopleList, adminSideGroup, layout switcher, listBody, mainPane/detailPane) preserved; view-switch / kanban / detail-pane verified working.",
+    "brief": "Quest HQ · task manager for Roofing/Drafting/Lumen — redesign both surfaces; user wanted a non-AI layout/flow, not just a restyle"
+  }
+]

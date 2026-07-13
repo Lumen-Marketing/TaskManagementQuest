@@ -1,0 +1,11 @@
+import { chromium } from '@playwright/test';
+const exe = 'C:/Users/tagal/AppData/Local/ms-playwright/chromium-1223/chrome-win64/chrome.exe';
+const browser = await chromium.launch({ executablePath: exe });
+const page = await (await browser.newContext({ viewport:{width:1280,height:800} })).newPage();
+await page.goto('http://localhost:4188/app.html?preview=1&role=developer&member=abraham', { waitUntil:'networkidle' });
+await page.waitForTimeout(900); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+await page.locator('#scopeSeg button[data-scope="mine"]').click(); await page.waitForTimeout(200);
+const minimized = await page.evaluate(()=>document.body.classList.contains('sidebar-minimized'));
+console.log('SIDEBAR_MINIMIZED_AFTER_CLICK=', minimized);
+await page.screenshot({ path:'verify_out/redesign_t5_topbar.png', clip:{x:248,y:0,width:560,height:54} });
+await browser.close();

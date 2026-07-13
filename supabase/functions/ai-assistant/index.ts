@@ -119,12 +119,12 @@ Deno.serve(async (req: Request) => {
       const team = Array.isArray(p.team) ? p.team : [];
       const companies = Array.isArray(p.companies) ? p.companies : [];
       const today = typeof p.today === "string" ? p.today : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());
-      const emptyDraft = { assignee: null, company: null, priority: null, due: null, dueTime: null };
+      const emptyDraft = { assignees: [], company: null, priority: null, due: null, dueTime: null };
       if (!text) return json(req, { ok: true, draft: emptyDraft });
 
       const names = team.map((t: any) => `${t.id} = ${t.name}`).join("; ");
       const comps = companies.map((c: any) => `${c.id} = ${c.label}`).join("; ");
-      const sys = "You extract task fields from a short sentence. Respond ONLY with a JSON object with keys assignee, company, priority, due, dueTime. Use an id from the PEOPLE list for assignee, an id from the COMPANIES list for company, priority one of low|medium|high|critical, due as YYYY-MM-DD, dueTime as 24h HH:mm. Use null for anything not clearly present. Never invent ids.";
+      const sys = "You extract task fields from a short sentence. Respond ONLY with a JSON object with keys assignees, company, priority, due, dueTime. assignees is an ARRAY of ids from the PEOPLE list (include EVERY person named — one or more); company is an id from the COMPANIES list; priority one of low|medium|high|critical; due as YYYY-MM-DD; dueTime as 24h HH:mm. Use [] for assignees and null for other fields not clearly present. Never invent ids.";
       const usr = `Today is ${today}.\nPEOPLE: ${names || "(none)"}\nCOMPANIES: ${comps || "(none)"}\nSENTENCE: ${text}`;
 
       let draft = emptyDraft;

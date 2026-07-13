@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quest HQ — Tasks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:#ED4E0D; --orange-dark:#c2410c;
+    --red:#D92B2B; --red-dark:#A32D2D;
+    --green:#0F6E56;
+    --ink:#111111; --ink-soft:#3f3d39;
+    --canvas:#f4f2ee; --card:#ffffff; --chip:#f5f2ee;
+    --line:#e5e1da; --line-soft:#f0ede8; --line-strong:#d6d2cb;
+    --sans:'Hanken Grotesk',system-ui,sans-serif;
+    --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--canvas);font-family:var(--sans);color:var(--ink);min-height:100vh}
+  button{font-family:var(--sans);cursor:pointer;background:none;border:none;color:inherit}
+  input{font-family:var(--sans)}
+  svg{display:block}
+
+  .topnav{background:#fff;border-bottom:1px solid var(--line);padding:10px 24px;display:flex;align-items:center;gap:28px}
+  .topnav .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px}
+  .topnav .logo .q{width:26px;height:26px;border-radius:7px;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800}
+  .topnav .navlinks{display:flex;gap:20px;font-size:14.5px;font-weight:700;color:var(--ink-soft)}
+  .topnav .navlinks .active{color:var(--ink);border-bottom:2.5px solid var(--orange);padding-bottom:2px}
+
+  .page{max-width:1240px;margin:0 auto;padding:22px 24px 80px}
+  .pagehead{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  .pagehead h1{font-size:24px;font-weight:800}
+  .searchbox{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line-strong);border-radius:999px;padding:8px 15px;background:#fff;width:260px}
+  .searchbox input{border:none;outline:none;font-size:13.5px;font-weight:600;width:100%;background:transparent}
+  .newbtn{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:700;padding:10px 18px;background:var(--orange);color:#fff;border-radius:999px;margin-left:auto}
+  .newbtn:hover{background:var(--orange-dark)}
+
+  .filterrow{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .fchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:6px 14px;border-radius:999px;border:1.5px solid var(--line-strong);background:#fff;color:var(--ink)}
+  .fchip:hover{border-color:var(--ink)}
+  .fchip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .fchip .sq{width:7px;height:7px;border-radius:2px;background:var(--orange)}
+
+  .cols{display:grid;grid-template-columns:30px 18px minmax(0,2.3fr) 118px 106px 110px 116px 112px;gap:10px;padding:0 16px 8px;align-items:center}
+  .cols span{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;color:#111}
+  .colbtn{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.1em;color:#111;padding:4px 6px;border-radius:7px}
+  .colbtn:hover{background:#e9e5dd}
+  .colbtn svg{opacity:.6}
+  .colbtn.filtered{color:var(--orange-dark);background:#FDF1EA}
+
+  .group{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+  .ghead{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none}
+  .ghead:hover{filter:brightness(.985)}
+  .ghead .gname{font-size:15px;font-weight:800}
+  .ghead .gcount{font-family:var(--mono);font-size:10.5px;font-weight:600;color:#fff;padding:2px 10px;border-radius:999px;margin-left:auto}
+  .ghead.overdue{background:#FCEBEB;border-bottom:1px solid #f5d0cb}
+  .ghead.overdue .gname{color:var(--red-dark)}
+  .ghead.overdue .gcount{background:var(--red)}
+  .ghead.today{border-bottom:1px solid var(--line-soft)}
+  .ghead.today .gcount{background:var(--orange)}
+  .ghead.plain{border-bottom:1px solid var(--line-soft)}
+  .ghead.plain .gcount{background:#5f5b55}
+  .ghead .chev{transition:transform .15s ease;color:inherit}
+  .group.closed .chev{transform:rotate(-90deg)}
+  .group.closed .gbody{display:none}
+  .group.closed .ghead{border-bottom:none}
+
+  .row{display:grid;grid-template-columns:30px 18px minmax(0,2.3fr) 118px 106px 110px 116px 112px;gap:10px;padding:12px 16px;align-items:center;border-bottom:1px solid #b0a99c}
+  .ckcell{display:flex;justify-content:center}
+  .ckcell input{width:15px;height:15px;accent-color:var(--orange);cursor:pointer}
+  .row:last-child{border-bottom:none}
+  .row:hover{background:#faf8f5}
+  .row.stuckrow{background:#FEF7F5!important}
+  .row.stuckrow:hover{background:#FDF0EC!important}
+  .tcell{min-width:0}
+  .ttitle{font-size:14px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+  .ttitle:hover{color:var(--orange-dark)}
+  .ttitle .steps{font-family:var(--mono);font-size:10.5px;color:#5f5b55;font-weight:500;margin-left:6px}
+  .stuckbadge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:#FCEBEB;border:1px solid #f0b9b0;color:var(--red-dark);margin-top:4px}
+
+  .cellbtn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#111;padding:4px 8px;border-radius:8px;max-width:100%}
+  .cellbtn:hover{background:var(--chip)}
+  .cellbtn .chv{opacity:.5;flex-shrink:0}
+  .pdot{width:9px;height:9px;border-radius:50%;justify-self:center}
+  .cellbtn .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .cellbtn .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .pbadge{font-size:10px;font-weight:700;padding:4px 11px;border-radius:999px;letter-spacing:.02em}
+  .pbadge.critical{background:var(--red);color:#fff}
+  .pbadge.high{background:var(--orange);color:#fff}
+  .pbadge.med{background:#FAC775;color:#412402}
+  .pbadge.low{background:var(--chip);border:1px solid var(--line-strong);color:#111}
+
+  .avatar{width:22px;height:22px;border-radius:50%;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
+
+  .due{font-family:var(--mono);font-size:11px;font-weight:600;line-height:1.45}
+  .due.late{color:var(--red)}
+  .due.today{color:var(--orange-dark);font-weight:600}
+  .due.ok{color:#111}
+
+  .menu{position:absolute;z-index:60;background:#fff;border:1px solid var(--line-strong);border-radius:12px;padding:7px;min-width:200px;box-shadow:0 12px 34px rgba(17,17,17,.16)}
+  .menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font-size:14.5px;font-weight:700;padding:9px 11px;border-radius:8px;color:var(--ink)}
+  .menu button:hover{background:var(--chip)}
+  .menu .odot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .menu .checkmark{margin-left:auto;color:var(--orange)}
+  .menu .mhead{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.1em;color:#111;padding:6px 10px 4px}
+
+  .toastwrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:120;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .toast{background:var(--ink);color:#fff;font-size:14px;font-weight:700;padding:11px 19px;border-radius:999px;display:flex;align-items:center;gap:9px;animation:pop .18s ease}
+  .toast.orange{background:var(--orange)}
+  @keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .emptygroup{font-size:13px;font-weight:600;color:#5f5b55;padding:14px 16px}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="logo"><span class="q">Q</span>Quest HQ</div>
+  <div class="navlinks"><span>Home</span><span class="active">Tasks</span><span>Meeting</span></div>
+</nav>
+
+<div class="page">
+  <div class="pagehead">
+    <h1>Tasks</h1>
+    <div class="searchbox"><span data-icon="search"></span><input id="searchInput" placeholder="Search tasks…" oninput="renderBoard()"></div>
+    <button class="newbtn" onclick="toast('Opens the New Task page','orange')"><span data-icon="plus"></span>New task</button>
+  </div>
+  <div class="filterrow" id="filterRow"></div>
+  <div class="cols">
+    <span></span><span></span><span style="font-weight:600">TASK</span>
+    <span><button class="colbtn" id="colbtn-status" onclick="openColFilter(event,'status')">STATUS</button></span>
+    <span><button class="colbtn" id="colbtn-priority" onclick="openColFilter(event,'priority')">PRIORITY</button></span>
+    <span><button class="colbtn" id="colbtn-label" onclick="openColFilter(event,'label')">LABEL</button></span>
+    <span><button class="colbtn" id="colbtn-assignee" onclick="openColFilter(event,'assignee')">ASSIGNEE</button></span>
+    <span><button class="colbtn" id="colbtn-due" onclick="openColFilter(event,'due')">DUE</button></span>
+  </div>
+  <div id="board"></div>
+</div>
+
+<div id="menuLayer"></div>
+<div class="toastwrap" id="toastWrap"></div>
+
+<script>
+/* ============================================================
+   QUEST HQ — TASKS BOARD
+   Shares TEAM / OPTS / DOT vocabulary with new-task.html and
+   task-detail.html. One source of truth in production.
+   ============================================================ */
+
+const TEAM = [
+  {name:'Abraham',    init:'AB', color:'#16325C'},
+  {name:'Kristin M.', init:'KM', color:'#0F6E56'},
+  {name:'Alkeith',    init:'AL', color:'#185FA5'},
+  {name:'Andres',     init:'AN', color:'#534AB7'},
+  {name:'Jesus',      init:'JE', color:'#993C1D'},
+  {name:'Ralph',      init:'RA', color:'#8a5a2b'},
+  {name:'Sean',       init:'SE', color:'#444441'},
+  {name:'Joshua',     init:'JO', color:'#993556'},
+];
+const OPTS = {
+  status:  ['To do','In progress','Pending','Done'],
+  priority:['Low','Med','High','Critical'],
+  label:   ['Drafting','Roof','Office','AR','Website','Follow-up','Lumen'],
+};
+const DOT = {
+  'To do':'#5f5b55','In progress':'#378ADD','Pending':'#EF9F27','Done':'#0F6E56',
+  'Drafting':'#185FA5','Roof':'#ED4E0D','Office':'#534AB7','AR':'#0F6E56','Website':'#993556','Follow-up':'#EF9F27','Lumen':'#185FA5',
+};
+const COMPANIES = ['All','Quest Roofing','Quest Drafting','Lumen Marketing'];
+const PDOT = {Critical:'#D92B2B', High:'#ED4E0D', Med:'#EF9F27', Low:'#b4b2a9'};
+
+const day = 86400000;
+const today = new Date(); today.setHours(0,0,0,0);
+const rel = n => new Date(today.getTime() + n*day);
+const iso = d => d.toISOString().slice(0,10);
+
+let TASKS = [
+  {id:'QH-2601', title:'AI bot recruiting', steps:[0,3], status:'To do', priority:'Critical', label:'Office', company:'Lumen Marketing', assignee:'Kristin M.', due:rel(-18), time:'10:59 AM', stuck:null},
+  {id:'QH-2614', title:'Send 58th St. plans to subs for quotes', steps:[0,3], status:'To do', priority:'Critical', label:'Roof', company:'Quest Drafting', assignee:'Kristin M.', due:rel(-18), time:'10:30 AM', stuck:{days:2, on:'Abraham'}},
+  {id:'QH-2603', title:'Check in with Alkeith', steps:[1,2], status:'In progress', priority:'High', label:'Roof', company:'Quest Roofing', assignee:'Kristin M.', due:rel(-22), time:null, stuck:null},
+  {id:'QH-2604', title:'Rob Goodyear change order', steps:[0,3], status:'In progress', priority:'Med', label:'AR', company:'Quest Roofing', assignee:'Abraham', due:rel(-18), time:'9:00 AM', stuck:null},
+  {id:'QH-2605', title:'Go to MESA to buy materials for HDZ', steps:[0,1], status:'To do', priority:'Low', label:'Roof', company:'Quest Roofing', assignee:'Abraham', due:rel(-18), time:null, stuck:null},
+  {id:'QH-2606', title:'Call Helix Landscaping', steps:null, status:'Pending', priority:'Low', label:'Lumen', company:'Lumen Marketing', assignee:'Abraham', due:rel(-17), time:null, stuck:null},
+  {id:'QH-2607', title:'Update Goodyear agreement', steps:null, status:'To do', priority:'Low', label:'Drafting', company:'Quest Drafting', assignee:'Abraham', due:rel(-17), time:null, stuck:null},
+  {id:'QH-2608', title:'Get supplier numbers for 58th', steps:[0,3], status:'To do', priority:'Low', label:'Roof', company:'Quest Roofing', assignee:'Abraham', due:rel(-17), time:null, stuck:null},
+  {id:'QH-2609', title:'Source a crew to do DRY-IN ASAP', steps:null, status:'In progress', priority:'High', label:'Roof', company:'Quest Roofing', assignee:'Abraham', due:rel(-17), time:null, stuck:null},
+  {id:'QH-2610', title:'Calculate total amount owed to EAGLE', steps:[0,2], status:'To do', priority:'Low', label:'AR', company:'Quest Roofing', assignee:'Abraham', due:rel(-17), time:null, stuck:null},
+  {id:'QH-2611', title:'Create videos', steps:[0,3], status:'To do', priority:'Low', label:'Lumen', company:'Lumen Marketing', assignee:'Abraham', due:rel(-17), time:null, stuck:null},
+  {id:'QH-2612', title:'V3 look at Google Drive in Lumen', steps:null, status:'Pending', priority:'Low', label:'Lumen', company:'Lumen Marketing', assignee:'Joshua', due:rel(-17), time:'10:00 AM', stuck:null},
+  {id:'QH-2613', title:'Call the safety harness supplier', steps:null, status:'To do', priority:'Med', label:'Roof', company:'Quest Roofing', assignee:'Abraham', due:rel(0), time:'12:06 PM', stuck:null},
+  {id:'QH-2615', title:'Call Rob and give project update', steps:null, status:'To do', priority:'Med', label:'Roof', company:'Quest Roofing', assignee:'Kristin M.', due:rel(0), time:null, stuck:null},
+  {id:'QH-2616', title:'Change order for Eduardo', steps:null, status:'To do', priority:'Low', label:'Roof', company:'Quest Roofing', assignee:'Ralph', due:rel(1), time:null, stuck:null},
+  {id:'QH-2617', title:'Draft demo agreement for PV project', steps:[0,2], status:'To do', priority:'High', label:'Drafting', company:'Quest Drafting', assignee:'Andres', due:rel(1), time:null, stuck:null},
+  {id:'QH-2618', title:'Lumen site: publish services pages', steps:[2,5], status:'In progress', priority:'Med', label:'Website', company:'Lumen Marketing', assignee:'Sean', due:rel(3), time:null, stuck:null},
+  {id:'QH-2619', title:'Follow up CSAA claim with Kristine', steps:[0,1], status:'To do', priority:'Critical', label:'AR', company:'Quest Roofing', assignee:'Kristin M.', due:rel(4), time:'11:00 AM', stuck:null},
+];
+
+let companyFilter = 'All';
+const collapsed = {};
+const SEL = new Set();
+const F = {status:new Set(), priority:new Set(), label:new Set(), assignee:new Set(), due:new Set()};
+const DUE_FILTERS = ['Overdue','Due today','Tomorrow','Upcoming'];
+function colFilterHTML(key){
+  const opts = key==='assignee' ? TEAM.map(t=>t.name) : key==='due' ? DUE_FILTERS : OPTS[key];
+  return `<div class="mhead">SHOW ONLY · PICK MULTIPLE</div>` + opts.map(o=>{
+    const sel = F[key].has(o);
+    const marker = key==='assignee' ? avatarHTML(o)
+      : key==='priority' ? `<span class="odot" style="background:${PDOT[o]}"></span>`
+      : key==='due' ? '' : `<span class="odot" style="background:${DOT[o]||'#888780'}"></span>`;
+    return `<button onclick="tglFilter('${key}','${o.replace(/'/g,"\\'")}')">${marker}${o} ${sel?`<span class="checkmark">${icon('check',13)}</span>`:''}</button>`;
+  }).join('') + (F[key].size ? `<button style="color:var(--red);border-top:1px solid var(--line-soft);border-radius:0 0 8px 8px;margin-top:4px" onclick="F['${key}'].clear();closeMenus();syncColBtns();renderBoard()">Clear filter</button>` : '');
+}
+function openColFilter(e, key){
+  e.stopPropagation();
+  placeMenu(e, colFilterHTML(key));
+}
+function tglFilter(key, val){
+  if (F[key].has(val)) F[key].delete(val); else F[key].add(val);
+  const m = document.querySelector('.menu');
+  if (m) m.innerHTML = colFilterHTML(key);
+  syncColBtns(); renderBoard();
+}
+function syncColBtns(){
+  Object.keys(F).forEach(k=>{
+    const b = document.getElementById('colbtn-'+k); if(!b) return;
+    const n = F[k].size;
+    b.className = 'colbtn' + (n?' filtered':'');
+    b.innerHTML = k.toUpperCase() + (n?` (${n})`:'') + ' ' + icon('chevD',10);
+  });
+}
+function dueGroupName(t){
+  const g = groupOf(t);
+  return g==='overdue'?'Overdue':g==='today'?'Due today':g==='tomorrow'?'Tomorrow':g==='upcoming'?'Upcoming':'Completed';
+}
+function tglSel(id, on){
+  if (on) SEL.add(id); else SEL.delete(id);
+  renderFocusBar();
+}
+function renderFocusBar(){
+  let bar = document.getElementById('focusBar');
+  if (!SEL.size){ if(bar) bar.remove(); return; }
+  if (!bar){
+    bar = document.createElement('div'); bar.id='focusBar';
+    bar.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:110;background:#111;color:#fff;border-radius:999px;padding:11px 12px 11px 22px;display:flex;align-items:center;gap:14px;box-shadow:0 10px 30px rgba(17,17,17,.3)';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = `<span style="font-size:14px;font-weight:700">${SEL.size} selected</span>
+    <button onclick="openFocus()" style="background:var(--orange);color:#fff;font-size:13.5px;font-weight:700;padding:9px 18px;border-radius:999px;display:inline-flex;align-items:center;gap:7px">${icon('flame',14)} Open Focus Mode</button>
+    <button onclick="clearSel()" style="color:#b8b3ab;font-size:13px;font-weight:700;padding:6px">Clear</button>`;
+}
+function clearSel(){ SEL.clear(); renderFocusBar(); renderBoard(); }
+function openFocus(){
+  /* TODO: Focus Mode screen — ordered queue of selected tasks, worked 1-by-1 */
+  const order = TASKS.filter(t=>SEL.has(t.id)).map((t,i)=>`${i+1}. ${t.title}`).join('  →  ');
+  toast(`Focus Mode: ${order}`,'orange');
+}
+
+/* ---------- utils ---------- */
+function person(name){ return TEAM.find(t=>t.name===name) || {name,init:name.slice(0,2).toUpperCase(),color:'#444441'}; }
+function avatarHTML(name){ const p=person(name); return `<span class="avatar" style="background:${p.color}" title="${p.name}">${p.init}</span>`; }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function firstName(n){ return n.split(' ')[0]; }
+function fmtShort(d){ return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}).toUpperCase(); }
+function diffDays(d){ return Math.round((d - today)/day); }
+
+/* ---------- icons ---------- */
+const P = {
+  chevD:'M6 9l6 6 6-6', plus:'M12 5v14 M5 12h14', check:'M5 13l4 4 10-11',
+  alert:'M12 4 L21 19 H3 Z M12 10v4 M12 16.8v.4',
+  flame:'M12 3c1 4-4 5-4 10a4 4 0 0 0 8 0c0-2-1-3-1-5 2 1 3 3 3 5a6 6 0 1 1-12 0c0-6 5-6 6-10z',
+  cal:'M4 6h16v14H4z M4 10h16 M8 4v4 M16 4v4',
+  hand:'M8 12V6a1.5 1.5 0 0 1 3 0v5 M11 11V4.5a1.5 1.5 0 0 1 3 0V11 M14 11V6a1.5 1.5 0 0 1 3 0v7a6 6 0 0 1-6 6 6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.5-1.5L8 13',
+  search:'M10 10m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0 M15 15l5 5',
+  checkCircle:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M8.5 12.5l2.5 2.5 4.5-5',
+};
+function icon(name,size=14,sw=2.2){
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="${P[name]}"/></svg>`;
+}
+function hydrateIcons(root=document){
+  root.querySelectorAll('[data-icon]').forEach(el=>{ el.innerHTML = icon(el.getAttribute('data-icon'), 15); });
+}
+
+/* ---------- grouping ---------- */
+function groupOf(t){
+  if (t.status==='Done') return 'done';
+  const d = diffDays(t.due);
+  if (d < 0) return 'overdue';
+  if (d === 0) return 'today';
+  if (d === 1) return 'tomorrow';
+  return 'upcoming';
+}
+const GROUPS = [
+  {key:'overdue',  name:'Overdue',   cls:'overdue', icon:'alert'},
+  {key:'today',    name:'Due today', cls:'today',   icon:'flame'},
+  {key:'tomorrow', name:'Tomorrow',  cls:'plain',   icon:'cal'},
+  {key:'upcoming', name:'Upcoming',  cls:'plain',   icon:'cal'},
+  {key:'done',     name:'Completed', cls:'plain',   icon:'checkCircle'},
+];
+
+/* ---------- renders ---------- */
+function renderFilters(){
+  document.getElementById('filterRow').innerHTML = COMPANIES.map(c=>
+    `<button class="fchip ${companyFilter===c?'on':''}" onclick="companyFilter='${c}';renderFilters();renderBoard()">${c==='All'?'':'<span class="sq"></span>'}${c}</button>`).join('');
+}
+
+function dueHTML(t){
+  const d = diffDays(t.due);
+  if (t.status==='Done') return `<span class="due ok" style="color:var(--green)">DONE</span>`;
+  if (d < 0) return `<span class="due late">${fmtShort(t.due)}<br>· ${-d}D LATE</span>`;
+  if (d === 0) return `<span class="due today">TODAY${t.time?'<br>· '+t.time:''}</span>`;
+  if (d === 1) return `<span class="due ok">TMRW${t.time?'<br>· '+t.time:''}</span>`;
+  return `<span class="due ok">${fmtShort(t.due)}${t.time?'<br>· '+t.time:''}</span>`;
+}
+
+function rowHTML(t){
+  const steps = t.steps ? `<span class="steps">${t.steps[0]}/${t.steps[1]}</span>` : '';
+  const stuck = t.stuck ? `<div><span class="stuckbadge">${icon('hand',10)} STUCK ${t.stuck.days===0?'TODAY':t.stuck.days+'D'} · on ${esc(firstName(t.stuck.on))}</span></div>` : '';
+  const pr = t.priority.toLowerCase();
+  const chv = `<span class="chv">${icon('chevD',11)}</span>`;
+  return `<div class="row ${t.stuck?'stuckrow':''}">
+    <label class="ckcell"><input type="checkbox" ${SEL.has(t.id)?'checked':''} onchange="tglSel('${t.id}',this.checked)" aria-label="Select ${t.id}"></label>
+    <span class="pdot" style="background:${PDOT[t.priority]}" title="${t.priority}"></span>
+    <div class="tcell">
+      <p class="ttitle" onclick="toast('Opens ${t.id} — task detail page')">${esc(t.title)}${steps}</p>
+      ${stuck}
+    </div>
+    <button class="cellbtn" onclick="openMenu(event,'status','${t.id}')"><span class="dot" style="background:${DOT[t.status]}"></span><span class="nm">${t.status}</span>${chv}</button>
+    <button class="cellbtn" style="padding-left:0" onclick="openMenu(event,'priority','${t.id}')"><span class="pbadge ${pr}">${t.priority.toUpperCase()}</span>${chv}</button>
+    <button class="cellbtn" onclick="openMenu(event,'label','${t.id}')"><span class="dot" style="background:${DOT[t.label]||'#888780'}"></span><span class="nm">${t.label}</span>${chv}</button>
+    <button class="cellbtn" onclick="openMenu(event,'assignee','${t.id}')">${avatarHTML(t.assignee)}<span class="nm">${firstName(t.assignee)}</span>${chv}</button>
+    <button class="cellbtn" onclick="openDueMenu(event,'${t.id}')">${dueHTML(t)}${chv}</button>
+  </div>`;
+}
+
+function renderBoard(){
+  const q = (document.getElementById('searchInput').value||'').toLowerCase();
+  const visible = TASKS.filter(t =>
+    (companyFilter==='All' || t.company===companyFilter) &&
+    (!q || t.title.toLowerCase().includes(q) || t.assignee.toLowerCase().includes(q)) &&
+    (!F.status.size || F.status.has(t.status)) &&
+    (!F.priority.size || F.priority.has(t.priority)) &&
+    (!F.label.size || F.label.has(t.label)) &&
+    (!F.assignee.size || F.assignee.has(t.assignee)) &&
+    (!F.due.size || F.due.has(dueGroupName(t))));
+  const byGroup = {};
+  visible.forEach(t => { const g = groupOf(t); (byGroup[g] = byGroup[g]||[]).push(t); });
+
+  document.getElementById('board').innerHTML = GROUPS.map(g=>{
+    const items = byGroup[g.key] || [];
+    if (!items.length && (g.key==='done' || g.key==='tomorrow')) return '';
+    const closed = collapsed[g.key] ? ' closed' : '';
+    return `<div class="group${closed}">
+      <div class="ghead ${g.cls}" onclick="collapsed['${g.key}']=!collapsed['${g.key}'];renderBoard()">
+        <span class="chev">${icon('chevD',13)}</span>
+        <span style="color:${g.key==='overdue'?'var(--red)':g.key==='today'?'var(--orange)':'#111'}">${icon(g.icon,14)}</span>
+        <span class="gname">${g.name}</span>
+        <span class="gcount">${items.length}</span>
+      </div>
+      <div class="gbody">${items.length ? items.map(rowHTML).join('') : `<p class="emptygroup">Nothing here.</p>`}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- inline edit menus ---------- */
+function closeMenus(){ document.getElementById('menuLayer').innerHTML=''; }
+function outsideClose(e){
+  const m = document.querySelector('.menu');
+  if (!m) return;
+  const inside = e.target.closest('.menu') || !document.contains(e.target);
+  if (inside) document.addEventListener('click', outsideClose, {once:true});
+  else closeMenus();
+}
+function placeMenu(e, html){
+  closeMenus();
+  const layer = document.getElementById('menuLayer');
+  const m = document.createElement('div'); m.className='menu'; m.innerHTML=html;
+  layer.appendChild(m);
+  const r = e.currentTarget.getBoundingClientRect();
+  const mw = 220;
+  m.style.left = Math.min(r.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - mw - 12)+'px';
+  m.style.top = (r.bottom + window.scrollY + 6)+'px';
+  setTimeout(()=>document.addEventListener('click', outsideClose, {once:true}));
+}
+function openMenu(e, key, id){
+  e.stopPropagation();
+  const t = TASKS.find(x=>x.id===id);
+  if (key==='assignee'){
+    placeMenu(e, `<div class="mhead">REASSIGN</div>` + TEAM.map(p=>
+      `<button onclick="setField('${id}','assignee','${p.name}')">${avatarHTML(p.name)} ${p.name} ${t.assignee===p.name?`<span class="checkmark">${icon('check',13)}</span>`:''}</button>`).join(''));
+    return;
+  }
+  placeMenu(e, `<div class="mhead">${key.toUpperCase()}</div>` + OPTS[key].map(o=>{
+    const marker = key==='priority' ? `<span class="odot" style="background:${PDOT[o]}"></span>` : `<span class="odot" style="background:${DOT[o]||'#888780'}"></span>`;
+    return `<button onclick="setField('${id}','${key}','${o}')">${marker}${o} ${t[key]===o?`<span class="checkmark">${icon('check',13)}</span>`:''}</button>`;
+  }).join(''));
+}
+function openDueMenu(e, id){
+  e.stopPropagation();
+  const t = TASKS.find(x=>x.id===id);
+  const cur = iso(t.due);
+  placeMenu(e, `<div class="mhead">DUE DATE</div>
+    <div style="padding:4px 6px"><input type="date" value="${cur}" style="width:100%;font-size:14px;font-weight:600;border:1.5px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-family:var(--sans)" onchange="setDue('${id}',this.value)"></div>
+    <button onclick="setDue('${id}','${iso(rel(0))}')">Today</button>
+    <button onclick="setDue('${id}','${iso(rel(1))}')">Tomorrow</button>
+    <button onclick="setDue('${id}','${iso(rel(7))}')">Next week</button>`);
+}
+function setDue(id, val){
+  const t = TASKS.find(x=>x.id===id);
+  t.due = new Date(val+'T00:00');
+  closeMenus(); renderBoard();
+  toast(`${t.id} due → ${fmtShort(t.due)}`);
+}
+function setField(id, key, val){
+  const t = TASKS.find(x=>x.id===id);
+  t[key] = val;
+  /* TODO: PATCH to Supabase + write History entry on the task */
+  closeMenus(); renderBoard();
+  toast(`${t.id} ${key} → ${val}`);
+}
+
+/* ---------- toast ---------- */
+function toast(msg, cls=''){
+  const w = document.getElementById('toastWrap');
+  const el = document.createElement('div'); el.className='toast '+cls;
+  el.innerHTML = icon('check',14)+' '+msg;
+  w.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),320); }, 2200);
+}
+
+/* ---------- boot ---------- */
+renderFilters();
+renderBoard();
+syncColBtns();
+hydrateIcons();
+</script>
+</body>
+</html>

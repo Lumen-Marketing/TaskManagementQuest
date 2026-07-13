@@ -10,13 +10,23 @@ const LISTS = {
 
 test('keeps valid fields that match the allowed lists', () => {
   const out = validateDraft(
-    { assignee: 'josh', company: 'lumen', priority: 'high', due: '2026-07-17', dueTime: '15:30' }, LISTS);
-  assert.deepEqual(out, { assignee: 'josh', company: 'lumen', priority: 'high', due: '2026-07-17', dueTime: '15:30' });
+    { assignees: ['josh'], company: 'lumen', priority: 'high', due: '2026-07-17', dueTime: '15:30' }, LISTS);
+  assert.deepEqual(out, { assignees: ['josh'], company: 'lumen', priority: 'high', due: '2026-07-17', dueTime: '15:30' });
 });
 
-test('nulls out assignee/company not on the list', () => {
-  const out = validateDraft({ assignee: 'nobody', company: 'acme' }, LISTS);
-  assert.equal(out.assignee, null);
+test('keeps multiple valid assignees, drops unknowns, dedups', () => {
+  const out = validateDraft({ assignees: ['josh', 'shan', 'nobody', 'josh'] }, LISTS);
+  assert.deepEqual(out.assignees, ['josh', 'shan']);
+});
+
+test('accepts a singular assignee string too', () => {
+  const out = validateDraft({ assignee: 'shan' }, LISTS);
+  assert.deepEqual(out.assignees, ['shan']);
+});
+
+test('nulls out assignees/company not on the list', () => {
+  const out = validateDraft({ assignees: ['nobody'], company: 'acme' }, LISTS);
+  assert.deepEqual(out.assignees, []);
   assert.equal(out.company, null);
 });
 
@@ -27,14 +37,14 @@ test('nulls out bad priority, date, and time', () => {
   assert.equal(out.dueTime, null);
 });
 
-test('garbage / missing input yields all nulls, fully shaped', () => {
-  const shape = { assignee: null, company: null, priority: null, due: null, dueTime: null };
+test('garbage / missing input yields empty shape', () => {
+  const shape = { assignees: [], company: null, priority: null, due: null, dueTime: null };
   assert.deepEqual(validateDraft(null, LISTS), shape);
   assert.deepEqual(validateDraft('nope', LISTS), shape);
   assert.deepEqual(validateDraft({}, LISTS), shape);
 });
 
 test('ignores unknown keys', () => {
-  const out = validateDraft({ assignee: 'shan', hacker: 'drop table' }, LISTS);
-  assert.deepEqual(out, { assignee: 'shan', company: null, priority: null, due: null, dueTime: null });
+  const out = validateDraft({ assignees: ['shan'], hacker: 'drop table' }, LISTS);
+  assert.deepEqual(out, { assignees: ['shan'], company: null, priority: null, due: null, dueTime: null });
 });
