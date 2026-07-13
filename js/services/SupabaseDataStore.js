@@ -698,6 +698,20 @@ App.SupabaseDataStore = class SupabaseDataStore {
     }
   }
 
+  /* Ask-your-tasks chat via the ai-assistant Edge Function. Returns
+     { ok, answer?, error? } and never throws so the drawer degrades gracefully. */
+  async chat({ question, history, tasks, today, truncated }) {
+    try {
+      const { data, error } = await this.supabase.functions.invoke('ai-assistant', {
+        body: { action: 'chat', question, history, tasks, today, truncated },
+      });
+      if (error) return { ok: false, error: (error && error.message) || 'AI unavailable.' };
+      return { ok: true, answer: data && data.answer };
+    } catch (err) {
+      return { ok: false, error: (err && err.message) || String(err) };
+    }
+  }
+
   /* Developer-only (RLS): every submitted report, newest first. */
   async listBugReports() {
     const res = await this.supabase
