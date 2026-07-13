@@ -7866,21 +7866,25 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
 @keyframes qhq-brief-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 
 /* ---------- Ask-your-tasks chat drawer ---------- */
+/* Messenger/IG-style popup: a compact floating window docked bottom-right.
+   The wrapper doesn't cover or dim the page (pointer-events:none) so the app
+   stays usable behind it; only the window itself is interactive. */
 .chat-scrim {
-  position: fixed; inset: 0; z-index: 1200;
-  background: rgba(8, 9, 10, 0);
-  transition: background .2s ease;
-  display: flex; justify-content: flex-end;
+  position: fixed; right: 20px; bottom: 20px; z-index: 1200;
+  pointer-events: none;
 }
-.chat-scrim.open { background: rgba(8, 9, 10, .38); }
 .chat-drawer {
+  pointer-events: auto;
   display: flex; flex-direction: column;
-  width: min(420px, 92vw); height: 100%;
+  width: min(370px, calc(100vw - 40px)); height: min(560px, 78vh);
   background: var(--bg-2, #fff); color: var(--ink);
-  box-shadow: -18px 0 48px rgba(0, 0, 0, .28);
-  transform: translateX(100%); transition: transform .22s ease;
+  border-radius: 16px; overflow: hidden;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .30), 0 2px 8px rgba(0, 0, 0, .16);
+  transform: translateY(14px) scale(.98); opacity: 0;
+  transform-origin: bottom right;
+  transition: transform .18s ease, opacity .18s ease;
 }
-.chat-scrim.open .chat-drawer { transform: translateX(0); }
+.chat-scrim.open .chat-drawer { transform: translateY(0) scale(1); opacity: 1; }
 .chat-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 16px; border-bottom: 1px solid var(--bg-3, rgba(0, 0, 0, .08));
@@ -7924,10 +7928,11 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
   .chat-dot { animation: none; }
 }
 @media (max-width: 720px) {
-  .chat-scrim { align-items: flex-end; }
+  .chat-scrim { right: 0; left: 0; bottom: 0; }
   .chat-drawer {
-    width: 100vw; height: 88vh; border-radius: 16px 16px 0 0;
-    transform: translateY(100%); box-shadow: 0 -18px 48px rgba(0, 0, 0, .28);
+    width: 100vw; height: 85vh; border-radius: 16px 16px 0 0;
+    transform: translateY(100%); opacity: 1;
+    box-shadow: 0 -18px 48px rgba(0, 0, 0, .28);
   }
   .chat-scrim.open .chat-drawer { transform: translateY(0); }
 }
