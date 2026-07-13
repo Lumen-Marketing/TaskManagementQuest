@@ -26,6 +26,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildBriefingContext } from "./lib/context.mjs";
 import { shapeBriefing, fallbackBriefing } from "./lib/shape.mjs";
 import { validateDraft } from "./lib/draft.mjs";
+import { buildDigestContext, shapeDigest, fallbackDigest } from "./lib/digest.mjs";
 
 // Provider seam — swap these two lines to move off Groq.
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
@@ -48,6 +49,9 @@ const MAX_CHAT_HISTORY = 6;     // conversation turns kept for context
 const MAX_CHAT_TASKS = 200;     // snapshot lines accepted
 const CHAT_DAILY_CAP = 100;     // per user, per UTC day
 const chatUsage = new Map<string, { day: string; n: number }>();
+
+const DIGEST_DAILY_CAP = 10; // client caches per week, so real volume is tiny
+const digestUsage = new Map<string, { day: string; n: number }>();
 
 function corsHeadersFor(req: Request): Record<string, string> {
   const headers: Record<string, string> = {
@@ -108,7 +112,7 @@ Deno.serve(async (req: Request) => {
     let payload: { action?: unknown };
     try { payload = JSON.parse(raw || "{}"); } catch { return json(req, { error: "Invalid JSON body." }, 400); }
     const action = payload.action;
-    if (action !== "briefing" && action !== "draft_task" && action !== "chat") {
+    if (action !== "briefing" && action !== "draft_task" && action !== "chat" && action !== "weekly_digest") {
       return json(req, { error: "Unknown action." }, 400);
     }
 
@@ -215,6 +219,61 @@ Deno.serve(async (req: Request) => {
         console.error("[ai-assistant] chat fetch threw", e);
         return json(req, { ok: false, error: "The assistant is unavailable right now." }, 502);
       }
+    }
+
+    // -------- weekly_digest: RLS-scoped done/slipped/coming recap -----------
+    if (action === "weekly_digest") {
+      const gday = new Date().toISOString().slice(0, 10);
+      const gu = digestUsage.get(uid);
+      const gn = gu && gu.day === gday ? gu.n : 0;
+      if (gn >= DIGEST_DAILY_CAP) return json(req, { error: "Daily digest limit reached. Try again tomorrow." }, 429);
+      digestUsage.set(uid, { day: gday, n: gn + 1 });
+
+      const gp = payload as { today?: unknown };
+      const today = typeof gp.today === "string" ? gp.today : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());
+
+      // No assignee filter — RLS bounds the rows to what the caller may read.
+      const { data: drows, error: dErr } = await userClient
+        .from("tasks")
+        .select("id,title,company_id,due,status,priority,assignee_id,completed_at")
+        .order("due", { ascending: true })
+        .limit(400);
+      if (dErr) {
+        console.error("[ai-assistant] digest fetch failed", dErr);
+        return json(req, { error: "Could not load tasks." }, 500);
+      }
+      const dtasks = (drows ?? []).map((r: any) => ({
+        id: r.id, title: r.title, company: r.company_id, due: r.due,
+        status: r.status, completedAt: r.completed_at,
+      }));
+      const dctx = buildDigestContext(dtasks, { today, windowDays: 7 });
+
+      const dsys = "You are a concise task assistant writing a weekly digest. In 2 to 4 sentences, recap what got done this past week, what slipped, and what is coming in the next 7 days, then up to 3 short bullet lines each naming one specific task. Only reference tasks in the provided context. Plain text, no emojis, no markdown headings.";
+      const dusr = `Today is ${today}.\nCounts: ${JSON.stringify(dctx.counts)}\nItems:\n${dctx.lines.join("\n") || "(none)"}`;
+
+      let digest;
+      try {
+        const res = await fetch(GROQ_ENDPOINT, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: GROQ_MODEL, temperature: 0.4, max_tokens: 350,
+            messages: [{ role: "system", content: dsys }, { role: "user", content: dusr }],
+          }),
+        });
+        if (!res.ok) {
+          console.error("[ai-assistant] digest provider rejected", { status: res.status });
+          digest = fallbackDigest(dctx);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          const text = data?.choices?.[0]?.message?.content ?? "";
+          digest = shapeDigest(text, dctx);
+        }
+      } catch (e) {
+        console.error("[ai-assistant] digest fetch threw", e);
+        digest = fallbackDigest(dctx);
+      }
+      return json(req, { ok: true, digest, generatedAt: new Date().toISOString() });
     }
 
     // -------- briefing (existing) -----------------------------------------
