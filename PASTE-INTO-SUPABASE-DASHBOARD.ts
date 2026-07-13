@@ -90,13 +90,16 @@ const DRAFT_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DRAFT_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const MAX_ASSIGNEES = 10;
+const draftIdSet = (list: any) => new Set((list || []).map((x: any) => x && x.id).filter(Boolean));
 function validateDraft(raw: any, opts: any) {
-  const out: any = { assignees: [], company: null, priority: null, due: null, dueTime: null };
+  const out: any = { assignees: [], company: null, priority: null, due: null, dueTime: null, type: null, label: null, project: null };
   if (!raw || typeof raw !== "object") return out;
-  const team = (opts && opts.team) || [];
-  const companies = (opts && opts.companies) || [];
-  const teamIds = new Set(team.map((t: any) => t && t.id).filter(Boolean));
-  const compIds = new Set(companies.map((c: any) => c && c.id).filter(Boolean));
+  const o = opts || {};
+  const teamIds = draftIdSet(o.team);
+  const compIds = draftIdSet(o.companies);
+  const typeIds = draftIdSet(o.types);
+  const labelIds = draftIdSet(o.labels);
+  const projectIds = draftIdSet(o.projects);
   const candidates = Array.isArray(raw.assignees) ? raw.assignees
     : (typeof raw.assignee === "string" ? [raw.assignee] : []);
   const seenIds = new Set();
@@ -108,6 +111,9 @@ function validateDraft(raw: any, opts: any) {
   if (typeof raw.priority === "string" && DRAFT_PRIORITIES.has(raw.priority)) out.priority = raw.priority;
   if (typeof raw.due === "string" && DRAFT_DATE_RE.test(raw.due) && !Number.isNaN(Date.parse(raw.due))) out.due = raw.due;
   if (typeof raw.dueTime === "string" && DRAFT_TIME_RE.test(raw.dueTime)) out.dueTime = raw.dueTime;
+  if (typeof raw.type === "string" && typeIds.has(raw.type)) out.type = raw.type;
+  if (typeof raw.label === "string" && labelIds.has(raw.label)) out.label = raw.label;
+  if (typeof raw.project === "string" && projectIds.has(raw.project)) out.project = raw.project;
   return out;
 }
 
@@ -180,18 +186,24 @@ Deno.serve(async (req: Request) => {
       if (dn >= DRAFT_DAILY_CAP) return json(req, { error: "Daily draft limit reached." }, 429);
       draftUsage.set(uid, { day: dday, n: dn + 1 });
 
-      const p = payload as { text?: unknown; team?: unknown; companies?: unknown; today?: unknown };
+      const p = payload as { text?: unknown; team?: unknown; companies?: unknown; today?: unknown; types?: unknown; labels?: unknown; projects?: unknown };
       const text = (typeof p.text === "string" ? p.text : "").slice(0, MAX_DRAFT_TEXT).trim();
       const team = Array.isArray(p.team) ? p.team : [];
       const companies = Array.isArray(p.companies) ? p.companies : [];
+      const types = Array.isArray(p.types) ? p.types : [];
+      const labels = Array.isArray(p.labels) ? p.labels : [];
+      const projects = Array.isArray(p.projects) ? p.projects : [];
       const today = typeof p.today === "string" ? p.today : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());
-      const emptyDraft = { assignees: [], company: null, priority: null, due: null, dueTime: null };
+      const emptyDraft = { assignees: [], company: null, priority: null, due: null, dueTime: null, type: null, label: null, project: null };
       if (!text) return json(req, { ok: true, draft: emptyDraft });
 
       const names = team.map((t: any) => `${t.id} = ${t.name}`).join("; ");
       const comps = companies.map((c: any) => `${c.id} = ${c.label}`).join("; ");
-      const sys = "You extract task fields from a short sentence. Respond ONLY with a JSON object with keys assignees, company, priority, due, dueTime. assignees is an ARRAY of ids from the PEOPLE list (include EVERY person named — one or more); company is an id from the COMPANIES list; priority one of low|medium|high|critical; due as YYYY-MM-DD; dueTime as 24h HH:mm. Use [] for assignees and null for other fields not clearly present. Never invent ids.";
-      const usr = `Today is ${today}.\nPEOPLE: ${names || "(none)"}\nCOMPANIES: ${comps || "(none)"}\nSENTENCE: ${text}`;
+      const typeList = types.map((t: any) => `${t.id} = ${t.label}`).join("; ");
+      const labelList = labels.map((l: any) => `${l.id} = ${l.label}`).join("; ");
+      const projList = projects.map((pr: any) => `${pr.id} = ${pr.label}`).join("; ");
+      const sys = "You extract task fields from a short sentence. Respond ONLY with a JSON object with keys assignees, company, priority, due, dueTime, type, label, project. assignees is an ARRAY of ids from the PEOPLE list (include EVERY person named — one or more); company is an id from the COMPANIES list; priority one of low|medium|high|critical; due as YYYY-MM-DD; dueTime as 24h HH:mm; type is an id from the TYPES list; label is an id from the LABELS list; project is an id from the PROJECTS list. Use [] for assignees and null for other fields not clearly present. Never invent ids.";
+      const usr = `Today is ${today}.\nPEOPLE: ${names || "(none)"}\nCOMPANIES: ${comps || "(none)"}\nTYPES: ${typeList || "(none)"}\nLABELS: ${labelList || "(none)"}\nPROJECTS: ${projList || "(none)"}\nSENTENCE: ${text}`;
 
       let draft = emptyDraft;
       try {
@@ -209,7 +221,7 @@ Deno.serve(async (req: Request) => {
           const content = data?.choices?.[0]?.message?.content ?? "{}";
           let parsed: unknown = {};
           try { parsed = JSON.parse(content); } catch { parsed = {}; }
-          draft = validateDraft(parsed, { team, companies });
+          draft = validateDraft(parsed, { team, companies, types, labels, projects });
         } else {
           console.error("[ai-assistant] draft provider rejected", { status: res.status });
         }

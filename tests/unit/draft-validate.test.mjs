@@ -6,12 +6,22 @@ import { validateDraft } from '../../supabase/functions/ai-assistant/lib/draft.m
 const LISTS = {
   team: [{ id: 'josh', name: 'Josh' }, { id: 'shan', name: 'Shan' }],
   companies: [{ id: 'lumen', label: 'Lumen' }, { id: 'roofing', label: 'Quest Roofing' }],
+  types: [{ id: 'lead', label: 'Lead' }, { id: 'admin', label: 'Admin' }],
+  labels: [{ id: 'urgent', label: 'Urgent' }],
+  projects: [{ id: 'p1', label: 'Johnson reroof' }],
 };
 
 test('keeps valid fields that match the allowed lists', () => {
   const out = validateDraft(
-    { assignees: ['josh'], company: 'lumen', priority: 'high', due: '2026-07-17', dueTime: '15:30' }, LISTS);
-  assert.deepEqual(out, { assignees: ['josh'], company: 'lumen', priority: 'high', due: '2026-07-17', dueTime: '15:30' });
+    { assignees: ['josh'], company: 'lumen', priority: 'high', due: '2026-07-17', dueTime: '15:30', type: 'lead', label: 'urgent', project: 'p1' }, LISTS);
+  assert.deepEqual(out, { assignees: ['josh'], company: 'lumen', priority: 'high', due: '2026-07-17', dueTime: '15:30', type: 'lead', label: 'urgent', project: 'p1' });
+});
+
+test('nulls out type/label/project not on their lists', () => {
+  const out = validateDraft({ type: 'nope', label: 'nope', project: 'nope' }, LISTS);
+  assert.equal(out.type, null);
+  assert.equal(out.label, null);
+  assert.equal(out.project, null);
 });
 
 test('keeps multiple valid assignees, drops unknowns, dedups', () => {
@@ -38,7 +48,7 @@ test('nulls out bad priority, date, and time', () => {
 });
 
 test('garbage / missing input yields empty shape', () => {
-  const shape = { assignees: [], company: null, priority: null, due: null, dueTime: null };
+  const shape = { assignees: [], company: null, priority: null, due: null, dueTime: null, type: null, label: null, project: null };
   assert.deepEqual(validateDraft(null, LISTS), shape);
   assert.deepEqual(validateDraft('nope', LISTS), shape);
   assert.deepEqual(validateDraft({}, LISTS), shape);
@@ -46,5 +56,5 @@ test('garbage / missing input yields empty shape', () => {
 
 test('ignores unknown keys', () => {
   const out = validateDraft({ assignees: ['shan'], hacker: 'drop table' }, LISTS);
-  assert.deepEqual(out, { assignees: ['shan'], company: null, priority: null, due: null, dueTime: null });
+  assert.deepEqual(out, { assignees: ['shan'], company: null, priority: null, due: null, dueTime: null, type: null, label: null, project: null });
 });

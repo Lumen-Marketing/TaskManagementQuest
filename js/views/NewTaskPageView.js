@@ -379,10 +379,10 @@ App.NewTaskPageView = class NewTaskPageView {
     // Pickers.
     this._bindPick('company', () => this._companyItems(), (v) => { this.S.company = v; this._afterCompany(); this._lockField('company'); }, false);
     this._bindPick('assignee', () => this._assigneeItems(), (v) => { this._toggleWho(v); this._lockField('assignees'); }, true);
-    this._bindPick('type', () => this._typeItems(), (v) => { this.S.type = v; this.sync('type'); }, false);
+    this._bindPick('type', () => this._typeItems(), (v) => { this.S.type = v; this._lockField('type'); this.sync('type'); }, false);
     this._bindPick('status', () => this._statusItems(), (v) => { this.S.status = v; this.sync(); }, false);
-    this._bindPick('label', () => this._labelItems(), (v) => { this.S.label = v || null; this.sync('lab'); }, false);
-    this._bindPick('project', () => this._projectItems(), (v) => { this.S.project = v || null; this.sync('proj'); }, false);
+    this._bindPick('label', () => this._labelItems(), (v) => { this.S.label = v || null; this._lockField('label'); this.sync('lab'); }, false);
+    this._bindPick('project', () => this._projectItems(), (v) => { this.S.project = v || null; this._lockField('project'); this.sync('proj'); }, false);
     this._bindPick('remind', () => this._remindItems(), (v) => { this.S.remind = v; this.sync('rem'); }, false);
     this._bindPick('watch', () => this._watchItems(), (v) => { this._toggleWatcher(v); }, true);
     this._bindPick('date', () => this._calMenu(), null, false);
@@ -554,6 +554,7 @@ App.NewTaskPageView = class NewTaskPageView {
       this.S.type = (exists && exists.key) || newKey;
       this.S.status = App.taxonomy.defaultStatus(this.S.company, this.S.type);
     } catch (e) { /* noop */ }
+    this._lockField('type');
     this._closeMenus(); this._flash('✓ type created → ' + val); this.sync('type');
   }
   _createLabel(val) {
@@ -568,6 +569,7 @@ App.NewTaskPageView = class NewTaskPageView {
         this.S.label = key;
       }
     } catch (e) { /* noop */ }
+    this._lockField('label');
     this._closeMenus(); this._flash('✓ label created → ' + val); this.sync('lab');
   }
   _createProject(val) {
@@ -580,10 +582,11 @@ App.NewTaskPageView = class NewTaskPageView {
         if (res && res.id) {
           App.projects = App.projects || {};
           App.projects[res.id] = { id: res.id, name: val, companyId: this.S.company, color: '', status: 'active' };
-          this.S.project = res.id; this.sync('proj');
+          this.S.project = res.id; this._lockField('project'); this.sync('proj');
         }
       }).catch(() => {});
     }
+    this._lockField('project');
     this._closeMenus(); this._flash('✓ project created → ' + val); this.sync('proj');
   }
 
@@ -630,9 +633,21 @@ App.NewTaskPageView = class NewTaskPageView {
       if (!App.TaskDraftClient.shouldRequest(text, this._draftLast, {})) return;
       this._draftLast = text;
       const ctx = this._parseCtx(false);
-      this._draftClient.fetchDraft({ text, team: ctx.team, companies: ctx.companies, today: ctx.today })
+      const opts = this._draftOptionLists();
+      this._draftClient.fetchDraft({ text, team: ctx.team, companies: ctx.companies, today: ctx.today, ...opts })
         .then(({ draft }) => { if (draft) this._applyAiDraft(draft); });
     }, 800);
+  }
+
+  // Per-company Type/Label/Project option lists sent to the AI so it can only
+  // pick from real options (validated again server-side and on apply).
+  _draftOptionLists() {
+    const co = this.S.company;
+    return {
+      types: App.taxonomy.activeTypes(co).map(t => ({ id: t.key, label: t.label })),
+      labels: App.taxonomy.activeLabels(co).map(l => ({ id: l.key, label: l.label })),
+      projects: Object.values(App.projects || {}).filter(p => p.companyId === co).map(p => ({ id: p.id, label: p.name })),
+    };
   }
 
   // Apply the validated draft to fields the user/token parser hasn't set.
@@ -649,6 +664,19 @@ App.NewTaskPageView = class NewTaskPageView {
     if ('priority' in apply) { this.S.pri = apply.priority; this._aiSet.add('priority'); }
     if ('due' in apply) { this.S.date = apply.due; this._aiSet.add('due'); }
     if ('dueTime' in apply) { this.S.time = apply.dueTime; this._aiSet.add('dueTime'); }
+    // Type/Label/Project: re-validate against the FINAL company's options (the
+    // company may have just changed), so a stale pick from another company is
+    // dropped rather than applied. Type is applied before sync() re-derives the
+    // status from the new type.
+    if ('type' in apply && App.taxonomy.activeTypes(this.S.company).some(t => t.key === apply.type)) {
+      this.S.type = apply.type; this._aiSet.add('type');
+    }
+    if ('label' in apply && App.taxonomy.activeLabels(this.S.company).some(l => l.key === apply.label)) {
+      this.S.label = apply.label; this._aiSet.add('label');
+    }
+    if ('project' in apply && (App.projects || {})[apply.project] && App.projects[apply.project].companyId === this.S.company) {
+      this.S.project = apply.project; this._aiSet.add('project');
+    }
     this.sync();
   }
 
@@ -732,7 +760,7 @@ App.NewTaskPageView = class NewTaskPageView {
     if (opts.square) lead = `<span class="nt-sq" style="background:${opts.square}"></span>`;
     else if (opts.swatch) lead = `<span class="nt-dot" style="background:${opts.swatch}"></span>`;
     else if (opts.icon) lead = `<i class="ti ${opts.icon}"></i>`; // opts.icon is the FULL ti-* class — the icon-subset scanner needs whole literals at call sites
-    const aiKey = { company: 'company', date: 'due', time: 'dueTime' }[key];
+    const aiKey = { company: 'company', date: 'due', time: 'dueTime', type: 'type', label: 'label', project: 'project' }[key];
     const tag = aiKey ? this._aiTag(aiKey) : '';
     val.innerHTML = lead + `<span class="nt-pick-txt">${App.utils.escapeHtml(text || '')}</span>` + tag;
   }

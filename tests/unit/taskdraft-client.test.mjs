@@ -28,6 +28,13 @@ test('mergeDraftIntoState applies only non-null, unlocked keys', () => {
   assert.deepEqual(aiFilled.sort(), ['assignees', 'due']);
 });
 
+test('mergeDraftIntoState applies type/label/project when present', () => {
+  const draft = { assignees: [], company: null, priority: null, due: null, dueTime: null, type: 'lead', label: 'urgent', project: 'p1' };
+  const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, new Set());
+  assert.deepEqual(apply, { type: 'lead', label: 'urgent', project: 'p1' });
+  assert.deepEqual(aiFilled.sort(), ['label', 'project', 'type']);
+});
+
 test('mergeDraftIntoState skips an empty assignees array', () => {
   const draft = { assignees: [], company: 'lumen', priority: null, due: null, dueTime: null };
   const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, new Set());

@@ -7,13 +7,17 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const MAX_ASSIGNEES = 10;
 
+const idSet = (list) => new Set((list || []).map((x) => x && x.id).filter(Boolean));
+
 export function validateDraft(raw, opts) {
-  const out = { assignees: [], company: null, priority: null, due: null, dueTime: null };
+  const out = { assignees: [], company: null, priority: null, due: null, dueTime: null, type: null, label: null, project: null };
   if (!raw || typeof raw !== 'object') return out;
-  const team = (opts && opts.team) || [];
-  const companies = (opts && opts.companies) || [];
-  const teamIds = new Set(team.map((t) => t && t.id).filter(Boolean));
-  const compIds = new Set(companies.map((c) => c && c.id).filter(Boolean));
+  const o = opts || {};
+  const teamIds = idSet(o.team);
+  const compIds = idSet(o.companies);
+  const typeIds = idSet(o.types);
+  const labelIds = idSet(o.labels);
+  const projectIds = idSet(o.projects);
 
   // Accept an `assignees` array or a singular `assignee`; keep only real roster
   // ids, de-duplicated and capped.
@@ -28,5 +32,8 @@ export function validateDraft(raw, opts) {
   if (typeof raw.priority === 'string' && PRIORITIES.has(raw.priority)) out.priority = raw.priority;
   if (typeof raw.due === 'string' && DATE_RE.test(raw.due) && !Number.isNaN(Date.parse(raw.due))) out.due = raw.due;
   if (typeof raw.dueTime === 'string' && TIME_RE.test(raw.dueTime)) out.dueTime = raw.dueTime;
+  if (typeof raw.type === 'string' && typeIds.has(raw.type)) out.type = raw.type;
+  if (typeof raw.label === 'string' && labelIds.has(raw.label)) out.label = raw.label;
+  if (typeof raw.project === 'string' && projectIds.has(raw.project)) out.project = raw.project;
   return out;
 }
