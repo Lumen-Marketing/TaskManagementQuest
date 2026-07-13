@@ -92,6 +92,22 @@ App.ChatDrawerView = class ChatDrawerView {
     }));
   }
 
+  // Who is currently clocked in (of the people the viewer can see), so the AI
+  // can answer "am I clocked in?" / "who's working right now?".
+  _clockLines() {
+    const tm = this.controller.timeModel;
+    const active = (tm && tm.allActive && tm.allActive()) || [];
+    return active.map((a) => {
+      const name = (App.directory.person(a.userId) || App.directory.personFallback(a.userId)).name;
+      const task = this.controller.taskModel.find(a.taskId);
+      const title = (task && task.title) || a.taskTitle || 'a task';
+      const ms = Math.min(Date.now() - a.startedAt, App.MAX_SHIFT_MS || (12 * 3600 * 1000));
+      const mins = Math.max(0, Math.round(ms / 60000));
+      const dur = mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + 'm';
+      return `${name} · on "${title}" · ${dur} so far`;
+    });
+  }
+
   async send(text) {
     const q = String(text || '').trim();
     if (!q || this.busy || !this.client) return;
@@ -104,8 +120,10 @@ App.ChatDrawerView = class ChatDrawerView {
 
     const today = App.utils.todayISO(0);
     const snap = App.ChatClient.buildSnapshot(this._items(), { today });
+    const clock = this._clockLines();
+    const me = (App.directory.person(this.controller.currentUser) || App.directory.personFallback(this.controller.currentUser)).name;
     const history = App.ChatClient.trimHistory(this.messages.slice(0, -1)); // exclude the just-sent question
-    const { answer } = await this.client.ask({ question: q, history, tasks: snap.lines, today, truncated: snap.truncated });
+    const { answer } = await this.client.ask({ question: q, history, tasks: snap.lines, today, truncated: snap.truncated, clock, me });
 
     if (!this.el) return; // closed while in flight
     this.renderTyping(false);

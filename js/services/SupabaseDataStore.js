@@ -700,10 +700,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
 
   /* Ask-your-tasks chat via the ai-assistant Edge Function. Returns
      { ok, answer?, error? } and never throws so the drawer degrades gracefully. */
-  async chat({ question, history, tasks, today, truncated }) {
+  async chat({ question, history, tasks, today, truncated, clock, me }) {
     try {
       const { data, error } = await this.supabase.functions.invoke('ai-assistant', {
-        body: { action: 'chat', question, history, tasks, today, truncated },
+        body: { action: 'chat', question, history, tasks, today, truncated, clock, me },
       });
       if (error) return { ok: false, error: (error && error.message) || 'AI unavailable.' };
       return { ok: true, answer: data && data.answer };

@@ -245,7 +245,7 @@ Deno.serve(async (req: Request) => {
       if (cn >= CHAT_DAILY_CAP) return json(req, { ok: false, error: "Daily chat limit reached. Try again tomorrow." }, 429);
       chatUsage.set(uid, { day: cday, n: cn + 1 });
 
-      const p = payload as { question?: unknown; history?: unknown; tasks?: unknown; today?: unknown; truncated?: unknown };
+      const p = payload as { question?: unknown; history?: unknown; tasks?: unknown; today?: unknown; truncated?: unknown; clock?: unknown; me?: unknown };
       const question = (typeof p.question === "string" ? p.question : "").slice(0, MAX_CHAT_TEXT).trim();
       const history = (Array.isArray(p.history) ? p.history : [])
         .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
@@ -253,12 +253,16 @@ Deno.serve(async (req: Request) => {
         .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, MAX_CHAT_TEXT) }));
       const taskLines = (Array.isArray(p.tasks) ? p.tasks : [])
         .filter((l: any) => typeof l === "string").slice(0, MAX_CHAT_TASKS);
+      const clockLines = (Array.isArray(p.clock) ? p.clock : [])
+        .filter((l: any) => typeof l === "string").slice(0, 50);
+      const me = (typeof p.me === "string" ? p.me : "").slice(0, 80);
       const truncated = p.truncated === true || (Array.isArray(p.tasks) && p.tasks.length > MAX_CHAT_TASKS);
       const today = typeof p.today === "string" ? p.today : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());
       if (!question) return json(req, { ok: true, answer: "What would you like to know about your tasks?" });
 
-      const sys = "You are a helpful assistant inside a task manager. Answer the user's question using ONLY the TASKS list provided. Never invent tasks, people, dates, or companies. If the answer is not in the list, say you don't see it in their tasks. You cannot create, edit, complete, assign, or delete anything — you only answer questions. Be concise and specific, and name the tasks you refer to. Plain text only: no markdown headings, no emojis. If the NOTE says the list was truncated, mention your view may be partial.";
-      const taskBlock = `Today is ${today}.${truncated ? "\nNOTE: the task list was truncated; you may not see every task." : ""}\nTASKS:\n${taskLines.join("\n") || "(no tasks)"}`;
+      const sys = `You are a helpful assistant inside a task manager. Answer the user's question using ONLY the information provided below (TASKS, and CLOCKED IN NOW). Never invent tasks, people, dates, companies, or timers. If the answer is not in the provided information, say you don't see it. You cannot create, edit, complete, assign, delete, or clock anything — you only answer questions.${me ? ` The person asking is ${me}.` : ""} Be concise. When you list more than one task, put each on its own line starting with "- " (a hyphen and a space), not in a comma-separated sentence. Do not use markdown headings, tables, or emojis. If the NOTE says the list was truncated, mention your view may be partial.`;
+      const clockBlock = clockLines.length ? clockLines.join("\n") : "(nobody you can see is clocked in right now)";
+      const taskBlock = `Today is ${today}.${truncated ? "\nNOTE: the task list was truncated; you may not see every task." : ""}\nCLOCKED IN NOW:\n${clockBlock}\nTASKS:\n${taskLines.join("\n") || "(no tasks)"}`;
       const messages = [
         { role: "system", content: sys },
         ...history,

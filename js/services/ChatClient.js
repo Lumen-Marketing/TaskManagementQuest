@@ -49,9 +49,9 @@ App.ChatClient = class ChatClient {
   }
 
   // Never throws. Returns { answer } or { answer: null }.
-  async ask({ question, history, tasks, today, truncated }) {
+  async ask({ question, history, tasks, today, truncated, clock, me }) {
     let res;
-    try { res = await this.dataStore.chat({ question, history, tasks, today, truncated }); }
+    try { res = await this.dataStore.chat({ question, history, tasks, today, truncated, clock, me }); }
     catch (_e) { return { answer: null }; }
     if (!res || !res.ok || !res.answer) return { answer: null };
     return { answer: res.answer };
