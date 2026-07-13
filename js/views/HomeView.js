@@ -433,6 +433,8 @@ App.HomeView = class HomeView {
           </div>
         </div>
 
+        ${this._briefingCardHtml()}
+
         <div class="qhq-perf">
           ${sectionHead('Your performance', this.period === 'month' ? 'this month' : 'this week', periodCtl)}
           <div class="qhq-kpirow">${metrics.map(trendCardHtml).join('')}</div>
@@ -440,7 +442,6 @@ App.HomeView = class HomeView {
 
         <div class="qhq-cc-shell">
           <div class="qhq-cc-main">
-            ${this._briefingCardHtml()}
             <div class="qhq-card qhq-col-up">
               ${cardHead('layers', 'tone-amber', 'Up next', 'your queue')}
               <div class="qhq-unlist">${unHtml}</div>

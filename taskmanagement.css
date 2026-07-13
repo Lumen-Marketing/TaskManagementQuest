@@ -7841,7 +7841,8 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
   .rp-pop { animation: none; }
 }
 
-/* AI daily briefing card (Home) */
+/* AI daily briefing card (Home) — full-width band above the KPI row */
+.qhq-brief { margin-top: 14px; }
 .qhq-brief .qhq-card-h { align-items: center; }
 .qhq-brief-refresh {
   margin-left: auto; background: none; border: 0; cursor: pointer;
