@@ -13,6 +13,11 @@ App.COMPANIES = {
   roofing:  { id: 'roofing',  label: 'Roofing',  pill: 'pill-roof'    },
   drafting: { id: 'drafting', label: 'Drafting', pill: 'pill-draft'   },
   lumen:    { id: 'lumen',    label: 'Lumen',    pill: 'pill-lumen'   },
+  // "Overall" spans every company. `all: true` marks it as the spans-all
+  // sentinel so code special-cases it without string-matching 'overall'.
+  // Visibility is still RLS-gated on profiles.company_ids (migration 028):
+  // only users granted 'overall' ever see or create Overall tasks.
+  overall:  { id: 'overall',  label: 'Overall',  pill: 'pill-overall', all: true },
 };
 
 App.TASK_TYPES = {

@@ -959,6 +959,7 @@ input:not([type="checkbox"]):not([type="radio"]), textarea, select {
 .pill-draft   { background: var(--pastel-blue);   color: var(--pastel-blue-ink); }
 .pill-lumen   { background: var(--pastel-yellow); color: var(--pastel-yellow-ink); }
 .pill-website { background: var(--pastel-green);  color: var(--pastel-green-ink); }
+.pill-overall { background: var(--pastel-lilac);  color: var(--pastel-lilac-ink); }
 
 /* Task type / label — plain text (pill design removed), each in its own column */
 .type-cell { display: flex; align-items: center; justify-content: center; gap: 6px 8px; flex-wrap: wrap; }
