@@ -77,7 +77,8 @@ App.taxonomy = (function () {
   // company so the app never runs without a taxonomy.
   function seedFromConstants() {
     idx = {};
-    const companies = Object.keys(App.COMPANIES || { roofing: 1 });
+    // 'overall' is synthesized on demand by co('overall') → unionCo(); never seed it.
+    const companies = Object.keys(App.COMPANIES || { roofing: 1 }).filter(c => c !== 'overall');
     const types = Object.values(App.TASK_TYPES || {});
     const statuses = Object.entries(App.STATUSES || {});
     const labels = Object.values(App.TASK_LABELS || {}).filter(l => l.id !== 'none');

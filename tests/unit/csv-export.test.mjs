@@ -11,7 +11,7 @@ globalThis.App = {
   STATUSES: { todo: { label: 'To do' } },
   directory: {
     person: (id) => ({ abe: { full: 'Abraham Q.' }, kris: { name: 'Kristin' } }[id] || null),
-    company: (id) => (id === 'roofing' ? { label: 'Quest Roofing' } : null),
+      company: (id) => ({ roofing: { label: 'Quest Roofing' }, overall: { label: 'Overall' } }[id] || null),
   },
   utils: { toISODate: (d) => d.toISOString().slice(0, 10) },
 };
@@ -40,6 +40,14 @@ test('tasksRows: header + resolved labels + subtask fraction + fallbacks', () =>
   assert.equal(rows[2][1], 'weird');
   assert.equal(rows[2][3], 'unknownco');
   assert.equal(rows[2][9], '');
+});
+
+test('tasksRows: an Overall task exports the "Overall" company label', () => {
+  const rows = tasksRows([{
+    id: 't3', title: 'Company-wide', type: 'admin', label: 'none', company: 'overall',
+    priority: 'high', status: 'todo', subtasks: [],
+  }]);
+  assert.equal(rows[1][3], 'Overall'); // company column
 });
 
 test('timeRows: filters to visible tasks, sorts by start, 2-decimal hours, snapshot-title fallback', () => {

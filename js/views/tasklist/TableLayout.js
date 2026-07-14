@@ -177,8 +177,14 @@
         options: Object.entries(App.STATUSES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.statuses || []).includes(k) })) };
     }
     if (col === 'companies') {
+      // Gate on accessible companies so the access-gated 'overall' shows only
+      // for granted users; fall back to the non-overall constants.
+      const access = (view.controller.uiState.companies || []).filter(id => id !== '*' && App.directory.company(id));
+      const entries = access.length
+        ? access.map(id => [id, (App.directory.company(id) || { label: id }).label])
+        : Object.values(App.COMPANIES).filter(c => !c.all).map(c => [c.id, c.label]);
       return { multi: true, group: 'companies', title: 'Filter company',
-        options: Object.entries(App.COMPANIES).map(([k, v]) => ({ value: k, label: v.label, selected: (f.companies || []).includes(k) })) };
+        options: entries.map(([k, label]) => ({ value: k, label, selected: (f.companies || []).includes(k) })) };
     }
     if (col === 'labels') {
       return { multi: true, group: 'labels', title: 'Filter label',

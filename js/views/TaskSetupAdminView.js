@@ -31,7 +31,9 @@ App.TaskSetupAdminView = class TaskSetupAdminView {
   }
 
   /* ---------- data ---------- */
-  companies() { return (this.controller.uiState.companies || []).filter(c => c !== '*'); }
+  // 'overall' is excluded: its taxonomy is a computed union of the real
+  // companies (see taxonomy.js co('overall')), not an editable per-company set.
+  companies() { return (this.controller.uiState.companies || []).filter(c => c !== '*' && c !== 'overall'); }
   resolveCompany() {
     if (this.company && this.companies().includes(this.company)) return this.company;
     const cur = this.controller.uiState.currentCompany;
