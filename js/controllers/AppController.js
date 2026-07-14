@@ -101,7 +101,7 @@ App.AppController = class AppController {
     const clockId = App.DEFAULT_CLOCK_TASK_ID;
     let base = this.taskModel.all().filter(t => !t.clearedAt && t.id !== clockId);
     if (!includeDone) base = base.filter(t => !App.taxonomy.isDone(t));
-    if (cur && cur !== '*') base = base.filter(t => t.company === cur);
+    if (cur && cur !== '*') base = base.filter(t => App.utils.taskInCompany(t, cur));
     if (role === 'worker') {
       base = base.filter(t => t.assignee === this.currentUser || t.creator === this.currentUser);
     } else if (role === 'supervisor' && App.realRole() !== 'developer') {

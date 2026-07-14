@@ -184,6 +184,15 @@ App.utils = {
      multi-company "drop the filter" option) — it means no company filter, so
      return the full active roster rather than intersecting on a literal '*'
      that no profile's company_ids ever contains. */
+  /* Does `companyId` (a scope/filter) select this task? '*' or empty means
+     no company filter. A real company also matches Overall tasks (they span
+     every company). When the scope IS 'overall', only Overall tasks match. */
+  taskInCompany(task, companyId) {
+    if (!companyId || companyId === '*') return true;
+    const c = task && task.company;
+    return c === companyId || c === 'overall';
+  },
+
   peopleInCompany(companyId, includeIds) {
     const base = this.activePeople(includeIds);
     if (!companyId || companyId === '*') return base;

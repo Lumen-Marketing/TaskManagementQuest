@@ -16,7 +16,7 @@
     const cur = view.controller.uiState.currentCompany;
     let watched = view.taskModel.all().filter(t =>
       !t.clearedAt && !App.taxonomy.isDone(t) && (t.watchers || []).includes(me));
-    if (cur && cur !== '*') watched = watched.filter(t => t.company === cur);
+    if (cur && cur !== '*') watched = watched.filter(t => App.utils.taskInCompany(t, cur));
 
     const sec = document.createElement('div');
     sec.className = 'watch-section';

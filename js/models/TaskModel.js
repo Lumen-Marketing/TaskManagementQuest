@@ -104,7 +104,7 @@ App.TaskModel = class TaskModel {
   /* ---------- queries ---------- */
   all() { return this.tasks; }
   find(id) { return this.tasks.find(t => t.id === id); }
-  byCompany(companyId) { return this.tasks.filter(t => t.company === companyId); }
+  byCompany(companyId) { return this.tasks.filter(t => App.utils.taskInCompany(t, companyId)); }
   byAssignee(userId) { return this.tasks.filter(t => t.assignee === userId); }
 
   /* The shared, cross-person Focus list: every active (not done, not soft-
@@ -131,7 +131,7 @@ App.TaskModel = class TaskModel {
     // companies" (god mode). The shared clock task is always visible so timers
     // work regardless of company.
     if (currentCompany && currentCompany !== '*') {
-      tasks = tasks.filter(t => t.company === currentCompany || t.id === clockTaskId);
+      tasks = tasks.filter(t => App.utils.taskInCompany(t, currentCompany) || t.id === clockTaskId);
     }
 
     // Role row-scope. Worker = tasks assigned to OR created by them (mirrors the
@@ -157,7 +157,7 @@ App.TaskModel = class TaskModel {
     else if (view === 'watching') tasks = tasks.filter(t => (t.watchers || []).includes(currentUser));
     else if (view.startsWith('company:')) {
       const c = view.split(':')[1];
-      tasks = tasks.filter(t => t.company === c);
+      tasks = tasks.filter(t => App.utils.taskInCompany(t, c));
     } else if (view.startsWith('person:')) {
       const p = view.split(':')[1];
       tasks = tasks.filter(t => t.assignee === p);
@@ -190,7 +190,9 @@ App.TaskModel = class TaskModel {
     if (activeFilters) {
       const f = activeFilters;
       if (f.assignees && f.assignees.length) tasks = tasks.filter(t => f.assignees.includes(t.assignee));
-      if (f.companies && f.companies.length) tasks = tasks.filter(t => f.companies.includes(t.company));
+      if (f.companies && f.companies.length) {
+        tasks = tasks.filter(t => f.companies.some(c => App.utils.taskInCompany(t, c)));
+      }
       if (f.projectId) tasks = tasks.filter(t => t.project === f.projectId);
       if (f.projects && f.projects.length) tasks = tasks.filter(t => f.projects.includes(t.project));
       if (f.statuses  && f.statuses.length)  tasks = tasks.filter(t => f.statuses.includes(t.status || 'todo'));
