@@ -7939,12 +7939,15 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
 }
 
 /* Today | This week toggle on the AI briefing card */
-.qhq-brief-seg { display: inline-flex; gap: 2px; margin-left: auto; margin-right: 6px;
-  background: var(--bg-3, rgba(0,0,0,.06)); border-radius: 999px; padding: 2px; }
-.qhq-seg-opt { border: 0; background: transparent; cursor: pointer; padding: 4px 10px;
-  border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--ink-3); line-height: 1.4; }
-.qhq-seg-opt.on { background: var(--bg-1, #fff); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+/* Today | This week. Visuals come from `.seg` (the same segmented control as
+   the tasks head-card "My work / Company" toggle, incl. its dark-theme rules),
+   so this only has to place it: beside the title rather than pushed right —
+   .qhq-brief-refresh still holds the right edge via its own margin-left:auto. */
+.qhq-brief-seg { flex: 0 0 auto; margin-left: 4px; }
 @media (max-width: 720px) {
-  .qhq-brief-seg { margin-left: 0; }
+  /* Phones: icons only, matching how #scopeSeg sheds its labels, so the title
+     keeps its room instead of the toggle wrapping to its own line. */
+  body.ui-command-center .qhq-brief-seg .seg-label { display: none; }
+  body.ui-command-center .qhq-brief-seg button { padding: 0 9px; }
   .qhq-card-h { flex-wrap: wrap; row-gap: 6px; }
 }

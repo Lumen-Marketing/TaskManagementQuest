@@ -585,10 +585,13 @@ App.HomeView = class HomeView {
     const mode = (this._briefMode = this._briefMode || 'today');
     const isWeek = mode === 'week';
     const icon = `<svg class="qhq-ic" viewBox="0 0 24 24" aria-hidden="true">${HOME_ICONS.fire}</svg>`;
+    // Reuses the head-card scope segment (`.seg`, as in the tasks "My work /
+    // Company" toggle) so the two read as the same control. It sits beside the
+    // title; `.qhq-brief-refresh` keeps the right edge via its own margin-auto.
     const seg = `
-      <div class="qhq-brief-seg" role="group" aria-label="Briefing range">
-        <button type="button" class="qhq-seg-opt ${isWeek ? '' : 'on'}" data-brief-mode="today" aria-pressed="${!isWeek}">Today</button>
-        <button type="button" class="qhq-seg-opt ${isWeek ? 'on' : ''}" data-brief-mode="week" aria-pressed="${isWeek}">This week</button>
+      <div class="seg qhq-brief-seg" role="group" aria-label="Briefing range">
+        <button type="button" class="${isWeek ? '' : 'on'}" data-brief-mode="today" aria-pressed="${!isWeek}" title="Today"><i class="ti ti-sun"></i><span class="seg-label">Today</span></button>
+        <button type="button" class="${isWeek ? 'on' : ''}" data-brief-mode="week" aria-pressed="${isWeek}" title="This week"><i class="ti ti-calendar"></i><span class="seg-label">This week</span></button>
       </div>`;
     const title = isWeek ? 'Weekly digest' : 'Daily briefing';
     const sub = isWeek ? 'this week in review' : 'your day at a glance';
