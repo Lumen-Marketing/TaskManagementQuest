@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   new App.ClockDashboardView({ taskModel, timeModel, controller });
   new App.HierarchyView({ controller });
   new App.TaskSetupAdminView({ controller });
+  new App.CheckinSettingsView({ controller });
   new App.PermissionsAdminView({ controller });
   new App.ReportsAdminView({ controller, dataStore });
 
