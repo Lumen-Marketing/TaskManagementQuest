@@ -71,6 +71,8 @@ App.PermissionsAdminView = class PermissionsAdminView {
         { id: 'approvals', label: 'Approve new members', perm: 'roles.manage' },
         { id: 'member-roles', label: 'Change member roles', perm: 'roles.manage',
           hint: 'Enforced by RLS as well — the UI is only a hint.' },
+        { id: 'checkins.manage', label: 'Proactive check-ins', perm: 'checkins.manage',
+          hint: 'Turn the scheduled AI check-in messages on or off for the team.' },
       ]},
       { id: 'insights', label: 'Insights', capabilities: [
         { id: 'home.view', label: 'Home dashboard', perm: 'home.view' },
