@@ -393,31 +393,38 @@
 }
 #taskDetailWrap .td2-watch-add:hover { background: var(--accent); color: #fff; }
 
-/* ---------- multi-assignee picker (New Task menu vocabulary) ---------- */
-#taskDetailWrap .td2-assignee-menu {
+/* ---------- multi-assignee picker (New Task menu vocabulary) ----------
+   NOT scoped under #taskDetailWrap: App.Menu.open() portals the menu onto
+   <body>, outside the wrap, so #taskDetailWrap-scoped rules would never match
+   and the menu rendered unstyled (dark-on-dark, unreadable). The .td2-am-*
+   / .td2-assignee-menu class names are unique to this picker, so unscoping
+   them can't leak. --accent is only set inside the .td2 subtree, so the
+   container re-declares it to stay self-sufficient on <body>. */
+.td2-assignee-menu {
+  --accent: var(--amber);
   position: absolute; top: calc(100% + 6px); left: 0; min-width: 240px; z-index: 70;
-  background: var(--surface); border-radius: var(--radius-md);
+  background: var(--surface); color: var(--ink); border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg); padding: 6px;
   animation: td2-menu-in var(--dur-fast) var(--ease-out);
 }
-#taskDetailWrap .td2-am-h {
+.td2-am-h {
   display: flex; align-items: baseline; gap: 8px;
   font-family: var(--font-mono); font-size: 10px; font-weight: 600;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3);
   padding: 6px 8px 8px;
 }
-#taskDetailWrap .td2-am-lead { text-transform: none; letter-spacing: 0; color: var(--accent); font-weight: 700; }
-#taskDetailWrap .td2-am-list { display: flex; flex-direction: column; max-height: 280px; overflow: auto; }
-#taskDetailWrap .td2-am-item {
+.td2-am-lead { text-transform: none; letter-spacing: 0; color: var(--accent); font-weight: 700; }
+.td2-am-list { display: flex; flex-direction: column; max-height: 280px; overflow: auto; }
+.td2-am-item {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
   padding: 8px 10px; border: none; background: none; border-radius: 8px;
   font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); cursor: pointer;
 }
-#taskDetailWrap .td2-am-item:hover { background: var(--bg-3); color: var(--ink); }
-#taskDetailWrap .td2-am-item.is-on { color: var(--ink); }
-#taskDetailWrap .td2-am-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#taskDetailWrap .td2-am-check { margin-left: auto; color: var(--accent); font-size: 16px; }
-#taskDetailWrap .td2-am-empty { padding: 12px; font-size: var(--text-xs); color: var(--ink-3); }
+.td2-am-item:hover { background: var(--bg-3); color: var(--ink); }
+.td2-am-item.is-on { color: var(--ink); }
+.td2-am-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.td2-am-check { margin-left: auto; color: var(--accent); font-size: 16px; }
+.td2-am-empty { padding: 12px; font-size: var(--text-xs); color: var(--ink-3); }
 
 /* saved flash (auto-save confirm) */
 #taskDetailWrap .td2-saved-flash { animation: td2-saved var(--dur-slow) var(--ease-out); }
