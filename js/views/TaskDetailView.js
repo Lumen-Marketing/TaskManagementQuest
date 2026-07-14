@@ -337,6 +337,7 @@ App.TaskDetailView = class TaskDetailView {
           <h1 class="td2-title${canWrite ? ' is-editable' : ''}"${canWrite ? ' contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Task title" title="Click to rename"' : ''}>${App.utils.escapeHtml(t.title)}</h1>
           <div class="td2-head-actions">
             <button class="td2-btn td2-btn-watch ${isWatching ? 'is-on' : ''}" data-action="toggle-watch" type="button"><i class="ti ti-eye"></i>${isWatching ? 'Watching' : 'Watch'}</button>
+            ${App.can('tasks.write') ? `<button class="td2-btn" data-action="new-task" type="button"><i class="ti ti-plus"></i>New task</button>` : ''}
             ${App.can('tasks.write') ? `<button class="td2-btn td2-btn-primary ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
             <button class="td2-btn td2-icon" data-action="overflow" aria-label="More actions" aria-haspopup="true" type="button"><i class="ti ti-dots"></i></button>
             <div class="td2-overflow hidden" id="tdpOverflow">
@@ -503,6 +504,9 @@ App.TaskDetailView = class TaskDetailView {
 
     // Delete lives in the ⋯ overflow menu now (may be absent if not permitted).
     qa('[data-action="delete-task"]').forEach(el => el.addEventListener('click', () => this.controller.deleteTask(t.id)));
+
+    const newTaskBtn = q('[data-action="new-task"]');
+    if (newTaskBtn) newTaskBtn.addEventListener('click', () => this.controller.openNewTaskPage());
 
     const completeBtn = q('[data-action="mark-complete"]');
     if (completeBtn) completeBtn.addEventListener('click', () => {
