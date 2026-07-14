@@ -23,7 +23,7 @@ App.ProgressWidgetView = class ProgressWidgetView {
   metrics() {
     const today = App.utils.todayISO(0);
     const me = this.currentUser;
-    const mine = this.taskModel.all().filter(t => t.assignee === me);
+    const mine = this.taskModel.all().filter(t => App.utils.isAssignee(t, me));
     const dueToday   = mine.filter(t => t.due === today);
     const doneToday  = mine.filter(t => App.utils.hqDateOf(t.completedAt) === today);
     // "In play today" = due today OR finished today (so finishing an older

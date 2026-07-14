@@ -72,7 +72,7 @@ App.HomeView = class HomeView {
   // In progress (pending/review), Completed (done), Not started (todo/hold).
   _statusMix() {
     const me = this.controller.currentUser;
-    const all = this.controller.visibleTasks({ includeDone: true }).filter(t => t.assignee === me);
+    const all = this.controller.visibleTasks({ includeDone: true }).filter(t => App.utils.isAssignee(t, me));
     const inProg = all.filter(t => t.status === 'pending' || t.status === 'review').length;
     const done = all.filter(t => App.taxonomy.isDone(t)).length;
     const notStarted = all.length - inProg - done; // todo / hold / unset
@@ -94,7 +94,7 @@ App.HomeView = class HomeView {
   // sparkline series (oldest -> newest).
   _trendMetrics(mode) {
     const me = this.controller.currentUser;
-    const all = this.controller.visibleTasks({ includeDone: true }).filter(t => t.assignee === me);
+    const all = this.controller.visibleTasks({ includeDone: true }).filter(t => App.utils.isAssignee(t, me));
     const { L, end, curStart, prevStart } = this._periodWindow(mode);
     const today = App.utils.todayISO(0);
     const doneMs = t => (t.completedAt ? new Date(t.completedAt).getTime() : null);
@@ -146,7 +146,7 @@ App.HomeView = class HomeView {
   // Current-month grid (Monday-first) with per-day open-task due counts.
   _miniCalendar() {
     const me = this.controller.currentUser;
-    const open = this.controller.visibleTasks({ includeDone: false }).filter(t => t.assignee === me);
+    const open = this.controller.visibleTasks({ includeDone: false }).filter(t => App.utils.isAssignee(t, me));
     const today = App.utils.todayISO(0);
     const dueByDay = {};
     open.forEach(t => { if (t.due) dueByDay[t.due] = (dueByDay[t.due] || 0) + 1; });
@@ -175,7 +175,7 @@ App.HomeView = class HomeView {
     const me = this.controller.currentUser;
     const today = App.utils.todayISO(0);
     return this.controller.visibleTasks({ includeDone: false })
-      .filter(t => t.assignee === me)
+      .filter(t => App.utils.isAssignee(t, me))
       .sort((a, b) => {
         const fa = a.focusSeq == null ? Infinity : a.focusSeq;
         const fb = b.focusSeq == null ? Infinity : b.focusSeq;
@@ -195,7 +195,7 @@ App.HomeView = class HomeView {
     let tasks = this.controller.visibleTasks({ includeDone: true });
     if (!manager) {
       tasks = tasks.filter(t =>
-        t.assignee === me || t.creator === me || (t.watchers || []).includes(me));
+        App.utils.isAssignee(t, me) || t.creator === me || (t.watchers || []).includes(me));
     }
     const feed = [];
     for (const t of tasks) {
@@ -377,7 +377,7 @@ App.HomeView = class HomeView {
     const cmFeed = (this._recentComments || [])
       .filter(c => c.authorId !== me)
       .map(c => ({ c, t: taskById.get(c.taskId), mention: (c.mentions || []).includes(me) }))
-      .filter(x => x.t && (x.mention || x.t.assignee === me || x.t.creator === me))
+      .filter(x => x.t && (x.mention || App.utils.isAssignee(x.t, me) || x.t.creator === me))
       .slice(0, 5);
     const snippet = s => { const t = String(s || '').replace(/\s+/g, ' ').trim(); return t.length > 90 ? t.slice(0, 87) + '…' : t; };
     const cmRows = cmFeed.map(({ c, t, mention }) => {

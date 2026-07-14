@@ -193,6 +193,24 @@ App.utils = {
     return c === companyId || c === 'overall';
   },
 
+  /* Every assignee on a task, in order — index 0 is the accountable lead and is
+     also mirrored into the single `assignee` field (migration 060). Rows written
+     before 060 carry only `assignee`, so fall back to it. */
+  taskAssignees(task) {
+    if (!task) return [];
+    if (Array.isArray(task.assigneeIds) && task.assigneeIds.length) return task.assigneeIds;
+    return task.assignee ? [task.assignee] : [];
+  },
+
+  /* Is this person assigned to the task AT ALL (lead or not)? Every list, scope
+     and filter must ask THIS, not `task.assignee === id` — the latter sees only
+     the lead, which hid co-assigned tasks from the people they were assigned to
+     even though RLS (060) let them read and open the row. */
+  isAssignee(task, userId) {
+    if (!task || !userId) return false;
+    return this.taskAssignees(task).includes(userId);
+  },
+
   peopleInCompany(companyId, includeIds) {
     const base = this.activePeople(includeIds);
     // 'overall' spans all companies → full roster, same as the '*' no-filter path.

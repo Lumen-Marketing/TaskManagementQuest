@@ -27,7 +27,7 @@ App.UpNextWidgetView = class UpNextWidgetView {
     const PRIO = { critical: 0, urgent: 1, high: 2, medium: 3, low: 4, chill: 5 };
     const today = App.utils.todayISO(0);
     const mine = this.taskModel.all().filter(t =>
-      t.assignee === this.currentUser && !App.taxonomy.isDone(t)
+      App.utils.isAssignee(t, this.currentUser) && !App.taxonomy.isDone(t)
     );
     const dueRanked = mine
       .filter(t => t.due)

@@ -103,12 +103,14 @@ App.AppController = class AppController {
     if (!includeDone) base = base.filter(t => !App.taxonomy.isDone(t));
     if (cur && cur !== '*') base = base.filter(t => App.utils.taskInCompany(t, cur));
     if (role === 'worker') {
-      base = base.filter(t => t.assignee === this.currentUser || t.creator === this.currentUser);
+      base = base.filter(t => App.utils.isAssignee(t, this.currentUser) || t.creator === this.currentUser);
     } else if (role === 'supervisor' && App.realRole() !== 'developer') {
       const reports = new Set((App.PROFILES || [])
         .filter(p => p.supervisor_id === me).map(p => p.member_id));
       base = base.filter(t =>
-        t.assignee === this.currentUser || t.creator === this.currentUser || reports.has(t.assignee));
+        App.utils.isAssignee(t, this.currentUser) ||
+        t.creator === this.currentUser ||
+        App.utils.taskAssignees(t).some(id => reports.has(id)));
     }
     return base;
   }
@@ -1222,7 +1224,7 @@ App.AppController = class AppController {
     // Count "done today" by anyone — gives the toast a motivational counter.
     const today = App.utils.todayISO(0);
     const me = this.currentUser;
-    const myDoneToday = this.taskModel.all().filter(t => t.assignee === me && App.utils.hqDateOf(t.completedAt) === today).length;
+    const myDoneToday = this.taskModel.all().filter(t => App.utils.isAssignee(t, me) && App.utils.hqDateOf(t.completedAt) === today).length;
     const tail = myDoneToday > 1 ? `${myDoneToday} finished today` : 'First win of the day';
     this.toastView.show({ title, sub: `${App.utils.escapeHtml(task.title)} · ${tail}`, variant: 'celebrate' });
   }
@@ -2356,7 +2358,7 @@ App.AppController = class AppController {
     }
     let target = App.can('tasks.view') && this.uiState.selectedTaskId
       ? this.taskModel.find(this.uiState.selectedTaskId)
-      : this.taskModel.all().find(t => t.assignee === this.currentUser && !App.taxonomy.isDone(t));
+      : this.taskModel.all().find(t => App.utils.isAssignee(t, this.currentUser) && !App.taxonomy.isDone(t));
     if (!target) target = this.taskModel.find(App.DEFAULT_CLOCK_TASK_ID);
     if (!target) {
       this.toastView.show({ title: 'Clock task missing', sub: 'Ask an admin to restore the General shift task.' });

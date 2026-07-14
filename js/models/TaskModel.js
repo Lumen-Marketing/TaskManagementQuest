@@ -105,7 +105,7 @@ App.TaskModel = class TaskModel {
   all() { return this.tasks; }
   find(id) { return this.tasks.find(t => t.id === id); }
   byCompany(companyId) { return this.tasks.filter(t => App.utils.taskInCompany(t, companyId)); }
-  byAssignee(userId) { return this.tasks.filter(t => t.assignee === userId); }
+  byAssignee(userId) { return this.tasks.filter(t => App.utils.isAssignee(t, userId)); }
 
   /* The shared, cross-person Focus list: every active (not done, not soft-
      cleared) task that's been given a focus position, ordered by it — regardless
@@ -139,17 +139,17 @@ App.TaskModel = class TaskModel {
     // created and delegated to a teammate); Supervisor = own/created or assigned to
     // a direct report. Admin/developer see everything in scope.
     if (role === 'worker') {
-      tasks = tasks.filter(t => t.assignee === currentUser || t.creator === currentUser || t.id === clockTaskId);
+      tasks = tasks.filter(t => App.utils.isAssignee(t, currentUser) || t.creator === currentUser || t.id === clockTaskId);
     } else if (role === 'supervisor' && reportMemberIds) {
       tasks = tasks.filter(t =>
-        t.assignee === currentUser ||
+        App.utils.isAssignee(t, currentUser) ||
         t.creator === currentUser ||
-        reportMemberIds.has(t.assignee) ||
+        App.utils.taskAssignees(t).some(id => reportMemberIds.has(id)) ||
         t.id === clockTaskId
       );
     }
 
-    if (view === 'mine') tasks = tasks.filter(t => t.assignee === currentUser);
+    if (view === 'mine') tasks = tasks.filter(t => App.utils.isAssignee(t, currentUser));
     else if (view === 'hot') tasks = tasks.filter(t => (t.priority === 'critical' || t.priority === 'urgent') && !App.taxonomy.isDone(t));
     else if (view === 'today') tasks = tasks.filter(t => t.due === t0 && !App.taxonomy.isDone(t));
     // `t.due &&`: due === '' must not read as overdue ('' < any ISO date).
@@ -160,12 +160,13 @@ App.TaskModel = class TaskModel {
       tasks = tasks.filter(t => App.utils.taskInCompany(t, c));
     } else if (view.startsWith('person:')) {
       const p = view.split(':')[1];
-      tasks = tasks.filter(t => t.assignee === p);
+      tasks = tasks.filter(t => App.utils.isAssignee(t, p));
     }
 
     // Scope segment ("My work"): narrows the active view to the viewer's own
-    // assignments without leaving it — Urgent stays Urgent, just mine.
-    if (scope === 'mine') tasks = tasks.filter(t => t.assignee === currentUser);
+    // assignments without leaving it — Urgent stays Urgent, just mine. Counts
+    // co-assignments, not just the ones where you're the lead.
+    if (scope === 'mine') tasks = tasks.filter(t => App.utils.isAssignee(t, currentUser));
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -189,7 +190,9 @@ App.TaskModel = class TaskModel {
 
     if (activeFilters) {
       const f = activeFilters;
-      if (f.assignees && f.assignees.length) tasks = tasks.filter(t => f.assignees.includes(t.assignee));
+      if (f.assignees && f.assignees.length) {
+        tasks = tasks.filter(t => App.utils.taskAssignees(t).some(id => f.assignees.includes(id)));
+      }
       if (f.companies && f.companies.length) {
         tasks = tasks.filter(t => f.companies.some(c => App.utils.taskInCompany(t, c)));
       }

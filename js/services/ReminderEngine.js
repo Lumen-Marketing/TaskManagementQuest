@@ -68,7 +68,7 @@ App.ReminderEngine = class ReminderEngine {
   /* ---------- internals ---------- */
 
   _isMyTask(t) {
-    return t.assignee === this.currentUser || (t.watchers || []).includes(this.currentUser);
+    return App.utils.isAssignee(t, this.currentUser) || (t.watchers || []).includes(this.currentUser);
   }
 
   /* Treat a task without dueTime as due at end-of-day (23:59 HQ) so
