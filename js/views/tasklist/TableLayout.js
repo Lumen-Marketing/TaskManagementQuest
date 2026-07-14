@@ -27,7 +27,8 @@
     row.className = 'qt-chiprow';
     const active = (view.controller.uiState.filters && view.controller.uiState.filters.companies) || [];
     const accessible = (view.controller.uiState.companies || []).filter(id => App.directory.company(id));
-    const ids = accessible.length ? accessible : Object.keys(App.COMPANIES);
+    // Fallback (accessible empty) must not leak the access-gated 'overall'.
+    const ids = accessible.length ? accessible : Object.keys(App.COMPANIES).filter(id => id !== 'overall');
     const chips = [{ id: 'all', label: 'All' }].concat(ids.map(id => ({ id, label: App.directory.company(id).label })));
     row.innerHTML = chips.map(c => {
       const on = c.id === 'all' ? active.length === 0 : (active.length === 1 && active[0] === c.id);

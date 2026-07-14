@@ -40,7 +40,15 @@ App.FilterBarView = class FilterBarView {
       swatch: p.color, active: f.assignees.includes(p.id),
     })).join('');
 
-    const companyChips = Object.values(App.COMPANIES).map(c => this.chip({
+    // Source from accessible companies so the access-gated 'overall' shows
+    // only for granted users; fall back to the non-overall constants.
+    const companyList = (this.controller.uiState.companies || [])
+      .filter(id => id !== '*' && App.directory.company(id))
+      .map(id => App.directory.company(id));
+    const companyChips = (companyList.length
+      ? companyList
+      : Object.values(App.COMPANIES).filter(c => !c.all)
+    ).map(c => this.chip({
       group: 'companies', value: c.id, label: c.label,
       active: f.companies.includes(c.id),
     })).join('');
