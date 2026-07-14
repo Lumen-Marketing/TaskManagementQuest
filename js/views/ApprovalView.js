@@ -82,7 +82,10 @@ App.ApprovalView = class ApprovalView {
         `<option value="${s.id}" ${profile.supervisor_id === s.id ? 'selected' : ''}>${App.utils.escapeHtml(s.name)}</option>`
       )).join('');
     const companyIds = Array.isArray(profile.company_ids) ? profile.company_ids : [];
-    const companyChecks = Object.values(App.COMPANIES).map(c => `
+    // 'overall' (c.all) is NOT a tickable company: it's granted automatically to
+    // anyone in 2+ real companies by the profiles_sync_overall trigger
+    // (migration 068). Showing a checkbox would just get overridden on save.
+    const companyChecks = Object.values(App.COMPANIES).filter(c => !c.all).map(c => `
       <label class="company-chk">
         <input type="checkbox" value="${App.utils.escapeHtml(c.id)}" ${companyIds.includes(c.id) ? 'checked' : ''} />
         <span>${App.utils.escapeHtml(c.label)}</span>
@@ -194,7 +197,8 @@ App.ApprovalView = class ApprovalView {
     const roles = Object.entries(App.ROLES)
       .map(([id, r]) => `<option value="${App.utils.escapeHtml(id)}" ${id === 'worker' ? 'selected' : ''}>${App.utils.escapeHtml(r.label)}</option>`)
       .join('');
-    const companies = Object.values(App.COMPANIES).map(c => `
+    // 'overall' is auto-granted at 2+ companies (migration 068) — not tickable.
+    const companies = Object.values(App.COMPANIES).filter(c => !c.all).map(c => `
       <label class="company-chk">
         <input type="checkbox" value="${App.utils.escapeHtml(c.id)}" />
         <span>${App.utils.escapeHtml(c.label)}</span>

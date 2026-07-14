@@ -27,40 +27,40 @@ on conflict (id) do nothing;
 This is a data row, not a schema change — `companies` already mirrors the
 client's `App.COMPANIES` (id / label / pill).
 
-## Step 2 — grant access
+## Step 2 — access is AUTOMATIC (run `068_overall_auto_grant.sql`)
 
-Visibility is gated by the same company RLS as every other task (migration
-028): a user only sees or creates Overall tasks when `profiles.company_ids`
-contains `'overall'`.
+Access is gated by the same company RLS as every other task (migration 028): a
+user sees/creates Overall tasks only when `profiles.company_ids` contains
+`'overall'`.
 
-### Recommended: the People / Approvals UI
+**You do not grant this by hand.** Being in **2 or more real companies** is what
+makes someone a cross-company member, so Overall follows automatically:
 
-The company checkboxes in the People admin (approve/edit a person, and "Add
-person") now include **Overall**. Tick **Overall** for anyone who should
-create or see Overall tasks, and save. That writes `'overall'` into their
-`profiles.company_ids` — no SQL required.
+| Real companies | Overall access |
+|----------------|----------------|
+| 2 or more      | granted (auto) |
+| 0 or 1         | not granted    |
+| any (developer)| granted (RLS god-mode bypass) |
 
-Developers already have all-company access (RLS god-mode bypass), so they can
-use Overall without being granted.
+`supabase/sql/068_overall_auto_grant.sql` installs a `profiles_sync_overall`
+trigger that maintains `'overall'` in `company_ids` on every write (adding it at
+2+ real companies, removing it below that), and backfills existing profiles. Tick
+someone into a second company in People/Approvals and Overall comes with it; drop
+them back to one and it goes away.
 
-### Alternative: SQL
+There is deliberately **no "Overall" checkbox** in People/Approvals — it's derived,
+so a manual tick would just be overridden on save.
 
-If you'd rather do it directly in the Supabase SQL editor:
-
-```sql
-update public.profiles
-set company_ids = array_append(company_ids, 'overall')
-where id = '<auth-uuid>'
-  and not ('overall' = any(company_ids));
-```
+Migration 068 also lets an Overall task be assigned to **any** approved member
+(migration 041 otherwise restricted a worker's assignee to the task's own
+company, which makes no sense for a company-wide task).
 
 ## Expected behavior
 
-- A **granted** user sees "Overall" in the New Task and Task Detail company
-  pickers, the table company chip, and the filter bar; Overall tasks appear
-  under every company view and export as `Overall` in CSV.
-- A **single-company** user *without* the grant does not see the Overall option
-  and cannot see Overall tasks — by design (the "only cross-company members"
-  visibility choice). If you want *everyone* to see Overall tasks regardless of
-  company, that needs a separate RLS migration adding an `overall` carve-out
-  (like `general-shift`); it is intentionally not built here.
+- A **cross-company** user (2+ companies) sees "Overall" in the New Task and Task
+  Detail company pickers, the table company chip, and the filter bar; Overall
+  tasks appear under every company view and export as `Overall` in CSV.
+- A **single-company** user does not see the Overall option and cannot see
+  Overall tasks — by design. If you want *everyone* to see Overall tasks
+  regardless of company, that needs a separate RLS migration adding an `overall`
+  carve-out (like `general-shift`); it is intentionally not built here.
