@@ -4,12 +4,36 @@
 under Roofing, Drafting, Lumen, and its own Overall view, and renders an
 `OVERALL` pill everywhere a company is shown.
 
+Enabling Overall takes **two** steps: register the company row (once, per
+database), then grant people access to it.
+
+## Step 1 — register the 'overall' company row (REQUIRED, once)
+
+`public.tasks.company_id` has a foreign key to `public.companies`
+(`tasks_company_id_fkey`), so `'overall'` must exist as a real row there.
+Without it, creating an Overall task fails with:
+
+> insert or update on table "tasks" violates foreign key constraint
+> "tasks_company_id_fkey"
+
+Run `supabase/sql/067_overall_company.sql` (idempotent):
+
+```sql
+insert into public.companies (id, label, pill)
+values ('overall', 'Overall', 'pill-overall')
+on conflict (id) do nothing;
+```
+
+This is a data row, not a schema change — `companies` already mirrors the
+client's `App.COMPANIES` (id / label / pill).
+
+## Step 2 — grant access
+
 Visibility is gated by the same company RLS as every other task (migration
 028): a user only sees or creates Overall tasks when `profiles.company_ids`
-contains `'overall'`. There is **no schema migration** — enabling Overall for a
-person is just granting them that access.
+contains `'overall'`.
 
-## Grant access (recommended: the People / Approvals UI)
+### Recommended: the People / Approvals UI
 
 The company checkboxes in the People admin (approve/edit a person, and "Add
 person") now include **Overall**. Tick **Overall** for anyone who should
@@ -19,7 +43,7 @@ create or see Overall tasks, and save. That writes `'overall'` into their
 Developers already have all-company access (RLS god-mode bypass), so they can
 use Overall without being granted.
 
-## Grant access (alternative: SQL)
+### Alternative: SQL
 
 If you'd rather do it directly in the Supabase SQL editor:
 

@@ -30,9 +30,10 @@ detail, New Task preview, Home/Reports, CSV export).
 
 ## Non-goals
 
-- No schema migration and no new RLS carve-out. (If we later want *everyone* to
+- No *schema* change and no new RLS carve-out. (If we later want *everyone* to
   see Overall tasks regardless of company, that's a separate migration adding an
-  `id`-style carve-out like `general-shift`.)
+  `id`-style carve-out like `general-shift`.) **Correction (2026-07-15):** a
+  one-row DATA migration *is* required — see Data model below.
 - No taxonomy-table seeding for `overall`; the union is computed client-side.
 - No change to how existing single-company tasks behave.
 
@@ -42,8 +43,14 @@ detail, New Task preview, Home/Reports, CSV export).
   `overall: { id: 'overall', label: 'Overall', pill: 'pill-overall', all: true }`.
   The `all: true` flag marks it as the spans-all sentinel so code can special-case
   it without string-matching `'overall'` everywhere.
-- Tasks persist `company_id = 'overall'`. The column is free text (no FK), so the
-  DB accepts it; the only gate is RLS on `company_ids`.
+- Tasks persist `company_id = 'overall'`.
+- ~~The column is free text (no FK), so the DB accepts it.~~ **WRONG — corrected
+  2026-07-15.** `public.tasks.company_id` has a FK to `public.companies`
+  (`tasks_company_id_fkey`), and `companies` mirrors `App.COMPANIES`
+  (`id`/`label`/`pill`). So `'overall'` MUST be inserted as a companies row or
+  every Overall task insert fails with a foreign-key violation. See
+  `supabase/sql/067_overall_company.sql`. RLS on `company_ids` is the *second*
+  gate, not the only one.
 
 ### Prerequisite data step (no migration)
 
