@@ -73,7 +73,10 @@ App.NewTaskPageView = class NewTaskPageView {
   /* ---------------- helpers ---------------- */
   _companyChoices() {
     let ids = ((this.controller.uiState && this.controller.uiState.companies) || []).filter(id => id !== '*');
-    if (!ids.length) ids = Object.keys(App.COMPANIES || {});
+    // Fallback path only fires when uiState.companies is empty. Never leak
+    // 'overall' here — it's an access-gated option that comes from the user's
+    // company_ids via the primary path, not from the full constant list.
+    if (!ids.length) ids = Object.keys(App.COMPANIES || {}).filter(id => id !== 'overall');
     const cur = this.controller.uiState && this.controller.uiState.currentCompany;
     const selected = (cur && cur !== '*') ? cur : ids[0];
     return { ids, selected };
@@ -261,7 +264,10 @@ App.NewTaskPageView = class NewTaskPageView {
     return this._menuHead('LABEL') + head + rows + this._createNewRow('Create new label…');
   }
   _projectItems() {
-    const list = Object.values(App.projects || {}).filter(p => p.companyId === this.S.company);
+    // Overall spans all companies → offer every project, not one company's.
+    const list = this.S.company === 'overall'
+      ? Object.values(App.projects || {})
+      : Object.values(App.projects || {}).filter(p => p.companyId === this.S.company);
     const head = `<button class="nt-mitem" data-v="">No project${this._check(!this.S.project)}</button>`;
     const rows = list.map(p =>
       `<button class="nt-mitem" data-v="${p.id}">${App.utils.escapeHtml(p.name)}${this._check(this.S.project === p.id)}</button>`).join('');
@@ -494,8 +500,10 @@ App.NewTaskPageView = class NewTaskPageView {
     this.S.whos = this.S.whos.filter(w => allowed.has(w));
     if (!this.S.whos.length) this.S.whos = [this.currentUser];
     this.watchers = this.watchers.filter(w => allowed.has(w));
+    // Overall spans all companies → keep any project; otherwise drop a project
+    // that belongs to a different company.
     const _proj = App.directory.project(this.S.project);
-    if (this.S.project && _proj && _proj.companyId !== this.S.company) this.S.project = null;
+    if (this.S.company !== 'overall' && this.S.project && _proj && _proj.companyId !== this.S.company) this.S.project = null;
     this.sync('co');
   }
   _toggleWho(id) {
