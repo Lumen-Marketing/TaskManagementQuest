@@ -858,6 +858,19 @@ App.TaskDetailView = class TaskDetailView {
     return src;
   }
 
+  // Company [id, label] options for the edit menus, gated on access: only the
+  // companies the viewer can reach (uiState.companies) — so 'overall' appears
+  // exactly for users granted it — plus the task's current company so an
+  // already-set value always renders. Mirrors NewTaskPageView._companyChoices.
+  _companyOpts(current) {
+    const access = (this.controller.uiState && this.controller.uiState.companies) || [];
+    const ids = access.filter(id => id !== '*' && App.directory.company(id));
+    if (current && !ids.includes(current)) ids.unshift(current);
+    if (!ids.length) return Object.values(App.COMPANIES)
+      .filter(c => !c.all).map(c => [c.id, c.label]);
+    return ids.map(id => [id, (App.directory.company(id) || { label: id }).label]);
+  }
+
   // Build the editor element (id="tdp-ie-input") for a given field.
   _inlineEditorHtml(t, field) {
     const esc = App.utils.escapeHtml;
@@ -869,7 +882,7 @@ App.TaskDetailView = class TaskDetailView {
       case 'priority':  return sel(Object.entries(App.PRIORITIES).map(([k, v]) => [k, v.label]), t.priority);
       case 'type':      return sel(App.taxonomy.activeTypes(t.company).map(tp => [tp.key, tp.label]), t.type);
       case 'label':     return sel([['none', (App.TASK_LABELS.none && App.TASK_LABELS.none.label) || 'No label'], ...App.taxonomy.activeLabels(t.company).map(l => [l.key, l.label])], t.label || 'none');
-      case 'company':   return sel(Object.values(App.COMPANIES).map(c => [c.id, c.label]), t.company);
+      case 'company':   return sel(this._companyOpts(t.company), t.company);
       case 'assignee':  return sel(App.utils.peopleInCompany(t.company, t.assignee).map(p => [p.id, p.name + (p.position ? ` — ${p.position}` : '')]), t.assignee);
       case 'due':       return `<input type="date" id="tdp-ie-input" class="tdp-ie-input picker-input" value="${esc(t.due || '')}" />`;
       // Free-typed 12h time — "9", "230p", "10:30" all work (App.timeField).
@@ -1562,7 +1575,7 @@ App.TaskDetailView = class TaskDetailView {
             <div class="te-sec">
               <div class="te-sec-h"><span class="te-n">01</span><span class="te-t">Details</span></div>
               <div class="te-frow">
-                <div class="te-f"><label>Company</label>${sel('edit-company', Object.values(App.COMPANIES).map(c => [c.id, c.label]), d.company)}</div>
+                <div class="te-f"><label>Company</label>${sel('edit-company', this._companyOpts(d.company), d.company)}</div>
                 <div class="te-f"><label>Type</label>${sel('edit-type', App.taxonomy.activeTypes(d.company).map(tp => [tp.key, tp.label]), d.type, 'data-action="type-change"')}</div>
                 <div class="te-f"><label>Status</label>${sel('edit-status', this._statusOpts(d.company, d.type, d.status), d.status)}</div>
                 <div class="te-f"><label>Label</label>${sel('edit-label', [['none', (App.TASK_LABELS.none && App.TASK_LABELS.none.label) || 'No label'], ...App.taxonomy.activeLabels(d.company).map(l => [l.key, l.label])], d.label || 'none')}</div>
