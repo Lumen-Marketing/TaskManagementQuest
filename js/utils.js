@@ -195,7 +195,8 @@ App.utils = {
 
   peopleInCompany(companyId, includeIds) {
     const base = this.activePeople(includeIds);
-    if (!companyId || companyId === '*') return base;
+    // 'overall' spans all companies → full roster, same as the '*' no-filter path.
+    if (!companyId || companyId === '*' || companyId === 'overall') return base;
     const profiles = App.PROFILES || [];
     // Managers have the full profiles list → scope by profiles.company_ids.
     // Workers don't → scope by the company_ids now mirrored onto the roster
