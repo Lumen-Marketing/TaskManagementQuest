@@ -43,3 +43,33 @@ test('empty input yields zero counts and no lines', () => {
   assert.deepEqual(ctx.counts, { overdue: 0, dueToday: 0, onHold: 0, completedSince: 0, total: 0 });
   assert.deepEqual(ctx.lines, []);
 });
+
+// Multi-assignee seam (migration 060). The lead is assigneeIds[0] and is also
+// mirrored into `assignee`; asking `t.assignee === me` sees only the lead and
+// silently drops tasks the viewer is co-assigned to.
+test('includes tasks where the viewer is a co-assignee, not the lead', () => {
+  const ctx = buildBriefingContext([
+    { id: 'a', title: 'Co-assigned to me', company: 'roofing', due: '2026-07-10',
+      status: 'todo', assignee: 'abraham', assigneeIds: ['abraham', 'me'] },
+  ], OPTS);
+  assert.equal(ctx.counts.overdue, 1);
+  assert.equal(ctx.counts.total, 1);
+  assert.match(ctx.lines[0], /^OVERDUE · Co-assigned to me/);
+});
+
+test('still excludes tasks the viewer is not assigned to at all', () => {
+  const ctx = buildBriefingContext([
+    { id: 'a', title: 'Not mine', company: 'roofing', due: '2026-07-10',
+      status: 'todo', assignee: 'abraham', assigneeIds: ['abraham', 'shan'] },
+  ], OPTS);
+  assert.equal(ctx.counts.total, 0);
+  assert.deepEqual(ctx.lines, []);
+});
+
+test('falls back to the single assignee on pre-060 rows (no assigneeIds)', () => {
+  const ctx = buildBriefingContext([
+    T({ id: 'a', title: 'Legacy row', due: '2026-07-10' }), // assignee: 'me', no assigneeIds
+  ], OPTS);
+  assert.equal(ctx.counts.overdue, 1);
+  assert.equal(ctx.counts.total, 1);
+});

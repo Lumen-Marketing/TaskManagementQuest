@@ -286,10 +286,19 @@ Deno.serve(async (req: Request) => {
 
     // ---- fetch the viewer's tasks under RLS -----------------------------
     // Pull a bounded slice of the caller's open + recently-completed tasks.
-    const { data: rows, error: taskErr } = await userClient
+    // Match on EITHER the lead (assignee_id) or any co-assignee (assignee_ids,
+    // migration 060) — filtering on assignee_id alone never even fetched the
+    // rows where the caller is a co-assignee, so their briefing silently
+    // omitted them. member ids are slugs/UUIDs; the guard keeps the value from
+    // breaking out of the PostgREST or() filter grammar.
+    const safeMember = /^[A-Za-z0-9_-]+$/.test(memberId) ? memberId : null;
+    let taskQuery = userClient
       .from("tasks")
-      .select("id,title,company_id,due,status,priority,assignee_id,focus_seq,completed_at")
-      .eq("assignee_id", memberId)
+      .select("id,title,company_id,due,status,priority,assignee_id,assignee_ids,focus_seq,completed_at");
+    taskQuery = safeMember
+      ? taskQuery.or(`assignee_id.eq.${safeMember},assignee_ids.cs.{${safeMember}}`)
+      : taskQuery.eq("assignee_id", memberId);
+    const { data: rows, error: taskErr } = await taskQuery
       .order("due", { ascending: true })
       .limit(120);
     if (taskErr) {
@@ -298,7 +307,11 @@ Deno.serve(async (req: Request) => {
     }
     const tasks = (rows ?? []).map((r) => ({
       id: r.id, title: r.title, company: r.company_id, due: r.due, status: r.status,
-      priority: r.priority, assignee: r.assignee_id, focusSeq: r.focus_seq, completedAt: r.completed_at, activity: [],
+      priority: r.priority, assignee: r.assignee_id,
+      assigneeIds: Array.isArray(r.assignee_ids) && r.assignee_ids.length
+        ? r.assignee_ids
+        : (r.assignee_id ? [r.assignee_id] : []),
+      focusSeq: r.focus_seq, completedAt: r.completed_at, activity: [],
     }));
 
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());

@@ -4,9 +4,26 @@
 const DONE = new Set(['done', 'complete', 'completed']);
 const trunc = (s, n) => { const t = String(s || ''); return t.length > n ? t.slice(0, n) : t; };
 
+/* Mirrors App.utils.taskAssignees / isAssignee (js/utils.js). Index 0 of
+   assigneeIds is the accountable lead and is also mirrored into `assignee`
+   (migration 060); rows written before 060 carry only `assignee`. Asking
+   `t.assignee === me` here would see only the LEAD, which hid co-assigned
+   tasks from the people they were assigned to — the same bug fixed in the
+   client by 9154515. */
+export function taskAssignees(task) {
+  if (!task) return [];
+  if (Array.isArray(task.assigneeIds) && task.assigneeIds.length) return task.assigneeIds;
+  return task.assignee ? [task.assignee] : [];
+}
+
+export function isAssignee(task, userId) {
+  if (!task || !userId) return false;
+  return taskAssignees(task).includes(userId);
+}
+
 export function buildBriefingContext(tasks, opts) {
   const { me, today, maxItems = 25 } = opts || {};
-  const mine = (tasks || []).filter((t) => t && t.assignee === me);
+  const mine = (tasks || []).filter((t) => isAssignee(t, me));
 
   const isDone = (t) => DONE.has(String(t.status || '').toLowerCase());
   const open = mine.filter((t) => !isDone(t));
