@@ -13,7 +13,27 @@ window.App = window.App || {};
 App.taxonomy = (function () {
   let idx = {}; // idx[company] = { types:[], statusesByType:{}, labels:[] }
   const empty = () => ({ types: [], statusesByType: {}, labels: [] });
-  const co = (c) => idx[c] || empty();
+  const co = (c) => (c === 'overall' ? unionCo() : (idx[c] || empty()));
+
+  // Overall spans every company: merge each real company's taxonomy into one
+  // index. Types/labels dedupe by key (first real company wins); a type's
+  // statuses come from the first company that defines that type. Computed on
+  // demand from `idx` so it always reflects the latest hydrate().
+  function unionCo() {
+    const out = empty();
+    const seenType = new Set(), seenLabel = new Set();
+    Object.keys(idx).forEach(cid => {
+      if (cid === 'overall') return;
+      const c = idx[cid];
+      c.types.forEach(t => { if (!seenType.has(t.key)) { seenType.add(t.key); out.types.push(t); } });
+      c.labels.forEach(l => { if (!seenLabel.has(l.key)) { seenLabel.add(l.key); out.labels.push(l); } });
+      Object.keys(c.statusesByType).forEach(tk => {
+        if (!out.statusesByType[tk]) out.statusesByType[tk] = c.statusesByType[tk];
+      });
+    });
+    out.types.sort(bySort); out.labels.sort(bySort);
+    return out;
+  }
   const bySort = (a, b) => (a.sort - b.sort) || String(a.label).localeCompare(String(b.label));
   const find = (list, key) => (list || []).find(x => x.key === key);
 
