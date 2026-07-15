@@ -711,10 +711,20 @@ App.NewTaskPageView = class NewTaskPageView {
       this._recording = true;
       btn.classList.add('rec');
       btn.setAttribute('aria-pressed', 'true');
-    } catch (_e) {
+    } catch (e) {
       this._cap = null;
-      this._flash('Microphone access was blocked.');
+      this._flash(this._voiceErrorMessage(e));
     }
+  }
+
+  // getUserMedia rejects with a DOMException whose .name pins the cause; map the
+  // common ones so a device/policy problem doesn't masquerade as a user denial.
+  _voiceErrorMessage(e) {
+    const name = (e && e.name) || '';
+    if (name === 'NotAllowedError' || name === 'SecurityError') return 'Microphone access was blocked.';
+    if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'No microphone was found.';
+    if (name === 'NotReadableError') return 'The microphone is in use by another app.';
+    return 'Could not start the microphone.';
   }
 
   async _stopVoice(btn) {
