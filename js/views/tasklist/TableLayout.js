@@ -123,7 +123,7 @@
       const more = rest.length
         ? `<span class="qt-avatar qt-avmore" title="${esc(restNames)}">+${rest.length}</span>`
         : '';
-      assigneeInner = `<span class="qt-avstack">${shown}${more}</span><span class="nm">${assigneeIds.length} people</span>`;
+      assigneeInner = `<span class="qt-avstack">${shown}${more}</span>`;
     }
 
     const row = document.createElement('div');
