@@ -767,6 +767,27 @@ App.SupabaseDataStore = class SupabaseDataStore {
     }
   }
 
+  /* Per-project AI rollup via the ai-assistant Edge Function. Returns
+     { ok, rollup?, generatedAt?, error? } and never throws so the Projects
+     drawer degrades gracefully. */
+  async projectRollup({ projectId, projectName, today }) {
+    try {
+      const { data, error } = await this.supabase.functions.invoke('ai-assistant', {
+        body: { action: 'project_rollup', projectId, projectName, today },
+      });
+      if (error) {
+        const status = (error.context && error.context.status) || null;
+        let msg = (error && error.message) || 'AI unavailable.';
+        try { const body = await error.context.json(); if (body && body.error) msg = body.error; }
+        catch (_e) { /* body already consumed or not JSON */ }
+        return { ok: false, status, error: msg };
+      }
+      return { ok: true, rollup: data && data.rollup, generatedAt: data && data.generatedAt };
+    } catch (err) {
+      return { ok: false, error: (err && err.message) || String(err) };
+    }
+  }
+
   /* Natural-language task draft via the ai-assistant Edge Function. Returns
      { ok, draft?, error? } and never throws so the New Task page degrades quietly. */
   async draftTask({ text, team, companies, today, types, labels, projects, statuses }) {

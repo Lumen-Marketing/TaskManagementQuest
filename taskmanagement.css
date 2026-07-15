@@ -7952,6 +7952,25 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
   .qhq-card-h { flex-wrap: wrap; row-gap: 6px; }
 }
 
+/* --- Projects: per-project AI rollup strip (drawer) --------------------- */
+.pv-rollup { margin: 2px 0 8px; padding: 12px 14px; border-radius: 12px; background: var(--bg-3, rgba(0,0,0,.035)); }
+.pv-rollup-btn { display: inline-flex; align-items: center; gap: 7px; font: inherit; font-weight: 600; font-size: 13px; color: var(--amber, #ED4E0D); background: none; border: 0; cursor: pointer; padding: 2px 0; }
+.pv-rollup-btn i { font-size: 15px; }
+.pv-rollup-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pv-rollup-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--amber, #ED4E0D); }
+.pv-rollup-eyebrow i { font-size: 13px; }
+.pv-rollup-refresh { margin-left: auto; background: none; border: 0; color: var(--ink-3, #8f867b); cursor: pointer; padding: 2px; line-height: 0; }
+.pv-rollup-refresh:hover { color: var(--amber, #ED4E0D); }
+.pv-rollup-text { font-size: 13px; line-height: 1.5; color: var(--ink, #2a2723); white-space: pre-wrap; }
+.pv-rollup-bullets { margin: 6px 0 0; padding-left: 18px; }
+.pv-rollup-bullets li { font-size: 12.5px; line-height: 1.45; color: var(--ink-2, #55504a); }
+.pv-rollup-when { margin-top: 6px; font-size: 11px; color: var(--ink-3, #8f867b); }
+.pv-rollup-line { font-size: 12.5px; color: var(--ink-3, #8f867b); margin-bottom: 6px; }
+.pv-rollup-skel { height: 11px; border-radius: 6px; margin: 4px 0; background: linear-gradient(90deg, var(--bg-3, #ececec) 25%, rgba(0,0,0,.06) 37%, var(--bg-3, #ececec) 63%); background-size: 400% 100%; animation: pv-rollup-shimmer 1.2s ease infinite; }
+.pv-rollup-skel.short { width: 60%; }
+@keyframes pv-rollup-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .pv-rollup-skel { animation: none; } }
+
 /* Check-ins settings (admin:checkins) */
 .ci-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .ci-row-t { display: flex; flex-direction: column; gap: 3px; }

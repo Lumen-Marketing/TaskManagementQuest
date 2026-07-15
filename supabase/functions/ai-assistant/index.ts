@@ -27,6 +27,7 @@ import { buildBriefingContext } from "./lib/context.mjs";
 import { shapeBriefing, fallbackBriefing } from "./lib/shape.mjs";
 import { validateDraft } from "./lib/draft.mjs";
 import { buildDigestContext, shapeDigest, fallbackDigest } from "./lib/digest.mjs";
+import { buildRollupContext, shapeRollup, fallbackRollup } from "./lib/rollup.mjs";
 import { validateAudioPayload, decodeBase64, pickAudioName } from "./lib/transcribe.mjs";
 
 // Provider seam — swap these two lines to move off Groq.
@@ -55,6 +56,9 @@ const chatUsage = new Map<string, { day: string; n: number }>();
 
 const DIGEST_DAILY_CAP = 10; // client caches per week, so real volume is tiny
 const digestUsage = new Map<string, { day: string; n: number }>();
+
+const ROLLUP_DAILY_CAP = 30; // on-demand, client-cached per session — real volume is small
+const rollupUsage = new Map<string, { day: string; n: number }>();
 
 const TRANSCRIBE_DAILY_CAP = 60;
 const transcribeUsage = new Map<string, { day: string; n: number }>();
@@ -121,7 +125,7 @@ Deno.serve(async (req: Request) => {
     let payload: { action?: unknown };
     try { payload = JSON.parse(raw || "{}"); } catch { return json(req, { error: "Invalid JSON body." }, 400); }
     const action = payload.action;
-    if (action !== "briefing" && action !== "draft_task" && action !== "chat" && action !== "weekly_digest" && action !== "transcribe") {
+    if (action !== "briefing" && action !== "draft_task" && action !== "chat" && action !== "weekly_digest" && action !== "project_rollup" && action !== "transcribe") {
       return json(req, { error: "Unknown action." }, 400);
     }
 
@@ -326,6 +330,71 @@ Deno.serve(async (req: Request) => {
         digest = fallbackDigest(dctx);
       }
       return json(req, { ok: true, digest, generatedAt: new Date().toISOString() });
+    }
+
+    // -------- project_rollup: RLS-scoped one-project status summary ---------
+    if (action === "project_rollup") {
+      const rday = new Date().toISOString().slice(0, 10);
+      const ru = rollupUsage.get(uid);
+      const rn = ru && ru.day === rday ? ru.n : 0;
+      if (rn >= ROLLUP_DAILY_CAP) return json(req, { error: "Daily rollup limit reached. Try again tomorrow." }, 429);
+      rollupUsage.set(uid, { day: rday, n: rn + 1 });
+
+      const rp = payload as { projectId?: unknown; projectName?: unknown; today?: unknown };
+      const projectId = typeof rp.projectId === "string" ? rp.projectId : "";
+      const projectName = (typeof rp.projectName === "string" ? rp.projectName : "").slice(0, 120);
+      const today = typeof rp.today === "string" ? rp.today : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Phoenix" }).format(new Date());
+      // Guard the id before it goes into the .eq() filter (defensive; mirrors the
+      // briefing's safeMember). A bad/empty id yields an empty fallback, no query.
+      const safeProject = /^[A-Za-z0-9_-]+$/.test(projectId) ? projectId : null;
+      if (!safeProject) {
+        const emptyCtx = buildRollupContext([], { today, projectName });
+        return json(req, { ok: true, rollup: fallbackRollup(emptyCtx), generatedAt: new Date().toISOString() });
+      }
+
+      // No assignee filter — RLS bounds the rows to what the caller may read.
+      const { data: rrows, error: rErr } = await userClient
+        .from("tasks")
+        .select("id,title,company_id,due,status,priority,assignee_id,completed_at")
+        .eq("project_id", safeProject)
+        .order("due", { ascending: true })
+        .limit(200);
+      if (rErr) {
+        console.error("[ai-assistant] rollup fetch failed", rErr);
+        return json(req, { error: "Could not load project tasks." }, 500);
+      }
+      const rtasks = (rrows ?? []).map((r: any) => ({
+        id: r.id, title: r.title, company: r.company_id, due: r.due,
+        status: r.status, completedAt: r.completed_at,
+      }));
+      const rctx = buildRollupContext(rtasks, { today, projectName, windowDays: 7 });
+
+      const rsys = "You are a concise task assistant writing a status rollup for a single project. In 2 to 4 sentences, say how far along the project is (use the percent complete), what got done recently, what has slipped, and what is coming up, then up to 3 short bullet lines each naming one specific task. Only reference tasks in the provided context. Plain text, no emojis, no markdown headings.";
+      const rusr = `Today is ${today}.\nProject: ${projectName || "(unnamed)"}\nPercent complete: ${rctx.pct}%\nCounts: ${JSON.stringify(rctx.counts)}\nItems:\n${rctx.lines.join("\n") || "(none)"}`;
+
+      let rollup;
+      try {
+        const res = await fetch(GROQ_ENDPOINT, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: GROQ_MODEL, temperature: 0.4, max_tokens: 350,
+            messages: [{ role: "system", content: rsys }, { role: "user", content: rusr }],
+          }),
+        });
+        if (!res.ok) {
+          console.error("[ai-assistant] rollup provider rejected", { status: res.status });
+          rollup = fallbackRollup(rctx);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          const text = data?.choices?.[0]?.message?.content ?? "";
+          rollup = shapeRollup(text, rctx);
+        }
+      } catch (e) {
+        console.error("[ai-assistant] rollup fetch threw", e);
+        rollup = fallbackRollup(rctx);
+      }
+      return json(req, { ok: true, rollup, generatedAt: new Date().toISOString() });
     }
 
     // -------- briefing (existing) -----------------------------------------

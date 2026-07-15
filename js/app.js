@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         sendEmail: async () => ({ ok: false, skipped: true }),
         getBriefing: async () => ({ ok: false, error: 'AI briefing is not available in preview mode.' }),
         getWeeklyDigest: async () => ({ ok: false, error: 'AI digest is not available in preview mode.' }),
+        projectRollup: async () => ({ ok: false, error: 'AI project rollup is not available in preview mode.' }),
         draftTask: async () => ({ ok: false, error: 'AI drafting is not available in preview mode.' }),
         chat: async () => ({ ok: false, error: 'AI chat is not available in preview mode.' }),
         deleteProfile: async (id) => {
