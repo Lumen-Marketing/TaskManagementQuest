@@ -1,0 +1,153 @@
+// supabase/functions/checkins/index.ts
+// checkins — scheduled (pg_cron) Edge Function that sends AI-written, one-way
+// check-ins (morning recap, end-of-day recap, weekly-capped stalled nudge) to
+// the in-app bell + email. Runs under the service role; gated by a shared
+// secret (x-checkins-secret; Verify JWT must be OFF). Deployed from repo source
+// (index.ts + lib/*.mjs) via the Supabase MCP — never a paste bundle.
+//
+// Secrets: CHECKINS_SECRET, GROQ_API_KEY, RESEND_API_KEY, EMAIL_FROM
+//   (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are injected automatically.)
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { firesNow, hqParts, weekKey } from "./lib/schedule.mjs";
+import { stalledByPerson, taskAssignees } from "./lib/stalled.mjs";
+import {
+  morningContext, eodContext, shapeMessage,
+  fallbackMorning, fallbackEod, stalledText, MODE_SUBJECT,
+} from "./lib/content.mjs";
+
+const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const MAX_TASKS = 2000;
+
+function esc(s: string): string {
+  return String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+}
+
+// Ask Groq to reword `fallback` around `contextLines`; degrade to the fallback.
+async function wording(groqKey: string | undefined, sys: string, contextLines: string[], fallback: string): Promise<string> {
+  if (!groqKey) return fallback;
+  try {
+    const res = await fetch(GROQ_ENDPOINT, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: GROQ_MODEL, temperature: 0.4, max_tokens: 220,
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: contextLines.join("\n") || "(no items)" },
+        ],
+      }),
+    });
+    if (!res.ok) { console.error("[checkins] groq rejected", res.status); return fallback; }
+    const data = await res.json().catch(() => ({}));
+    return shapeMessage(data?.choices?.[0]?.message?.content ?? "", fallback).text;
+  } catch (e) {
+    console.error("[checkins] groq threw", e);
+    return fallback;
+  }
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method !== "POST") return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+
+  const secret = Deno.env.get("CHECKINS_SECRET");
+  if (!secret || req.headers.get("x-checkins-secret") !== secret) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+  }
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return new Response(JSON.stringify({ error: "server misconfigured" }), { status: 500 });
+
+  const db = createClient(supabaseUrl, serviceKey);
+  const groqKey = Deno.env.get("GROQ_API_KEY");
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  const from = Deno.env.get("EMAIL_FROM") ?? "Quest HQ <onboarding@resend.dev>";
+  const now = Date.now();
+  const { dateKey } = hqParts(now);
+
+  // Settings gate.
+  const setRes = await db.from("checkin_settings").select("*").eq("id", 1).single();
+  const cfg = setRes.data ?? { morning_enabled: false, eod_enabled: false, stalled_enabled: false, stalled_days: 3 };
+  const active: string[] = [];
+  if (cfg.morning_enabled && firesNow("morning", now)) active.push("morning");
+  if (cfg.eod_enabled && firesNow("eod", now)) active.push("eod");
+  if (cfg.stalled_enabled && firesNow("stalled", now)) active.push("stalled");
+  if (!active.length) return new Response(JSON.stringify({ ok: true, scanned: 0, sent: 0, errors: [] }), { headers: { "Content-Type": "application/json" } });
+
+  // Recipients: members with an email/id.
+  const memRes = await db.from("team_members").select("id, email");
+  const emailById = new Map<string, string>();
+  const memberIds: string[] = [];
+  (memRes.data ?? []).forEach((m: any) => { memberIds.push(m.id); if (m.email) emailById.set(m.id, String(m.email).trim()); });
+
+  // All tasks (RLS bypassed; we filter per person in code).
+  const taskRes = await db.from("tasks")
+    .select("id, title, company_id, due, status, completed_at, updated_at, assignee_id, assignee_ids")
+    .limit(MAX_TASKS);
+  if (taskRes.error) { console.error("[checkins] task load failed", taskRes.error); return new Response(JSON.stringify({ error: "task load failed" }), { status: 500 }); }
+  const tasks = taskRes.data ?? [];
+
+  const errors: string[] = [];
+  let sent = 0;
+
+  // Deliver one message: claim dedupe row, then bell + email (best-effort).
+  async function deliver(kind: string, person: string, period: string, subject: string, body: string, taskId: string | null) {
+    const claim = await db.from("checkin_log")
+      .upsert({ kind, subject: person, period }, { onConflict: "kind,subject,period", ignoreDuplicates: true })
+      .select();
+    if (claim.error) { errors.push(`log ${kind}/${person}: ${claim.error.message}`); return; }
+    if (!claim.data || claim.data.length === 0) return; // already sent this period
+
+    const html = String(body).split("\n").map((l) => `<p>${esc(l)}</p>`).join("");
+    const notif = await db.from("notifications").insert({
+      id: crypto.randomUUID(), member_id: person, task_id: taskId,
+      meta: `Check-in · ${subject}`, html, read: false,
+    });
+    if (notif.error) errors.push(`notif ${kind}/${person}: ${notif.error.message}`);
+
+    if (apiKey && emailById.has(person)) {
+      try {
+        const r = await fetch(RESEND_ENDPOINT, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ from, to: [emailById.get(person)], subject, html: `${html}<p style="color:#888;font-size:12px">Quest HQ check-in</p>` }),
+        });
+        if (!r.ok) errors.push(`email ${kind}/${person}: ${r.status}`);
+      } catch (e) { errors.push(`email ${kind}/${person}: ${String(e)}`); }
+    }
+    sent++;
+  }
+
+  // --- Recap modes (morning / eod): one message per person per day. ---
+  for (const mode of active.filter((m) => m === "morning" || m === "eod")) {
+    for (const person of memberIds) {
+      const mine = tasks.filter((t: any) => taskAssignees(t).includes(person));
+      const ctx = mode === "morning" ? morningContext(mine, { today: dateKey }) : eodContext(mine, { today: dateKey });
+      // Skip a person with nothing to say (no open work / no activity).
+      if (!ctx.lines.length && (mode === "morning" ? ctx.counts.total === 0 : ctx.counts.done === 0 && ctx.counts.open === 0)) continue;
+      const fallback = mode === "morning" ? fallbackMorning(ctx) : fallbackEod(ctx);
+      const sys = mode === "morning"
+        ? "You write a 2-sentence morning check-in for a worker from the task lines given. End by asking what they're tackling today. Plain text, no markdown, no emojis. Only reference the given tasks."
+        : "You write a 2-sentence end-of-day check-in from the task lines given. Note what got done and what slipped, then ask them to confirm what they finished. Plain text, no markdown, no emojis.";
+      const body = await wording(groqKey, sys, ctx.lines, fallback);
+      await deliver(mode, person, dateKey, MODE_SUBJECT[mode], body, null);
+    }
+  }
+
+  // --- Stalled mode: one grouped message per person per week. ---
+  if (active.includes("stalled")) {
+    const period = weekKey(dateKey);
+    const byPerson = stalledByPerson(tasks, { nowMs: now, stalledDays: cfg.stalled_days ?? 3 });
+    for (const [person, items] of byPerson) {
+      const fallback = stalledText(items);
+      const sys = "You write a short, friendly nudge listing a worker's stalled tasks (given as lines) and ask if they're still moving. Keep the task titles. Plain text, no markdown, no emojis.";
+      const body = await wording(groqKey, sys, items.map((x: any) => `- ${x.title}`), fallback);
+      await deliver("stalled", person, period, MODE_SUBJECT.stalled, body, items[0]?.id ?? null);
+    }
+  }
+
+  return new Response(JSON.stringify({ ok: true, scanned: tasks.length, sent, errors: errors.slice(0, 20) }), { headers: { "Content-Type": "application/json" } });
+});

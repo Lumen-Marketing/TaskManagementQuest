@@ -467,6 +467,31 @@ App.SupabaseDataStore = class SupabaseDataStore {
     return { types: t.data || [], statuses: s.data || [], labels: l.data || [] };
   }
 
+  /* Proactive check-ins config (single row, id=1). Read/written by the boss-only
+     CheckinSettingsView; the scheduled `checkins` Edge Function reads the same
+     row via the service role. Admin RLS (migration 070) gates these calls. */
+  async getCheckinSettings() {
+    const { data, error } = await this.supabase
+      .from('checkin_settings').select('*').eq('id', 1).single();
+    if (error) throw error;
+    return data;
+  }
+
+  async saveCheckinSettings(patch) {
+    const row = {
+      morning_enabled: !!patch.morning_enabled,
+      eod_enabled: !!patch.eod_enabled,
+      stalled_enabled: !!patch.stalled_enabled,
+      stalled_days: Math.max(1, Math.min(90, parseInt(patch.stalled_days, 10) || 3)),
+      updated_by: this.currentUser || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await this.supabase
+      .from('checkin_settings').update(row).eq('id', 1).select().single();
+    if (error) throw error;
+    return data;
+  }
+
   async createTaskType(row) {
     const res = await this.supabase.from('task_types').insert(row).select('*').single();
     this._throwIfError(res, 'creating task type');
