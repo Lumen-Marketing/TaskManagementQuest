@@ -160,6 +160,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       taxTypesRes,
       taxStatusesRes,
       taxLabelsRes,
+      taxSopsRes,
     ] = await Promise.all([
       this._pageAll(() => this.supabase.from('team_members').select('*').order('name', { ascending: true }).order('id', { ascending: true }), 'people'),
       this._pageAll(() => this.supabase.from('tasks').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }), 'tasks'),
@@ -175,6 +176,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       this.supabase.from('task_types').select('*'),
       this.supabase.from('task_type_statuses').select('*'),
       this.supabase.from('task_labels').select('*'),
+      this._optionalSelect('task_label_sops'),
     ]);
 
     this._throwIfError(timersRes, 'active timers');
@@ -218,8 +220,24 @@ App.SupabaseDataStore = class SupabaseDataStore {
         types: taxTypesRes.data || [],
         statuses: taxStatusesRes.data || [],
         labels: taxLabelsRes.data || [],
+        sops: taxSopsRes.data || [],
       },
     };
+  }
+
+  /* A select that yields [] instead of throwing when the table isn't there yet.
+     task_label_sops (migration 069) ships in the client before it exists on every
+     database, and a hard failure here would take the whole boot load down. Zero
+     rows is also exactly what App.taxonomy.activeSop() needs to fall back to the
+     built-in App.SOP_CHECKLISTS, so an un-migrated database degrades to the
+     defaults rather than to a broken app. */
+  async _optionalSelect(table) {
+    try {
+      const res = await this.supabase.from(table).select('*');
+      return res.error ? { data: [], error: null } : res;
+    } catch (e) {
+      return { data: [], error: null };
+    }
   }
 
   /* Tasks-only refresh for the background sync poll. Mirrors the tasks query in
@@ -456,15 +474,16 @@ App.SupabaseDataStore = class SupabaseDataStore {
      Reads come back through loadTaxonomy() in the exact shape App.taxonomy.hydrate
      expects (same as load()'s `taxonomy` block). */
   async loadTaxonomy() {
-    const [t, s, l] = await Promise.all([
+    const [t, s, l, sop] = await Promise.all([
       this.supabase.from('task_types').select('*'),
       this.supabase.from('task_type_statuses').select('*'),
       this.supabase.from('task_labels').select('*'),
+      this._optionalSelect('task_label_sops'),
     ]);
     this._throwIfError(t, 'task types');
     this._throwIfError(s, 'task statuses');
     this._throwIfError(l, 'task labels');
-    return { types: t.data || [], statuses: s.data || [], labels: l.data || [] };
+    return { types: t.data || [], statuses: s.data || [], labels: l.data || [], sops: sop.data || [] };
   }
 
   async createTaskType(row) {
@@ -498,6 +517,25 @@ App.SupabaseDataStore = class SupabaseDataStore {
     const res = await this.supabase.from('task_labels').update(patch).eq('id', id).select('*').single();
     this._throwIfError(res, 'updating label');
     return res.data;
+  }
+
+  /* SOP checklist steps, one row per step of a label's job-type SOP (migration 069).
+     Unlike types/statuses/labels these are NOT soft-deleted: a checklist step carries
+     no history on existing tasks (its text was copied into the task's own checklist at
+     creation), so removing one is a plain delete. */
+  async createSopStep(row) {
+    const res = await this.supabase.from('task_label_sops').insert(row).select('*').single();
+    this._throwIfError(res, 'creating SOP step');
+    return res.data;
+  }
+  async updateSopStep(id, patch) {
+    const res = await this.supabase.from('task_label_sops').update(patch).eq('id', id).select('*').single();
+    this._throwIfError(res, 'updating SOP step');
+    return res.data;
+  }
+  async deleteSopStep(id) {
+    const res = await this.supabase.from('task_label_sops').delete().eq('id', id);
+    this._throwIfError(res, 'removing SOP step');
   }
 
   /* Hard-delete a single task on demand. RLS gates this to the same
@@ -713,6 +751,21 @@ App.SupabaseDataStore = class SupabaseDataStore {
       });
       if (error) return { ok: false, error: (error && error.message) || 'AI unavailable.' };
       return { ok: true, draft: data && data.draft };
+    } catch (err) {
+      return { ok: false, error: (err && err.message) || String(err) };
+    }
+  }
+
+  /* Speech → text via the ai-assistant Edge Function. Returns
+     { ok, text?, error? } and never throws so the New Task page degrades quietly. */
+  async transcribe({ audio, mime }) {
+    try {
+      const { data, error } = await this.supabase.functions.invoke('ai-assistant', {
+        body: { action: 'transcribe', audio, mime },
+      });
+      if (error) return { ok: false, error: (error && error.message) || 'Voice unavailable.' };
+      if (!data || data.ok === false) return { ok: false, error: (data && data.error) || 'Voice unavailable.' };
+      return { ok: true, text: (data && data.text) || '' };
     } catch (err) {
       return { ok: false, error: (err && err.message) || String(err) };
     }
