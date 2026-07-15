@@ -52,6 +52,11 @@ App.NewTaskPageView = class NewTaskPageView {
     };
     this.watchers = [];
     this.subtasks = [];
+    // Job-type SOP: the steps the current label's SOP put into `subtasks`, and the
+    // company::label they came from. _applySop() swaps one SOP out for another when
+    // either changes; the user's own steps ride through untouched.
+    this.sopSteps = [];
+    this._sopKey = `${company}::null`;   // S.label starts null → no SOP applied yet
     this.description = '';
     this.woNumber = null;            // preview '—' until create assigns a real number
     this.dispatched = false;
@@ -128,7 +133,10 @@ App.NewTaskPageView = class NewTaskPageView {
         <div class="nt-cols">
           <div class="nt-sheet">
             <div class="nt-titlebox">
-              <input id="nt-title" class="nt-title-in" placeholder="What needs to get done?" autocomplete="off" aria-label="Task title" />
+              <div class="nt-title-row">
+                <input id="nt-title" class="nt-title-in" placeholder="What needs to get done?" autocomplete="off" aria-label="Task title" />
+                ${(App.VoiceCapture && App.VoiceCapture.isSupported()) ? '<button id="nt-mic" class="nt-mic" type="button" aria-label="Hold to dictate" title="Hold to dictate"><i class="ti ti-microphone"></i></button>' : ''}
+              </div>
               <div id="nt-flash" class="nt-flash" aria-live="polite"></div>
               <p class="nt-hint">Type <b>@name</b> <b>#company</b> <b>!high</b> <b>tmrw</b> <b>9:30a</b> — fields fill as you write.</p>
             </div>
@@ -156,7 +164,7 @@ App.NewTaskPageView = class NewTaskPageView {
             </div>
 
             <div class="nt-sec" data-sec="detail">
-              <div class="nt-sec-h"><span class="nt-n">03</span><span class="nt-t">Detail</span></div>
+              <div class="nt-sec-h"><span class="nt-n">03</span><span class="nt-t">Detail</span><span class="nt-sop-note" id="nt-sop-note" aria-live="polite"></span></div>
               <textarea id="nt-desc" class="nt-desc" placeholder="Add context, links, scope…" aria-label="Description"></textarea>
               <div class="nt-sublist" id="nt-subtasks"></div>
               <div class="nt-chkrow">
@@ -375,6 +383,9 @@ App.NewTaskPageView = class NewTaskPageView {
     title.addEventListener('input', () => { this._applyParse(false); this._scheduleDraft(); this.sync(); });
     title.addEventListener('blur', () => { this._applyParse(true); this.sync(); });
 
+    // Voice: press-and-hold the mic to dictate the title.
+    this._bindMic();
+
     // Description + subtasks.
     document.getElementById('nt-desc').addEventListener('input', (e) => { this.description = e.target.value; });
     const subIn = document.getElementById('nt-subtask-input');
@@ -387,7 +398,7 @@ App.NewTaskPageView = class NewTaskPageView {
     this._bindPick('assignee', () => this._assigneeItems(), (v) => { this._toggleWho(v); this._lockField('assignees'); }, true);
     this._bindPick('type', () => this._typeItems(), (v) => { this.S.type = v; this._lockField('type'); this.sync('type'); }, false);
     this._bindPick('status', () => this._statusItems(), (v) => { this.S.status = v; this.sync(); }, false);
-    this._bindPick('label', () => this._labelItems(), (v) => { this.S.label = v || null; this._lockField('label'); this.sync('lab'); }, false);
+    this._bindPick('label', () => this._labelItems(), (v) => { this.S.label = v || null; this._lockField('label'); this._applySop(); this.sync('lab'); }, false);
     this._bindPick('project', () => this._projectItems(), (v) => { this.S.project = v || null; this._lockField('project'); this.sync('proj'); }, false);
     this._bindPick('remind', () => this._remindItems(), (v) => { this.S.remind = v; this.sync('rem'); }, false);
     this._bindPick('watch', () => this._watchItems(), (v) => { this._toggleWatcher(v); }, true);
@@ -504,6 +515,10 @@ App.NewTaskPageView = class NewTaskPageView {
     // that belongs to a different company.
     const _proj = App.directory.project(this.S.project);
     if (this.S.company !== 'overall' && this.S.project && _proj && _proj.companyId !== this.S.company) this.S.project = null;
+    // Labels are per-company too: drop one the new company doesn't define, then
+    // re-run the SOP (the same label key can carry a different SOP per company).
+    if (this.S.label && !App.taxonomy.activeLabels(this.S.company).some(l => l.key === this.S.label)) this.S.label = null;
+    this._applySop();
     this.sync('co');
   }
   _toggleWho(id) {
@@ -536,15 +551,57 @@ App.NewTaskPageView = class NewTaskPageView {
   }
   _renderSubtasks() {
     const list = document.getElementById('nt-subtasks');
+    if (!list) return;
     list.innerHTML = '';
     this.subtasks.forEach((text, i) => {
+      const fromSop = this.sopSteps.includes(text);
       const row = document.createElement('div');
-      row.className = 'nt-subitem';
-      row.innerHTML = `<span class="nt-sub-box"></span><span class="nt-subtext"></span><button class="nt-subdel" type="button" aria-label="Remove step"><i class="ti ti-x"></i></button>`;
+      row.className = 'nt-subitem' + (fromSop ? ' is-sop' : '');
+      row.innerHTML = `<span class="nt-sub-box"></span><span class="nt-subtext"></span>${fromSop ? '<span class="nt-sop-tag">SOP</span>' : ''}<button class="nt-subdel" type="button" aria-label="Remove step"><i class="ti ti-x"></i></button>`;
       row.querySelector('.nt-subtext').textContent = text;
-      row.querySelector('.nt-subdel').addEventListener('click', () => { this.subtasks.splice(i, 1); this._renderSubtasks(); this.sync('sub'); });
+      row.querySelector('.nt-subdel').addEventListener('click', () => {
+        // A deleted SOP step is the user overriding the SOP — forget we put it there,
+        // so a later re-apply of the SAME label doesn't try to remove it twice.
+        const s = this.sopSteps.indexOf(text);
+        if (s >= 0) this.sopSteps.splice(s, 1);
+        this.subtasks.splice(i, 1);
+        this._renderSubtasks(); this.sync('sub');
+      });
       list.appendChild(row);
     });
+  }
+
+  /* Swap the checklist's job-type SOP to match the current company + label.
+     Picking label "Roof" drops the roofing SOP steps in; switching to "Framing"
+     pulls those back out and drops the framing steps in. Steps the user typed
+     themselves are never touched (App.utils.mergeSopSteps).
+
+     Keyed on company::label and a no-op when neither changed, so it's safe to call
+     from every path that can move either one (label pick, company pick, AI draft). */
+  _applySop() {
+    const label = this.S.label || null;
+    const key = `${this.S.company}::${label}`;
+    if (key === this._sopKey) return;
+    this._sopKey = key;
+
+    const next = App.taxonomy.activeSop(this.S.company, label);
+    const limit = (App.validate.LIMITS && App.validate.LIMITS.subtasks) || 50;
+    this.subtasks = App.utils.mergeSopSteps(this.subtasks, this.sopSteps, next, limit);
+    this.sopSteps = next.slice();
+    this._renderSubtasks();
+    this._renderSopNote();
+    if (next.length) {
+      this._flash(`✓ SOP applied → ${App.taxonomy.labelLabel(this.S.company, label)} · ${next.length} step${next.length === 1 ? '' : 's'}`);
+    }
+  }
+
+  _renderSopNote() {
+    const el = document.getElementById('nt-sop-note');
+    if (!el) return;
+    const n = this.sopSteps.length;
+    if (!n) { el.textContent = ''; el.classList.remove('show'); return; }
+    el.textContent = `SOP · ${App.taxonomy.labelLabel(this.S.company, this.S.label)} — ${n} step${n === 1 ? '' : 's'} added`;
+    el.classList.add('show');
   }
   async _createStatus(val) {
     try {
@@ -578,6 +635,7 @@ App.NewTaskPageView = class NewTaskPageView {
       }
     } catch (e) { /* noop */ }
     this._lockField('label');
+    this._applySop();   // a brand-new label has no SOP → clears any previous SOP's steps
     this._closeMenus(); this._flash('✓ label created → ' + val); this.sync('lab');
   }
   _createProject(val) {
@@ -629,6 +687,66 @@ App.NewTaskPageView = class NewTaskPageView {
 
   // Small "AI" marker appended to the label of a field the AI filled.
   _aiTag(key) { return this._aiSet && this._aiSet.has(key) ? '<span class="nt-ai" title="Filled by AI — edit to override">AI</span>' : ''; }
+
+  // Wire the hold-to-talk mic. No-op if the button wasn't rendered.
+  _bindMic() {
+    const btn = document.getElementById('nt-mic');
+    if (!btn || !App.VoiceCapture) return;
+    this._recording = false;
+    this._busyVoice = false;
+    const begin = (e) => { e.preventDefault(); this._startVoice(btn); };
+    const end = (e) => { if (e) e.preventDefault(); this._stopVoice(btn); };
+    btn.addEventListener('pointerdown', begin);
+    btn.addEventListener('pointerup', end);
+    btn.addEventListener('pointerleave', end);
+    btn.addEventListener('pointercancel', end);
+  }
+
+  async _startVoice(btn) {
+    if (this._recording || this._busyVoice) return;
+    this._cap = new App.VoiceCapture({ maxMs: 60000 });
+    this._cap.onAutoStop(() => this._stopVoice(btn));
+    try {
+      await this._cap.start();
+      this._recording = true;
+      btn.classList.add('rec');
+      btn.setAttribute('aria-pressed', 'true');
+    } catch (_e) {
+      this._cap = null;
+      this._flash('Microphone access was blocked.');
+    }
+  }
+
+  async _stopVoice(btn) {
+    if (!this._recording || this._busyVoice || !this._cap) return;
+    this._recording = false;
+    this._busyVoice = true;
+    btn.classList.remove('rec');
+    btn.classList.add('busy');
+    btn.removeAttribute('aria-pressed');
+    let clip = null;
+    try { clip = await this._cap.stop(); } catch (_e) { /* fall through */ }
+    this._cap = null;
+    try {
+      if (!clip || !clip.blob || !clip.blob.size) { this._flash("Didn't catch that — try again."); return; }
+      const audio = await App.VoiceCapture.blobToBase64(clip.blob);
+      const res = await this.controller.dataStore.transcribe({ audio, mime: clip.mime });
+      if (!res || !res.ok) { this._flash(res && res.error ? res.error : 'Voice is unavailable right now.'); return; }
+      const text = (res.text || '').trim();
+      if (!text) { this._flash("Didn't catch that — try again."); return; }
+      const el = document.getElementById('nt-title');
+      if (el) {
+        el.value = text;
+        this._applyParse(false);
+        this._scheduleDraft();
+        this.sync();
+        el.focus();
+      }
+    } finally {
+      this._busyVoice = false;
+      btn.classList.remove('busy');
+    }
+  }
 
   // Debounced natural-language draft. Called on each title input; fires ~800ms
   // after typing stops, only when the sentence is substantial and changed.
@@ -685,6 +803,7 @@ App.NewTaskPageView = class NewTaskPageView {
     if ('project' in apply && (App.projects || {})[apply.project] && App.projects[apply.project].companyId === this.S.company) {
       this.S.project = apply.project; this._aiSet.add('project');
     }
+    this._applySop();   // an AI-picked label pulls in its SOP too
     this.sync();
   }
 

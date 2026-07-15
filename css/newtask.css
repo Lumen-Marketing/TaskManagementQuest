@@ -58,6 +58,10 @@
 #newTaskWrap .nt-setup-link:hover { color: var(--orange); }
 #newTaskWrap .nt-setup-link i { font-size: 15px; }
 
+/* Job-type SOP: which SOP the current label pulled into the checklist below. */
+#newTaskWrap .nt-sop-note { margin-left: auto; font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--orange-dark); background: #FDF1EA; padding: 3px 9px; border-radius: 6px; opacity: 0; transition: opacity .2s ease; }
+#newTaskWrap .nt-sop-note.show { opacity: 1; }
+
 /* ---------------- title ---------------- */
 #newTaskWrap .nt-title-in { width: 100%; font-family: var(--sans); font-size: 22px; font-weight: 600; border: 2px solid var(--ink); border-radius: 12px; padding: 15px 17px; outline: none; color: var(--ink); background: var(--card); }
 #newTaskWrap .nt-title-in::placeholder { color: #8a857e; font-weight: 600; }
@@ -112,6 +116,13 @@
 #newTaskWrap .nt-subtext { font-size: 14px; font-weight: 700; flex: 1; min-width: 0; }
 #newTaskWrap .nt-subdel { background: none; border: none; color: var(--ink-soft); padding: 0; display: flex; cursor: pointer; }
 #newTaskWrap .nt-subdel:hover { color: var(--red); }
+/* A step the label's SOP put here (vs. one the user typed). Deletable like any other.
+   The tag sits right after its step (not flushed right) so 7 of them read as inline
+   annotations instead of a ragged second column. */
+#newTaskWrap .nt-subitem.is-sop .nt-sub-box { border-color: var(--orange); }
+#newTaskWrap .nt-subitem.is-sop .nt-subtext { flex: 0 1 auto; }
+#newTaskWrap .nt-subdel { margin-left: auto; }
+#newTaskWrap .nt-sop-tag { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .08em; color: var(--orange-dark); background: #FDF1EA; padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
 #newTaskWrap .nt-chkrow { display: flex; gap: 8px; margin-top: 10px; }
 #newTaskWrap .nt-chkrow input { flex: 1; min-width: 0; font-family: var(--sans); font-size: 14px; font-weight: 600; border: 1.5px solid var(--line-strong); border-radius: 10px; padding: 9px 12px; outline: none; color: var(--ink); background: var(--card); }
 #newTaskWrap .nt-chkrow input:focus { border-color: var(--ink); }
@@ -270,3 +281,23 @@
   color: var(--amber); background: var(--amber-bg, rgba(237,78,13,.12));
   border-radius: 999px; vertical-align: middle;
 }
+
+/* Voice dictation button in the title box */
+.nt-title-row { display: flex; align-items: center; gap: 10px; }
+.nt-title-row .nt-title-in { flex: 1 1 auto; min-width: 0; }
+.nt-mic {
+  flex: 0 0 auto;
+  width: 40px; height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 12px;
+  background: #f2efe9; color: #1b1a17;
+  cursor: pointer; touch-action: none;
+  transition: background .15s ease, transform .1s ease, color .15s ease;
+}
+.nt-mic:hover { background: #e8e4dc; }
+.nt-mic:active { transform: scale(.96); }
+.nt-mic.rec { background: #ED4E0D; color: #fff; animation: nt-mic-pulse 1s ease-in-out infinite; }
+.nt-mic.busy { opacity: .6; cursor: default; }
+.nt-mic i { font-size: 20px; }
+@keyframes nt-mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(237, 78, 13, .45); } 50% { box-shadow: 0 0 0 6px rgba(237, 78, 13, 0); } }
+@media (prefers-reduced-motion: reduce) { .nt-mic.rec { animation: none; } }

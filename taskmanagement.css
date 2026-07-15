@@ -7970,3 +7970,13 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
 .pv-rollup-skel.short { width: 60%; }
 @keyframes pv-rollup-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 @media (prefers-reduced-motion: reduce) { .pv-rollup-skel { animation: none; } }
+
+/* Check-ins settings (admin:checkins) */
+.ci-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.ci-row-t { display: flex; flex-direction: column; gap: 3px; }
+.ci-row-title { font-weight: 700; color: var(--ink); }
+.ci-row-desc { font-size: 12px; color: var(--ink-3); }
+.ci-days { display: inline-flex; align-items: center; gap: 8px; margin: 16px 0; color: var(--ink-2); font-weight: 600; }
+.ci-days input { width: 64px; }
+.ci-actions { display: flex; align-items: center; gap: 12px; }
+.ci-status { font-size: 12px; color: var(--ink-3); }
