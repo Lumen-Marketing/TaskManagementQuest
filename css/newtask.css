@@ -282,22 +282,46 @@
   border-radius: 999px; vertical-align: middle;
 }
 
-/* Voice dictation button in the title box */
+/* Voice dictation button in the title box — a branded, warm voice affordance. */
 .nt-title-row { display: flex; align-items: center; gap: 10px; }
 .nt-title-row .nt-title-in { flex: 1 1 auto; min-width: 0; }
 .nt-mic {
+  position: relative;
   flex: 0 0 auto;
-  width: 40px; height: 40px;
+  width: 42px; height: 42px;
   display: inline-flex; align-items: center; justify-content: center;
-  border: none; border-radius: 12px;
-  background: #f2efe9; color: #1b1a17;
-  cursor: pointer; touch-action: none;
-  transition: background .15s ease, transform .1s ease, color .15s ease;
+  border: none; border-radius: 50%;
+  background: rgba(237, 78, 13, .10);
+  color: #ED4E0D;
+  cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent;
+  transition: background .16s ease, transform .12s ease, color .16s ease, box-shadow .16s ease;
 }
-.nt-mic:hover { background: #e8e4dc; }
-.nt-mic:active { transform: scale(.96); }
-.nt-mic.rec { background: #ED4E0D; color: #fff; animation: nt-mic-pulse 1s ease-in-out infinite; }
-.nt-mic.busy { opacity: .6; cursor: default; }
-.nt-mic i { font-size: 20px; }
-@keyframes nt-mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(237, 78, 13, .45); } 50% { box-shadow: 0 0 0 6px rgba(237, 78, 13, 0); } }
-@media (prefers-reduced-motion: reduce) { .nt-mic.rec { animation: none; } }
+.nt-mic i { font-size: 19px; line-height: 1; transition: transform .16s ease; }
+.nt-mic:hover { background: rgba(237, 78, 13, .17); transform: translateY(-1px); }
+.nt-mic:active { transform: scale(.94); }
+.nt-mic:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(237, 78, 13, .28); }
+
+/* Recording: solid brand fill, white icon, breathing pulse ring. */
+.nt-mic.rec { background: #ED4E0D; color: #fff; transform: none; animation: nt-mic-pulse 1.15s ease-in-out infinite; }
+.nt-mic.rec i { transform: scale(1.08); }
+@keyframes nt-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(237, 78, 13, .45); }
+  50% { box-shadow: 0 0 0 7px rgba(237, 78, 13, 0); }
+}
+
+/* Transcribing: swap the icon for a spinner so it reads as "working". */
+.nt-mic.busy { cursor: default; background: rgba(237, 78, 13, .10); color: #ED4E0D; }
+.nt-mic.busy i { opacity: 0; }
+.nt-mic.busy::after {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid rgba(237, 78, 13, .30); border-top-color: #ED4E0D;
+  animation: nt-mic-spin .7s linear infinite;
+}
+@keyframes nt-mic-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-mic.rec { animation: none; }
+  .nt-mic.busy::after { animation-duration: 1.4s; }
+  .nt-mic:hover { transform: none; }
+}
