@@ -7964,7 +7964,23 @@ body.ui-command-center .qhq-rpt-top .h { font-size: 20px; }
 .pv-rollup-text { font-size: 13px; line-height: 1.5; color: var(--ink, #2a2723); white-space: pre-wrap; }
 .pv-rollup-bullets { margin: 6px 0 0; padding-left: 18px; }
 .pv-rollup-bullets li { font-size: 12.5px; line-height: 1.45; color: var(--ink-2, #55504a); }
-.pv-rollup-when { margin-top: 6px; font-size: 11px; color: var(--ink-3, #8f867b); }
+.pv-rollup-when { font-size: 11px; color: var(--ink-3, #8f867b); }
+.pv-rollup-head .pv-rollup-when { margin-left: auto; }
+/* Inline ✨ trigger beside the project name (replaces the full-width button) */
+.pv-rollup-inline { align-self: center; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; padding: 3px 9px; border: 0; border-radius: 999px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .01em; color: var(--amber, #ED4E0D); background: var(--bg-3, rgba(0,0,0,.05)); cursor: pointer; white-space: nowrap; }
+.pv-rollup-inline:hover { color: #fff; background: var(--amber, #ED4E0D); }
+.pv-rollup-inline i { font-size: 13px; }
+.pv-rollup-inline.loading { cursor: default; }
+.pv-rollup-inline.loading:hover { color: var(--amber, #ED4E0D); background: var(--bg-3, rgba(0,0,0,.05)); }
+.pv-rollup-inline.loading i { animation: pv-rollup-pulse 1s ease-in-out infinite; }
+@keyframes pv-rollup-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+@media (max-width: 720px) {
+  .pv-rollup-lbl { display: none; }              /* icon-only pill on phones */
+  .pv-rollup-inline { padding: 3px 7px; }
+  .pv-prog { flex: 0 1 120px; min-width: 0; }    /* let progress yield so the name keeps its room */
+  .pv-row .pv-client { display: none; }          /* drop the secondary client label so the name reads */
+}
+@media (prefers-reduced-motion: reduce) { .pv-rollup-inline.loading i { animation: none; } }
 .pv-rollup-line { font-size: 12.5px; color: var(--ink-3, #8f867b); margin-bottom: 6px; }
 .pv-rollup-skel { height: 11px; border-radius: 6px; margin: 4px 0; background: linear-gradient(90deg, var(--bg-3, #ececec) 25%, rgba(0,0,0,.06) 37%, var(--bg-3, #ececec) 63%); background-size: 400% 100%; animation: pv-rollup-shimmer 1.2s ease infinite; }
 .pv-rollup-skel.short { width: 60%; }

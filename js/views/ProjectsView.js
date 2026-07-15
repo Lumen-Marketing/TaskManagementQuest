@@ -96,8 +96,28 @@ App.ProjectsView = class ProjectsView {
       </div>`;
   }
 
-  // Rollup strip for an expanded folder. Reads live state + the session cache
-  // so re-expanding a folder shows a prior summary immediately.
+  // Inline ✨ trigger shown beside the project name while the folder is open.
+  // The generated summary itself renders in the drawer via _rollupHtml.
+  _rollupInline(p) {
+    const esc = App.utils.escapeHtml;
+    const state = this._rollupState.get(p.id) || 'idle';
+    const cached = App.RollupClient && App.RollupClient.get(p.id);
+    if (state === 'loading') {
+      return `<span class="pv-rollup-inline loading"><i class="ti ti-sparkles"></i><span class="pv-rollup-lbl">Summarizing…</span></span>`;
+    }
+    if (state === 'error') {
+      return `<button class="pv-rollup-inline" data-rollup="${esc(p.id)}" type="button" title="Try again"><i class="ti ti-sparkles"></i><span class="pv-rollup-lbl">Try again</span></button>`;
+    }
+    if (cached && cached.rollup) {
+      return `<button class="pv-rollup-inline" data-rollup-refresh="${esc(p.id)}" type="button" title="Refresh summary"><i class="ti ti-sparkles"></i><span class="pv-rollup-lbl">Refresh</span></button>`;
+    }
+    return `<button class="pv-rollup-inline" data-rollup="${esc(p.id)}" type="button" title="Summarize this project"><i class="ti ti-sparkles"></i><span class="pv-rollup-lbl">Summarize</span></button>`;
+  }
+
+  // Rollup CONTENT for an expanded folder (the trigger lives inline beside the
+  // name — see _rollupInline). Reads live state + the session cache so
+  // re-expanding a folder shows a prior summary immediately. Empty when idle
+  // with nothing cached — the beside-name button is the only entry point.
   _rollupHtml(p) {
     const esc = App.utils.escapeHtml;
     const state = this._rollupState.get(p.id) || 'idle';
@@ -109,8 +129,7 @@ App.ProjectsView = class ProjectsView {
     if (state === 'error') {
       const msg = this._rollupErr.get(p.id) || 'Summary unavailable.';
       return `<div class="pv-rollup" data-rollup-for="${esc(p.id)}">
-        <div class="pv-rollup-line">${esc(msg)}</div>
-        <button class="pv-rollup-btn" data-rollup="${esc(p.id)}" type="button"><i class="ti ti-sparkles"></i> Try again</button></div>`;
+        <div class="pv-rollup-line">${esc(msg)}</div></div>`;
     }
     if (cached && cached.rollup) {
       const r = cached.rollup;
@@ -119,14 +138,12 @@ App.ProjectsView = class ProjectsView {
       return `<div class="pv-rollup" data-rollup-for="${esc(p.id)}">
         <div class="pv-rollup-head">
           <span class="pv-rollup-eyebrow"><i class="ti ti-sparkles"></i> AI rollup</span>
-          <button class="pv-rollup-refresh" data-rollup-refresh="${esc(p.id)}" type="button" aria-label="Refresh summary" title="Refresh"><i class="ti ti-refresh"></i></button>
+          ${when ? `<span class="pv-rollup-when">${esc(when)}</span>` : ''}
         </div>
         <div class="pv-rollup-text">${esc(r.text)}</div>
-        ${bullets ? `<ul class="pv-rollup-bullets">${bullets}</ul>` : ''}
-        ${when ? `<div class="pv-rollup-when">${esc(when)}</div>` : ''}</div>`;
+        ${bullets ? `<ul class="pv-rollup-bullets">${bullets}</ul>` : ''}</div>`;
     }
-    return `<div class="pv-rollup" data-rollup-for="${esc(p.id)}">
-      <button class="pv-rollup-btn" data-rollup="${esc(p.id)}" type="button"><i class="ti ti-sparkles"></i> Summarize this project</button></div>`;
+    return ''; // idle & no cache → nothing in the drawer; trigger is beside the name
   }
 
   _fmtWhen(iso) {
@@ -190,7 +207,7 @@ App.ProjectsView = class ProjectsView {
         <div class="pv-row" data-project="${esc(p.id)}" role="button" tabindex="0">
           <button class="pv-chev" data-toggle="${esc(p.id)}" aria-label="Toggle tasks" aria-expanded="${open}" type="button"><i class="ti ti-chevron-right"></i></button>
           ${check}
-          <span class="pv-id"><span class="pv-name">${esc(p.name)}</span>${(p.client || p.address) ? `<span class="pv-client">${esc(p.client || p.address)}</span>` : ''}</span>
+          <span class="pv-id"><span class="pv-name">${esc(p.name)}</span>${(p.client || p.address) ? `<span class="pv-client">${esc(p.client || p.address)}</span>` : ''}${open ? this._rollupInline(p) : ''}</span>
           <span class="pv-prog">${prog}</span>
           <span class="pv-duecol${overdue ? ' overdue' : ''}">${due ? 'Due ' + esc(due) : ''}</span>
           ${actions}
