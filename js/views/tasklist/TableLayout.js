@@ -96,6 +96,36 @@
     const avColor = App.utils.safeColor(person.color);
     const firstName = String(person.name || person.full || 'Unassigned').split(' ')[0];
 
+    // Assignee cell: one avatar + first name for a solo assignee; an overlapping
+    // avatar stack (title = full name on hover) once a task has co-assignees, so
+    // every assigned person is visible instead of just the lead (see
+    // App.utils.taskAssignees / the multi-assignee seam).
+    const assigneeIds = App.utils.taskAssignees(t);
+    let assigneeInner;
+    if (assigneeIds.length <= 1) {
+      assigneeInner = `<span class="qt-avatar" style="background:${avColor}" title="${esc(person.full || person.name || 'Unassigned')}">${esc(initials)}</span><span class="nm">${esc(firstName)}</span>`;
+    } else {
+      const MAX = 4;
+      const av = (id) => {
+        const p = App.directory.person(id) || { name: id, full: id, color: '#8a857e' };
+        const full = p.full || p.name || id || '?';
+        const c = App.utils.safeColor(p.color);
+        const inner = p.avatar_url
+          ? `<img src="${esc(p.avatar_url)}" alt="">`
+          : esc(App.utils.initials(full));
+        return `<span class="qt-avatar" title="${esc(full)}" style="background:${p.avatar_url ? 'transparent' : c}">${inner}</span>`;
+      };
+      const shown = assigneeIds.slice(0, MAX).map(av).join('');
+      const rest = assigneeIds.slice(MAX);
+      const restNames = rest
+        .map(id => { const p = App.directory.person(id); return (p && (p.full || p.name)) || id; })
+        .join(', ');
+      const more = rest.length
+        ? `<span class="qt-avatar qt-avmore" title="${esc(restNames)}">+${rest.length}</span>`
+        : '';
+      assigneeInner = `<span class="qt-avstack">${shown}${more}</span><span class="nm">${assigneeIds.length} people</span>`;
+    }
+
     const row = document.createElement('div');
     row.className = 'qt-row' + (selected ? ' selected' : '') + (bulkSel ? ' bulk-selected' : '') + (isStuck ? ' qt-stuckrow' : '') + (isDone ? ' qt-done' : '');
     row.dataset.id = t.id;
@@ -115,7 +145,7 @@
       <div class="qt-cell-label">${lblKey !== 'none'
         ? `<span class="qt-cellbtn"><span class="dot" style="background:${lblColor}"></span><span class="nm">${esc(lblLabel)}</span></span>`
         : `<span class="qt-cellbtn" style="color:#a8a39b"><span class="nm">—</span></span>`}</div>
-      <div class="qt-cell-assignee"><span class="qt-cellbtn"><span class="qt-avatar" style="background:${avColor}">${esc(initials)}</span><span class="nm">${esc(firstName)}</span></span></div>
+      <div class="qt-cell-assignee"><span class="qt-cellbtn">${assigneeInner}</span></div>
       <div class="qt-due ${dueCls}">${esc(dueText)}${t.dueTime ? `<span class="qt-duetime">${esc(App.utils.formatClockTz(t.dueTime))}</span>` : ''}</div>
       <div class="qt-actions">
         ${canClock ? `<button class="timer-btn ${myTimerOnThis ? 'active' : ''}" data-action="toggle-timer" title="${myTimerOnThis ? 'Pause — back to General shift' : 'Start timer'}"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play'}"></i></button>` : ''}
