@@ -16,6 +16,9 @@ App.ProjectsView = class ProjectsView {
     this.expanded = new Set();   // folder ids with their task drawer open
     this.collapsed = new Set();  // due-group keys the user has collapsed
     this._seenDone = new Set();  // done-group keys already auto-collapsed once
+    this._rollupState = new Map(); // projectId → 'idle' | 'loading' | 'error'
+    this._rollupErr = new Map();   // projectId → error string
+    this._rollupClient = null;     // lazily created App.RollupClient
     this._ac = new AbortController();
     App.EventBus.on('view:changed',    (v) => { if (v === 'projects') this.render(); }, { signal: this._ac.signal });
     App.EventBus.on('projects:changed', () => { if (this._visible()) this.render(); }, { signal: this._ac.signal });
@@ -93,6 +96,66 @@ App.ProjectsView = class ProjectsView {
       </div>`;
   }
 
+  // Rollup strip for an expanded folder. Reads live state + the session cache
+  // so re-expanding a folder shows a prior summary immediately.
+  _rollupHtml(p) {
+    const esc = App.utils.escapeHtml;
+    const state = this._rollupState.get(p.id) || 'idle';
+    const cached = App.RollupClient && App.RollupClient.get(p.id);
+    if (state === 'loading') {
+      return `<div class="pv-rollup" data-rollup-for="${esc(p.id)}">
+        <div class="pv-rollup-skel"></div><div class="pv-rollup-skel short"></div></div>`;
+    }
+    if (state === 'error') {
+      const msg = this._rollupErr.get(p.id) || 'Summary unavailable.';
+      return `<div class="pv-rollup" data-rollup-for="${esc(p.id)}">
+        <div class="pv-rollup-line">${esc(msg)}</div>
+        <button class="pv-rollup-btn" data-rollup="${esc(p.id)}" type="button"><i class="ti ti-sparkles"></i> Try again</button></div>`;
+    }
+    if (cached && cached.rollup) {
+      const r = cached.rollup;
+      const bullets = (r.bullets || []).slice(0, 3).map(b => `<li>${esc(b.label)}</li>`).join('');
+      const when = cached.generatedAt ? this._fmtWhen(cached.generatedAt) : '';
+      return `<div class="pv-rollup" data-rollup-for="${esc(p.id)}">
+        <div class="pv-rollup-head">
+          <span class="pv-rollup-eyebrow"><i class="ti ti-sparkles"></i> AI rollup</span>
+          <button class="pv-rollup-refresh" data-rollup-refresh="${esc(p.id)}" type="button" aria-label="Refresh summary" title="Refresh"><i class="ti ti-refresh"></i></button>
+        </div>
+        <div class="pv-rollup-text">${esc(r.text)}</div>
+        ${bullets ? `<ul class="pv-rollup-bullets">${bullets}</ul>` : ''}
+        ${when ? `<div class="pv-rollup-when">${esc(when)}</div>` : ''}</div>`;
+    }
+    return `<div class="pv-rollup" data-rollup-for="${esc(p.id)}">
+      <button class="pv-rollup-btn" data-rollup="${esc(p.id)}" type="button"><i class="ti ti-sparkles"></i> Summarize this project</button></div>`;
+  }
+
+  _fmtWhen(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return 'Updated ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  // Fetch (or refresh) the rollup for one project, driving the strip through
+  // loading → cached/error. Result lands in App.RollupClient.cache.
+  _generateRollup(id, force = false) {
+    if (!App.RollupClient || !this.controller.dataStore) {
+      this._rollupState.set(id, 'error');
+      this._rollupErr.set(id, 'AI is not available.');
+      this._renderBody();
+      return;
+    }
+    const p = (App.projects || {})[id];
+    const name = (p && p.name) || '';
+    this._rollupState.set(id, 'loading');
+    this._renderBody();
+    const client = this._rollupClient || (this._rollupClient = new App.RollupClient({ dataStore: this.controller.dataStore }));
+    client.fetch(id, name, { force }).then((r) => {
+      if (r.rollup) { this._rollupState.set(id, 'idle'); this._rollupErr.delete(id); }
+      else { this._rollupState.set(id, 'error'); this._rollupErr.set(id, r.error || 'Summary unavailable.'); }
+      if (this._visible()) this._renderBody();
+    });
+  }
+
   _row(p) {
     const esc = App.utils.escapeHtml;
     const c = this._counts(p.id);
@@ -118,7 +181,7 @@ App.ProjectsView = class ProjectsView {
     let drawer = '';
     if (open) {
       const tasks = this._folderTasks(p.id);
-      drawer = `<div class="pv-tasks">${tasks.length
+      drawer = this._rollupHtml(p) + `<div class="pv-tasks">${tasks.length
         ? tasks.map(t => this._taskRow(t)).join('')
         : '<div class="pv-noTasks">No tasks in this project yet.</div>'}</div>`;
     }
@@ -322,6 +385,10 @@ App.ProjectsView = class ProjectsView {
       }));
     host.querySelectorAll('.pv-chev').forEach(btn =>
       btn.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(btn.dataset.toggle); }));
+    host.querySelectorAll('[data-rollup]').forEach(btn =>
+      btn.addEventListener('click', (e) => { e.stopPropagation(); this._generateRollup(btn.dataset.rollup); }));
+    host.querySelectorAll('[data-rollup-refresh]').forEach(btn =>
+      btn.addEventListener('click', (e) => { e.stopPropagation(); this._generateRollup(btn.dataset.rollupRefresh, true); }));
     host.querySelectorAll('.pv-row').forEach(row =>
       row.addEventListener('click', () => this.controller.openProject(row.dataset.project)));
     host.querySelectorAll('.pv-trow[data-task]').forEach(row =>
