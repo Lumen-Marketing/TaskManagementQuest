@@ -19,7 +19,7 @@ App.TaskDraftClient = class TaskDraftClient {
 
   static mergeDraftIntoState(draft, locked) {
     const lockedSet = locked instanceof Set ? locked : new Set(locked || []);
-    const keys = ['assignees', 'company', 'priority', 'due', 'dueTime', 'type', 'label', 'project'];
+    const keys = ['assignees', 'company', 'priority', 'due', 'dueTime', 'type', 'label', 'project', 'status', 'remind'];
     const apply = {};
     const aiFilled = [];
     for (const k of keys) {
@@ -33,9 +33,9 @@ App.TaskDraftClient = class TaskDraftClient {
   }
 
   // Never throws. Returns { draft } or { draft: null }.
-  async fetchDraft({ text, team, companies, today, types, labels, projects }) {
+  async fetchDraft({ text, team, companies, today, types, labels, projects, statuses }) {
     let res;
-    try { res = await this.dataStore.draftTask({ text, team, companies, today, types, labels, projects }); }
+    try { res = await this.dataStore.draftTask({ text, team, companies, today, types, labels, projects, statuses }); }
     catch (_e) { return { draft: null }; }
     if (!res || !res.ok || !res.draft) return { draft: null };
     return { draft: res.draft };

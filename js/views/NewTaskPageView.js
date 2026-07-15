@@ -66,6 +66,7 @@ App.NewTaskPageView = class NewTaskPageView {
     this._aiSet = new Set();     // draft keys the AI filled (for the ✨ marker)
     this._draftLast = '';        // last title text sent to the AI
     this._draftTimer = null;
+    this._draftSeq = 0;          // race guard: only the newest request's reply is applied
     this._draftClient = App.TaskDraftClient ? new App.TaskDraftClient({ dataStore: this.controller.dataStore }) : null;
 
     this.wrap.innerHTML = this.template();
@@ -770,8 +771,11 @@ App.NewTaskPageView = class NewTaskPageView {
       this._draftLast = text;
       const ctx = this._parseCtx(false);
       const opts = this._draftOptionLists();
+      // Race guard: tag this request; only apply its reply if no newer request has
+      // been sent since (a slow older reply must never clobber a newer dictation).
+      const seq = ++this._draftSeq;
       this._draftClient.fetchDraft({ text, team: ctx.team, companies: ctx.companies, today: ctx.today, ...opts })
-        .then(({ draft }) => { if (draft) this._applyAiDraft(draft); });
+        .then(({ draft }) => { if (draft && seq === this._draftSeq) this._applyAiDraft(draft); });
     }, 800);
   }
 
@@ -783,6 +787,7 @@ App.NewTaskPageView = class NewTaskPageView {
       types: App.taxonomy.activeTypes(co).map(t => ({ id: t.key, label: t.label })),
       labels: App.taxonomy.activeLabels(co).map(l => ({ id: l.key, label: l.label })),
       projects: Object.values(App.projects || {}).filter(p => p.companyId === co).map(p => ({ id: p.id, label: p.name })),
+      statuses: App.taxonomy.activeStatuses(co, this.S.type).map(s => ({ id: s.key, label: s.label })),
     };
   }
 
@@ -813,6 +818,13 @@ App.NewTaskPageView = class NewTaskPageView {
     if ('project' in apply && (App.projects || {})[apply.project] && App.projects[apply.project].companyId === this.S.company) {
       this.S.project = apply.project; this._aiSet.add('project');
     }
+    // Status is scoped to the FINAL company+type — validate against that so a pick
+    // made for a different type is dropped rather than applied (sync() would reset
+    // an invalid status to the type default anyway).
+    if ('status' in apply && App.taxonomy.activeStatuses(this.S.company, this.S.type).some(s => s.key === apply.status)) {
+      this.S.status = apply.status; this._aiSet.add('status');
+    }
+    if ('remind' in apply) { this.S.remind = apply.remind; this._aiSet.add('remind'); }
     this._applySop();   // an AI-picked label pulls in its SOP too
     this.sync();
   }

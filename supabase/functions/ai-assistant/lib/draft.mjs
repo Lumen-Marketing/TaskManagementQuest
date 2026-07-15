@@ -4,13 +4,15 @@
 const PRIORITIES = new Set(['low', 'medium', 'high', 'critical']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+// Reminder is a fixed relative-to-due offset enum (see NewTaskPageView._remindItems).
+const REMINDERS = new Set(['none', 'at', '30m', '1h', '1d']);
 
 const MAX_ASSIGNEES = 10;
 
 const idSet = (list) => new Set((list || []).map((x) => x && x.id).filter(Boolean));
 
 export function validateDraft(raw, opts) {
-  const out = { assignees: [], company: null, priority: null, due: null, dueTime: null, type: null, label: null, project: null };
+  const out = { assignees: [], company: null, priority: null, due: null, dueTime: null, type: null, label: null, project: null, status: null, remind: null };
   if (!raw || typeof raw !== 'object') return out;
   const o = opts || {};
   const teamIds = idSet(o.team);
@@ -18,6 +20,7 @@ export function validateDraft(raw, opts) {
   const typeIds = idSet(o.types);
   const labelIds = idSet(o.labels);
   const projectIds = idSet(o.projects);
+  const statusIds = idSet(o.statuses);
 
   // Accept an `assignees` array or a singular `assignee`; keep only real roster
   // ids, de-duplicated and capped.
@@ -35,5 +38,7 @@ export function validateDraft(raw, opts) {
   if (typeof raw.type === 'string' && typeIds.has(raw.type)) out.type = raw.type;
   if (typeof raw.label === 'string' && labelIds.has(raw.label)) out.label = raw.label;
   if (typeof raw.project === 'string' && projectIds.has(raw.project)) out.project = raw.project;
+  if (typeof raw.status === 'string' && statusIds.has(raw.status)) out.status = raw.status;
+  if (typeof raw.remind === 'string' && REMINDERS.has(raw.remind)) out.remind = raw.remind;
   return out;
 }

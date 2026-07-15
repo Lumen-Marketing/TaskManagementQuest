@@ -35,6 +35,19 @@ test('mergeDraftIntoState applies type/label/project when present', () => {
   assert.deepEqual(aiFilled.sort(), ['label', 'project', 'type']);
 });
 
+test('mergeDraftIntoState applies status and remind when present', () => {
+  const draft = { assignees: [], company: null, priority: null, due: null, dueTime: null, type: null, label: null, project: null, status: 'pending', remind: '1h' };
+  const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, new Set());
+  assert.deepEqual(apply, { status: 'pending', remind: '1h' });
+  assert.deepEqual(aiFilled.sort(), ['remind', 'status']);
+});
+
+test('mergeDraftIntoState respects a lock on status', () => {
+  const draft = { status: 'pending', remind: '1h' };
+  const { apply } = TDC.mergeDraftIntoState(draft, new Set(['status']));
+  assert.deepEqual(apply, { remind: '1h' });
+});
+
 test('mergeDraftIntoState skips an empty assignees array', () => {
   const draft = { assignees: [], company: 'lumen', priority: null, due: null, dueTime: null };
   const { apply, aiFilled } = TDC.mergeDraftIntoState(draft, new Set());
@@ -47,11 +60,12 @@ test('fetchDraft forwards all option lists to the data store', async () => {
   const client = new TDC({ dataStore: { draftTask: async (body) => { received = body; return { ok: true, draft: { assignees: [] } }; } } });
   await client.fetchDraft({
     text: 'x', team: [{ id: 'a' }], companies: [{ id: 'c' }], today: '2026-07-14',
-    types: [{ id: 't' }], labels: [{ id: 'l' }], projects: [{ id: 'p' }],
+    types: [{ id: 't' }], labels: [{ id: 'l' }], projects: [{ id: 'p' }], statuses: [{ id: 's' }],
   });
   assert.deepEqual(received.types, [{ id: 't' }]);
   assert.deepEqual(received.labels, [{ id: 'l' }]);
   assert.deepEqual(received.projects, [{ id: 'p' }]);
+  assert.deepEqual(received.statuses, [{ id: 's' }]);
 });
 
 test('mergeDraftIntoState with everything locked applies nothing', () => {

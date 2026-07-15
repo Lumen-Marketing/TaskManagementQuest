@@ -769,10 +769,10 @@ App.SupabaseDataStore = class SupabaseDataStore {
 
   /* Natural-language task draft via the ai-assistant Edge Function. Returns
      { ok, draft?, error? } and never throws so the New Task page degrades quietly. */
-  async draftTask({ text, team, companies, today, types, labels, projects }) {
+  async draftTask({ text, team, companies, today, types, labels, projects, statuses }) {
     try {
       const { data, error } = await this.supabase.functions.invoke('ai-assistant', {
-        body: { action: 'draft_task', text, team, companies, today, types, labels, projects },
+        body: { action: 'draft_task', text, team, companies, today, types, labels, projects, statuses },
       });
       if (error) return { ok: false, error: (error && error.message) || 'AI unavailable.' };
       return { ok: true, draft: data && data.draft };
