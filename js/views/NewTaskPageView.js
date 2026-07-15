@@ -775,7 +775,22 @@ App.NewTaskPageView = class NewTaskPageView {
       // been sent since (a slow older reply must never clobber a newer dictation).
       const seq = ++this._draftSeq;
       this._draftClient.fetchDraft({ text, team: ctx.team, companies: ctx.companies, today: ctx.today, ...opts })
-        .then(({ draft }) => { if (draft && seq === this._draftSeq) this._applyAiDraft(draft); });
+        .then(({ draft }) => {
+          if (!draft || seq !== this._draftSeq) return;
+          // Best-effort fill: an apply failure must degrade quietly (like a
+          // provider error) — never bubble to the global "something went wrong"
+          // handler. Capture the real error for diagnosis.
+          try { this._applyAiDraft(draft); }
+          catch (e) {
+            console.error('[ai-draft] apply failed', e);
+            if (App.observability && App.observability.captureException) {
+              App.observability.captureException(e, { source: 'ai-draft-apply' });
+            }
+          }
+        })
+        .catch((e) => {
+          console.error('[ai-draft] request failed', e);
+        });
     }, 800);
   }
 
@@ -909,7 +924,7 @@ App.NewTaskPageView = class NewTaskPageView {
     if (opts.square) lead = `<span class="nt-sq" style="background:${opts.square}"></span>`;
     else if (opts.swatch) lead = `<span class="nt-dot" style="background:${opts.swatch}"></span>`;
     else if (opts.icon) lead = `<i class="ti ${opts.icon}"></i>`; // opts.icon is the FULL ti-* class — the icon-subset scanner needs whole literals at call sites
-    const aiKey = { company: 'company', date: 'due', time: 'dueTime', type: 'type', label: 'label', project: 'project' }[key];
+    const aiKey = { company: 'company', date: 'due', time: 'dueTime', type: 'type', label: 'label', project: 'project', status: 'status', remind: 'remind' }[key];
     const tag = aiKey ? this._aiTag(aiKey) : '';
     val.innerHTML = lead + `<span class="nt-pick-txt">${App.utils.escapeHtml(text || '')}</span>` + tag;
   }
