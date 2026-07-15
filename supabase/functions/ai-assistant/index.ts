@@ -27,10 +27,13 @@ import { buildBriefingContext } from "./lib/context.mjs";
 import { shapeBriefing, fallbackBriefing } from "./lib/shape.mjs";
 import { validateDraft } from "./lib/draft.mjs";
 import { buildDigestContext, shapeDigest, fallbackDigest } from "./lib/digest.mjs";
+import { validateAudioPayload, decodeBase64, pickAudioName } from "./lib/transcribe.mjs";
 
 // Provider seam — swap these two lines to move off Groq.
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_TRANSCRIBE_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions";
+const GROQ_TRANSCRIBE_MODEL = "whisper-large-v3-turbo";
 
 const MAX_PAYLOAD_BYTES = 32 * 1024;
 const MAX_CONTEXT_ITEMS = 25;
@@ -52,6 +55,9 @@ const chatUsage = new Map<string, { day: string; n: number }>();
 
 const DIGEST_DAILY_CAP = 10; // client caches per week, so real volume is tiny
 const digestUsage = new Map<string, { day: string; n: number }>();
+
+const TRANSCRIBE_DAILY_CAP = 60;
+const transcribeUsage = new Map<string, { day: string; n: number }>();
 
 function corsHeadersFor(req: Request): Record<string, string> {
   const headers: Record<string, string> = {
@@ -108,11 +114,14 @@ Deno.serve(async (req: Request) => {
     const memberId = profile.member_id || uid;
 
     const raw = await req.text();
-    if (raw.length > MAX_PAYLOAD_BYTES) return json(req, { error: "Payload too large." }, 413);
+    const isTranscribe = raw.includes('"transcribe"');
+    if (!isTranscribe && raw.length > MAX_PAYLOAD_BYTES) {
+      return json(req, { error: "Payload too large." }, 413);
+    }
     let payload: { action?: unknown };
     try { payload = JSON.parse(raw || "{}"); } catch { return json(req, { error: "Invalid JSON body." }, 400); }
     const action = payload.action;
-    if (action !== "briefing" && action !== "draft_task" && action !== "chat" && action !== "weekly_digest") {
+    if (action !== "briefing" && action !== "draft_task" && action !== "chat" && action !== "weekly_digest" && action !== "transcribe") {
       return json(req, { error: "Unknown action." }, 400);
     }
 
@@ -167,6 +176,47 @@ Deno.serve(async (req: Request) => {
         console.error("[ai-assistant] draft fetch threw", e);
       }
       return json(req, { ok: true, draft });
+    }
+
+    // -------- transcribe: audio → text (feeds draft_task on the client) -----
+    if (action === "transcribe") {
+      const tday = new Date().toISOString().slice(0, 10);
+      const tu = transcribeUsage.get(uid);
+      const tn = tu && tu.day === tday ? tu.n : 0;
+      if (tn >= TRANSCRIBE_DAILY_CAP) return json(req, { ok: false, error: "Daily voice limit reached. Try again tomorrow." }, 429);
+      transcribeUsage.set(uid, { day: tday, n: tn + 1 });
+
+      const v = validateAudioPayload(payload as { audio?: unknown; mime?: unknown });
+      if (!v.ok) return json(req, { ok: false, error: v.error }, 400);
+
+      let bytes: Uint8Array;
+      try { bytes = decodeBase64(v.audio); }
+      catch { return json(req, { ok: false, error: "Invalid audio." }, 400); }
+      if (!bytes.length) return json(req, { ok: false, error: "Empty audio." }, 400);
+
+      const form = new FormData();
+      form.append("file", new Blob([bytes], { type: v.mime }), pickAudioName(v.mime));
+      form.append("model", GROQ_TRANSCRIBE_MODEL);
+      form.append("response_format", "json");
+      form.append("temperature", "0");
+
+      try {
+        const res = await fetch(GROQ_TRANSCRIBE_ENDPOINT, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${groqKey}` }, // no Content-Type: fetch sets the multipart boundary
+          body: form,
+        });
+        if (!res.ok) {
+          console.error("[ai-assistant] transcribe provider rejected", { status: res.status });
+          return json(req, { ok: false, error: "Voice is unavailable right now." }, 502);
+        }
+        const data = await res.json().catch(() => ({}));
+        const text = typeof data?.text === "string" ? data.text.trim() : "";
+        return json(req, { ok: true, text });
+      } catch (e) {
+        console.error("[ai-assistant] transcribe fetch threw", e);
+        return json(req, { ok: false, error: "Voice is unavailable right now." }, 502);
+      }
     }
 
     // -------- chat: answer questions from the client's task snapshot ---------
