@@ -36,10 +36,11 @@
      sit here, and the account name/role text are all dropped —
      nav moves to the bottom bar, the name to the Profile tab.
      ======================================================== */
-  body.ui-command-center .topbar { padding: 0 var(--m-pad); gap: 10px; }
+  body.ui-command-center .topbar { padding: 0 var(--m-pad); gap: 8px; }
   body.ui-command-center .primary-nav { display: none; }        /* → bottom nav */
   body.ui-command-center .tb-views { display: none; }           /* wallboard → drawer "Views" */
   body.ui-command-center .company-switcher { display: none; }   /* → drawer "Workspaces" */
+  body.ui-command-center #chatBtn { display: none; }            /* declutter — chat is desktop-only */
 
   /* Unify every round control to one shape + size. */
   body.ui-command-center .tb-logo,
@@ -60,19 +61,18 @@
     border-radius: 999px;
   }
 
-  /* Clock: idle collapses to a round icon-only control so it matches the
-     bell/avatar; while running it expands back to a pill with the live timer
-     (you still need to see elapsed time on a time-tracking app). */
-  body.ui-command-center .clock-widget {
-    height: var(--m-ctl); min-width: var(--m-ctl); width: var(--m-ctl);
+  /* Clock: always a round icon-only control that matches the bell/avatar (idle
+     or running) — running just tints it green. Label + live timer are dropped
+     from the bar; the account menu still shows the running time. This kills the
+     odd-shaped green pill that broke the row's symmetry. */
+  body.ui-command-center .clock-widget,
+  body.ui-command-center .clock-widget.running {
+    height: var(--m-ctl); width: var(--m-ctl); min-width: var(--m-ctl);
     padding: 0; border-radius: 50%; justify-content: center; gap: 0;
     flex: 0 0 auto;
   }
-  body.ui-command-center .clock-widget:not(.running) #clockLabel { display: none; }
-  body.ui-command-center .clock-widget.running {
-    width: auto; border-radius: 999px; padding: 0 12px; gap: 6px;
-  }
-  body.ui-command-center .clock-widget.running #clockLabel { display: none; }
+  body.ui-command-center .clock-widget #clockLabel,
+  body.ui-command-center .clock-widget .clock-timer { display: none; }
 
   /* Account chip → avatar only (name + role + caret drop). */
   body.ui-command-center .userchip { gap: 0; padding: 0; background: none; border: none; }
@@ -162,6 +162,7 @@
     grid-template-columns: 1fr 1fr;
     gap: var(--m-gap);
     width: 100%;
+    overflow: hidden;   /* belt-and-braces: never let a widget push the page sideways */
   }
   body.ui-command-center .page-head-widgets > .up-next-mount,
   body.ui-command-center .page-head-widgets > .focus-widget-mount,
@@ -176,13 +177,59 @@
   body.ui-command-center .page-head-widgets > .focus-widget-mount  { order: 2; }
   body.ui-command-center .page-head-widgets > .progress-widget-mount { order: 3; }
   body.ui-command-center .page-head-widgets > .controls-widget-mount { order: 4; }
-  /* Each quadrant's card fills its cell and shares one height baseline. */
+  /* Each quadrant's card fills its cell and shares one height baseline. The
+     hard overflow guard (hidden + min-width:0) is what stops the heavy desktop
+     widgets — built for a 360px-wide strip — from spilling past a half-width
+     cell and pushing the page sideways. */
   body.ui-command-center .page-head-widgets > * > .up-next-card,
   body.ui-command-center .page-head-widgets > * > .progress-card,
   body.ui-command-center .page-head-widgets .focus-widget,
   body.ui-command-center .page-head-widgets .controls-card {
     height: 100%;
     border-radius: var(--m-radius);
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* --- Up next: stack for a narrow cell. Drop the type glyph, let the title
+     wrap to two lines, and shrink the timer button into the top-right corner
+     so it stops crushing the text. --- */
+  body.ui-command-center .page-head-widgets .up-next-card {
+    flex-direction: column; align-items: stretch; gap: 6px;
+    padding: 12px; position: relative;
+  }
+  body.ui-command-center .page-head-widgets .up-next-icon { display: none; }
+  body.ui-command-center .page-head-widgets .up-next-text { min-width: 0; }
+  body.ui-command-center .page-head-widgets .up-next-title {
+    white-space: normal;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; padding-right: 40px;
+  }
+  body.ui-command-center .page-head-widgets .up-next-meta { flex-wrap: wrap; }
+  body.ui-command-center .page-head-widgets .up-next-start {
+    position: absolute; top: 10px; right: 10px;
+    width: 34px; height: 34px; flex: 0 0 auto;
+  }
+
+  /* --- Progress: ring on top, "X of Y done" centered under it. Drop the
+     Total/Done/Pending strip (it mashes in a half cell and just repeats the
+     ring), and re-show the card text that a desktop breakpoint had hidden. --- */
+  body.ui-command-center .page-head-widgets .progress-card {
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 8px; padding: 12px;
+  }
+  body.ui-command-center .page-head-widgets .progress-metrics { display: none; }
+  body.ui-command-center .page-head-widgets .progress-card-text {
+    display: flex; min-width: 0; align-items: center;
+  }
+  body.ui-command-center .page-head-widgets .progress-card-title { white-space: normal; }
+
+  /* --- Focus: keep the title on one clipped line so it can't run past the
+     card edge. --- */
+  body.ui-command-center .page-head-widgets .focus-widget { padding: 12px; }
+  body.ui-command-center .page-head-widgets .focus-widget-row { min-width: 0; }
+  body.ui-command-center .page-head-widgets .focus-widget-title {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
   /* Controls quadrant: stack Sort / Group (+ the re-shown Filter) so three
      buttons fit a half-width cell. Filter was hidden by css/tasks.css; bring it
