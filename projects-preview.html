@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects — mobile shell preview</title>
+
+<!-- Same sheets, same ORDER as app.html: mobile.css must load LAST so it wins
+     on equal specificity. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.5.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="taskmanagement.css">
+<link rel="stylesheet" href="css/tasks.css">
+<link rel="stylesheet" href="css/mobile.css">
+</head>
+
+<!-- ⚠️ The ancestor chain is load-bearing, not decoration. bento-preview.html
+     once omitted #listPane and rendered a clean stat line the real app could
+     never show, and two rounds of "spacing fixes" were chased against a harness
+     that was lying. Mirror app.html exactly:
+       body.ui-command-center > .app > .main > #projectsWrap.qhq-page
+     #projectsWrap is a SIBLING of #listPane (app.html:218-220) — that is
+     precisely why none of the skin's `#listPane ... !important` card chrome
+     reaches this page, which is the whole premise of mobile.css §5. -->
+<body class="ui-command-center">
+  <div class="app">
+    <main class="main" id="mainPane">
+      <div class="list-pane" id="listPane" hidden></div>
+      <section id="projectsWrap" class="qhq-page" aria-label="Projects"></section>
+    </main>
+  </div>
+
+<script src="js/views/ProjectsView.js"></script>
+<script>
+/* Harness stub. Only the seams ProjectsView actually touches — if this file
+   needs a new stub, that is a real signal the view grew a new dependency. */
+window.App = Object.assign(window.App || {}, {
+  utils: {
+    escapeHtml: s => String(s ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+    todayISO: (n = 0) => { const d = new Date(2026, 6, 17); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); },
+    formatDue: iso => ({ text: iso ? iso.slice(5) : '' }),
+    isAssignee: () => true,
+  },
+  EventBus: { on() {} },
+  can: () => true,
+  taxonomy: { isDone: t => t.status === 'done' },
+  STATUSES: {
+    todo: { label: 'Pending' }, doing: { label: 'Working on it' },
+    review: { label: 'In review' }, done: { label: 'Done' },
+  },
+  directory: {
+    company: id => ({ roofing: { label: 'Roofing' }, drafting: { label: 'Drafting' }, lumen: { label: 'Lumen' } }[id]),
+    companyFallback: id => ({ label: id }),
+    person: id => ({ k: { name: 'Kyle' }, a: { name: 'Abraham' }, s: { name: 'Shan' } }[id]),
+    personFallback: () => ({ name: '—' }),
+  },
+});
+
+const D = n => { const d = new Date(2026, 6, 17); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+
+App.projects = {
+  p1: { id: 'p1', name: 'GET DRAFTING WEBSITE LIVE',        companyId: 'drafting', status: 'active',  dueDate: D(1) },
+  p2: { id: 'p2', name: 'DESKTOP VERSION IMPROVEMENTS',      companyId: 'lumen',    status: 'active',  dueDate: D(3) },
+  p3: { id: 'p3', name: 'ADD WHAT’S NEXT FIELD TO ALL THREE FUNNELS', companyId: 'lumen', status: 'active', dueDate: D(-2) },
+  p4: { id: 'p4', name: 'DIRECT PHOTO UPLOAD ON JOB CARDS',  companyId: 'roofing',  status: 'active',  dueDate: null },
+  p5: { id: 'p5', name: 'ROOF REPLACEMENT — 12TH ST',   companyId: 'roofing',  status: 'complete', dueDate: D(-9) },
+  p6: { id: 'p6', name: 'Q3 BRAND REFRESH',                  companyId: 'lumen',    status: 'complete', dueDate: D(-14) },
+};
+
+const TASKS = [
+  { id: 't1', project: 'p1', title: 'Wire the contact form', status: 'doing',  priority: 'high',   assignee: 'k', due: D(1) },
+  { id: 't2', project: 'p1', title: 'Copy pass on services', status: 'done',   priority: 'medium', assignee: 'a', due: D(0) },
+  { id: 't3', project: 'p2', title: 'Tighten the table',     status: 'review', priority: 'high',   assignee: 's', due: D(2) },
+  { id: 't4', project: 'p3', title: 'Funnel audit',          status: 'todo',   priority: 'urgent', assignee: 'k', due: D(-2) },
+  { id: 't5', project: 'p4', title: 'Camera permission',     status: 'todo',   priority: 'low',    assignee: 'a', due: null },
+  { id: 't6', project: 'p5', title: 'Final invoice',         status: 'done',   priority: 'low',    assignee: 's', due: D(-9) },
+];
+
+new App.ProjectsView({
+  controller: {
+    uiState: { currentCompany: '*' },
+    openProject() {}, promptNewFolder() {}, setProjectStatus() {},
+    openNewTaskPage() {}, deleteProject() {}, selectTask() {},
+  },
+  taskModel: { all: () => TASKS },
+}).render();
+</script>
+</body>
+</html>

@@ -13,6 +13,7 @@ App.ProjectsView = class ProjectsView {
     this.taskModel = taskModel;
     this.wrap = document.getElementById('projectsWrap');
     this.sort = 'recent';
+    this.coFilter = '*';         // mobile chip strip: '*' = All (see _chipFolders)
     this.expanded = new Set();   // folder ids with their task drawer open
     this.collapsed = new Set();  // due-group keys the user has collapsed
     this._seenDone = new Set();  // done-group keys already auto-collapsed once
@@ -61,7 +62,26 @@ App.ProjectsView = class ProjectsView {
     return arr; // 'recent' keeps created_at insertion order
   }
 
-  _visibleFolders() { return this._sortFolders(this._baseFolders()); }
+  // The mobile chip strip narrows the page to one company. It only renders on a
+  // phone, and '*' means "All", so on desktop this is always the identity
+  // filter and _visibleFolders behaves exactly as it did before the strip.
+  _chipFolders() {
+    const base = this._baseFolders();
+    return this.coFilter === '*' ? base : base.filter(p => p.companyId === this.coFilter);
+  }
+
+  _visibleFolders() { return this._sortFolders(this._chipFolders()); }
+
+  // The hero: the soonest-due open project — the Projects twin of the Tasks
+  // page's "Up next". Falls back to the first open project when nothing is
+  // dated (a card that says "here's the work" still beats no card), and to
+  // nothing at all when there are no open projects to point at.
+  _heroFolder() {
+    const open = this._chipFolders().filter(p => this._isActive(p));
+    if (!open.length) return null;
+    const dated = open.filter(p => p.dueDate).sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
+    return dated[0] || open[0];
+  }
 
   _companyColor(companyId) {
     return ({ roofing: 'var(--u-high)', drafting: 'var(--blue)', lumen: 'var(--amber)' })[companyId] || 'var(--amber)';
@@ -216,6 +236,78 @@ App.ProjectsView = class ProjectsView {
       </div>`;
   }
 
+  /* ---- Mobile shell (css/mobile.css §5). These nodes render at every width
+     and css/mobile.css reveals them only ≤720px — the same trick
+     ProgressWidgetView uses for .progress-line. That is deliberate: it keeps
+     this view free of width checks, so there is no resize handler and no
+     "am I mobile" flag to get out of sync with the CSS. ---- */
+
+  // Hero — the soonest-due open project, mirroring the Tasks page's Up next.
+  _heroHtml() {
+    const esc = App.utils.escapeHtml;
+    const p = this._heroFolder();
+    if (!p) return '';
+    const co = App.directory.company(p.companyId) || App.directory.companyFallback(p.companyId);
+    const c = this._counts(p.id);
+    const overdue = this._dueBucket(p) === 'overdue';
+    const due = p.dueDate
+      ? `<span class="pv-hero-due${overdue ? ' overdue' : ''}">${overdue ? 'Overdue' : 'Due ' + esc(this._fmtDue(p.dueDate))}</span>`
+      : '';
+    return `
+      <div class="m-hero-mount">
+        <div class="m-hero pv-hero" data-hero="${esc(p.id)}" role="button" tabindex="0" style="--pc:${esc(this._folderColor(p))}">
+          <div class="m-hero-text">
+            <div class="m-hero-eyebrow">Up next</div>
+            <div class="m-hero-title">${esc(p.name)}</div>
+            <div class="m-hero-meta">
+              <span class="pv-hero-co"><span class="pv-hero-dot"></span>${esc(co.label)}</span>
+              ${due}
+              <span class="pv-hero-open">${c.open} open</span>
+            </div>
+          </div>
+          <span class="m-hero-action pv-hero-go" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
+        </div>
+      </div>`;
+  }
+
+  // Stat line — folders complete, with the meter taking the slack. Counts the
+  // same thing the desktop ring does (lifecycle status, not tasks), so the two
+  // sizes can never disagree.
+  _statlineHtml() {
+    const list = this._chipFolders();
+    const done = list.filter(p => !this._isActive(p)).length;
+    const pct = list.length ? Math.round((done / list.length) * 100) : 0;
+    return `
+      <div class="m-statline">
+        <div class="m-stat">
+          <span class="m-stat-txt">${done} of ${list.length} complete</span>
+          <span class="m-meter" aria-hidden="true"><span style="width:${pct}%"></span></span>
+        </div>
+      </div>`;
+  }
+
+  // Chip strip — the company panels (.pv-cobox) collapsed into one scrolling
+  // row of filters, exactly as the Tasks table does it. Built from the folders
+  // actually in scope, so it never offers an empty company.
+  _chipsHtml() {
+    const esc = App.utils.escapeHtml;
+    const base = this._baseFolders();
+    const ids = [...new Set(base.map(p => p.companyId))];
+    if (ids.length < 2) return '';   // one company — a filter with one option is noise
+    const chip = (id, label, color) => `
+      <button class="m-chip${this.coFilter === id ? ' on' : ''}" data-co="${esc(id)}" type="button"
+        ${color ? `style="--cc:${esc(color)}"` : ''}>
+        ${color ? '<span class="m-chip-dot"></span>' : ''}${esc(label)}
+      </button>`;
+    return `<div class="m-chips" role="group" aria-label="Filter by company">
+      ${chip('*', 'All', '')}
+      ${ids.map(id => {
+        const co = App.directory.company(id) || App.directory.companyFallback(id);
+        return chip(id, co.label, this._companyColor(id));
+      }).join('')}
+    </div>`;
+  }
+
   render() {
     if (!this.wrap) this.wrap = document.getElementById('projectsWrap');
     if (!this.wrap) return;
@@ -232,18 +324,36 @@ App.ProjectsView = class ProjectsView {
 
     this.wrap.innerHTML = `
       <div class="pv-head">
-        <div>
+        <div class="pv-head-l">
           <div class="pv-eyebrow">Workspace</div>
           <h1 class="pv-title">Projects</h1>
         </div>
         <div class="pv-head-r">
-          <select class="pv-sort" id="proj-sort" aria-label="Sort projects">
-            <option value="recent"${this.sort === 'recent' ? ' selected' : ''}>Recently added</option>
-            <option value="name"${this.sort === 'name' ? ' selected' : ''}>Name (A–Z)</option>
-            <option value="active"${this.sort === 'active' ? ' selected' : ''}>Most active</option>
-          </select>
-          ${App.can('tasks.write') ? `<button class="pv-new" data-action="new-folder" type="button"><i class="ti ti-plus"></i> New project</button>` : ''}
+          <!-- .m-selwrap is display:contents above 720px, so on desktop this
+               select is still a direct child of .pv-head-r and lays out exactly
+               as it always has. On a phone the wrapper becomes a 38px box, the
+               glyph shows, and the select goes transparent on top of it — which
+               keeps the native picker instead of reimplementing one. -->
+          <span class="m-selwrap">
+            <i class="ti ti-arrows-sort m-glyph" aria-hidden="true"></i>
+            <select class="pv-sort" id="proj-sort" aria-label="Sort projects">
+              <option value="recent"${this.sort === 'recent' ? ' selected' : ''}>Recently added</option>
+              <option value="name"${this.sort === 'name' ? ' selected' : ''}>Name (A–Z)</option>
+              <option value="active"${this.sort === 'active' ? ' selected' : ''}>Most active</option>
+            </select>
+          </span>
+          ${App.can('tasks.write') ? `<button class="pv-new" data-action="new-folder" type="button"><i class="ti ti-plus"></i> <span class="pv-new-lbl">New project</span></button>` : ''}
         </div>
+      </div>
+
+      <!-- .pv-shell mirrors #taskViewWrap's box on a phone (12px margin + 12px
+           padding = the x=24 gutter every band on the Tasks page sits on).
+           The chip strip's edge-bleed is -12/+12 and only lands on that gutter
+           inside a box shaped like this one. -->
+      <div class="pv-shell">
+        ${this._heroHtml()}
+        ${this._statlineHtml()}
+        ${this._chipsHtml()}
       </div>
 
       <div class="pv-kpis">
@@ -276,6 +386,13 @@ App.ProjectsView = class ProjectsView {
     const nf = this.wrap.querySelector('[data-action="new-folder"]');
     if (nf) nf.addEventListener('click', () => this.controller.promptNewFolder());
 
+    // Chips change what the hero and the stat line describe, not just the list,
+    // so this re-renders the head rather than only the body.
+    this.wrap.querySelectorAll('.m-chip[data-co]').forEach(b =>
+      b.addEventListener('click', () => { this.coFilter = b.dataset.co; this.render(); }));
+    const hero = this.wrap.querySelector('.pv-hero[data-hero]');
+    if (hero) hero.addEventListener('click', () => this.controller.openProject(hero.dataset.hero));
+
     this._renderBody();
   }
 
@@ -304,6 +421,9 @@ App.ProjectsView = class ProjectsView {
   _renderBody() {
     const host = this.wrap && this.wrap.querySelector('.pv-body');
     if (!host) return;
+    // When a chip has narrowed the page to one company, that company's panel
+    // header is a duplicate of the lit chip — mobile.css hides it on this flag.
+    host.classList.toggle('pv-filtered', this.coFilter !== '*');
     const esc = App.utils.escapeHtml;
     const folders = this._visibleFolders();
     if (!folders.length) {

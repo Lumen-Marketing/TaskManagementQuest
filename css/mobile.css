@@ -19,6 +19,20 @@
    renders both; each size hides the one it doesn't use). */
 .progress-line { display: none; }
 
+/* The shared shell's nodes (§5) are rendered by every page at every width and
+   revealed only on phones, the same way .progress-line is. Rendering them
+   unconditionally is what keeps ProjectsView/HomeView free of width branches —
+   there is no resize handler and no "am I mobile" flag anywhere. */
+.m-hero-mount,
+.m-statline,
+.m-chips { display: none; }
+/* Glyphs that stand in for a word on a phone (the sort control's icon). */
+.m-glyph { display: none; }
+/* Desktop keeps the original select/button exactly as it was: `contents` makes
+   the wrapper vanish from layout entirely, so .pv-head-r still lays its own
+   children out. */
+.m-selwrap { display: contents; }
+
 @media (max-width: 720px) {
   :root {
     --m-pad: 16px;
@@ -530,5 +544,377 @@
 
   /* Page head: consistent gutter with the rest of the mobile system. */
   body.ui-command-center .page-head { padding: 14px var(--m-gap) 8px; }
+
+  /* ========================================================
+     5. THE SHARED SHELL  (.m-*)
+     Sections 1–4b above built this shape for the Tasks page against the Tasks
+     page's own markup, and every selector there is welded to it
+     (`.page-head-widgets`, `.progress-card`, `.qt-chiprow`). Projects and Home
+     have to wear the same shape, so the shape gets defined once here, in
+     markup-neutral classes, and those two pages emit it directly.
+
+     Tasks is NOT rebuilt on top of this: §4a stays exactly as shipped and
+     click-QA'd, and is now best read as the *adapter* that maps this shape onto
+     the old skin's card chrome. It needs `#listPane` + `!important` to win that
+     fight (taskmanagement.css:6870/:7757 hang card chrome off
+     `#listPane .progress-card` with !important, so only an ID beats it).
+
+     Projects and Home need none of that: #projectsWrap and #homeWrap are
+     SIBLINGS of #listPane (app.html:218-220), so none of that !important chrome
+     reaches them. Plain classes are enough. Copying §4a's ID armour over here
+     would be cargo-culting a fight that isn't happening.
+
+     The row:  [ hero card, full width          ]
+               [ text + meter ] ....... [glyph][glyph]
+               [ chip ][ chip ][ chip ] →scroll
+     ======================================================== */
+
+  /* --- 5a. Hero — the one real card on the page. Mirrors §4a's .up-next-card
+     geometry so the three pages open with the same object. --- */
+  .m-hero-mount { display: block; }
+  .m-hero {
+    display: flex; flex-direction: row; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--m-radius);
+    overflow: hidden; min-width: 0;
+    text-align: left; width: 100%;
+  }
+  .m-hero-text { min-width: 0; flex: 1 1 auto; }
+  .m-hero-eyebrow {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-3, #8b93a1);
+    margin-bottom: 3px;
+  }
+  .m-hero-title {
+    font-family: 'Hanken Grotesk', var(--font-body); font-weight: 800;
+    font-size: 15px; line-height: 1.25; color: var(--ink, #e7ebf3);
+    /* 2 lines then ellipsis — a long project name must not grow the hero into
+       the tall card this whole pass exists to delete. */
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; white-space: normal;
+  }
+  .m-hero-meta {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    margin-top: 5px; font-size: 11px;
+  }
+  .m-hero-action { width: 38px; height: 38px; flex: 0 0 auto; }
+
+  /* --- 5b. Stat line — chrome-less, 36px, meter takes the slack.
+     [ 8 of 11 done ▬▬▬▬▬▭▭ ] ......... [▣][▣]
+     The left cell is the 1fr: it runs from the gutter to the glyph cluster, so
+     the row has no dead space and its edges line up with the hero above. --- */
+  .m-statline {
+    display: grid; grid-template-columns: 1fr auto;
+    align-items: center; column-gap: 6px;
+    width: 100%; margin-top: 14px;
+    overflow: hidden;   /* never let the meter push the page sideways */
+  }
+  /* The stat wears the .btn box, but it is not tappable — resting chrome only,
+     no hover, no :active. */
+  .m-stat {
+    display: flex; flex-direction: row; align-items: center; gap: 7px;
+    box-sizing: border-box; height: 36px; padding: 0 12px; min-width: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--m-radius-ctl);
+  }
+  .m-stat-txt {
+    white-space: nowrap; flex: 0 0 auto;
+    font-size: 14px; font-weight: 600; line-height: 36px;
+    color: var(--ink, #e7ebf3);
+  }
+  /* 4px of colour reads at a glance where a ring can't, and costs no height —
+     the box stays 36px. The empty track still says "0%", which a bare fill
+     wouldn't. */
+  .m-meter {
+    display: block; flex: 1 1 auto; min-width: 0;
+    height: 4px; border-radius: 999px;
+    background: rgba(255, 255, 255, .10);
+    overflow: hidden;
+  }
+  .m-meter > span {
+    display: block; height: 100%; border-radius: inherit;
+    background: var(--accent, #ED4E0D);
+    transition: width var(--dur-med, .24s) var(--ease-out, ease);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .m-meter > span { transition: none; }
+  }
+  /* Right cluster: icon-only controls, identical boxes. */
+  .m-ctls { display: flex; flex-direction: row; gap: 4px; flex-wrap: nowrap; }
+  .m-ctl {
+    flex: 0 0 auto;
+    width: 36px; height: 36px; min-width: 36px; min-height: 36px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--m-radius-ctl);
+    color: var(--ink-2, #aeb6c2); cursor: pointer;
+    font-size: 0;   /* label out, glyph stays — keeps the a11y text in the DOM */
+  }
+  .m-ctl i { font-size: 16px; }
+  .m-ctl:hover { background: var(--bg-3); border-color: var(--border-strong); }
+  .m-ctl:active { transform: scale(.97); }
+  .m-ctl.on { color: var(--accent, #ED4E0D); border-color: var(--accent, #ED4E0D); }
+
+  /* --- 5c. Chip strip — one scrolling row, never wraps.
+     Lifted from §3 including scroll-padding: without it, snapping aligns the
+     first chip to the scrollport edge and scrolls the gutter away the moment
+     the chips overflow — the strip then sits 12px left of everything else, at
+     320/360 but not 390. --- */
+  .m-chips {
+    display: flex; flex-wrap: nowrap; align-items: center; gap: 8px;
+    margin-top: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    /* Bleed to the screen edge so the strip scrolls edge-to-edge, but keep the
+       first chip on the page gutter via the padding. */
+    margin-left: calc(-1 * var(--m-gap));
+    margin-right: calc(-1 * var(--m-gap));
+    padding-left: var(--m-gap);
+    padding-right: var(--m-gap);
+    scroll-padding-left: var(--m-gap);
+    scroll-padding-right: var(--m-gap);
+    /* fade the right edge so it reads as scrollable */
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+            mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+  .m-chips::-webkit-scrollbar { display: none; }
+  .m-chip {
+    flex: 0 0 auto; scroll-snap-align: start;
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 13px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink-2, #aeb6c2);
+    white-space: nowrap; cursor: pointer;
+  }
+  .m-chip .m-chip-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: var(--cc, var(--accent, #ED4E0D));
+  }
+  .m-chip.on {
+    background: var(--ink, #e7ebf3); border-color: var(--ink, #e7ebf3);
+    color: var(--bg-1, #14171c);
+  }
+  .m-chip:active { transform: scale(.97); }
+
+  /* --- 5d. Head card — one row, every label a glyph. Same treatment as §4. --- */
+  .m-glyph { display: inline-flex; }
+
+  /* ========================================================
+     6. PROJECTS  (#projectsWrap)
+     Was: a two-row head, then FIVE full-width KPI cards (.pv-kpis is
+     `flex: 1 1 168px`, so on a phone every card takes the whole row and they
+     stack) — ~380px of statistics before the first project. That is the same
+     mistake the Tasks bento made, and it gets the same answer: one hero, one
+     stat line.
+     ======================================================== */
+
+  /* --- 6a. Gutter. Projects sits on 28px (.pv-head/.pv-cobox margins) because
+     it is not in the @media 900px list at taskmanagement.css:5572 that puts
+     .page-head + #taskViewWrap on 12+12=24. Put it on 24 with the rest. --- */
+  body.ui-command-center .pv-head { margin: 14px 24px 12px; }
+  /* The shell is the #taskViewWrap-shaped box the chip strip needs (see the
+     comment in ProjectsView._heroHtml's caller). */
+  #projectsWrap .pv-shell { margin: 0 12px; padding: 0 12px; }
+  #projectsWrap .pv-cobox { margin: 12px 24px 10px; border-radius: 12px; }
+
+  /* --- 6b. Head card → one row: [Projects] ....... [⇅] [＋] --- */
+  body.ui-command-center .pv-head { flex-wrap: nowrap; gap: 8px; padding: 8px 10px 8px 14px; min-width: 0; }
+  #projectsWrap .pv-head-l { flex: 0 1 auto; min-width: 0; }
+  body.ui-command-center .pv-head .pv-title {
+    font-size: 17px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #projectsWrap .pv-head-r { gap: 6px; margin-left: auto; flex: 0 0 auto; }
+  /* Sort: the native <select> laid over a glyph. Styling a select's own text
+     away is unreliable across engines (the closed-state label is UA-drawn), so
+     the glyph is a real element and the select is a transparent hit target on
+     top of it — which keeps the native picker sheet. */
+  #projectsWrap .m-selwrap {
+    display: inline-flex; position: relative;
+    width: var(--m-ctl); height: var(--m-ctl); flex: 0 0 auto;
+    align-items: center; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--m-radius-ctl);
+    color: var(--ink-2, #aeb6c2);
+  }
+  #projectsWrap .m-selwrap .m-glyph { font-size: 17px; }
+  #projectsWrap .m-selwrap .pv-sort {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; padding: 0; margin: 0;
+    opacity: 0; border: 0; background: none;
+    -webkit-appearance: none; appearance: none;
+    cursor: pointer;
+  }
+  /* New project keeps its accent fill — it is the page's primary action and,
+     unlike Tasks' #newTaskBtn, the bottom nav's ⊕ does NOT duplicate it (that
+     ⊕ is New *Task*). Label out, glyph in. */
+  #projectsWrap .pv-new {
+    width: var(--m-ctl); height: var(--m-ctl); padding: 0; flex: 0 0 auto;
+    justify-content: center; gap: 0;
+    border-radius: var(--m-radius-ctl);
+  }
+  #projectsWrap .pv-new .pv-new-lbl { display: none; }
+  #projectsWrap .pv-new i { font-size: 18px; }
+
+  /* --- 6c. The five KPI cards go; the stat line replaces them. --- */
+  #projectsWrap .pv-kpis { display: none; }
+
+  /* --- 6d. Hero trim --- */
+  #projectsWrap .pv-hero { cursor: pointer; }
+  #projectsWrap .pv-hero-co { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-3, #8b93a1); font-weight: 600; }
+  #projectsWrap .pv-hero-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pc, var(--accent)); flex: none; }
+  #projectsWrap .pv-hero-due {
+    font-weight: 700; color: var(--ink-2, #aeb6c2);
+    background: var(--bg-3); border-radius: 999px; padding: 2px 8px;
+  }
+  #projectsWrap .pv-hero-due.overdue { color: #fff; background: var(--rust, #C0442A); }
+  #projectsWrap .pv-hero-open { color: var(--ink-3, #8b93a1); font-weight: 600; }
+  #projectsWrap .pv-hero-go {
+    display: grid; place-items: center; border-radius: 50%;
+    background: var(--accent, #ED4E0D); color: #fff; font-size: 17px;
+  }
+
+  /* --- 6e. Company panels. The chip strip carries the company now, so the
+     panel header is a duplicate label on a phone — but only once a single
+     company is chosen. With "All" it is the only thing separating the panels,
+     so it stays; ProjectsView marks .pv-body when a chip narrows the page. --- */
+  #projectsWrap .pv-body.pv-filtered .pv-cohead { display: none; }
+  #projectsWrap .pv-cohead { padding: 10px 14px; }
+  #projectsWrap .pv-duehdr { padding: 9px 14px; }
+
+  /* --- 6f. Folder rows → two-line cards, matching §4b's task cards.
+     Line 1: [chev][✓] name.
+     Line 2: progress ......... due.
+     Actions (add task / delete) drop: they are hover affordances with no hover
+     on a phone, and both live inside the project once it is open. --- */
+  #projectsWrap .pv-row {
+    display: flex; flex-wrap: wrap; align-items: center;
+    column-gap: 8px; row-gap: 5px;
+    padding: 9px 12px;
+  }
+  #projectsWrap .pv-chev { order: 1; flex: 0 0 auto; }
+  #projectsWrap .pv-check { order: 2; flex: 0 0 auto; }
+  #projectsWrap .pv-id { order: 3; flex: 1 1 0; min-width: 0; }
+  #projectsWrap .pv-name { white-space: normal; font-size: 13.5px; line-height: 1.25; }
+  /* The line break. A ::after on a flex container is itself a flex item, so a
+     zero-height 100%-wide one ends line 1 — without it the progress bar flows
+     up beside the name and re-wraps it, which is the thing being fixed. */
+  #projectsWrap .pv-row::after { content: ''; order: 4; flex: 0 0 100%; height: 0; }
+  /* Line 2 is indented to clear the chevron + tick, so the meters line up down
+     the list instead of starting under the name on some rows and the tick on
+     others. 22 (chev) + 20 (check) + 2 gaps = 58. */
+  #projectsWrap .pv-prog {
+    order: 5; flex: 1 1 auto; min-width: 0; margin-left: 58px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #projectsWrap .pv-row:not(:has(.pv-check)) .pv-prog { margin-left: 30px; }
+  #projectsWrap .pv-progtxt { font-size: 10.5px; white-space: nowrap; }
+  /* taskmanagement.css:647 hides the due column on narrow widths — that was the
+     right call when it was competing for line 1, but line 2 is its own line now
+     and the Tasks cards end on a due date. Bring it back (the ID out-ranks that
+     class-only rule) and pin it right, so its edge is identical on every row
+     whatever the word. */
+  #projectsWrap .pv-duecol {
+    display: block; order: 6; flex: 0 0 auto; margin-left: auto;
+    font-size: 10.5px; text-align: right;
+  }
+  #projectsWrap .pv-actions { display: none; }
+
+  /* --- 6g. Expanded drawer: the task rows inside a folder get the same
+     compact treatment; assignee drops (the avatars aren't rendered here, just
+     a name, and it is the least useful thing on a 320px line). --- */
+  #projectsWrap .pv-trow { padding: 7px 12px 7px 58px; gap: 7px; }
+  #projectsWrap .pv-ttitle { font-size: 12.5px; }
+  #projectsWrap .pv-tassignee { display: none; }
+  #projectsWrap .pv-tstatus, #projectsWrap .pv-tdue { font-size: 10.5px; }
+
+  /* ========================================================
+     7. HOME  (#homeWrap)
+     Was: a greeting, the briefing, a 4-up trend row that goes 1-up on a phone
+     (taskmanagement.css:5652), then six dashboard cards stacked — a very long
+     scroll where nothing is ever the point. Now: greeting card, briefing as the
+     hero, one stat line, and a chip strip that shows one section at a time.
+     ======================================================== */
+
+  /* --- 7a. Gutter. .qhq-home sits on 18px; everything else on this phone sits
+     on 24. Its children ARE the bands (head, brief, statline, chips, cards), so
+     the page's own padding is the gutter — no per-card margins needed. The chip
+     strip then bleeds -12/+12 off that 24 and lands its first chip back on it,
+     exactly as the Tasks strip does inside #taskViewWrap. --- */
+  .qhq-home { padding: 14px 24px 28px; }
+
+  /* --- 7b. Head card → one row: [Good evening, Shan] ....... [▦] --- */
+  body.ui-command-center .qhq-head { flex-wrap: nowrap; gap: 8px; padding: 8px 10px 8px 14px; min-width: 0; }
+  body.ui-command-center .qhq-head > div:first-child { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; }
+  body.ui-command-center .qhq-head .qhq-greet {
+    font-size: 17px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* The date is the one thing on this card the phone's own status bar already
+     answers, and it is what forces the greeting to wrap. */
+  body.ui-command-center .qhq-head .qhq-dateline { display: none; }
+  /* `width: auto` is the load-bearing one: taskmanagement.css:6139 gives this
+     row `width: 100%` so it sits on its own line, which on a nowrap card makes
+     it eat the whole row and squeeze the greeting to ZERO width — the card
+     rendered empty. Same trap, same fix as §4's .head-card-actions. */
+  .qhq-home .qhq-actions {
+    width: auto; gap: 6px; margin-left: auto; flex: 0 0 auto; flex-wrap: nowrap;
+  }
+  .qhq-home .qhq-act {
+    width: var(--m-ctl); height: var(--m-ctl); min-width: 0; padding: 0;
+    justify-content: center; gap: 0;
+    border-radius: var(--m-radius-ctl);
+  }
+  /* The label goes, the glyph stays. The text stays in the DOM, so the button
+     keeps its accessible name. */
+  .qhq-home .qhq-act .qhq-act-lbl { display: none; }
+  .qhq-home .qhq-act i { margin: 0; font-size: 17px; }
+  /* "New task" and "All tasks" are both already one tap away on the bottom nav
+     (the raised orange ⊕ and the Tasks tab) — the same reason §4 drops
+     #newTaskBtn from the Tasks head card. Calendar has no tab, so it stays. */
+  .qhq-home .qhq-act[data-act="new"],
+  .qhq-home .qhq-act[data-act="all"] { display: none; }
+
+  /* --- 7c. Briefing = the hero. It is already a card; it just has to stop
+     looking like one card among six and sit tight under the head. --- */
+  .qhq-home .qhq-brief { margin: 12px 0 0; border-radius: var(--m-radius); padding: 14px; }
+
+  /* --- 7d. Sections: one at a time, driven by the chip strip.
+     `.m-sec` is display:none until HomeView._applySection lights one. The
+     cards live inside .qhq-cc-shell / -main / -rail, which taskmanagement.css
+     already collapses to a single column at this width (:5737) — so hiding the
+     inactive ones is all that is left to do. --- */
+  #homeWrap .m-sec { display: none; }
+  #homeWrap .m-sec.on { display: block; }
+  #homeWrap .qhq-cc-shell { margin-top: 0; gap: 0; }
+  #homeWrap .qhq-cc-main,
+  #homeWrap .qhq-cc-rail { gap: 0; }
+  /* PRE-EXISTING BUG, not one this pass introduced: taskmanagement.css:5737
+     stacks these with `1fr`, which is minmax(AUTO, 1fr) — the track refuses to
+     shrink below the content's min-content width. .qhq-cc-main measured 342px
+     wide with a 378px track, so every Home card has been hanging 36px off the
+     right of a 390px phone. minmax(0, 1fr) lets the track shrink; the cards'
+     own min-width:0 below lets their contents follow.
+     (Same failure as the .app grid clipping fixed previously — `1fr` is never
+     the right column on a phone.) */
+  #homeWrap .qhq-cc-shell,
+  #homeWrap .qhq-cc-main { grid-template-columns: minmax(0, 1fr); }
+  #homeWrap .qhq-cc-main > *,
+  #homeWrap .qhq-cc-rail > * { min-width: 0; }
+  /* Only one section is ever visible, so every wrapper that still has a card in
+     it would otherwise contribute its own gap and stack empty space. */
+  #homeWrap .m-sec.on { margin-top: 12px; }
+  /* The section head repeats what the lit chip just said. */
+  #homeWrap .qhq-perf .qhq-sec-h { display: none; }
+  #homeWrap .qhq-perf { margin-top: 0; }
+  /* --tile-h is measured off the calendar for the desktop 2-col band; on a
+     phone the cards are full width and it just pins Up next to a random
+     height. HomeView sets it inline, so this has to out-rank a style attr. */
+  #homeWrap .qhq-cc-main { grid-template-rows: none !important; }
+  #homeWrap .qhq-cal { max-width: none; }
 }
 

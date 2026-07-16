@@ -28,6 +28,9 @@ App.HomeView = class HomeView {
     this.controller = controller;
     this.wrap = document.getElementById('homeWrap');
     this.period = 'week';           // trend-card window: 'week' | 'month'
+    // Mobile only: which .m-sec card the chip strip is showing. Desktop shows
+    // every section at once and never reads this (see css/mobile.css §7).
+    this.section = 'upnext';
     App.homeView = this;            // handy for tests + debugging
     this.subscribe();
     if (this.visible()) this.render();
@@ -293,7 +296,7 @@ App.HomeView = class HomeView {
         <div class="qhq-pbar-track"><i style="width:${Math.round(pct(n))}%;background:${color}"></i></div>
       </div>`;
     const donutHtml = `
-      <div class="qhq-card qhq-donut-card">
+      <div class="qhq-card qhq-donut-card m-sec" data-sec="stats">
         ${cardHead('donut', 'tone-blue', 'Projects overview', 'your tasks')}
         <div class="qhq-donut-wrap">
           <div class="qhq-donut" style="${donutStyle}"><div class="qhq-donut-hole">
@@ -349,7 +352,7 @@ App.HomeView = class HomeView {
 
     const cal = this._miniCalendar();
     const calHtml = `
-      <div class="qhq-cal">
+      <div class="qhq-cal m-sec" data-sec="calendar">
         <div class="qhq-cal-head">${esc(cal.label)}</div>
         <div class="qhq-cal-grid qhq-cal-dow">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<span>${d}</span>`).join('')}</div>
         ${cal.weeks.map(w => `<div class="qhq-cal-grid">${w.map(c => c
@@ -393,7 +396,7 @@ App.HomeView = class HomeView {
       </div>`;
     }).join('');
     const cmHtml = `
-      <div class="qhq-card qhq-cm-card">
+      <div class="qhq-card qhq-cm-card m-sec" data-sec="comments">
         ${cardHead('chat', 'tone-amber', 'Comments & mentions', 'on your tasks')}
         <div class="qhq-cmlist">${cmRows || '<div class="qhq-empty">No comments on your tasks yet.</div>'}</div>
       </div>`;
@@ -426,27 +429,35 @@ App.HomeView = class HomeView {
             <div class="qhq-greet">${this._greeting()}, <span class="em">${esc(this._firstName())}</span></div>
             <div class="qhq-dateline">${icon('date')} ${esc(this._longDate(today))}</div>
           </div>
+          <!-- Each label is wrapped so a phone can drop the words and keep the
+               glyph (css/mobile.css §7b). Calendar had no icon — without one it
+               collapses to an empty box there, since there is nothing left to
+               draw once the label goes. The .m-glyph icons are display:none
+               above 720px, so the desktop buttons are unchanged. -->
           <div class="qhq-actions">
-            <button type="button" class="qhq-act primary" data-act="new"><i class="ti ti-plus"></i> New task</button>
-            <button type="button" class="qhq-act" data-act="all">All tasks</button>
-            <button type="button" class="qhq-act" data-act="calendar">Calendar</button>
+            <button type="button" class="qhq-act primary" data-act="new"><i class="ti ti-plus"></i> <span class="qhq-act-lbl">New task</span></button>
+            <button type="button" class="qhq-act" data-act="all"><i class="ti ti-list-check m-glyph"></i><span class="qhq-act-lbl">All tasks</span></button>
+            <button type="button" class="qhq-act" data-act="calendar"><i class="ti ti-calendar m-glyph"></i><span class="qhq-act-lbl">Calendar</span></button>
           </div>
         </div>
 
         ${this._briefingCardHtml()}
 
-        <div class="qhq-perf">
+        ${this._statlineHtml()}
+        ${this._chipsHtml(teamLoad.length > 0)}
+
+        <div class="qhq-perf m-sec" data-sec="stats">
           ${sectionHead('Your performance', this.period === 'month' ? 'this month' : 'this week', periodCtl)}
           <div class="qhq-kpirow">${metrics.map(trendCardHtml).join('')}</div>
         </div>
 
         <div class="qhq-cc-shell">
           <div class="qhq-cc-main">
-            <div class="qhq-card qhq-col-up">
+            <div class="qhq-card qhq-col-up m-sec" data-sec="upnext">
               ${cardHead('layers', 'tone-amber', 'Up next', 'your queue')}
               <div class="qhq-unlist">${unHtml}</div>
             </div>
-            <div class="qhq-card qhq-col-risk">
+            <div class="qhq-card qhq-col-risk m-sec" data-sec="risk">
               ${cardHead('warning', 'tone-rust', 'At risk', 'needs attention')}
               <div class="qhq-arlist">${riskRows}</div>
             </div>
@@ -456,11 +467,11 @@ App.HomeView = class HomeView {
           <div class="qhq-cc-rail">
             ${calHtml}
             ${teamLoad.length ? `
-              <div class="qhq-card qhq-tw-card qhq-tw-rail">
+              <div class="qhq-card qhq-tw-card qhq-tw-rail m-sec" data-sec="team">
                 ${cardHead('people', 'tone-blue', 'Team workload', 'open per person')}
                 <div class="qhq-twlist">${twHtml}</div>
               </div>` : `
-              <div class="qhq-card qhq-recents">
+              <div class="qhq-card qhq-recents m-sec" data-sec="recents">
                 ${cardHead('activity', 'tone-slate', 'Recents', 'your activity')}
                 <div class="qhq-reclist">${recHtml}</div>
               </div>`}
@@ -468,7 +479,7 @@ App.HomeView = class HomeView {
         </div>
 
         ${teamLoad.length ? `
-          <div class="qhq-card qhq-recents qhq-recents-full">
+          <div class="qhq-card qhq-recents qhq-recents-full m-sec" data-sec="recents">
             ${cardHead('activity', 'tone-slate', 'Recents', 'team activity')}
             <div class="qhq-reclist">${recHtml}</div>
           </div>` : ''}
@@ -544,6 +555,12 @@ App.HomeView = class HomeView {
     const mainEl = this.wrap.querySelector('.qhq-cc-main');
     if (calEl && mainEl) mainEl.style.setProperty('--tile-h', calEl.offsetHeight + 'px');
 
+    // Mobile section chips. render() rebuilds the strip, so the active chip has
+    // to be re-applied on every paint, not only on click.
+    this.wrap.querySelectorAll('[data-sec-chip]').forEach(b =>
+      b.addEventListener('click', () => { this.section = b.dataset.secChip; this._applySection(); }));
+    this._applySection();
+
     // Lazy-load the Comments & mentions feed once per Home visit — the guard
     // stops a fetch→render→fetch loop; subscribe() re-arms it on leaving Home.
     if (!this._cmFetched) {
@@ -580,6 +597,63 @@ App.HomeView = class HomeView {
   // daily briefing (unchanged); "week" is the weekly digest. Each renders its
   // own state (skeleton / narrative+bullets / muted-degrade) so Home never
   // shows a broken card.
+  /* ---- Mobile shell (css/mobile.css §5 + §7). Rendered at every width and
+     revealed only ≤720px, the same way ProgressWidgetView handles
+     .progress-line — so this view needs no width check and no resize handler
+     that could drift out of sync with the CSS. ---- */
+
+  // Stat line — the same numbers the "Projects overview" donut draws, so the
+  // two can never disagree; the donut is one chip away.
+  _statlineHtml() {
+    const mix = this._statusMix();
+    const pct = mix.total ? Math.round((mix.done / mix.total) * 100) : 0;
+    return `
+      <div class="m-statline">
+        <div class="m-stat">
+          <span class="m-stat-txt">${mix.done} of ${mix.total} done</span>
+          <span class="m-meter" aria-hidden="true"><span style="width:${pct}%"></span></span>
+        </div>
+      </div>`;
+  }
+
+  // Chip strip — Home's six dashboard cards are a very long phone scroll, so
+  // the chips show one at a time, exactly as the Tasks strip filters the table.
+  // Sections are listed in the order the cards appear in the DOM.
+  _chipsHtml(hasTeam) {
+    const esc = App.utils.escapeHtml;
+    const secs = [
+      { k: 'upnext',   label: 'Up next' },
+      { k: 'risk',     label: 'At risk' },
+      { k: 'stats',    label: 'Stats' },
+      { k: 'comments', label: 'Comments' },
+      ...(hasTeam ? [{ k: 'team', label: 'Team' }] : []),
+      { k: 'calendar', label: 'Calendar' },
+      { k: 'recents',  label: 'Recents' },
+    ];
+    // A roster only exists for managers, so 'team' can vanish under a viewer
+    // whose chip was already on it — fall back rather than render a page with
+    // every section hidden.
+    if (!secs.some(s => s.k === this.section)) this.section = 'upnext';
+    return `<div class="m-chips" role="tablist" aria-label="Dashboard section">
+      ${secs.map(s => `<button class="m-chip${this.section === s.k ? ' on' : ''}" role="tab"
+        aria-selected="${this.section === s.k}" data-sec-chip="${esc(s.k)}" type="button">${esc(s.label)}</button>`).join('')}
+    </div>`;
+  }
+
+  // Reflect the active chip onto the cards. Toggling classes beats re-rendering:
+  // Home's render() refetches nothing but does rebuild every card, and a chip
+  // tap must not restart the entrance animation or drop the calendar's state.
+  _applySection() {
+    if (!this.wrap) return;
+    this.wrap.querySelectorAll('.m-sec').forEach(el =>
+      el.classList.toggle('on', el.dataset.sec === this.section));
+    this.wrap.querySelectorAll('[data-sec-chip]').forEach(b => {
+      const on = b.dataset.secChip === this.section;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+  }
+
   _briefingCardHtml() {
     const esc = App.utils.escapeHtml;
     const mode = (this._briefMode = this._briefMode || 'today');

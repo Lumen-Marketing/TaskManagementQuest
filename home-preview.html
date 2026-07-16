@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home — mobile shell preview</title>
+
+<!-- Same sheets, same ORDER as app.html: mobile.css loads LAST so it wins on
+     equal specificity. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.5.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="taskmanagement.css">
+<link rel="stylesheet" href="css/mobile.css">
+</head>
+
+<!-- ⚠️ Mirror app.html's ancestors exactly — a harness that doesn't is a
+     harness that lies (bento-preview.html once omitted #listPane and rendered a
+     stat line the real app could never produce).
+       body.ui-command-center > .app > .main > #homeWrap.qhq-page
+     #homeWrap is a SIBLING of #listPane (app.html:218), which is why none of
+     the skin's `#listPane … !important` chrome reaches it. -->
+<body class="ui-command-center">
+  <div class="app">
+    <main class="main" id="mainPane">
+      <div class="list-pane" id="listPane" hidden></div>
+      <section id="homeWrap" class="qhq-page" aria-label="Home"></section>
+    </main>
+  </div>
+
+<script src="js/views/HomeView.js"></script>
+<script>
+const D = n => { const d = new Date(2026, 6, 17); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+
+window.App = Object.assign(window.App || {}, {
+  utils: {
+    escapeHtml: s => String(s ?? '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+    todayISO: (n = 0) => D(n),
+    toISODate: d => {
+      const x = (d instanceof Date) ? d : new Date(d);
+      return isNaN(x) ? '' : `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+    },
+    formatDue: iso => ({ text: iso ? iso.slice(5) : '' }),
+    timeAgo: () => '2h ago',
+    isAssignee: (t, id) => t.assignee === id,
+  },
+  EventBus: { on() {}, emit() {} },
+  can: () => true,
+  currentProfile: { id: 's', name: 'Shan' },
+  taxonomy: { isDone: t => t.status === 'done' },
+  directory: {
+    company: id => ({ roofing: { label: 'Roofing' }, lumen: { label: 'Lumen' } }[id]),
+    companyFallback: id => ({ label: id }),
+    person: id => ({ k: { name: 'Kyle' }, a: { name: 'Abraham' }, s: { name: 'Shan' } }[id]),
+    personFallback: () => ({ name: '—' }),
+  },
+});
+
+const T = (id, title, status, priority, due, assignee = 's') =>
+  ({ id, title, status, priority, due, assignee, creator: 's', project: 'p1', company: 'lumen',
+     updatedAt: D(0), createdAt: D(-3) });
+
+const TASKS = [
+  T('t1', 'GET DRAFTING WEBSITE LIVE',            'doing',  'high',   D(1)),
+  T('t2', 'DESKTOP VERSION IMPROVEMENTS',         'doing',  'high',   D(1)),
+  T('t3', 'ADD WHAT’S NEXT FIELD TO ALL FUNNELS', 'review', 'high',   D(-1)),
+  T('t4', 'DIRECT PHOTO UPLOAD ON JOB CARDS',     'todo',   'urgent', D(-2)),
+  T('t5', 'FIX THE MOBILE NAV',                   'todo',   'medium', D(3)),
+  T('t6', 'SHIP THE ROLLUP',                      'done',   'low',    D(-4)),
+  T('t7', 'CLEAN THE BACKLOG',                    'done',   'medium', D(-6)),
+  T('t8', 'INVOICE RUN',                          'done',   'low',    D(-8)),
+];
+
+new App.HomeView({
+  controller: {
+    currentUser: 's',
+    dataStore: null,
+    visibleTasks: () => TASKS,
+    getUserName: id => ({ k: 'Kyle', a: 'Abraham', s: 'Shan' }[id] || '—'),
+    loadRecentComments: () => Promise.resolve([
+      { id: 'c1', taskId: 't1', authorId: 'k', body: 'Staging is up — take a look when you can.', createdAt: D(0), mentions: ['s'] },
+      { id: 'c2', taskId: 't3', authorId: 'a', body: 'Funnel two is missing the field entirely.', createdAt: D(0), mentions: [] },
+    ]),
+    selectTask() {}, setView() {}, setLayout() {}, clearFilters() {},
+    toggleFilterValue() {}, openCalendarOn() {}, openNewTaskPage() {},
+  },
+}).render();
+</script>
+</body>
+</html>
