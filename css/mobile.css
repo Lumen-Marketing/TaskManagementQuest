@@ -231,9 +231,12 @@
      ======================================================== */
   body.ui-command-center .page-head-widgets {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    /* Row 2 groups hard right: an empty 1fr eats the slack so the stat and all
+       four icon buttons read as one cluster instead of two things drifting
+       apart across an empty line. */
+    grid-template-columns: 1fr auto auto auto;
     align-items: center;
-    row-gap: 14px; column-gap: 12px;
+    row-gap: 14px; column-gap: 6px;
     width: 100%;
     overflow: hidden;   /* belt-and-braces: never let a widget push the page sideways */
   }
@@ -248,14 +251,15 @@
   body.ui-command-center .page-head-widgets > .up-next-mount {
     grid-area: 1 / 1 / 2 / -1; order: 0;
   }
+  /* Column 1 stays empty — the cluster starts at column 2. */
   body.ui-command-center .page-head-widgets > .progress-widget-mount {
-    grid-area: 2 / 1 / 3 / 2; order: 0;
+    grid-area: 2 / 2 / 3 / 3; order: 0;
   }
   body.ui-command-center .page-head-widgets > .focus-widget-mount {
-    grid-area: 2 / 2 / 3 / 3; order: 0; min-width: 0;
+    grid-area: 2 / 3 / 3 / 4; order: 0; min-width: 0;
   }
   body.ui-command-center .page-head-widgets > .controls-widget-mount {
-    grid-area: 2 / 3 / 3 / 4; order: 0;
+    grid-area: 2 / 4 / 3 / 5; order: 0;
   }
 
   /* --- Up next: the one real card. Full width, so the title gets a line to
@@ -278,8 +282,10 @@
     width: 38px; height: 38px; flex: 0 0 auto;
   }
 
-  /* --- Stat line: Progress and Focus lose their card chrome entirely —
-     no background, no border, no padding — and read as plain text. --- */
+  /* --- Stat line: one right-hand cluster — [0 of 0 done] [☰₁] [▽] [↕] [⊟].
+     The 76px card chrome goes; what comes back is the .btn box the Filter /
+     Sort / Group buttons already wear, so the stat and all four glyphs read as
+     one row of controls instead of a card, a bare glyph, and three buttons. --- */
   /* `#listPane` is load-bearing here, not padding: the skin hangs its card
      chrome off `[data-theme="dark"] #listPane .progress-card` (:7757) and the
      light twin (:6870), both `!important`. Two !importants → specificity
@@ -299,8 +305,22 @@
        is a real button and 16px of text is not a target. */
     height: auto; min-height: 36px;
   }
-  body.ui-command-center .page-head-widgets .progress-card {
+  /* The stat wears the .btn box (declared after the strip above, same
+     specificity — later wins). It is not tappable, so it carries the resting
+     chrome only: no hover, no :active scale. */
+  body.ui-command-center #listPane .page-head-widgets .progress-card,
+  body.ui-command-center #listPane .page-head-widgets .focus-widget-head {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--m-radius-ctl);
+  }
+  /* #listPane again: the strip block above already set `height: auto` at that
+     specificity, so a class-only rule here loses and the stat stands 38px
+     (min-height 36 + its two 1px borders) against the buttons' 36. */
+  body.ui-command-center #listPane .page-head-widgets .progress-card {
     flex-direction: row; align-items: center; gap: 7px; text-align: left;
+    padding: 0 10px;
+    box-sizing: border-box; height: 36px;
   }
   /* Ring goes too: at stat-line size it's a 26px circle around an unlabelled
      "0" — decoration that reads as a puzzle. "0 of 0 done" already says it. */
@@ -337,18 +357,23 @@
   body.ui-command-center .page-head-widgets .focus-widget-open {
     font-size: 0; flex: 0 0 auto;
   }
+  /* Same 36px box as Filter / Sort / Group, sitting immediately left of them. */
   body.ui-command-center .page-head-widgets .focus-widget-head {
-    width: 36px; justify-content: center; gap: 0;
-    border-radius: var(--m-radius-ctl);
+    width: 36px; height: 36px; justify-content: center; gap: 0;
   }
 
   /* Controls: icon-only at the end of the stat line. Same button nodes/IDs, so
      every existing menu handler and anchor still works. Filter was hidden by
      css/tasks.css; bring it back here. */
-  body.ui-command-center .page-head-widgets .controls-card {
+  /* nowrap + flex:0 0 auto are the guard: the skin gives these `flex: 1 1 auto`
+     and lets the card wrap (:7244), so 3px of overflow at 320 silently folded
+     the buttons onto a second row instead of staying one line. */
+  body.ui-command-center #listPane .page-head-widgets .controls-card {
     display: flex; flex-direction: row; gap: 4px; justify-content: flex-end;
+    flex-wrap: nowrap;
   }
-  body.ui-command-center .page-head-widgets .controls-card .btn {
+  body.ui-command-center #listPane .page-head-widgets .controls-card .btn {
+    flex: 0 0 auto;
     width: 36px; height: 36px; min-height: 36px; padding: 0;
     justify-content: center; gap: 0;
     font-size: 0;              /* label out, glyph stays — keeps the a11y text in the DOM */
