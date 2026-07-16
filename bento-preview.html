@@ -40,6 +40,24 @@
 <body class="ui-command-center">
   <div class="harness-page">
     <div class="page-head">
+      <!-- Header card — mirrors app.html ~line 148. -->
+      <div class="head-card">
+        <span class="page-eyebrow" id="pageEyebrow" hidden>This week</span>
+        <h1 class="page-title head-card-title" id="pageTitle">All tasks</h1>
+        <div class="seg" id="scopeSeg" role="tablist" aria-label="Task scope">
+          <button type="button" data-scope="mine" title="My work"><i class="ti ti-user"></i><span class="seg-label">My work</span></button>
+          <button type="button" class="on" data-scope="all" title="Company"><i class="ti ti-users-group"></i><span class="seg-label">Company</span></button>
+        </div>
+        <div class="head-card-actions">
+          <button class="btn" id="viewBtn"><i class="ti ti-table"></i>View: Table</button>
+          <button class="btn tb-secondary" id="viewsBtn"><i class="ti ti-bookmarks"></i>Views</button>
+          <button class="btn tb-secondary" id="selectBtn"><i class="ti ti-checkbox"></i>Select</button>
+          <button class="btn tb-secondary" id="exportBtn"><i class="ti ti-download"></i>Export</button>
+          <button class="btn btn-more" id="moreBtn" aria-label="More actions" title="More"><i class="ti ti-dots"></i></button>
+          <button class="btn btn-primary" id="newTaskBtn"><i class="ti ti-plus"></i>New task</button>
+        </div>
+      </div>
+
       <div class="page-head-widgets">
         <div class="up-next-mount" id="upNextWidget">
           <div class="up-next-card is-high" data-task-id="demo">
@@ -115,9 +133,9 @@
     // Report the measured height of the widget block, so the harness answers the
     // actual question ("how much of the screen does this eat?") rather than
     // leaving it to the eye.
-    const el = document.querySelector('.page-head-widgets');
+    const h = el => Math.round(document.querySelector(el).getBoundingClientRect().height);
     document.getElementById('readout').textContent =
-      'page-head-widgets: ' + Math.round(el.getBoundingClientRect().height) + 'px tall'
+      'head-card: ' + h('.head-card') + 'px · widgets: ' + h('.page-head-widgets') + 'px'
       + ' · viewport ' + window.innerWidth + '×' + window.innerHeight;
   </script>
 </body>

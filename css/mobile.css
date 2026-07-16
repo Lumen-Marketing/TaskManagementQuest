@@ -160,6 +160,59 @@
   #taskViewWrap.qt-skin .qt-chip { flex: 0 0 auto; scroll-snap-align: start; }
 
   /* ========================================================
+     4. HEADER CARD — title + everything else as icons, one row
+     taskmanagement.css:7096 deliberately wraps this card into two rows on
+     phones ("the title + scope + actions can't share one row"). They can, once
+     every label collapses to its glyph: only the title keeps words.
+     [All tasks] [👤|👥] .......................... [▦] [⋯] [＋]
+     ======================================================== */
+  body.ui-command-center .head-card {
+    flex-wrap: nowrap;          /* undo the wrap at taskmanagement.css:7097 */
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--m-radius);
+    /* Without this the card is a flex item at its automatic min-content width
+       and grows past a 320px screen, clipping the last button. */
+    min-width: 0;
+  }
+  /* The title is the only thing that may shrink — it ellipsises rather than
+     pushing the controls off the row. */
+  body.ui-command-center .head-card .page-title,
+  body.ui-command-center .head-card .head-card-title {
+    font-size: 17px;
+    flex: 0 1 auto; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* Scope toggle → two glyphs, no words. */
+  body.ui-command-center .head-card #scopeSeg .seg-label { display: none; }
+  body.ui-command-center .head-card #scopeSeg button {
+    width: 34px; height: 32px; padding: 0; justify-content: center;
+  }
+  body.ui-command-center .head-card #scopeSeg button i { margin: 0; font-size: 15px; }
+  /* Actions → three equal icon buttons. `font-size: 0` drops each label while
+     leaving the text in the DOM, so the accessible name survives. */
+  /* taskmanagement.css:7101 gives this row `width:100%` so it sits on its own
+     line; put it back beside the title. */
+  body.ui-command-center .head-card-actions {
+    gap: 6px; width: auto; margin-left: auto; flex: 0 0 auto; flex-wrap: nowrap;
+  }
+  body.ui-command-center .head-card-actions .btn {
+    width: var(--m-ctl, 38px); height: var(--m-ctl, 38px);
+    min-height: 0; min-width: 0; padding: 0;
+    justify-content: center; gap: 0;
+    font-size: 0;
+    border-radius: var(--m-radius-ctl);
+  }
+  body.ui-command-center .head-card-actions .btn i { margin: 0; font-size: 17px; }
+  body.ui-command-center .head-card-actions .btn-more { width: var(--m-ctl, 38px); }
+  /* New task is dropped here, not shrunk: the bottom nav's raised orange ⊕ is
+     already the mobile New-Task entry (BottomNavView `new` → openNewTaskPage(),
+     behind the same App.can('tasks.write') gate), so this was a second button
+     for the same action. Removing it is also what buys the row enough width to
+     fit a 320px screen without shrinking the touch targets below 38px. */
+  body.ui-command-center .head-card-actions #newTaskBtn { display: none; }
+
+  /* ========================================================
      4a. WIDGETS — one hero card + a stat line
      A 2×2 bento put four competing focal points above the task list. On a
      phone only "Up next" earns a card; Progress and Focus are each one number
