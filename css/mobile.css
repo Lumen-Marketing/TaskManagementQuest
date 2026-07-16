@@ -96,10 +96,36 @@
   body.ui-command-center .clock-widget #clockLabel,
   body.ui-command-center .clock-widget .clock-timer { display: none; }
 
-  /* Account chip → avatar only (name + role + caret drop). */
-  body.ui-command-center .userchip { gap: 0; padding: 0; background: none; border: none; }
+  /* Account chip → avatar only (name + role + caret drop).
+     NOTE the selector: `body.ui-command-center .topbar-right .userchip`, not
+     `... .userchip`. taskmanagement.css:7160 uses the longer form inside its own
+     ≤720 block, and (0,3,0) beats (0,2,0) — so a shorter selector here loses and
+     the chip silently keeps 3px of padding plus a transparent 1px border.
+     Together with the .topbar-right padding below, that pushed the avatar 32px
+     off the right edge while the brand sat 16px off the left: the bar was
+     visibly lopsided, and the boss spotted it. */
+  body.ui-command-center .topbar-right .userchip {
+    gap: 0; padding: 0; background: none; border: 0;
+  }
   body.ui-command-center .userchip .uc-meta,
   body.ui-command-center .userchip .uc-gear { display: none; }
+
+  /* The other half of that asymmetry: taskmanagement.css:3803 gives
+     .topbar-right `padding-right: 12px` (and :3493 22px above it). That was for
+     a bar whose last item was a wide account chip; now the last item is a 38px
+     circle that should sit on the same gutter the brand does. The bar's own
+     --m-pad is the only inset either edge needs. */
+  body.ui-command-center .topbar-right { padding-right: 0; }
+
+  /* One gap for the whole bar. taskmanagement.css:4046 squeezes .topbar-right
+     to `gap: 2px` (and :3803 to 4px) — a leftover from when this row had to fit
+     a wide account chip, a wallboard icon and a workspace switcher that are all
+     dropped on phones now. It left the bell and the avatar all but touching
+     while the brand sat 8px off the search pill: same row, two different
+     rhythms. 8px matches .topbar's own gap, so every control is evenly spaced.
+     The search pill pays for it (192→174 at 390, 122→104 at 320) — it's a
+     placeholder-only field and still the widest thing on the row. */
+  body.ui-command-center .topbar-right { gap: 8px; }
 
   /* ========================================================
      2. BOTTOM NAV BAR (Instagram-style)

@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- Topbar harness. NO data-theme = LIGHT, the app's default and what the boss
+     runs (a dark-only harness has already hidden two real bugs here).
+     ?theme=dark for the other.
+     Markup below is copied VERBATIM from app.html — including the bell's
+     `<div style="position:relative">` wrapper and the .userchip wrapper, which
+     are exactly the kind of thing a "simplified" harness would tidy away and
+     then fail to reproduce the bug being chased. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Topbar — mobile symmetry preview</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.5.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="taskmanagement.css">
+<link rel="stylesheet" href="css/tasks.css">
+<link rel="stylesheet" href="css/mobile.css">
+<script>
+if (new URLSearchParams(location.search).get('theme') === 'dark') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+}
+</script>
+</head>
+<body class="ui-command-center">
+  <div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="tb-logo logo" id="brandLogo" aria-label="Toggle navigation"><i class="ti ti-bolt"></i></button>
+      <nav class="primary-nav" id="primaryNav" aria-label="Primary"></nav>
+    </div>
+    <div class="topbar-right">
+      <div class="search">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input type="text" id="searchInput" aria-label="Search tasks, people, projects" placeholder="Search tasks, people, projects" />
+      </div>
+
+      <div id="companySwitcher" class="company-switcher hidden"></div>
+
+      <button type="button" id="clockWidget" class="clock-widget running" aria-label="Clock in / out" title="Clock in / out">
+        <i class="ti ti-player-play-filled" aria-hidden="true"></i>
+        <span id="clockLabel">Clock in</span>
+        <span id="clockTimer" class="clock-timer">00:12:04</span>
+      </button>
+
+      <div class="tb-views" id="tbViews" aria-label="Quick views">
+        <button type="button" class="tb-icon" data-view="wallboard" title="Wallboard" aria-label="Wallboard"><i class="ti ti-device-tv"></i></button>
+      </div>
+
+      <button type="button" class="icon-btn" id="chatBtn" aria-label="Ask your tasks" title="Ask your tasks">
+        <i class="ti ti-sparkles"></i>
+      </button>
+
+      <div style="position: relative;">
+        <button class="icon-btn" id="notifBtn" aria-label="Notifications">
+          <i class="ti ti-bell"></i>
+          <span class="dot" id="notifDot"></span>
+        </button>
+      </div>
+
+      <div class="userchip" id="userChip">
+        <button type="button" class="avatar" id="userAvatar" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" style="background: var(--amber); color: var(--color-accent-ink);">AM</button>
+        <div class="uc-meta">
+          <div class="uc-name">Abraham M.</div>
+          <div class="uc-role">Owner · Admin</div>
+        </div>
+        <i class="ti ti-chevron-down uc-gear" aria-hidden="true"></i>
+      </div>
+    </div>
+  </div>
+  </div>
+</body>
+</html>
