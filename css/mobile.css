@@ -160,17 +160,19 @@
   #taskViewWrap.qt-skin .qt-chip { flex: 0 0 auto; scroll-snap-align: start; }
 
   /* ========================================================
-     4a. WIDGETS — true 2×2 bento
-     Up next · Focus / Progress · Controls, four equal quadrants.
+     4a. WIDGETS — one hero card + a stat line
+     A 2×2 bento put four competing focal points above the task list. On a
+     phone only "Up next" earns a card; Progress and Focus are each one number
+     and one link, so they collapse into a single chrome-less line under it,
+     with the Filter/Sort/Group controls as icons at the end of that same line.
+     Row 1: Up next (full width).
+     Row 2: [ring 0%] [0 of 0 done] [Focus · Set order] ....... [▽] [↕] [⊟]
      ======================================================== */
   body.ui-command-center .page-head-widgets {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    /* Rows size to content with a shared floor, rather than `1fr` — that made
-       the emptiest widget dictate the height of all four. */
-    grid-auto-rows: minmax(92px, auto);
-    align-items: stretch;
-    gap: 8px;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    row-gap: 10px; column-gap: 10px;
     width: 100%;
     overflow: hidden;   /* belt-and-braces: never let a widget push the page sideways */
   }
@@ -180,85 +182,105 @@
   body.ui-command-center .page-head-widgets > .controls-widget-mount {
     width: auto; min-width: 0; flex: none;
   }
-  /* Pin the quadrant order (existing skin rules set flex `order` on these
-     mounts, which grid auto-placement otherwise honours): Up next · Focus /
-     Progress · Controls. */
-  body.ui-command-center .page-head-widgets > .up-next-mount      { order: 1; }
-  body.ui-command-center .page-head-widgets > .focus-widget-mount  { order: 2; }
-  body.ui-command-center .page-head-widgets > .progress-widget-mount { order: 3; }
-  body.ui-command-center .page-head-widgets > .controls-widget-mount { order: 4; }
-  /* Each quadrant's card fills its cell and shares one height baseline. The
-     hard overflow guard (hidden + min-width:0) is what stops the heavy desktop
-     widgets — built for a 360px-wide strip — from spilling past a half-width
-     cell and pushing the page sideways. */
-  body.ui-command-center .page-head-widgets > * > .up-next-card,
-  body.ui-command-center .page-head-widgets > * > .progress-card,
-  body.ui-command-center .page-head-widgets .focus-widget,
-  body.ui-command-center .page-head-widgets .controls-card {
-    height: 100%;
-    border-radius: var(--m-radius);
-    overflow: hidden;
-    min-width: 0;
+  /* Explicit placement — the skin sets flex `order` on these mounts, which grid
+     auto-placement would otherwise honour and scatter across the two rows. */
+  body.ui-command-center .page-head-widgets > .up-next-mount {
+    grid-area: 1 / 1 / 2 / -1; order: 0;
+  }
+  body.ui-command-center .page-head-widgets > .progress-widget-mount {
+    grid-area: 2 / 1 / 3 / 2; order: 0;
+  }
+  body.ui-command-center .page-head-widgets > .focus-widget-mount {
+    grid-area: 2 / 2 / 3 / 3; order: 0; min-width: 0;
+  }
+  body.ui-command-center .page-head-widgets > .controls-widget-mount {
+    grid-area: 2 / 3 / 3 / 4; order: 0;
   }
 
-  /* --- Up next: stack for a narrow cell. Drop the type glyph, let the title
-     wrap to two lines, and shrink the timer button into the top-right corner
-     so it stops crushing the text. --- */
-  body.ui-command-center .page-head-widgets .up-next-card {
-    flex-direction: column; align-items: stretch; gap: 4px;
-    padding: 10px; position: relative;
+  /* --- Up next: the one real card. Full width, so the title gets a line to
+     itself and the timer button sits inline instead of overlapping. --- */
+  body.ui-command-center .page-head-widgets > * > .up-next-card {
+    border-radius: var(--m-radius);
+    overflow: hidden; min-width: 0;
+    flex-direction: row; align-items: center; gap: 10px;
+    padding: 12px 14px;
   }
   body.ui-command-center .page-head-widgets .up-next-icon { display: none; }
-  body.ui-command-center .page-head-widgets .up-next-text { min-width: 0; }
+  body.ui-command-center .page-head-widgets .up-next-text { min-width: 0; flex: 1 1 auto; }
   body.ui-command-center .page-head-widgets .up-next-title {
     white-space: normal;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden; padding-right: 40px;
+    overflow: hidden;
   }
   body.ui-command-center .page-head-widgets .up-next-meta { flex-wrap: wrap; }
   body.ui-command-center .page-head-widgets .up-next-start {
-    position: absolute; top: 10px; right: 10px;
-    width: 34px; height: 34px; flex: 0 0 auto;
+    width: 38px; height: 38px; flex: 0 0 auto;
   }
 
-  /* --- Progress: small ring beside "X of Y done" on one row, rather than
-     stacked — the stack was the tallest thing in the bento. Drop the
-     Total/Done/Pending strip (it mashes in a half cell and just repeats the
-     ring), and re-show the card text that a desktop breakpoint had hidden. --- */
-  body.ui-command-center .page-head-widgets .progress-card {
-    flex-direction: row; align-items: center; justify-content: flex-start;
-    text-align: left; gap: 10px; padding: 10px;
+  /* --- Stat line: Progress and Focus lose their card chrome entirely —
+     no background, no border, no padding — and read as plain text. --- */
+  body.ui-command-center .page-head-widgets .progress-card,
+  body.ui-command-center .page-head-widgets .focus-widget,
+  body.ui-command-center .page-head-widgets .controls-card {
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0; margin: 0; min-width: 0;
+    /* The skin pins these to a card-sized 76px (and the controls card to 72px)
+       via `min-height` + `height` — both have to go, or the stat line keeps a
+       card's worth of empty space it no longer needs.
+       See taskmanagement.css:5313 and :7244. */
+    height: auto; min-height: 0;
   }
-  body.ui-command-center .page-head-widgets .progress-metrics { display: none; }
+  body.ui-command-center .page-head-widgets .progress-card {
+    flex-direction: row; align-items: center; gap: 7px; text-align: left;
+  }
+  /* Ring goes too: at stat-line size it's a 26px circle around an unlabelled
+     "0" — decoration that reads as a puzzle. "0 of 0 done" already says it. */
+  body.ui-command-center .page-head-widgets .progress-metrics,
+  body.ui-command-center .page-head-widgets .progress-ring,
+  body.ui-command-center .page-head-widgets .progress-card-eyebrow { display: none; }
   body.ui-command-center .page-head-widgets .progress-card-text {
     display: flex; flex-direction: column; min-width: 0;
   }
-  body.ui-command-center .page-head-widgets .progress-card-title { white-space: normal; }
-  body.ui-command-center .page-head-widgets .progress-ring,
-  body.ui-command-center .page-head-widgets .progress-ring svg { width: 44px; height: 44px; }
-
-  /* --- Focus: keep the title on one clipped line so it can't run past the
-     card edge. --- */
-  body.ui-command-center .page-head-widgets .focus-widget { padding: 10px; }
-  /* The hint paragraph is the tallest thing in the empty Focus card and the
-     "Set order" / "Open" action already says what the card does. */
-  body.ui-command-center .page-head-widgets .focus-widget-hint { display: none; }
-  body.ui-command-center .page-head-widgets .focus-widget-row { min-width: 0; }
-  body.ui-command-center .page-head-widgets .focus-widget-title {
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  /* Stat text reads as quiet status; the Focus action reads as tappable. */
+  body.ui-command-center .page-head-widgets .progress-card-title {
+    white-space: nowrap; font-size: 12.5px; margin: 0;
+    font-weight: 500; color: var(--ink-dim, #8b93a3);
   }
-  /* Controls quadrant: a compact menu of Filter / Sort / Group. Filter was
-     hidden by css/tasks.css; bring it back here. Slim rows (not tall buttons)
-     so this card matches the height of its neighbours instead of towering. */
+  /* Focus collapses to its header ("Focus · Set order"). The hint paragraph and
+     the drag rows go — the full list is a tap away behind the header, which is
+     already a button that opens the Focus view. */
+  body.ui-command-center .page-head-widgets .focus-widget-hint,
+  body.ui-command-center .page-head-widgets .focus-widget-rows { display: none; }
+  body.ui-command-center .page-head-widgets .focus-widget-head {
+    padding: 0; gap: 6px; justify-content: flex-start;
+    width: auto; min-width: 0; white-space: nowrap;
+  }
+  body.ui-command-center .page-head-widgets .focus-widget-eyebrow,
+  body.ui-command-center .page-head-widgets .focus-widget-open {
+    font-size: 12px; flex: 0 0 auto; white-space: nowrap;
+  }
+  body.ui-command-center .page-head-widgets .focus-widget-open {
+    color: var(--accent, #ED4E0D); font-weight: 600;
+  }
+  /* The eyebrow is just a redundant "FOCUS" label next to its own action —
+     "Set order" / "Open" carries the meaning on its own. */
+  body.ui-command-center .page-head-widgets .focus-widget-eyebrow { display: none; }
+
+  /* Controls: icon-only at the end of the stat line. Same button nodes/IDs, so
+     every existing menu handler and anchor still works. Filter was hidden by
+     css/tasks.css; bring it back here. */
   body.ui-command-center .page-head-widgets .controls-card {
-    display: flex; flex-direction: column; gap: 4px; justify-content: center;
-    padding: 8px;
+    display: flex; flex-direction: row; gap: 4px; justify-content: flex-end;
   }
   body.ui-command-center .page-head-widgets .controls-card .btn {
-    width: 100%; justify-content: flex-start;
-    min-height: 30px; height: 30px; padding: 0 8px; font-size: 12px;
+    width: 32px; height: 32px; min-height: 32px; padding: 0;
+    justify-content: center; gap: 0;
+    font-size: 0;              /* label out, glyph stays — keeps the a11y text in the DOM */
+    border-radius: var(--m-radius-ctl);
   }
-  body.ui-command-center .page-head-widgets .controls-card .btn i { font-size: 15px; }
+  body.ui-command-center .page-head-widgets .controls-card .btn i { font-size: 16px; }
   #filterBtn { display: inline-flex !important; }   /* undo the desktop hide, mobile only */
 
   /* ========================================================

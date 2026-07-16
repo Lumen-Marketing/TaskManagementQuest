@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bento preview — mobile page-head widgets</title>
+<!--
+  Static harness for the mobile page-head widgets (Up next / Progress / Focus /
+  Controls). The live bento needs an authenticated session, so this reproduces
+  the markup those views emit verbatim against the real stylesheets, in the real
+  load order from app.html. Markup mirrors:
+    js/views/UpNextWidgetView.js   (up-next-card, ~line 90)
+    js/views/ProgressWidgetView.js (progress-card, ~line 45)
+    js/views/FocusWidgetView.js    (focus-widget-empty, ~line 125)
+    app.html                       (controls-card, ~line 173)
+  Keep in sync if those change.
+-->
+<link rel="stylesheet" href="vendor/tabler-icons/tabler-icons-subset.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="taskmanagement.css">
+<link rel="stylesheet" href="css/taskdetail.css">
+<link rel="stylesheet" href="css/newtask.css">
+<link rel="stylesheet" href="css/tasks.css">
+<link rel="stylesheet" href="css/mobile.css">
+<style>
+  /* Harness chrome only — not part of the app. */
+  body { margin: 0; }
+  .harness-page { padding: 14px 12px; }
+  .harness-rule {
+    margin: 10px 0 0; font: 11px/1.4 ui-monospace, monospace;
+    color: #7a8394; letter-spacing: .04em;
+  }
+  .harness-fauxtable {
+    margin-top: 10px; border-radius: 12px; padding: 12px;
+    background: rgba(255,255,255,.04); color: #7a8394;
+    font: 12px/1.4 system-ui, sans-serif;
+  }
+</style>
+</head>
+<body class="ui-command-center">
+  <div class="harness-page">
+    <div class="page-head">
+      <div class="page-head-widgets">
+        <div class="up-next-mount" id="upNextWidget">
+          <div class="up-next-card is-high" data-task-id="demo">
+            <div class="up-next-icon"><i class="ti ti-bolt"></i></div>
+            <div class="up-next-text">
+              <div class="up-next-eyebrow">Up next</div>
+              <div class="up-next-title" title="GET DRAFTING WEBSITE LIVE">GET DRAFTING WEBSITE LIVE</div>
+              <div class="up-next-meta">
+                <span class="up-next-prio prio-high">high</span>
+                <span class="up-next-due">Due tomorrow</span>
+              </div>
+            </div>
+            <button class="up-next-start running" data-action="start" aria-label="Back to General shift">
+              <i class="ti ti-player-pause-filled"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="focus-widget-mount" id="focusWidget">
+          <div class="focus-widget focus-widget-empty">
+            <button type="button" class="focus-widget-head" data-action="open-focus">
+              <span class="focus-widget-eyebrow"><i class="ti ti-list-numbers"></i> Focus</span>
+              <span class="focus-widget-open">Set order</span>
+            </button>
+            <div class="focus-widget-hint">Drag tasks to set your execution order.</div>
+          </div>
+        </div>
+
+        <div class="progress-widget-mount" id="progressWidget">
+          <div class="progress-card">
+            <div class="progress-ring" role="img" aria-label="0% complete">
+              <svg width="56" height="56" viewBox="0 0 56 56">
+                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5" />
+                <circle cx="28" cy="28" r="22" fill="none" stroke="url(#progGrad)" stroke-width="5"
+                        stroke-linecap="round" stroke-dasharray="138.23" stroke-dashoffset="138.23"
+                        transform="rotate(-90 28 28)" />
+                <defs>
+                  <linearGradient id="progGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%"  stop-color="oklch(82% 0.16 95)" />
+                    <stop offset="100%" stop-color="oklch(74% 0.16 50)" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="progress-ring-num">0<span>%</span></div>
+            </div>
+            <div class="progress-card-text">
+              <div class="progress-card-eyebrow">Today's progress</div>
+              <div class="progress-card-title">0 of 0 done</div>
+            </div>
+            <div class="progress-metrics">
+              <div class="progress-metric"><div class="progress-metric-num">0</div><div class="progress-metric-label">Total</div></div>
+              <div class="progress-metric"><div class="progress-metric-num">0</div><div class="progress-metric-label">Done</div></div>
+              <div class="progress-metric"><div class="progress-metric-num">0</div><div class="progress-metric-label">Pending</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-widget-mount" id="controlsWidget">
+          <div class="controls-card">
+            <button class="btn" id="filterBtn"><i class="ti ti-filter"></i>Filter</button>
+            <button class="btn" id="sortBtn"><i class="ti ti-arrows-sort"></i>Sort</button>
+            <button class="btn" id="groupBtn"><i class="ti ti-layout-rows"></i>Group by</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="harness-fauxtable">— task table starts here —</div>
+    <div class="harness-rule" id="readout"></div>
+  </div>
+
+  <script>
+    // Report the measured height of the widget block, so the harness answers the
+    // actual question ("how much of the screen does this eat?") rather than
+    // leaving it to the eye.
+    const el = document.querySelector('.page-head-widgets');
+    document.getElementById('readout').textContent =
+      'page-head-widgets: ' + Math.round(el.getBoundingClientRect().height) + 'px tall'
+      + ' · viewport ' + window.innerWidth + '×' + window.innerHeight;
+  </script>
+</body>
+</html>
