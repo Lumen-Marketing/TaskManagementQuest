@@ -233,7 +233,7 @@
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    row-gap: 10px; column-gap: 10px;
+    row-gap: 14px; column-gap: 12px;
     width: 100%;
     overflow: hidden;   /* belt-and-braces: never let a widget push the page sideways */
   }
@@ -290,8 +290,10 @@
     /* The skin pins these to a card-sized 76px (and the controls card to 72px)
        via `min-height` + `height` — both have to go, or the stat line keeps a
        card's worth of empty space it no longer needs.
-       See taskmanagement.css:5313 and :7244. */
-    height: auto; min-height: 0;
+       See taskmanagement.css:5313 and :7244.
+       36px back, not as card chrome but as the row's tap height — "Set order"
+       is a real button and 16px of text is not a target. */
+    height: auto; min-height: 36px;
   }
   body.ui-command-center .page-head-widgets .progress-card {
     flex-direction: row; align-items: center; gap: 7px; text-align: left;
@@ -306,8 +308,8 @@
   }
   /* Stat text reads as quiet status; the Focus action reads as tappable. */
   body.ui-command-center .page-head-widgets .progress-card-title {
-    white-space: nowrap; font-size: 12.5px; margin: 0;
-    font-weight: 500; color: var(--ink-dim, #8b93a3);
+    white-space: nowrap; font-size: 14px; line-height: 36px; margin: 0;
+    font-weight: 600; color: var(--ink, #e7ebf3);
   }
   /* Focus collapses to its header ("Focus · Set order"). The hint paragraph and
      the drag rows go — the full list is a tap away behind the header, which is
@@ -315,12 +317,12 @@
   body.ui-command-center .page-head-widgets .focus-widget-hint,
   body.ui-command-center .page-head-widgets .focus-widget-rows { display: none; }
   body.ui-command-center .page-head-widgets .focus-widget-head {
-    padding: 0; gap: 6px; justify-content: flex-start;
-    width: auto; min-width: 0; white-space: nowrap;
+    padding: 0; gap: 6px; justify-content: flex-start; align-items: center;
+    width: auto; min-width: 0; min-height: 36px; white-space: nowrap;
   }
   body.ui-command-center .page-head-widgets .focus-widget-eyebrow,
   body.ui-command-center .page-head-widgets .focus-widget-open {
-    font-size: 12px; flex: 0 0 auto; white-space: nowrap;
+    font-size: 14px; line-height: 36px; flex: 0 0 auto; white-space: nowrap;
   }
   body.ui-command-center .page-head-widgets .focus-widget-open {
     color: var(--accent, #ED4E0D); font-weight: 600;
@@ -336,7 +338,7 @@
     display: flex; flex-direction: row; gap: 4px; justify-content: flex-end;
   }
   body.ui-command-center .page-head-widgets .controls-card .btn {
-    width: 32px; height: 32px; min-height: 32px; padding: 0;
+    width: 36px; height: 36px; min-height: 36px; padding: 0;
     justify-content: center; gap: 0;
     font-size: 0;              /* label out, glyph stays — keeps the a11y text in the DOM */
     border-radius: var(--m-radius-ctl);
