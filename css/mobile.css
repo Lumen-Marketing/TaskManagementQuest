@@ -231,10 +231,11 @@
      ======================================================== */
   body.ui-command-center .page-head-widgets {
     display: grid;
-    /* Row 2: the stat sits on the left gutter, flush with the Up next card's
-       edge above it; the 1fr slack sits between it and the four icon buttons,
-       which stay grouped on the right gutter. */
-    grid-template-columns: auto 1fr auto auto;
+    /* Row 2: the stat takes the 1fr itself — it runs from the left gutter to
+       the icon cluster, so the row has no dead space in the middle and the
+       stat's edges line up with the Up next card above. The four icon buttons
+       stay shrink-wrapped on the right gutter. */
+    grid-template-columns: 1fr auto auto;
     align-items: center;
     row-gap: 14px; column-gap: 6px;
     width: 100%;
@@ -251,15 +252,15 @@
   body.ui-command-center .page-head-widgets > .up-next-mount {
     grid-area: 1 / 1 / 2 / -1; order: 0;
   }
-  /* Column 2 is the empty 1fr — the icon cluster starts at column 3. */
+  /* The stat mount is the 1fr; `width: auto` above lets it stretch to it. */
   body.ui-command-center .page-head-widgets > .progress-widget-mount {
     grid-area: 2 / 1 / 3 / 2; order: 0;
   }
   body.ui-command-center .page-head-widgets > .focus-widget-mount {
-    grid-area: 2 / 3 / 3 / 4; order: 0; min-width: 0;
+    grid-area: 2 / 2 / 3 / 3; order: 0; min-width: 0;
   }
   body.ui-command-center .page-head-widgets > .controls-widget-mount {
-    grid-area: 2 / 4 / 3 / 5; order: 0;
+    grid-area: 2 / 3 / 3 / 4; order: 0;
   }
 
   /* --- Up next: the one real card. Full width, so the title gets a line to
@@ -319,8 +320,10 @@
      (min-height 36 + its two 1px borders) against the buttons' 36. */
   body.ui-command-center #listPane .page-head-widgets .progress-card {
     flex-direction: row; align-items: center; gap: 7px; text-align: left;
-    padding: 0 10px;
+    padding: 0 12px;
     box-sizing: border-box; height: 36px;
+    /* Fills its 1fr column — the mount stretches, the card has to be told. */
+    width: 100%;
   }
   /* Ring goes too: at stat-line size it's a 26px circle around an unlabelled
      "0" — decoration that reads as a puzzle. "0 of 0 done" already says it. */
