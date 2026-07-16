@@ -72,17 +72,6 @@ App.ProjectsView = class ProjectsView {
 
   _visibleFolders() { return this._sortFolders(this._chipFolders()); }
 
-  // The hero: the soonest-due open project — the Projects twin of the Tasks
-  // page's "Up next". Falls back to the first open project when nothing is
-  // dated (a card that says "here's the work" still beats no card), and to
-  // nothing at all when there are no open projects to point at.
-  _heroFolder() {
-    const open = this._chipFolders().filter(p => this._isActive(p));
-    if (!open.length) return null;
-    const dated = open.filter(p => p.dueDate).sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
-    return dated[0] || open[0];
-  }
-
   _companyColor(companyId) {
     return ({ roofing: 'var(--u-high)', drafting: 'var(--blue)', lumen: 'var(--amber)' })[companyId] || 'var(--amber)';
   }
@@ -242,34 +231,6 @@ App.ProjectsView = class ProjectsView {
      this view free of width checks, so there is no resize handler and no
      "am I mobile" flag to get out of sync with the CSS. ---- */
 
-  // Hero — the soonest-due open project, mirroring the Tasks page's Up next.
-  _heroHtml() {
-    const esc = App.utils.escapeHtml;
-    const p = this._heroFolder();
-    if (!p) return '';
-    const co = App.directory.company(p.companyId) || App.directory.companyFallback(p.companyId);
-    const c = this._counts(p.id);
-    const overdue = this._dueBucket(p) === 'overdue';
-    const due = p.dueDate
-      ? `<span class="pv-hero-due${overdue ? ' overdue' : ''}">${overdue ? 'Overdue' : 'Due ' + esc(this._fmtDue(p.dueDate))}</span>`
-      : '';
-    return `
-      <div class="m-hero-mount">
-        <div class="m-hero pv-hero" data-hero="${esc(p.id)}" role="button" tabindex="0" style="--pc:${esc(this._folderColor(p))}">
-          <div class="m-hero-text">
-            <div class="m-hero-eyebrow">Up next</div>
-            <div class="m-hero-title">${esc(p.name)}</div>
-            <div class="m-hero-meta">
-              <span class="pv-hero-co"><span class="pv-hero-dot"></span>${esc(co.label)}</span>
-              ${due}
-              <span class="pv-hero-open">${c.open} open</span>
-            </div>
-          </div>
-          <span class="m-hero-action pv-hero-go" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>
-        </div>
-      </div>`;
-  }
-
   // Chip strip — the company panels (.pv-cobox) collapsed into one scrolling
   // row of filters, exactly as the Tasks table does it. Built from the folders
   // actually in scope, so it never offers an empty company.
@@ -339,7 +300,6 @@ App.ProjectsView = class ProjectsView {
            The chip strip's edge-bleed is -12/+12 and only lands on that gutter
            inside a box shaped like this one. -->
       <div class="pv-shell">
-        ${this._heroHtml()}
 
       <!-- The real KPI cards, moved inside .pv-shell so a phone can put them
            directly under the hero (they used to sit after it in source order,
@@ -380,12 +340,10 @@ App.ProjectsView = class ProjectsView {
     const nf = this.wrap.querySelector('[data-action="new-folder"]');
     if (nf) nf.addEventListener('click', () => this.controller.promptNewFolder());
 
-    // Chips change what the hero and the stat line describe, not just the list,
-    // so this re-renders the head rather than only the body.
+    // Chips change the KPI figures too, not just the list, so this re-renders
+    // the whole page rather than only the body.
     this.wrap.querySelectorAll('.m-chip[data-co]').forEach(b =>
       b.addEventListener('click', () => { this.coFilter = b.dataset.co; this.render(); }));
-    const hero = this.wrap.querySelector('.pv-hero[data-hero]');
-    if (hero) hero.addEventListener('click', () => this.controller.openProject(hero.dataset.hero));
 
     this._renderBody();
   }

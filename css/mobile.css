@@ -23,7 +23,6 @@
    revealed only on phones, the same way .progress-line is. Rendering them
    unconditionally is what keeps ProjectsView/HomeView free of width branches —
    there is no resize handler and no "am I mobile" flag anywhere. */
-.m-hero-mount,
 .m-statline,
 .m-chips { display: none; }
 /* Glyphs that stand in for a word on a phone (the sort control's icon). */
@@ -564,41 +563,9 @@
      reaches them. Plain classes are enough. Copying §4a's ID armour over here
      would be cargo-culting a fight that isn't happening.
 
-     The row:  [ hero card, full width          ]
-               [ text + meter ] ....... [glyph][glyph]
+     The row:  [ text + meter ] ....... [glyph][glyph]
                [ chip ][ chip ][ chip ] →scroll
      ======================================================== */
-
-  /* --- 5a. Hero — the one real card on the page. Mirrors §4a's .up-next-card
-     geometry so the three pages open with the same object. --- */
-  .m-hero-mount { display: block; }
-  .m-hero {
-    display: flex; flex-direction: row; align-items: center; gap: 10px;
-    padding: 12px 14px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--m-radius);
-    overflow: hidden; min-width: 0;
-    text-align: left; width: 100%;
-  }
-  .m-hero-text { min-width: 0; flex: 1 1 auto; }
-  .m-hero-eyebrow {
-    font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
-    text-transform: uppercase; color: var(--ink-3, #8b93a1);
-    margin-bottom: 3px;
-  }
-  .m-hero-title {
-    font-family: 'Hanken Grotesk', var(--font-body); font-weight: 800;
-    font-size: 15px; line-height: 1.25; color: var(--ink, #e7ebf3);
-    /* 2 lines then ellipsis — a long project name must not grow the hero into
-       the tall card this whole pass exists to delete. */
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden; white-space: normal;
-  }
-  .m-hero-meta {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-    margin-top: 5px; font-size: 11px;
-  }
-  .m-hero-action { width: 38px; height: 38px; flex: 0 0 auto; }
 
   /* --- 5b. Stat line — chrome-less, 36px, meter takes the slack.
      [ 8 of 11 done ▬▬▬▬▬▭▭ ] ......... [▣][▣]
@@ -801,21 +768,6 @@
   #projectsWrap .pv-kpi-num { font-size: 22px; }
   #projectsWrap .pv-kpi-cmplbl { font-size: 15px; }
   #projectsWrap .pv-kpi-lbl { font-size: 11.5px; }
-
-  /* --- 6d. Hero trim --- */
-  #projectsWrap .pv-hero { cursor: pointer; }
-  #projectsWrap .pv-hero-co { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-3, #8b93a1); font-weight: 600; }
-  #projectsWrap .pv-hero-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pc, var(--accent)); flex: none; }
-  #projectsWrap .pv-hero-due {
-    font-weight: 700; color: var(--ink-2, #aeb6c2);
-    background: var(--bg-3); border-radius: 999px; padding: 2px 8px;
-  }
-  #projectsWrap .pv-hero-due.overdue { color: #fff; background: var(--rust, #C0442A); }
-  #projectsWrap .pv-hero-open { color: var(--ink-3, #8b93a1); font-weight: 600; }
-  #projectsWrap .pv-hero-go {
-    display: grid; place-items: center; border-radius: 50%;
-    background: var(--accent, #ED4E0D); color: #fff; font-size: 17px;
-  }
 
   /* --- 6e. Company panels. The chip strip carries the company now, so the
      panel header is a duplicate label on a phone — but only once a single
