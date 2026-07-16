@@ -1,5 +1,8 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<!-- ⚠️ NO data-theme ON PURPOSE: the app default is LIGHT and that is what the
+     boss runs. A dark-only harness hid two real light-theme bugs. Append
+     ?theme=dark for the other one. Verify BOTH. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -26,6 +29,12 @@
     </main>
   </div>
 
+<script>
+// Default LIGHT (the app's default); ?theme=dark for the other.
+if (new URLSearchParams(location.search).get('theme') === 'dark') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+}
+</script>
 <script src="js/views/HomeView.js"></script>
 <script>
 const D = n => { const d = new Date(2026, 6, 17); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };

@@ -629,7 +629,12 @@
   .m-meter {
     display: block; flex: 1 1 auto; min-width: 0;
     height: 4px; border-radius: 999px;
-    background: rgba(255, 255, 255, .10);
+    /* NOT rgba(255,255,255,.1): the app runs in LIGHT theme by default, where a
+       10%-white track on a white card is invisible and the meter reads as a
+       floating orange line with no scale. --bg-3 inverts with the theme (92%
+       light / 25% dark), so the empty part of the track is visible in both —
+       which is what makes 0% read as 0% rather than broken. */
+    background: var(--bg-3);
     overflow: hidden;
   }
   .m-meter > span {
@@ -694,9 +699,15 @@
     width: 7px; height: 7px; border-radius: 50%; flex: none;
     background: var(--cc, var(--accent, #ED4E0D));
   }
+  /* `--bg-1` DOES NOT EXIST anywhere in this codebase — it was my invention, so
+     the #14171c fallback always won and the selected chip rendered near-black
+     text on a near-black pill in LIGHT theme (unreadable; dark theme happened
+     to look fine, which is why a dark-only harness passed it).
+     --surface inverts with the theme (99.5% light / 18% dark), so ink-on-surface
+     is legible in both. */
   .m-chip.on {
-    background: var(--ink, #e7ebf3); border-color: var(--ink, #e7ebf3);
-    color: var(--bg-1, #14171c);
+    background: var(--ink); border-color: var(--ink);
+    color: var(--surface);
   }
   .m-chip:active { transform: scale(.97); }
 
@@ -760,8 +771,36 @@
   #projectsWrap .pv-new .pv-new-lbl { display: none; }
   #projectsWrap .pv-new i { font-size: 18px; }
 
-  /* --- 6c. The five KPI cards go; the stat line replaces them. --- */
-  #projectsWrap .pv-kpis { display: none; }
+  /* --- 6c. KPI cards — TWO PER ROW, not five stacked.
+     `flex: 1 1 168px` in a wrapping flex row means each card claims a whole
+     390px line, so the five of them stacked ~380px deep and you scrolled past
+     the lot to reach a project. A 2-col grid keeps the coloured icon tiles the
+     boss wants (the colour-coding IS the point) at ~200px total.
+     minmax(0,1fr) not 1fr — a 1fr track won't shrink below "Open tasks"'s
+     min-content and would push the pair off a 320px screen. --- */
+  #projectsWrap .pv-kpis {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    /* The shell already provides the x=24 gutter; the cards' own 28px side
+       margin would sit ON TOP of it and land them at 52. */
+    margin: 12px 0 0;
+  }
+  #projectsWrap .pv-kpi {
+    flex: none;          /* it's a grid item now; the flex basis would fight it */
+    min-width: 0; gap: 10px; padding: 11px 12px; border-radius: 12px;
+  }
+  /* The ring card is the odd one out of five — give it the full width rather
+     than a lonely half-row, which is also where its "across all projects"
+     caption has room to stay on one line. */
+  #projectsWrap .pv-kpi-ring { grid-column: 1 / -1; }
+  #projectsWrap .pv-kpi-ic { width: 34px; height: 34px; border-radius: 10px; font-size: 17px; }
+  #projectsWrap .pv-ring { width: 34px; height: 34px; }
+  #projectsWrap .pv-ring::after { inset: 5px; }
+  #projectsWrap .pv-ring b { font-size: 10px; }
+  #projectsWrap .pv-kpi-num { font-size: 22px; }
+  #projectsWrap .pv-kpi-cmplbl { font-size: 15px; }
+  #projectsWrap .pv-kpi-lbl { font-size: 11.5px; }
 
   /* --- 6d. Hero trim --- */
   #projectsWrap .pv-hero { cursor: pointer; }

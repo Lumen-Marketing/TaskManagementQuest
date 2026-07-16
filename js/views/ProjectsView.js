@@ -270,22 +270,6 @@ App.ProjectsView = class ProjectsView {
       </div>`;
   }
 
-  // Stat line — folders complete, with the meter taking the slack. Counts the
-  // same thing the desktop ring does (lifecycle status, not tasks), so the two
-  // sizes can never disagree.
-  _statlineHtml() {
-    const list = this._chipFolders();
-    const done = list.filter(p => !this._isActive(p)).length;
-    const pct = list.length ? Math.round((done / list.length) * 100) : 0;
-    return `
-      <div class="m-statline">
-        <div class="m-stat">
-          <span class="m-stat-txt">${done} of ${list.length} complete</span>
-          <span class="m-meter" aria-hidden="true"><span style="width:${pct}%"></span></span>
-        </div>
-      </div>`;
-  }
-
   // Chip strip — the company panels (.pv-cobox) collapsed into one scrolling
   // row of filters, exactly as the Tasks table does it. Built from the folders
   // actually in scope, so it never offers an empty company.
@@ -311,7 +295,11 @@ App.ProjectsView = class ProjectsView {
   render() {
     if (!this.wrap) this.wrap = document.getElementById('projectsWrap');
     if (!this.wrap) return;
-    const base = this._baseFolders();
+    // _chipFolders, not _baseFolders: on a phone the company chips narrow the
+    // page, and stat cards that kept counting the companies you just filtered
+    // OUT would be lying. '*' (All) is the identity filter and is the only
+    // value desktop ever has, so the desktop numbers are unchanged.
+    const base = this._chipFolders();
     const counts = base.map(p => this._counts(p.id));
     const openTotal = counts.reduce((n, c) => n + c.open, 0);
     const doneTotal = counts.reduce((n, c) => n + c.done, 0);
@@ -352,10 +340,13 @@ App.ProjectsView = class ProjectsView {
            inside a box shaped like this one. -->
       <div class="pv-shell">
         ${this._heroHtml()}
-        ${this._statlineHtml()}
-        ${this._chipsHtml()}
-      </div>
 
+      <!-- The real KPI cards, moved inside .pv-shell so a phone can put them
+           directly under the hero (they used to sit after it in source order,
+           which would have stranded them below the chip strip). .pv-shell has
+           NO desktop styling — it is a plain block — so the cards' own
+           28px side margin still applies above 720px and the desktop row is
+           byte-identical to before. -->
       <div class="pv-kpis">
         <div class="pv-kpi" style="--kc:var(--amber)">
           <span class="pv-kpi-ic"><i class="ti ti-folders"></i></span>
@@ -377,6 +368,9 @@ App.ProjectsView = class ProjectsView {
           <div class="pv-ring" style="--p:${pct}%"><b>${base.length ? pct + '%' : '—'}</b></div>
           <div class="pv-kpi-body"><div class="pv-kpi-cmplbl">Complete</div><div class="pv-kpi-lbl">${base.length ? 'across all projects' : 'no projects yet'}</div></div>
         </div>
+      </div>
+
+        ${this._chipsHtml()}
       </div>
 
       <div class="pv-body"></div>`;

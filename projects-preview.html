@@ -1,5 +1,10 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<!-- ⚠️ NO data-theme here ON PURPOSE: the app's DEFAULT is LIGHT, and that is
+     what the boss actually runs. A dark-only harness hid two real bugs (an
+     invisible meter track and an unreadable selected chip, both white-on-white
+     in light). Append ?theme=dark to check the other one — the script below
+     reads it. Verify BOTH before shipping. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,6 +34,13 @@
     </main>
   </div>
 
+<script>
+// Theme switch for the harness: default LIGHT (the app's default), ?theme=dark
+// for the other. Set before the view renders so nothing paints twice.
+if (new URLSearchParams(location.search).get('theme') === 'dark') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+}
+</script>
 <script src="js/views/ProjectsView.js"></script>
 <script>
 /* Harness stub. Only the seams ProjectsView actually touches — if this file
