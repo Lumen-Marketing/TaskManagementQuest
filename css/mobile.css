@@ -351,6 +351,10 @@
   body.ui-command-center .page-head-widgets .focus-widget-eyebrow {
     display: inline-flex; align-items: center;
     font-size: 0; flex: 0 0 auto;
+    /* gap:0 or the glyph sits 3px left of centre: the eyebrow's "Focus" text is
+       zero-width at font-size:0 but still a flex item, so the skin's 6px gap is
+       laid out beside it regardless — a 22px box for a 16px glyph. */
+    gap: 0;
     /* Matches the Filter / Sort / Group glyphs exactly (16px, --ink-2). The box
        was always identical; an 18px orange glyph inside it just read heavier
        and rounder than its 16px grey neighbours. */
@@ -363,6 +367,16 @@
   /* Same 36px box as Filter / Sort / Group, sitting immediately left of them. */
   body.ui-command-center .page-head-widgets .focus-widget-head {
     width: 36px; height: 36px; justify-content: center; gap: 0;
+  }
+  /* Press/hover parity: this is a <button>, not a .btn, so it inherits none of
+     the .btn states — and the resting border above is !important, which would
+     otherwise pin it while its neighbours respond to the same tap. */
+  body.ui-command-center #listPane .page-head-widgets .focus-widget-head:hover {
+    background: var(--bg-3) !important;
+    border-color: var(--border-strong) !important;
+  }
+  body.ui-command-center .page-head-widgets .focus-widget-head:active {
+    transform: scale(0.97);
   }
 
   /* Controls: icon-only at the end of the stat line. Same button nodes/IDs, so
