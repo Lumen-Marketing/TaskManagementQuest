@@ -151,14 +151,11 @@
             <span class="qt-gname">Tomorrow</span>
             <span class="qt-gcount">9</span>
           </div>
-          <div class="qt-gbody">
-            <div class="qt-row">
-              <input type="checkbox" class="qt-check">
-              <span class="qt-pdot"></span>
-              <span class="qt-title">GET DRAFTING WEBSITE LIVE</span>
-              <span class="qt-due">Tomorrow</span>
-            </div>
-          </div>
+          <!-- Rows mirror js/views/tasklist/TableLayout.js (~line 131) verbatim —
+               the old placeholder markup here (.qt-check / .qt-title) matched no
+               rule the app ships, so it could not show what the phone shows.
+               Three lengths, incl. one that wraps and one with a +N stack. -->
+          <div class="qt-gbody" id="rows"></div>
         </div>
       </div>
     </div>
@@ -167,6 +164,32 @@
   </div>
 
   <script>
+    // Rows built from the same shape TableLayout emits, so the harness measures
+    // the real thing rather than a hand-drawn lookalike.
+    const ROWS = [
+      { title: 'GET DRAFTING WEBSITE LIVE', st: 'working', stLabel: 'Working on it', prio: 'high', av: ['KI', 'AB', 'RC'], more: 1 },
+      { title: 'DESKTOP VERSION IMPROVEMENTS', st: 'working', stLabel: 'Working on it', prio: 'high', av: ['KI', 'RC', 'JD'], more: 0 },
+      { title: "ADD WHAT'S NEXT FIELD TO ALL THREE FUNNELS", st: 'review', stLabel: 'In review', prio: 'high', av: ['AB', 'RC'], more: 0 },
+      { title: 'FIX', st: 'todo', stLabel: 'To do', prio: 'low', av: ['KI'], more: 0 },
+    ];
+    document.getElementById('rows').innerHTML = ROWS.map(r => `
+      <div class="qt-row">
+        <span class="qt-ck"><input type="checkbox" data-action="toggle-done" aria-label="Complete task"></span>
+        <span class="qt-pdot prio-${r.prio}" title="${r.prio}"></span>
+        <div class="qt-tcell"><span class="qt-ttitle">${r.title}</span></div>
+        <div class="qt-cell-status"><button class="qt-cellbtn status-${r.st}" data-action="open-status"><span class="dot"></span><span class="nm">${r.stLabel}</span><span class="chv"><i class="ti ti-chevron-down"></i></span></button></div>
+        <div class="qt-cell-priority"><span class="qt-pcell"><button class="qt-pbadge prio-${r.prio}" data-action="open-priority">${r.prio.toUpperCase()}</button><span class="chv"><i class="ti ti-chevron-down"></i></span></span></div>
+        <div class="qt-cell-label"><span class="qt-cellbtn"><span class="dot" style="background:#7FA9F7"></span><span class="nm">Website</span></span></div>
+        <div class="qt-cell-assignee"><span class="qt-cellbtn"><span class="qt-avstack">${
+          r.av.map(a => `<span class="qt-avatar" style="background:#8a6a4a" title="${a}">${a}</span>`).join('')
+        }${r.more ? `<span class="qt-avatar qt-avmore">+${r.more}</span>` : ''}</span></span></div>
+        <div class="qt-due">Tomorrow</div>
+        <div class="qt-actions">
+          <button class="finish-btn"><i class="ti ti-circle-check"></i></button>
+          <button class="quick-actions-btn"><i class="ti ti-dots-vertical"></i></button>
+        </div>
+      </div>`).join('');
+
     // Report the measured height of the widget block, so the harness answers the
     // actual question ("how much of the screen does this eat?") rather than
     // leaving it to the eye.

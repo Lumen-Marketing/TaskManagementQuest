@@ -427,8 +427,11 @@
 
   /* ========================================================
      4b. TABLE — clean stacked cards
-     Two tidy lines: [✓ · title ............ due] then
-     [status · priority · label ........ avatars].
+     Line 1 is the name and nothing else: [✓ · title].
+     Line 2 is every detail: [status · priority · label · due ... avatars].
+     The title used to share line 1 with the due date at flex 1 1 55%, which
+     wrapped nearly every title onto a second line — giving it the full width
+     is most of what makes the list shorter, before any padding comes off.
      ======================================================== */
   /* ONE gutter for the whole phone page. `#taskViewWrap` already contributes
      12px margin + 12px padding, so .qt-wrap's own 12px pushed every table card
@@ -443,23 +446,69 @@
 
   #taskViewWrap.qt-skin .qt-row {
     display: flex; flex-wrap: wrap; align-items: center;
-    column-gap: 7px; row-gap: 7px;
-    padding: 11px 14px;
+    column-gap: 5px; row-gap: 4px;
+    padding: 8px 12px;
   }
+  /* Line 1 — the name, with only the tick and the priority dot for company. */
   #taskViewWrap.qt-skin .qt-ck { order: 1; flex: 0 0 auto; }
   #taskViewWrap.qt-skin .qt-pdot { order: 2; flex: 0 0 auto; }
-  #taskViewWrap.qt-skin .qt-tcell { order: 3; flex: 1 1 55%; min-width: 0; }
-  #taskViewWrap.qt-skin .qt-ttitle { white-space: normal; font-size: 14px; line-height: 1.28; }
-  #taskViewWrap.qt-skin .qt-due {
-    order: 4; flex: 0 0 auto; margin-left: auto; text-align: right;
-    font-size: 11px;
+  /* basis 0 so a long title never exceeds the line and wrap itself below the
+     checkbox — it grows into the space left beside the tick and wraps inside
+     its own box instead. */
+  #taskViewWrap.qt-skin .qt-tcell { order: 3; flex: 1 1 0; min-width: 0; }
+  #taskViewWrap.qt-skin .qt-ttitle { white-space: normal; font-size: 13.5px; line-height: 1.25; }
+  /* The break. A ::after on a flex container is itself a flex item, so a
+     zero-height 100%-wide one ends line 1 — without it the details would flow
+     up beside the title and re-wrap it, which is the thing being fixed. */
+  #taskViewWrap.qt-skin .qt-row::after {
+    content: ''; order: 4; flex: 0 0 100%; height: 0;
   }
-  /* second line: the meta chips, tidy and same height */
+  /* Line 2 — every detail, one tight line.
+     Status and label are the only elastic items: they shrink and ellipsis so
+     the line can't wrap. Sized to fit exactly, this line came to 316.3px in a
+     316px row and dropped the avatars onto a third line — 0.3px. Truncation is
+     the guard; the numbers below just decide where it starts biting. */
+  /* Natural widths, no forced distribution. Line 2 measures ~312px against 316
+     available at 390, so it fits as-is; below that it wraps to two lines, which
+     beats the alternative — a zero flex-basis makes the line always fit, but
+     only by truncating these two to "Wo…" and "W." on a narrow phone.
+     (Worth knowing: in a wrapping flex container items wrap BEFORE they shrink,
+     so min-width:0 + ellipsis alone never fires here.) */
+  #taskViewWrap.qt-skin .qt-cell-status,
+  #taskViewWrap.qt-skin .qt-cell-label {
+    flex: 0 1 auto; min-width: 0;
+  }
+  #taskViewWrap.qt-skin .qt-cell-status .qt-cellbtn,
+  #taskViewWrap.qt-skin .qt-cell-label .qt-cellbtn {
+    max-width: 100%; min-width: 0;
+  }
+  #taskViewWrap.qt-skin .qt-cell-status .nm,
+  #taskViewWrap.qt-skin .qt-cell-label .nm {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   #taskViewWrap.qt-skin .qt-cell-status   { order: 5; }
-  #taskViewWrap.qt-skin .qt-cell-priority { order: 6; }
+  #taskViewWrap.qt-skin .qt-cell-priority { order: 6; flex: 0 0 auto; }
   #taskViewWrap.qt-skin .qt-cell-label    { order: 7; }
-  #taskViewWrap.qt-skin .qt-cell-assignee { order: 8; margin-left: auto; }
-  #taskViewWrap.qt-skin .qt-cellbtn { padding: 3px 6px; }
+  #taskViewWrap.qt-skin .qt-due {
+    order: 8; flex: 0 0 auto; font-size: 10.5px;
+  }
+  #taskViewWrap.qt-skin .qt-cell-assignee { order: 9; flex: 0 0 auto; margin-left: auto; }
+  /* Very tight: line 2 has to fit status + priority + label + due + avatars in
+     ~317px at 390. Everything sits on an 18px band; the priority badge was the
+     outlier at 24px tall with 11px side padding. */
+  #taskViewWrap.qt-skin .qt-cellbtn { padding: 2px 5px; font-size: 10.5px; }
+  #taskViewWrap.qt-skin .qt-pbadge {
+    padding: 2px 7px; font-size: 9.5px; min-height: 0; line-height: 1.45;
+  }
+  #taskViewWrap.qt-skin .qt-cell-priority .chv { display: none; }
+  #taskViewWrap.qt-skin .qt-avatar {
+    width: 18px; height: 18px; font-size: 8.5px;
+  }
+  /* The stack overlaps harder — 3 avatars + "+N" cost ~61px otherwise, which is
+     what tips the line over on a narrow phone. */
+  #taskViewWrap.qt-skin .qt-avstack .qt-avatar + .qt-avatar { margin-left: -7px; }
+  #taskViewWrap.qt-skin .qt-cell-assignee .qt-cellbtn { padding: 0; background: none; border: 0; }
+  #taskViewWrap.qt-skin .qt-cell-assignee .nm { display: none; }
   #taskViewWrap.qt-skin .qt-actions { display: none; }
 
   /* Declutter the meta line: the inline dropdown carets (the "⌄" after the
@@ -476,3 +525,4 @@
   /* Page head: consistent gutter with the rest of the mobile system. */
   body.ui-command-center .page-head { padding: 14px var(--m-gap) 8px; }
 }
+
