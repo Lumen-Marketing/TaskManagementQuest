@@ -468,16 +468,16 @@
      the line can't wrap. Sized to fit exactly, this line came to 316.3px in a
      316px row and dropped the avatars onto a third line — 0.3px. Truncation is
      the guard; the numbers below just decide where it starts biting. */
-  /* Natural widths, no forced distribution. Line 2 measures ~312px against 316
-     available at 390, so it fits as-is; below that it wraps to two lines, which
-     beats the alternative — a zero flex-basis makes the line always fit, but
-     only by truncating these two to "Wo…" and "W." on a narrow phone.
-     (Worth knowing: in a wrapping flex container items wrap BEFORE they shrink,
-     so min-width:0 + ellipsis alone never fires here.) */
-  #taskViewWrap.qt-skin .qt-cell-status,
-  #taskViewWrap.qt-skin .qt-cell-label {
-    flex: 0 1 auto; min-width: 0;
-  }
+  /* Fixed columns, so the line reads down the list as well as across.
+     Content-sized cells put every row's priority pill and due date at a
+     different x — "Working on it" is 25px wider than "Pending", and that shift
+     lands on everything after it. The status column is sized for its longest
+     value; priority for MEDIUM; the assignee column for a 4-avatar stack.
+     (Line 2 wraps rather than shrinks on a narrow phone: in a wrapping flex
+     container items wrap BEFORE they shrink, so ellipsis never fires. Two
+     readable lines beat one line of "Wo…" and "W.".) */
+  #taskViewWrap.qt-skin .qt-cell-status { flex: 0 0 96px; min-width: 0; }
+  #taskViewWrap.qt-skin .qt-cell-label  { flex: 0 1 auto; min-width: 0; }
   #taskViewWrap.qt-skin .qt-cell-status .qt-cellbtn,
   #taskViewWrap.qt-skin .qt-cell-label .qt-cellbtn {
     max-width: 100%; min-width: 0;
@@ -487,12 +487,18 @@
     min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   #taskViewWrap.qt-skin .qt-cell-status   { order: 5; }
-  #taskViewWrap.qt-skin .qt-cell-priority { order: 6; flex: 0 0 auto; }
+  #taskViewWrap.qt-skin .qt-cell-priority { order: 6; flex: 0 0 58px; }
   #taskViewWrap.qt-skin .qt-cell-label    { order: 7; }
+  /* Due sits hard against the avatar column and right-aligns, so its edge is
+     the same on every row whatever the word ("Tomorrow" vs "Fri" vs a date). */
   #taskViewWrap.qt-skin .qt-due {
     order: 8; flex: 0 0 auto; font-size: 10.5px;
+    margin-left: auto; text-align: right;
   }
-  #taskViewWrap.qt-skin .qt-cell-assignee { order: 9; flex: 0 0 auto; margin-left: auto; }
+  #taskViewWrap.qt-skin .qt-cell-assignee {
+    order: 9; flex: 0 0 54px;
+    display: flex; justify-content: flex-end;
+  }
   /* Very tight: line 2 has to fit status + priority + label + due + avatars in
      ~317px at 390. Everything sits on an 18px band; the priority badge was the
      outlier at 24px tall with 11px side padding. */

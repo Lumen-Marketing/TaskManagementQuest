@@ -166,10 +166,14 @@
   <script>
     // Rows built from the same shape TableLayout emits, so the harness measures
     // the real thing rather than a hand-drawn lookalike.
+    // Status/priority/avatar-count all vary on purpose: these columns have to
+    // line up down the list, and only a mixed sample proves it.
     const ROWS = [
       { title: 'GET DRAFTING WEBSITE LIVE', st: 'working', stLabel: 'Working on it', prio: 'high', av: ['KI', 'AB', 'RC'], more: 1 },
       { title: 'DESKTOP VERSION IMPROVEMENTS', st: 'working', stLabel: 'Working on it', prio: 'high', av: ['KI', 'RC', 'JD'], more: 0 },
       { title: "ADD WHAT'S NEXT FIELD TO ALL THREE FUNNELS", st: 'review', stLabel: 'In review', prio: 'high', av: ['AB', 'RC'], more: 0 },
+      { title: 'GOOGLE DRIVE INTEGRATION', st: 'pending', stLabel: 'Pending', prio: 'high', av: ['KI', 'RC'], more: 0 },
+      { title: 'JOB TYPE SOP CHECK LISTS ON CLICKS', st: 'pending', stLabel: 'Pending', prio: 'medium', av: ['KI', 'AB', 'RC'], more: 0 },
       { title: 'FIX', st: 'todo', stLabel: 'To do', prio: 'low', av: ['KI'], more: 0 },
     ];
     document.getElementById('rows').innerHTML = ROWS.map(r => `
