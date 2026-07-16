@@ -41,6 +41,10 @@
   body.ui-command-center .tb-views { display: none; }           /* wallboard → drawer "Views" */
   body.ui-command-center .company-switcher { display: none; }   /* → drawer "Workspaces" */
   body.ui-command-center #chatBtn { display: none; }            /* declutter — chat is desktop-only */
+  /* The bar uses justify-content:space-between, so the right group shrink-wraps
+     and the search never grows. Let it fill the space between the brand and the
+     icons. */
+  body.ui-command-center .topbar-right { flex: 1 1 auto; min-width: 0; }
 
   /* Unify every round control to one shape + size. */
   body.ui-command-center .tb-logo,
@@ -55,7 +59,7 @@
   body.ui-command-center .topbar .icon-btn i { font-size: 17px; }
 
   /* Search: the single flexible pill. */
-  body.ui-command-center .search { flex: 1 1 auto; min-width: 0; max-width: none; }
+  body.ui-command-center .search { flex: 1 1 auto; min-width: 0; max-width: none; height: var(--m-ctl); }
   body.ui-command-center .search input {
     width: 100%; height: var(--m-ctl);
     border-radius: 999px;
@@ -67,10 +71,12 @@
      odd-shaped green pill that broke the row's symmetry. */
   body.ui-command-center .clock-widget,
   body.ui-command-center .clock-widget.running {
-    height: var(--m-ctl); width: var(--m-ctl); min-width: var(--m-ctl);
+    height: var(--m-ctl); width: var(--m-ctl);
+    min-width: var(--m-ctl); min-height: var(--m-ctl); max-height: var(--m-ctl);
     padding: 0; border-radius: 50%; justify-content: center; gap: 0;
     flex: 0 0 auto;
   }
+  body.ui-command-center .clock-widget i { font-size: 15px; }
   body.ui-command-center .clock-widget #clockLabel,
   body.ui-command-center .clock-widget .clock-timer { display: none; }
 
@@ -160,6 +166,8 @@
   body.ui-command-center .page-head-widgets {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 1fr;      /* every quadrant the same height */
+    align-items: stretch;
     gap: var(--m-gap);
     width: 100%;
     overflow: hidden;   /* belt-and-braces: never let a widget push the page sideways */
@@ -231,15 +239,17 @@
   body.ui-command-center .page-head-widgets .focus-widget-title {
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   }
-  /* Controls quadrant: stack Sort / Group (+ the re-shown Filter) so three
-     buttons fit a half-width cell. Filter was hidden by css/tasks.css; bring it
-     back here since the bento has room for it. */
+  /* Controls quadrant: a compact menu of Filter / Sort / Group. Filter was
+     hidden by css/tasks.css; bring it back here. Slim rows (not tall buttons)
+     so this card matches the height of its neighbours instead of towering. */
   body.ui-command-center .page-head-widgets .controls-card {
-    display: flex; flex-direction: column; gap: 8px; justify-content: center;
+    display: flex; flex-direction: column; gap: 6px; justify-content: center;
   }
   body.ui-command-center .page-head-widgets .controls-card .btn {
     width: 100%; justify-content: flex-start;
+    min-height: 34px; height: 34px; padding: 0 10px; font-size: 12.5px;
   }
+  body.ui-command-center .page-head-widgets .controls-card .btn i { font-size: 15px; }
   #filterBtn { display: inline-flex !important; }   /* undo the desktop hide, mobile only */
 
   /* ========================================================
