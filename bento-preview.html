@@ -25,7 +25,9 @@
 <style>
   /* Harness chrome only — not part of the app. */
   body { margin: 0; }
-  .harness-page { padding: 14px 12px; }
+  /* No padding of its own: .page-head and .qt-wrap each bring their own insets,
+     and the whole point of this harness is to compare them. */
+  .harness-page { padding: 0; }
   .harness-rule {
     margin: 10px 0 0; font: 11px/1.4 ui-monospace, monospace;
     color: #7a8394; letter-spacing: .04em;
@@ -125,7 +127,35 @@
       </div>
     </div>
 
-    <div class="harness-fauxtable">— task table starts here —</div>
+    <!-- Chip strip + one group card — mirrors js/views/tasklist/TableLayout.js
+         (qt-chiprow ~line 27, qt-group ~line 366). Present so the harness can
+         measure whether the page head lines up with the table below it. -->
+    <div id="taskViewWrap" class="qt-skin">
+      <div class="qt-wrap">
+        <div class="qt-chiprow">
+          <button type="button" class="qt-chip on" data-company="all">All</button>
+          <button type="button" class="qt-chip" data-company="roofing"><span class="sq"></span>Roofing</button>
+          <button type="button" class="qt-chip" data-company="drafting"><span class="sq"></span>Drafting</button>
+          <button type="button" class="qt-chip" data-company="lumen"><span class="sq"></span>Lumen</button>
+        </div>
+        <div class="qt-group">
+          <div class="qt-ghead today" data-group-key="today">
+            <span class="qt-chev"><i class="ti ti-chevron-down"></i></span>
+            <span class="qt-gicon"><i class="ti ti-arrow-right"></i></span>
+            <span class="qt-gname">Tomorrow</span>
+            <span class="qt-gcount">9</span>
+          </div>
+          <div class="qt-gbody">
+            <div class="qt-row">
+              <input type="checkbox" class="qt-check">
+              <span class="qt-pdot"></span>
+              <span class="qt-title">GET DRAFTING WEBSITE LIVE</span>
+              <span class="qt-due">Tomorrow</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="harness-rule" id="readout"></div>
   </div>
 

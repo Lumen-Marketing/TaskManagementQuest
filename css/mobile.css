@@ -148,10 +148,18 @@
     scroll-snap-type: x proximity;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+    /* Bleed to the screen edge so the strip scrolls edge-to-edge, but keep the
+       first chip on the page gutter via the padding. */
     margin-left: calc(-1 * var(--m-gap));
     margin-right: calc(-1 * var(--m-gap));
     padding-left: var(--m-gap);
     padding-right: var(--m-gap);
+    /* Without this, snapping aligns the first chip to the scrollport edge and
+       scrolls the padding away (scrollLeft:12) the moment the chips overflow —
+       so the row sat 12px left of everything else on narrow phones only.
+       scroll-padding keeps the snap position on the gutter. */
+    scroll-padding-left: var(--m-gap);
+    scroll-padding-right: var(--m-gap);
     /* fade the right edge so it reads as scrollable */
     -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
             mask-image: linear-gradient(90deg, #000 88%, transparent);
@@ -341,7 +349,12 @@
      Two tidy lines: [✓ · title ............ due] then
      [status · priority · label ........ avatars].
      ======================================================== */
-  #taskViewWrap.qt-skin .qt-wrap { padding: 12px var(--m-gap) calc(var(--m-navh) + 28px); }
+  /* ONE gutter for the whole phone page. `#taskViewWrap` already contributes
+     12px margin + 12px padding, so .qt-wrap's own 12px pushed every table card
+     to x=36 while the page-head cards sat at x=24 — the head and the table were
+     never on the same line. Zero the horizontal padding here (keep the vertical
+     and the bottom-nav clearance) so table cards land at 24 with the rest. */
+  #taskViewWrap.qt-skin .qt-wrap { padding: 12px 0 calc(var(--m-navh) + 28px); }
   #taskViewWrap.qt-skin .qt-cols { display: none; }
   /* tighter group chrome so the list reads compact */
   #taskViewWrap.qt-skin .qt-group { margin-bottom: 10px; border-radius: 12px; }
