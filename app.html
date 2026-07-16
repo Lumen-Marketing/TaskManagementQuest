@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="css/taskdetail.css">
 <link rel="stylesheet" href="css/newtask.css">
 <link rel="stylesheet" href="css/tasks.css">
+<link rel="stylesheet" href="css/mobile.css">
 <script src="js/theme-boot.js"></script>
 </head>
 <body class="ui-command-center">
@@ -236,12 +237,16 @@
   </main>
 </div>
 
-<!-- Floating quick-add button — phone-only (CSS-hidden on desktop, which has the
-     toolbar "New task" button). Wired in app.js; hidden for users who can't
-     create tasks and while bulk-select mode is active. -->
+<!-- Floating quick-add button — legacy. Retired on phones (≤720px) in favour of
+     the bottom-nav center ⊕; still present for any non-phone edge use. -->
 <button type="button" id="fab" class="fab hidden" aria-label="New task" title="New task">
   <i class="ti ti-plus"></i>
 </button>
+
+<!-- Phone-only bottom tab bar (Instagram-style): Home · Tasks · ⊕ · Projects ·
+     Profile. Painted + wired by BottomNavView; CSS-hidden above 720px. The
+     center ⊕ is the only New-Task entry point on phones. -->
+<nav id="bottomNav" aria-label="Primary (mobile)"></nav>
 
 <!-- Bulk-select action bar (BulkActionsView mounts here). Fixed to the bottom,
      shown only while bulk-select mode is on. -->
@@ -296,6 +301,7 @@
 <script defer src="js/views/dragOrder.js"></script>
 <script defer src="js/views/TopbarView.js"></script>
 <script defer src="js/views/SidebarView.js"></script>
+<script defer src="js/views/BottomNavView.js"></script>
 <script defer src="js/views/ProjectPickerView.js"></script>
 <script defer src="js/views/DateTimePickerView.js"></script>
 <script defer src="js/views/tasklist/TableLayout.js"></script>

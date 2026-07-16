@@ -1,0 +1,231 @@
+/* ============================================================
+   QUEST HQ — MOBILE COHESIVE SYSTEM  (≤720px, phone only)
+   Loaded LAST so it wins on equal specificity. Desktop is
+   untouched (every rule is inside the phone media query except
+   the one base #bottomNav hide). Dark palette + orange accent
+   kept — this is a cohesion + layout pass, not a re-theme.
+
+   Fixes the four complaints:
+     1. Topbar — mismatched shapes/sizes → one search pill + a row
+        of identical round controls.
+     2. Bottom nav — new Instagram-style tab bar (BottomNavView).
+     3. Pills — wrapping clutter → one horizontal scrolling strip.
+     4. Widgets — stacked cards → true 2×2 bento; table → cards.
+   ============================================================ */
+
+/* Base (all widths): the bottom bar only exists on phones. */
+#bottomNav { display: none; }
+
+@media (max-width: 720px) {
+  :root {
+    --m-pad: 16px;
+    --m-gap: 12px;
+    --m-radius: 16px;
+    --m-radius-ctl: 12px;
+    --m-tap: 44px;
+    --m-ctl: 38px;      /* round topbar control diameter */
+    --m-navh: 58px;     /* bottom nav bar height (before safe area) */
+  }
+
+  /* ========================================================
+     1. TOPBAR — slim, cohesive single row
+     Brand · Search (flex) · Clock · Chat · Bell · Avatar.
+     Every round control is the same size / radius / treatment;
+     search is the one pill that absorbs the flex. The desktop
+     section nav, the wallboard icon, the scope box that used to
+     sit here, and the account name/role text are all dropped —
+     nav moves to the bottom bar, the name to the Profile tab.
+     ======================================================== */
+  body.ui-command-center .topbar { padding: 0 var(--m-pad); gap: 10px; }
+  body.ui-command-center .primary-nav { display: none; }        /* → bottom nav */
+  body.ui-command-center .tb-views { display: none; }           /* wallboard → drawer "Views" */
+  body.ui-command-center .company-switcher { display: none; }   /* → drawer "Workspaces" */
+
+  /* Unify every round control to one shape + size. */
+  body.ui-command-center .tb-logo,
+  body.ui-command-center .topbar .icon-btn,
+  body.ui-command-center .topbar .avatar {
+    width: var(--m-ctl); height: var(--m-ctl);
+    min-width: var(--m-ctl);
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto;
+  }
+  body.ui-command-center .topbar .icon-btn i { font-size: 17px; }
+
+  /* Search: the single flexible pill. */
+  body.ui-command-center .search { flex: 1 1 auto; min-width: 0; max-width: none; }
+  body.ui-command-center .search input {
+    width: 100%; height: var(--m-ctl);
+    border-radius: 999px;
+  }
+
+  /* Clock: idle collapses to a round icon-only control so it matches the
+     bell/avatar; while running it expands back to a pill with the live timer
+     (you still need to see elapsed time on a time-tracking app). */
+  body.ui-command-center .clock-widget {
+    height: var(--m-ctl); min-width: var(--m-ctl); width: var(--m-ctl);
+    padding: 0; border-radius: 50%; justify-content: center; gap: 0;
+    flex: 0 0 auto;
+  }
+  body.ui-command-center .clock-widget:not(.running) #clockLabel { display: none; }
+  body.ui-command-center .clock-widget.running {
+    width: auto; border-radius: 999px; padding: 0 12px; gap: 6px;
+  }
+  body.ui-command-center .clock-widget.running #clockLabel { display: none; }
+
+  /* Account chip → avatar only (name + role + caret drop). */
+  body.ui-command-center .userchip { gap: 0; padding: 0; background: none; border: none; }
+  body.ui-command-center .userchip .uc-meta,
+  body.ui-command-center .userchip .uc-gear { display: none; }
+
+  /* ========================================================
+     2. BOTTOM NAV BAR (Instagram-style)
+     ======================================================== */
+  #bottomNav {
+    display: flex;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+    height: calc(var(--m-navh) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.28);
+    align-items: stretch;
+  }
+  #bottomNav .bn-tab {
+    flex: 1 1 0; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 6px 2px;
+    background: none; border: none; cursor: pointer;
+    color: var(--ink-3);
+    transition: color var(--dur-fast, .12s) var(--ease-out, ease);
+  }
+  #bottomNav .bn-tab i { font-size: 22px; line-height: 1; }
+  #bottomNav .bn-tab .bn-label {
+    font-size: 10px; font-weight: 600; letter-spacing: .01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  #bottomNav .bn-tab.active { color: var(--accent, #ED4E0D); }
+  #bottomNav .bn-tab:active { transform: scale(.94); }
+
+  /* Center ⊕ — raised orange circle, the only mobile New-Task entry. */
+  #bottomNav .bn-tab.bn-center {
+    flex: 0 0 auto; justify-content: flex-start;
+  }
+  #bottomNav .bn-tab.bn-center i {
+    width: 52px; height: 52px; margin-top: -18px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; font-size: 26px;
+    background: var(--accent, #ED4E0D); color: #fff;
+    box-shadow: 0 6px 16px rgba(237, 78, 13, 0.45);
+  }
+  #bottomNav .bn-tab.bn-center .bn-label { color: var(--ink-3); }
+  #bottomNav .bn-tab.bn-center:active i { transform: scale(.94); }
+
+  /* Give the scroll area room so the last row / group clears the bar, and
+     retire the floating FAB (the center ⊕ replaces it). */
+  body.ui-command-center .main,
+  body.ui-command-center .list-pane {
+    padding-bottom: calc(var(--m-navh) + env(safe-area-inset-bottom, 0px) + 8px);
+  }
+  #fab { display: none !important; }
+  /* The bulk-action bar must clear the nav too. */
+  .bulk-bar:not(.hidden) { bottom: calc(var(--m-navh) + env(safe-area-inset-bottom, 0px)); }
+
+  /* ========================================================
+     3. PILLS — single horizontal scrolling strip
+     (company chip row in the Table skin). No more 2-row wrap.
+     ======================================================== */
+  #taskViewWrap.qt-skin .qt-chiprow {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-left: calc(-1 * var(--m-gap));
+    margin-right: calc(-1 * var(--m-gap));
+    padding-left: var(--m-gap);
+    padding-right: var(--m-gap);
+    /* fade the right edge so it reads as scrollable */
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+            mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+  #taskViewWrap.qt-skin .qt-chiprow::-webkit-scrollbar { display: none; }
+  #taskViewWrap.qt-skin .qt-chip { flex: 0 0 auto; scroll-snap-align: start; }
+
+  /* ========================================================
+     4a. WIDGETS — true 2×2 bento
+     Up next · Focus / Progress · Controls, four equal quadrants.
+     ======================================================== */
+  body.ui-command-center .page-head-widgets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--m-gap);
+    width: 100%;
+  }
+  body.ui-command-center .page-head-widgets > .up-next-mount,
+  body.ui-command-center .page-head-widgets > .focus-widget-mount,
+  body.ui-command-center .page-head-widgets > .progress-widget-mount,
+  body.ui-command-center .page-head-widgets > .controls-widget-mount {
+    width: auto; min-width: 0; flex: none;
+  }
+  /* Pin the quadrant order (existing skin rules set flex `order` on these
+     mounts, which grid auto-placement otherwise honours): Up next · Focus /
+     Progress · Controls. */
+  body.ui-command-center .page-head-widgets > .up-next-mount      { order: 1; }
+  body.ui-command-center .page-head-widgets > .focus-widget-mount  { order: 2; }
+  body.ui-command-center .page-head-widgets > .progress-widget-mount { order: 3; }
+  body.ui-command-center .page-head-widgets > .controls-widget-mount { order: 4; }
+  /* Each quadrant's card fills its cell and shares one height baseline. */
+  body.ui-command-center .page-head-widgets > * > .up-next-card,
+  body.ui-command-center .page-head-widgets > * > .progress-card,
+  body.ui-command-center .page-head-widgets .focus-widget,
+  body.ui-command-center .page-head-widgets .controls-card {
+    height: 100%;
+    border-radius: var(--m-radius);
+  }
+  /* Controls quadrant: stack Sort / Group (+ the re-shown Filter) so three
+     buttons fit a half-width cell. Filter was hidden by css/tasks.css; bring it
+     back here since the bento has room for it. */
+  body.ui-command-center .page-head-widgets .controls-card {
+    display: flex; flex-direction: column; gap: 8px; justify-content: center;
+  }
+  body.ui-command-center .page-head-widgets .controls-card .btn {
+    width: 100%; justify-content: flex-start;
+  }
+  #filterBtn { display: inline-flex !important; }   /* undo the desktop hide, mobile only */
+
+  /* ========================================================
+     4b. TABLE — clean stacked cards
+     Two tidy lines: [✓ · title ............ due] then
+     [status · priority · label ........ avatars].
+     ======================================================== */
+  #taskViewWrap.qt-skin .qt-wrap { padding: 14px var(--m-gap) calc(var(--m-navh) + 28px); }
+  #taskViewWrap.qt-skin .qt-cols { display: none; }
+
+  #taskViewWrap.qt-skin .qt-row {
+    display: flex; flex-wrap: wrap; align-items: center;
+    column-gap: 8px; row-gap: 9px;
+    padding: 14px 14px;
+  }
+  #taskViewWrap.qt-skin .qt-ck { order: 1; flex: 0 0 auto; }
+  #taskViewWrap.qt-skin .qt-pdot { order: 2; flex: 0 0 auto; }
+  #taskViewWrap.qt-skin .qt-tcell { order: 3; flex: 1 1 55%; min-width: 0; }
+  #taskViewWrap.qt-skin .qt-ttitle { white-space: normal; font-size: 15px; line-height: 1.3; }
+  #taskViewWrap.qt-skin .qt-due {
+    order: 4; flex: 0 0 auto; margin-left: auto; text-align: right;
+    font-size: 11px;
+  }
+  /* second line: the meta chips, tidy and same height */
+  #taskViewWrap.qt-skin .qt-cell-status   { order: 5; }
+  #taskViewWrap.qt-skin .qt-cell-priority { order: 6; }
+  #taskViewWrap.qt-skin .qt-cell-label    { order: 7; }
+  #taskViewWrap.qt-skin .qt-cell-assignee { order: 8; margin-left: auto; }
+  #taskViewWrap.qt-skin .qt-cellbtn { padding: 3px 6px; }
+  #taskViewWrap.qt-skin .qt-actions { display: none; }
+  /* give each task card a hairline separation that reads as a card edge */
+  #taskViewWrap.qt-skin .qt-row + .qt-row { border-top: 1px solid var(--border); }
+
+  /* Page head: consistent gutter with the rest of the mobile system. */
+  body.ui-command-center .page-head { padding: 14px var(--m-gap) 8px; }
+}

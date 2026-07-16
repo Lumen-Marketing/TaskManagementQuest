@@ -192,6 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   new App.TopbarView({ timeModel, notifModel, controller, currentUser: App.CURRENT_USER });
   new App.SidebarView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
+  new App.BottomNavView({ controller });
   new App.TaskListView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   new App.TaskDetailView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
   App.projectPicker = new App.ProjectPickerView({ controller });
