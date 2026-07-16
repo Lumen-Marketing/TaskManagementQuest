@@ -41,6 +41,11 @@
 </head>
 <body class="ui-command-center">
   <div class="harness-page">
+    <!-- #listPane is NOT decoration: taskmanagement.css hangs `!important` card
+         chrome off `[data-theme="dark"] #listPane .progress-card` (~:7757, and
+         the light twin at ~:6870). Without this wrapper the harness renders a
+         borderless stat line that the real app never shows. Mirrors app.html:137. -->
+    <div class="list-pane" id="listPane">
     <div class="page-head">
       <!-- Header card — mirrors app.html ~line 148. -->
       <div class="head-card">
@@ -156,6 +161,7 @@
         </div>
       </div>
     </div>
+    </div><!-- /#listPane -->
     <div class="harness-rule" id="readout"></div>
   </div>
 

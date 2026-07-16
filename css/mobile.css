@@ -280,9 +280,13 @@
 
   /* --- Stat line: Progress and Focus lose their card chrome entirely —
      no background, no border, no padding — and read as plain text. --- */
-  body.ui-command-center .page-head-widgets .progress-card,
-  body.ui-command-center .page-head-widgets .focus-widget,
-  body.ui-command-center .page-head-widgets .controls-card {
+  /* `#listPane` is load-bearing here, not padding: the skin hangs its card
+     chrome off `[data-theme="dark"] #listPane .progress-card` (:7757) and the
+     light twin (:6870), both `!important`. Two !importants → specificity
+     decides, and their ID beat a class-only strip. Hence the ID on our side. */
+  body.ui-command-center #listPane .page-head-widgets .progress-card,
+  body.ui-command-center #listPane .page-head-widgets .focus-widget,
+  body.ui-command-center #listPane .page-head-widgets .controls-card {
     background: none !important;
     border: 0 !important;
     box-shadow: none !important;
@@ -320,16 +324,23 @@
     padding: 0; gap: 6px; justify-content: flex-start; align-items: center;
     width: auto; min-width: 0; min-height: 36px; white-space: nowrap;
   }
-  body.ui-command-center .page-head-widgets .focus-widget-eyebrow,
-  body.ui-command-center .page-head-widgets .focus-widget-open {
-    font-size: 14px; line-height: 36px; flex: 0 0 auto; white-space: nowrap;
+  /* Focus goes icon-only: the words cost ~55px on a line that has none to
+     spare. The eyebrow already carries the numbered-list glyph, so it renders
+     the icon (font-size:0 drops its "Focus" word) and the action keeps its
+     "Set order" / "Open" text in the DOM for screen readers only. */
+  body.ui-command-center .page-head-widgets .focus-widget-eyebrow {
+    display: inline-flex; align-items: center;
+    font-size: 0; flex: 0 0 auto;
+    color: var(--accent, #ED4E0D);
   }
+  body.ui-command-center .page-head-widgets .focus-widget-eyebrow i { font-size: 18px; }
   body.ui-command-center .page-head-widgets .focus-widget-open {
-    color: var(--accent, #ED4E0D); font-weight: 600;
+    font-size: 0; flex: 0 0 auto;
   }
-  /* The eyebrow is just a redundant "FOCUS" label next to its own action —
-     "Set order" / "Open" carries the meaning on its own. */
-  body.ui-command-center .page-head-widgets .focus-widget-eyebrow { display: none; }
+  body.ui-command-center .page-head-widgets .focus-widget-head {
+    width: 36px; justify-content: center; gap: 0;
+    border-radius: var(--m-radius-ctl);
+  }
 
   /* Controls: icon-only at the end of the stat line. Same button nodes/IDs, so
      every existing menu handler and anchor still works. Filter was hidden by
