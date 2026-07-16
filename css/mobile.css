@@ -351,9 +351,12 @@
   body.ui-command-center .page-head-widgets .focus-widget-eyebrow {
     display: inline-flex; align-items: center;
     font-size: 0; flex: 0 0 auto;
-    color: var(--accent, #ED4E0D);
+    /* Matches the Filter / Sort / Group glyphs exactly (16px, --ink-2). The box
+       was always identical; an 18px orange glyph inside it just read heavier
+       and rounder than its 16px grey neighbours. */
+    color: var(--ink-2, #aeb6c2);
   }
-  body.ui-command-center .page-head-widgets .focus-widget-eyebrow i { font-size: 18px; }
+  body.ui-command-center .page-head-widgets .focus-widget-eyebrow i { font-size: 16px; }
   body.ui-command-center .page-head-widgets .focus-widget-open {
     font-size: 0; flex: 0 0 auto;
   }
