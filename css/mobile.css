@@ -15,6 +15,9 @@
 
 /* Base (all widths): the bottom bar only exists on phones. */
 #bottomNav { display: none; }
+/* Likewise the stat meter — desktop shows the ring instead (ProgressWidgetView
+   renders both; each size hides the one it doesn't use). */
+.progress-line { display: none; }
 
 @media (max-width: 720px) {
   :root {
@@ -331,7 +334,27 @@
   body.ui-command-center .page-head-widgets .progress-ring,
   body.ui-command-center .page-head-widgets .progress-card-eyebrow { display: none; }
   body.ui-command-center .page-head-widgets .progress-card-text {
-    display: flex; flex-direction: column; min-width: 0;
+    display: flex; flex-direction: column; min-width: 0; flex: 0 0 auto;
+  }
+  /* The meter takes the width the stat gained: text left, track filling the
+     rest. 4px of colour reads at a glance where the hidden ring can't, and it
+     costs no height — the box stays 36px. The empty track still says "0%",
+     which a bare fill wouldn't. */
+  body.ui-command-center #listPane .page-head-widgets .progress-line {
+    display: block; flex: 1 1 auto; min-width: 0;
+    height: 4px; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.10);
+    overflow: hidden;
+  }
+  body.ui-command-center #listPane .page-head-widgets .progress-line span {
+    display: block; height: 100%; border-radius: inherit;
+    background: var(--accent, #ED4E0D);
+    transition: width var(--dur-med, .24s) var(--ease-out, ease);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.ui-command-center #listPane .page-head-widgets .progress-line span {
+      transition: none;
+    }
   }
   /* Stat text reads as quiet status; the Focus action reads as tappable. */
   body.ui-command-center .page-head-widgets .progress-card-title {

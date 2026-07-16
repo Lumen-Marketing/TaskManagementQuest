@@ -66,6 +66,13 @@ App.ProgressWidgetView = class ProgressWidgetView {
           <div class="progress-card-eyebrow">Today's progress</div>
           <div class="progress-card-title">${m.completed} of ${m.total} done</div>
         </div>
+        <!-- Phone-only meter: the ring is hidden at that size, so this carries
+             the percentage instead. Hidden by default in css/mobile.css (base,
+             outside the media query) — desktop keeps the ring. aria-hidden
+             because the title beside it already states the same numbers. -->
+        <div class="progress-line" aria-hidden="true">
+          <span style="width:${m.pct}%"></span>
+        </div>
         <div class="progress-metrics">
           <div class="progress-metric">
             <div class="progress-metric-num">${m.total}</div>
