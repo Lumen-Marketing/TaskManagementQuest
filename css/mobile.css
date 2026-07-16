@@ -247,18 +247,21 @@
      Two tidy lines: [✓ · title ............ due] then
      [status · priority · label ........ avatars].
      ======================================================== */
-  #taskViewWrap.qt-skin .qt-wrap { padding: 14px var(--m-gap) calc(var(--m-navh) + 28px); }
+  #taskViewWrap.qt-skin .qt-wrap { padding: 12px var(--m-gap) calc(var(--m-navh) + 28px); }
   #taskViewWrap.qt-skin .qt-cols { display: none; }
+  /* tighter group chrome so the list reads compact */
+  #taskViewWrap.qt-skin .qt-group { margin-bottom: 10px; border-radius: 12px; }
+  #taskViewWrap.qt-skin .qt-ghead { padding: 10px 14px; }
 
   #taskViewWrap.qt-skin .qt-row {
     display: flex; flex-wrap: wrap; align-items: center;
-    column-gap: 8px; row-gap: 9px;
-    padding: 14px 14px;
+    column-gap: 7px; row-gap: 7px;
+    padding: 11px 14px;
   }
   #taskViewWrap.qt-skin .qt-ck { order: 1; flex: 0 0 auto; }
   #taskViewWrap.qt-skin .qt-pdot { order: 2; flex: 0 0 auto; }
   #taskViewWrap.qt-skin .qt-tcell { order: 3; flex: 1 1 55%; min-width: 0; }
-  #taskViewWrap.qt-skin .qt-ttitle { white-space: normal; font-size: 15px; line-height: 1.3; }
+  #taskViewWrap.qt-skin .qt-ttitle { white-space: normal; font-size: 14px; line-height: 1.28; }
   #taskViewWrap.qt-skin .qt-due {
     order: 4; flex: 0 0 auto; margin-left: auto; text-align: right;
     font-size: 11px;
@@ -270,6 +273,15 @@
   #taskViewWrap.qt-skin .qt-cell-assignee { order: 8; margin-left: auto; }
   #taskViewWrap.qt-skin .qt-cellbtn { padding: 3px 6px; }
   #taskViewWrap.qt-skin .qt-actions { display: none; }
+
+  /* Declutter the meta line: the inline dropdown carets (the "⌄" after the
+     status + priority pills) and the empty-label "—" placeholder are
+     desktop-table affordances that just add noise on a phone. The pills stay
+     tappable; the dash only ever meant "no label". */
+  #taskViewWrap.qt-skin .qt-cell-status .chv,
+  #taskViewWrap.qt-skin .qt-cell-priority .chv { display: none; }
+  #taskViewWrap.qt-skin .qt-cell-label .qt-cellbtn:not(:has(.dot)) { display: none; }
+
   /* give each task card a hairline separation that reads as a card edge */
   #taskViewWrap.qt-skin .qt-row + .qt-row { border-top: 1px solid var(--border); }
 
