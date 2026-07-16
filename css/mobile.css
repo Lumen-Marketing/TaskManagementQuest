@@ -231,10 +231,10 @@
      ======================================================== */
   body.ui-command-center .page-head-widgets {
     display: grid;
-    /* Row 2 groups hard right: an empty 1fr eats the slack so the stat and all
-       four icon buttons read as one cluster instead of two things drifting
-       apart across an empty line. */
-    grid-template-columns: 1fr auto auto auto;
+    /* Row 2: the stat sits on the left gutter, flush with the Up next card's
+       edge above it; the 1fr slack sits between it and the four icon buttons,
+       which stay grouped on the right gutter. */
+    grid-template-columns: auto 1fr auto auto;
     align-items: center;
     row-gap: 14px; column-gap: 6px;
     width: 100%;
@@ -251,9 +251,9 @@
   body.ui-command-center .page-head-widgets > .up-next-mount {
     grid-area: 1 / 1 / 2 / -1; order: 0;
   }
-  /* Column 1 stays empty — the cluster starts at column 2. */
+  /* Column 2 is the empty 1fr — the icon cluster starts at column 3. */
   body.ui-command-center .page-head-widgets > .progress-widget-mount {
-    grid-area: 2 / 2 / 3 / 3; order: 0;
+    grid-area: 2 / 1 / 3 / 2; order: 0;
   }
   body.ui-command-center .page-head-widgets > .focus-widget-mount {
     grid-area: 2 / 3 / 3 / 4; order: 0; min-width: 0;
