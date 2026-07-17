@@ -1,13 +1,14 @@
 window.App = window.App || {};
 
 /* BottomNavView — the phone-only Instagram-style bottom tab bar.
-   Five slots: Home · Tasks · ⊕ · Projects · Profile. The raised orange
+   Five slots: Home · Tasks · ⊕ · Projects · Team. The raised orange
    center ⊕ is the only New-Task entry point on mobile (the old floating
-   FAB is CSS-hidden ≤720px); the Profile tab opens the account/profile page.
-   The full secondary navigation (Team / Reports / admin / workspaces / views)
-   stays reachable through the brand-mark drawer toggle in the topbar, so no
-   destination is stranded. Rendered into #bottomNav in app.html and shown
-   only ≤720px via css/mobile.css.
+   FAB is CSS-hidden ≤720px); the Team tab opens the Team workload board
+   (gated to roles that can see team time — it's dropped for everyone else).
+   Account/profile stays reachable via the topbar avatar, and the full
+   secondary navigation (Reports / admin / workspaces / views) through the
+   brand-mark drawer toggle, so no destination is stranded. Rendered into
+   #bottomNav in app.html and shown only ≤720px via css/mobile.css.
 
    Routing reuses the controller seams the rest of the app uses
    (goHome / setView / openNewTaskPage), so nothing new is wired downstream.
@@ -40,8 +41,8 @@ App.BottomNavView = class BottomNavView {
         gate: () => App.can('tasks.write'), match: () => false, center: true },
       { key: 'projects', label: 'Projects', icon: 'ti-folder',     action: () => this.controller.setView('projects'),
         gate: () => canView('projects'), match: (v) => v === 'projects' },
-      { key: 'profile',  label: 'Profile',  icon: 'ti-user',       action: () => this.controller.openProfile(),
-        gate: () => true, match: () => false },
+      { key: 'team',     label: 'Team',     icon: 'ti-users',      action: () => this.controller.setView('time:resource'),
+        gate: () => App.can('time.team'), match: (v) => v === 'time:resource' },
     ];
   }
 

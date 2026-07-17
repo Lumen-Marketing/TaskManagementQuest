@@ -52,6 +52,34 @@
   body.ui-command-center .deck.drawer .sidebar { flex: 1 1 auto; width: 100%; }
 
   /* ========================================================
+     0b. TEAM-SECTION TABLES — de-crowd on phones
+     Team workload + Clock dashboard render 5-column tables (Person · Task ·
+     Project · Started/Elapsed · Live) that crush into slivers on a phone — the
+     task title wraps to 3 lines and the project pill collides with the timer.
+     Let columns size to content, trim padding, and drop the two secondary
+     columns on the "active right now" tables so Person · Task · Elapsed get room
+     (the green live row + running timer already signal "live"). Approvals keeps
+     its own horizontal-scroll table (min-width) and is untouched.
+     ======================================================== */
+  body.ui-command-center .time-table:not(.approval-table) { table-layout: auto; }
+  body.ui-command-center .time-table th,
+  body.ui-command-center .time-table td { padding: 9px 10px; }
+  body.ui-command-center .time-table td { font-size: 12px; }
+  body.ui-command-center .time-section-title { font-size: 18px; padding-left: 4px; }
+
+  /* Team workload "Active right now": drop Project (3) + the Live column (5). */
+  body.ui-command-center .time-live-table th:nth-child(3),
+  body.ui-command-center .time-live-table td:nth-child(3),
+  body.ui-command-center .time-live-table th:nth-child(5),
+  body.ui-command-center .time-live-table td:nth-child(5) { display: none; }
+
+  /* Clock dashboard "Active right now": drop Project (3) + Started (4). */
+  body.ui-command-center .clock-live-table th:nth-child(3),
+  body.ui-command-center .clock-live-table td:nth-child(3),
+  body.ui-command-center .clock-live-table th:nth-child(4),
+  body.ui-command-center .clock-live-table td:nth-child(4) { display: none; }
+
+  /* ========================================================
      1. TOPBAR — slim, cohesive single row
      Brand · Search (flex) · Clock · Chat · Bell · Avatar.
      Every round control is the same size / radius / treatment;

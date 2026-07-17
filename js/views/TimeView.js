@@ -207,7 +207,7 @@ App.TimeView = class TimeView {
         <div class="time-section">
           <div class="time-section-title">Active right now</div>
           ${active.length ? `
-            <table class="time-table">
+            <table class="time-table time-live-table">
               <thead><tr><th>Person</th><th>Task</th><th>Project</th><th>Elapsed</th><th></th></tr></thead>
               <tbody>${liveRows}</tbody>
             </table>

@@ -111,7 +111,7 @@ App.ClockDashboardView = class ClockDashboardView {
         <div class="time-section">
           <div class="time-section-title">Active right now</div>
           ${active.length ? `
-            <table class="time-table">
+            <table class="time-table clock-live-table">
               <thead><tr><th>Person</th><th>Current task</th><th>Project</th><th>Started</th><th>Elapsed</th></tr></thead>
               <tbody>${liveRows}</tbody>
             </table>
