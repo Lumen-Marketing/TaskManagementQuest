@@ -190,21 +190,19 @@
     scroll-snap-type: x proximity;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-    /* Bleed to the screen edge so the strip scrolls edge-to-edge, but keep the
-       first chip on the page gutter via the padding. */
-    margin-left: calc(-1 * var(--m-gap));
-    margin-right: calc(-1 * var(--m-gap));
-    padding-left: var(--m-gap);
-    padding-right: var(--m-gap);
-    /* Without this, snapping aligns the first chip to the scrollport edge and
-       scrolls the padding away (scrollLeft:12) the moment the chips overflow —
-       so the row sat 12px left of everything else on narrow phones only.
-       scroll-padding keeps the snap position on the gutter. */
-    scroll-padding-left: var(--m-gap);
-    scroll-padding-right: var(--m-gap);
-    /* fade the right edge so it reads as scrollable */
-    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
-            mask-image: linear-gradient(90deg, #000 88%, transparent);
+    /* NO BLEED. This used to be `margin: 0 -12px` + `padding: 0 12px` so the
+       strip scrolled edge-to-edge. The side effect is what the boss spotted:
+       the SCROLLPORT is where chips get clipped, so with the bleed they
+       appeared and disappeared at x=12/378 while every table card sits at
+       24/366 — a scrolled-out chip peeked 12px outside the table's edge.
+       Sizing the strip to the content column instead means the clip line IS
+       the table's edge, top to bottom of the page.
+       (The scroll-padding that used to be here only existed to stop
+       scroll-snap eating that padding — no padding, nothing to eat.) */
+    /* fade the right edge so it reads as scrollable — the fade now ENDS on the
+       gutter, so "gone" and "card edge" are the same x. */
+    -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent);
+            mask-image: linear-gradient(90deg, #000 86%, transparent);
   }
   #taskViewWrap.qt-skin .qt-chiprow::-webkit-scrollbar { display: none; }
   #taskViewWrap.qt-skin .qt-chip { flex: 0 0 auto; scroll-snap-align: start; }
@@ -654,11 +652,8 @@
   .m-ctl:active { transform: scale(.97); }
   .m-ctl.on { color: var(--accent, #ED4E0D); border-color: var(--accent, #ED4E0D); }
 
-  /* --- 5c. Chip strip — one scrolling row, never wraps.
-     Lifted from §3 including scroll-padding: without it, snapping aligns the
-     first chip to the scrollport edge and scrolls the gutter away the moment
-     the chips overflow — the strip then sits 12px left of everything else, at
-     320/360 but not 390. --- */
+  /* --- 5c. Chip strip — one scrolling row, never wraps. Clips exactly on the
+     page gutter, so the pills appear and disappear on the table's own edge. --- */
   .m-chips {
     display: flex; flex-wrap: nowrap; align-items: center; gap: 8px;
     margin-top: 12px;
@@ -666,17 +661,10 @@
     scroll-snap-type: x proximity;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-    /* Bleed to the screen edge so the strip scrolls edge-to-edge, but keep the
-       first chip on the page gutter via the padding. */
-    margin-left: calc(-1 * var(--m-gap));
-    margin-right: calc(-1 * var(--m-gap));
-    padding-left: var(--m-gap);
-    padding-right: var(--m-gap);
-    scroll-padding-left: var(--m-gap);
-    scroll-padding-right: var(--m-gap);
-    /* fade the right edge so it reads as scrollable */
-    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
-            mask-image: linear-gradient(90deg, #000 88%, transparent);
+    /* NO BLEED — see §3. The scrollport is the clip line, so bleeding it 12px
+       past the gutter made chips appear/disappear 12px outside the cards. */
+    -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent);
+            mask-image: linear-gradient(90deg, #000 86%, transparent);
   }
   .m-chips::-webkit-scrollbar { display: none; }
   .m-chip {

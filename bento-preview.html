@@ -1,5 +1,9 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<!-- Theme: LIGHT by default — the app's own default, and what the boss runs.
+     This harness was dark-only, which is precisely how two light-theme bugs
+     (an invisible meter track, an unreadable selected chip) shipped. Append
+     ?theme=dark for the other one. Check BOTH. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,6 +42,11 @@
     font: 12px/1.4 system-ui, sans-serif;
   }
 </style>
+<script>
+if (new URLSearchParams(location.search).get('theme') === 'dark') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+}
+</script>
 </head>
 <body class="ui-command-center">
   <div class="harness-page">
