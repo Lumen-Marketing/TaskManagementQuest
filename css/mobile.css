@@ -65,7 +65,11 @@
   body.ui-command-center .time-table th,
   body.ui-command-center .time-table td { padding: 9px 10px; }
   body.ui-command-center .time-table td { font-size: 12px; }
-  body.ui-command-center .time-section-title { font-size: 18px; padding-left: 4px; }
+  /* Align the section titles + tables to the page gutter (24px) so they line up
+     with the shared "Team workload" header card above them (it sits at 24, while
+     .time-page defaulted to a 14px inset). */
+  body.ui-command-center #timeViewWrap .time-page { padding-left: 24px; padding-right: 24px; }
+  body.ui-command-center .time-section-title { font-size: 18px; padding-left: 0; }
 
   /* Team workload "Active right now": drop Project (3) + the Live column (5). */
   body.ui-command-center .time-live-table th:nth-child(3),
