@@ -14,6 +14,7 @@ import { stalledByPerson, taskAssignees } from "./lib/stalled.mjs";
 import {
   morningContext, eodContext, shapeMessage,
   fallbackMorning, fallbackEod, stalledText, MODE_SUBJECT,
+  MODE_ROUTE, MODE_CTA_LABEL,
 } from "./lib/content.mjs";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
@@ -65,6 +66,10 @@ Deno.serve(async (req: Request) => {
   const groqKey = Deno.env.get("GROQ_API_KEY");
   const apiKey = Deno.env.get("RESEND_API_KEY");
   const from = Deno.env.get("EMAIL_FROM") ?? "Quest HQ <onboarding@resend.dev>";
+  // Absolute app base for the email CTA button (e.g. https://<prod>/app.html).
+  // Unset → the button is omitted and the email degrades to text (never a broken
+  // link). The in-app bell renders its own CTA and needs nothing here.
+  const appUrl = Deno.env.get("APP_URL");
   const now = Date.now();
   const { dateKey } = hqParts(now);
 
@@ -109,11 +114,18 @@ Deno.serve(async (req: Request) => {
     if (notif.error) errors.push(`notif ${kind}/${person}: ${notif.error.message}`);
 
     if (apiKey && emailById.has(person)) {
+      // Deep-link CTA button (email-only; the bell renders its own). `kind` is
+      // the mode; omit the button if APP_URL / the mode's route is missing.
+      const route = MODE_ROUTE[kind];
+      const label = MODE_CTA_LABEL[kind];
+      const btn = (appUrl && route && label)
+        ? `<p style="margin:16px 0"><a href="${esc(appUrl + route)}" style="display:inline-block;background:#ED4E0D;color:#ffffff;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;font-family:Arial,sans-serif;font-size:14px">${esc(label)} &rarr;</a></p>`
+        : "";
       try {
         const r = await fetch(RESEND_ENDPOINT, {
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ from, to: [emailById.get(person)], subject, html: `${html}<p style="color:#888;font-size:12px">Quest HQ check-in</p>` }),
+          body: JSON.stringify({ from, to: [emailById.get(person)], subject, html: `${html}${btn}<p style="color:#888;font-size:12px">Quest HQ check-in</p>` }),
         });
         if (!r.ok) errors.push(`email ${kind}/${person}: ${r.status}`);
       } catch (e) { errors.push(`email ${kind}/${person}: ${String(e)}`); }
@@ -130,8 +142,8 @@ Deno.serve(async (req: Request) => {
       if (!ctx.lines.length && (mode === "morning" ? ctx.counts.total === 0 : ctx.counts.done === 0 && ctx.counts.open === 0)) continue;
       const fallback = mode === "morning" ? fallbackMorning(ctx) : fallbackEod(ctx);
       const sys = mode === "morning"
-        ? "You write a 2-sentence morning check-in for a worker from the task lines given. End by asking what they're tackling today. Plain text, no markdown, no emojis. Only reference the given tasks."
-        : "You write a 2-sentence end-of-day check-in from the task lines given. Note what got done and what slipped, then ask them to confirm what they finished. Plain text, no markdown, no emojis.";
+        ? "You write a 2-sentence morning check-in for a worker from the task lines given. State what's overdue or due today and end on a brief, plain statement — do NOT ask a question (the app shows a 'Set today's focus' button). Plain text, no markdown, no emojis. Only reference the given tasks."
+        : "You write a 2-sentence end-of-day check-in from the task lines given. Note what got done and what slipped, then end on a brief, plain statement — do NOT ask a question (the app shows a 'Review today' button). Plain text, no markdown, no emojis.";
       const body = await wording(groqKey, sys, ctx.lines, fallback);
       await deliver(mode, person, dateKey, MODE_SUBJECT[mode], body, null);
     }

@@ -346,6 +346,9 @@ App.AppController = class AppController {
     if (ui.selectedTaskId != null) return '#/task/' + enc(String(ui.selectedTaskId));
     if (ui.view === 'all') {
       if (ui.filters && ui.filters.projectId) return '#/folder/' + enc(String(ui.filters.projectId));
+      // Execution order is the 'focus' sort over the table layout (not a layout
+      // value — see FocusWidgetView / TaskListView), so it rides sortBy here.
+      if (ui.sortBy === 'focus') return '#/tasks/execution';
       if (ui.layout === 'calendar') {
         return ui.calendarSelectedDay
           ? '#/tasks/calendar/' + enc(ui.calendarSelectedDay)
@@ -432,12 +435,22 @@ App.AppController = class AppController {
         } else if (head === 'tasks') {
           if (this.uiState.filters) this.uiState.filters.projectId = null;
           this.setView('all');
-          this.setLayout(['table', 'calendar', 'kanban', 'cards'].includes(a) ? a : 'table');
-          if (a === 'calendar') {
-            const iso = /^\d{4}-\d{2}-\d{2}$/.test(b || '') ? b : null;
-            this.uiState.calendarAnchor = iso;
-            this.uiState.calendarSelectedDay = iso;
-            App.EventBus.emit('calendar:changed');
+          if (a === 'execution') {
+            // Execution-order rides the 'focus' sort over the table layout
+            // (mirrors FocusWidgetView), not a layout value. Guard the sort so a
+            // re-applied identical hash doesn't toggle sortDir.
+            this.setLayout('table');
+            if (this.uiState.sortBy !== 'focus') this.setSortBy('focus');
+          } else {
+            // Leaving execution order back to a plain list drops the focus sort.
+            if (this.uiState.sortBy === 'focus') this.setSortBy('priority');
+            this.setLayout(['table', 'calendar', 'kanban', 'cards'].includes(a) ? a : 'table');
+            if (a === 'calendar') {
+              const iso = /^\d{4}-\d{2}-\d{2}$/.test(b || '') ? b : null;
+              this.uiState.calendarAnchor = iso;
+              this.uiState.calendarSelectedDay = iso;
+              App.EventBus.emit('calendar:changed');
+            }
           }
           App.EventBus.emit('filters:changed');
         } else if (head === 'home') {
@@ -2371,6 +2384,20 @@ App.AppController = class AppController {
   /* ---------- notifications ---------- */
   markAllNotifsRead() {
     this.notifModel.markAllRead();
+  }
+
+  /* A check-in notification's CTA was clicked: mark it read and deep-link to the
+     mode's target (morning → execution order, eod → task table). Stalled has no
+     route (checkinCta.route === null) and is handled by openNotification instead
+     — it opens the linked task. Pushes a real history entry so Back works. */
+  openCheckin(notifId) {
+    const n = this.notifModel.find(notifId);
+    this.notifModel.markRead(notifId);
+    const cta = App.utils.checkinCta(n && n.meta);
+    const route = cta && cta.route;
+    if (!route) return;
+    try { window.history.pushState(null, '', route); } catch (e) { /* pushState throttled/unavailable */ }
+    this._applyRoute(route);
   }
 
   openNotification(notifId, taskId) {

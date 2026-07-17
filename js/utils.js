@@ -366,6 +366,26 @@ App.utils = {
     return base ? `${base} · ${rel}` : rel;
   },
 
+  /* Map a check-in notification's stored `meta` to its call-to-action, or null
+     when the notification isn't a check-in. The `checkins` edge function writes
+     meta as `Check-in · <subject>`; we read the subject back and resolve the
+     per-mode label + deep-link route. `route === null` means "no route — act on
+     the notification's own task" (stalled mode carries the task id).
+
+     ⚠️ The subject strings MUST stay in lockstep with MODE_SUBJECT in
+     supabase/functions/checkins/lib/content.mjs. That module is Deno-only, so
+     there is no shared import — a wording change there is a change here too. */
+  checkinCta(meta) {
+    const m = String(meta == null ? '' : meta).match(/^Check-in\s+·\s+(.+?)\s*$/);
+    if (!m) return null;
+    const BY_SUBJECT = {
+      'Your morning check-in':      { mode: 'morning', label: "Set today's focus",   route: '#/tasks/execution' },
+      'Your end-of-day check-in':   { mode: 'eod',     label: 'Review today',        route: '#/tasks' },
+      'Tasks that have gone quiet': { mode: 'stalled', label: 'Review stalled tasks', route: null },
+    };
+    return BY_SUBJECT[m[1]] || null;
+  },
+
   /* Format a true point-in-time (a real instant: clock-in moment, time-entry
      timestamp — anything stored as timestamptz) in the shared display timezone
      from App.timezone(), so every viewer sees the SAME wall-clock reading for the

@@ -1,7 +1,7 @@
 // tests/unit/checkin-content.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { morningContext, eodContext, shapeMessage, fallbackMorning, fallbackEod, stalledText } from '../../supabase/functions/checkins/lib/content.mjs';
+import { morningContext, eodContext, shapeMessage, fallbackMorning, fallbackEod, stalledText, MODE_SUBJECT, MODE_ROUTE, MODE_CTA_LABEL } from '../../supabase/functions/checkins/lib/content.mjs';
 
 const T = (o) => ({ id: o.id, title: o.title, company_id: o.company_id || 'roofing',
   due: o.due ?? null, status: o.status || 'todo', completed_at: o.completed_at ?? null });
@@ -36,4 +36,24 @@ test('fallbacks and stalledText produce non-empty plain strings', () => {
   const s = stalledText([{ id: 't1', title: 'Alpha' }, { id: 't2', title: 'Beta' }]);
   assert.match(s, /Alpha/);
   assert.match(s, /Beta/);
+});
+
+// The CTA button now carries the action, so the copy must not ask a dead
+// question the worker can't answer (the whole point of the feature).
+test('morning/eod fallbacks ask no rhetorical question', () => {
+  const variants = [
+    fallbackMorning({ counts: { overdue: 2, dueToday: 1, total: 5 } }),
+    fallbackMorning({ counts: { overdue: 0, dueToday: 0, total: 0 } }),
+    fallbackEod({ counts: { done: 3, slipped: 1, open: 4 } }),
+    fallbackEod({ counts: { done: 0, slipped: 0, open: 0 } }),
+  ];
+  for (const v of variants) assert.equal(v.includes('?'), false, `unexpected '?' in: ${v}`);
+});
+
+test('MODE_ROUTE / MODE_CTA_LABEL cover every subject mode', () => {
+  for (const mode of Object.keys(MODE_SUBJECT)) {
+    assert.equal(typeof MODE_ROUTE[mode], 'string', `route for ${mode}`);
+    assert.equal(typeof MODE_CTA_LABEL[mode], 'string', `label for ${mode}`);
+  }
+  assert.equal(MODE_ROUTE.morning, '#/tasks/execution');
 });

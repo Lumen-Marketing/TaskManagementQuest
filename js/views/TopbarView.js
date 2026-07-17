@@ -369,12 +369,20 @@ App.TopbarView = class TopbarView {
       this.notifList.innerHTML = `<div class="notif-empty">You're all caught up.</div>`;
       return;
     }
-    this.notifList.innerHTML = all.map(n => `
-      <div class="notif-item ${n.read ? '' : 'unread'}" data-notif-id="${App.utils.escapeHtml(n.id)}" data-task-id="${App.utils.escapeHtml(n.taskId || '')}">
+    this.notifList.innerHTML = all.map(n => {
+      // Check-in notifications carry a deep-link CTA the client renders itself —
+      // the notification HTML can't (sanitizeNotificationHtml strips links).
+      const cta = App.utils.checkinCta(n.meta);
+      const ctaLine = cta
+        ? `<div class="notif-cta">${App.utils.escapeHtml(cta.label)} <span class="notif-cta-arrow" aria-hidden="true">→</span></div>`
+        : '';
+      return `
+      <div class="notif-item ${n.read ? '' : 'unread'}" data-notif-id="${App.utils.escapeHtml(n.id)}" data-task-id="${App.utils.escapeHtml(n.taskId || '')}" data-cta-route="${cta && cta.route ? '1' : ''}">
         <div class="notif-meta">${App.utils.escapeHtml(App.utils.notifMeta(n.meta, n.createdAt))}</div>
         <div class="notif-text">${App.utils.sanitizeNotificationHtml(n.html)}</div>
-      </div>
-    `).join('');
+        ${ctaLine}
+      </div>`;
+    }).join('');
 
     this.notifList.querySelectorAll('.notif-item').forEach(item => {
       App.utils.makeActivatable(item);
@@ -383,7 +391,10 @@ App.TopbarView = class TopbarView {
         const taskId = item.dataset.taskId;
         this.notifPanel.classList.add('hidden');
         this.notifBtn.setAttribute('aria-expanded', 'false');
-        this.controller.openNotification(notifId, taskId);
+        // Routed check-in CTAs deep-link; everything else (incl. stalled, which
+        // has a task but no route) opens the linked task as before.
+        if (item.dataset.ctaRoute) this.controller.openCheckin(notifId);
+        else this.controller.openNotification(notifId, taskId);
       });
     });
   }

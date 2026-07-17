@@ -1912,6 +1912,12 @@ button.tdp-chip:hover { border-color: var(--ink-3); }
 .notif-item.unread:hover { background: color-mix(in oklch, var(--amber-bg), var(--ink) 8%); }
 .notif-meta { font-size: 10.5px; color: var(--ink-3); margin-bottom: 3px; }
 .notif-text { font-size: 12px; line-height: 1.4; }
+/* Check-in deep-link CTA (client-rendered — the notification HTML can't carry a
+   link). Brand-orange, weight+color for affordance, no hairline (house rule). */
+.notif-cta { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--accent, #ED4E0D); display: inline-flex; align-items: center; gap: 5px; }
+.notif-item:hover .notif-cta { text-decoration: underline; text-underline-offset: 2px; }
+.notif-cta-arrow { font-weight: 700; transition: transform var(--dur-fast) var(--ease-out); }
+.notif-item:hover .notif-cta-arrow { transform: translateX(2px); }
 .notif-empty { padding: 40px 14px; text-align: center; color: var(--ink-3); font-size: 12px; }
 
 /* Helper */

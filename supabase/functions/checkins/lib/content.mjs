@@ -13,6 +13,21 @@ export const MODE_SUBJECT = {
   stalled: 'Tasks that have gone quiet',
 };
 
+// Per-mode deep-link CTA for the email button. The route is appended to APP_URL
+// (e.g. `${APP_URL}#/tasks/execution`). ⚠️ These labels+routes MUST match
+// App.utils.checkinCta in js/utils.js — the client renders the same CTA in the
+// bell from the notification's subject. A change here is a change there too.
+export const MODE_ROUTE = {
+  morning: '#/tasks/execution',
+  eod: '#/tasks',
+  stalled: '#/tasks',
+};
+export const MODE_CTA_LABEL = {
+  morning: "Set today's focus",
+  eod: 'Review today',
+  stalled: 'Review stalled tasks',
+};
+
 export function morningContext(tasks, { today }) {
   const list = (tasks || []).filter((t) => t && !isDone(t));
   const overdue = list.filter((t) => t.due && t.due < today);
@@ -47,7 +62,8 @@ export function fallbackMorning(ctx) {
   if (c.overdue) parts.push(`${plural(c.overdue, 'task')} overdue`);
   if (c.dueToday) parts.push(`${c.dueToday} due today`);
   const head = parts.length ? parts.join(', ') + '.' : 'Nothing overdue or due today.';
-  return `${head} You have ${plural(c.total, 'open task')}. What are you tackling today?`;
+  // No rhetorical question — the check-in's CTA button carries the action.
+  return `${head} You have ${plural(c.total, 'open task')}. Set today's focus below.`;
 }
 
 export function fallbackEod(ctx) {
@@ -56,7 +72,8 @@ export function fallbackEod(ctx) {
   if (c.done) parts.push(`${plural(c.done, 'task')} done today`);
   if (c.slipped) parts.push(`${c.slipped} slipped past due`);
   const head = parts.length ? parts.join(', ') + '.' : 'No completions logged today.';
-  return `${head} ${plural(c.open, 'task')} still open. Confirm what you finished.`;
+  // No directive to reply — the 'Review today' CTA button carries the action.
+  return `${head} ${plural(c.open, 'task')} still open.`;
 }
 
 export function stalledText(items) {
