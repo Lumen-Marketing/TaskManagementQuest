@@ -44,6 +44,14 @@
   }
 
   /* ========================================================
+     0. NAV DRAWER — make the nav fill the drawer
+     The drawer (.deck) is `display: flex` (a row), so its .sidebar is a flex
+     item that shrinks to its content width (~200px) and leaves a wide empty
+     band on the right of the ~300px drawer. Stretch it to fill.
+     ======================================================== */
+  body.ui-command-center .deck.drawer .sidebar { flex: 1 1 auto; width: 100%; }
+
+  /* ========================================================
      1. TOPBAR — slim, cohesive single row
      Brand · Search (flex) · Clock · Chat · Bell · Avatar.
      Every round control is the same size / radius / treatment;
