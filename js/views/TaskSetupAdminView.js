@@ -53,7 +53,7 @@ App.TaskSetupAdminView = class TaskSetupAdminView {
       return;
     }
     if (!this.raw) {
-      this.wrap.innerHTML = `<div class="tsetup"><div class="tsetup-head"><div><h2 class="tsetup-title">Task setup</h2></div></div><p class="tsetup-sub">Loading…</p></div>`;
+      this.wrap.innerHTML = `<div class="tsetup"><div class="tsetup-head"><div><p class="tsetup-sub">Loading…</p></div></div></div>`;
     }
     try {
       this.raw = await this.dataStore.loadTaxonomy();
@@ -81,7 +81,6 @@ App.TaskSetupAdminView = class TaskSetupAdminView {
       <div class="tsetup">
         <div class="tsetup-head">
           <div>
-            <h2 class="tsetup-title">Task setup</h2>
             <p class="tsetup-sub">Customize the types, statuses, and labels for each workspace.</p>
           </div>
           <label class="tsetup-company-wrap">Workspace

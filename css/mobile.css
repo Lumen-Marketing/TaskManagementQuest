@@ -260,6 +260,12 @@
      fit a 320px screen without shrinking the touch targets below 38px. */
   body.ui-command-center .head-card-actions #newTaskBtn { display: none; }
 
+  /* Task-setup admin page: its heading was nearly flush (2px) while the head
+     card above it sits on the 24px gutter with its title text indented a further
+     10px (card padding). Line the "Task setup" heading + its content up under
+     the pill's TEXT so the two read as aligned. */
+  body.ui-command-center #timeViewWrap .tsetup { padding-left: 34px; padding-right: 20px; }
+
   /* ========================================================
      4a. WIDGETS — one hero card + a stat line
      A 2×2 bento put four competing focal points above the task list. On a

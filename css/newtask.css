@@ -224,7 +224,7 @@
 /* ---------------- responsive ---------------- */
 @media (max-width: 920px) {
   #newTaskWrap .nt-cols { grid-template-columns: 1fr; }
-  #newTaskWrap .nt-preview { position: static; order: -1; }
+  #newTaskWrap .nt-preview { position: static; }
 }
 @media (max-width: 560px) {
   #newTaskWrap .nt-title-in { font-size: 19px; }

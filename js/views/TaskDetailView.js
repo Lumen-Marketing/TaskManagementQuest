@@ -336,9 +336,9 @@ App.TaskDetailView = class TaskDetailView {
         <div class="td2-titlebar">
           <h1 class="td2-title${canWrite ? ' is-editable' : ''}"${canWrite ? ' contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Task title" title="Click to rename"' : ''}>${App.utils.escapeHtml(t.title)}</h1>
           <div class="td2-head-actions">
-            <button class="td2-btn td2-btn-watch ${isWatching ? 'is-on' : ''}" data-action="toggle-watch" type="button"><i class="ti ti-eye"></i>${isWatching ? 'Watching' : 'Watch'}</button>
-            ${App.can('tasks.write') ? `<button class="td2-btn" data-action="new-task" type="button"><i class="ti ti-plus"></i>New task</button>` : ''}
-            ${App.can('tasks.write') ? `<button class="td2-btn td2-btn-primary ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i>${isDone ? 'Reopen' : 'Mark complete'}</button>` : ''}
+            <button class="td2-btn td2-btn-watch ${isWatching ? 'is-on' : ''}" data-action="toggle-watch" type="button" aria-label="${isWatching ? 'Watching' : 'Watch'}"><i class="ti ti-eye"></i><span class="td2-btn-lbl">${isWatching ? 'Watching' : 'Watch'}</span></button>
+            ${App.can('tasks.write') ? `<button class="td2-btn" data-action="new-task" type="button" aria-label="New task"><i class="ti ti-plus"></i><span class="td2-btn-lbl">New task</span></button>` : ''}
+            ${App.can('tasks.write') ? `<button class="td2-btn td2-btn-primary ${isDone ? 'is-done' : ''}" data-action="mark-complete" type="button" aria-label="${isDone ? 'Reopen' : 'Mark complete'}"><i class="ti ${isDone ? 'ti-rotate-clockwise' : 'ti-circle-check'}"></i><span class="td2-btn-lbl">${isDone ? 'Reopen' : 'Mark complete'}</span></button>` : ''}
             <button class="td2-btn td2-icon" data-action="overflow" aria-label="More actions" aria-haspopup="true" type="button"><i class="ti ti-dots"></i></button>
             <div class="td2-overflow hidden" id="tdpOverflow">
               <button class="td2-overflow-item" data-action="qa-duplicate" type="button"><i class="ti ti-copy"></i>Duplicate</button>
@@ -351,6 +351,7 @@ App.TaskDetailView = class TaskDetailView {
           <button class="td2-chip td2-chip-status ${statusChip.cls}" style="${statusChip.style}" data-action="status-menu" type="button">${App.utils.escapeHtml(statusObj.label)} <i class="ti ti-chevron-down"></i></button>
           <button class="td2-chip td2-chip-due ${dueState}"${canWrite ? ' data-action="chip-due"' : ''} type="button">${dueInner}</button>
           <button class="td2-chip td2-chip-assignee"${canWrite ? ' data-action="chip-assignee"' : ''} type="button">${App.directory.avatarStack(assignees)}<span class="td2-chip-name">${App.utils.escapeHtml(assigneeLabel)}</span></button>
+          <span class="td2-chip-break" aria-hidden="true"></span>
         </div>
       </div>
 
@@ -407,16 +408,16 @@ App.TaskDetailView = class TaskDetailView {
 
         <aside class="td2-col td2-col-right">
           ${stuckHtml}
-          <div class="td2-card">
+          <div class="td2-card td2-qa-card">
             <div class="td2-card-h">Quick actions</div>
             <div class="td2-qa-list">
-              <button class="td2-qa td2-qa-solid td2-clockin" data-action="toggle-timer" type="button"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i>${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}</button>
-              ${(canWrite && nudgeName) ? `<button class="td2-qa td2-qa-nudge${overdue ? ' is-late' : ''}" data-action="qa-nudge" type="button"><i class="ti ti-bell-ringing"></i>Nudge ${App.utils.escapeHtml(nudgeName)}${overdue ? `<span class="td2-qa-late">${daysOverdue}D LATE</span>` : ''}</button>` : ''}
-              ${canWrite ? `<button class="td2-qa td2-qa-solid" data-action="qa-help" type="button"><i class="ti ti-lifebuoy"></i>Request help</button>` : ''}
-              ${(canWrite && !stuck) ? `<button class="td2-qa td2-qa-outline" data-action="qa-stuck" type="button"><i class="ti ti-alert-triangle"></i>I'm stuck</button>` : ''}
-              <button class="td2-qa td2-qa-outline" data-action="qa-reassign" type="button"><i class="ti ti-user-share"></i>Reassign</button>
+              <button class="td2-qa td2-qa-solid td2-clockin" data-action="toggle-timer" type="button" aria-label="${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}" title="${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}"><i class="ti ${myTimerOnThis ? 'ti-player-pause-filled' : 'ti-player-play-filled'}"></i><span class="td2-qa-lbl">${myTimerOnThis ? 'Back to General shift' : 'Clock in on this task'}</span></button>
+              ${(canWrite && nudgeName) ? `<button class="td2-qa td2-qa-nudge${overdue ? ' is-late' : ''}" data-action="qa-nudge" type="button" aria-label="Nudge ${App.utils.escapeHtml(nudgeName)}" title="Nudge ${App.utils.escapeHtml(nudgeName)}"><i class="ti ti-bell-ringing"></i><span class="td2-qa-lbl">Nudge ${App.utils.escapeHtml(nudgeName)}${overdue ? `<span class="td2-qa-late">${daysOverdue}D LATE</span>` : ''}</span></button>` : ''}
+              ${canWrite ? `<button class="td2-qa td2-qa-solid" data-action="qa-help" type="button" aria-label="Request help" title="Request help"><i class="ti ti-lifebuoy"></i><span class="td2-qa-lbl">Request help</span></button>` : ''}
+              ${(canWrite && !stuck) ? `<button class="td2-qa td2-qa-outline" data-action="qa-stuck" type="button" aria-label="I'm stuck" title="I'm stuck"><i class="ti ti-alert-triangle"></i><span class="td2-qa-lbl">I'm stuck</span></button>` : ''}
+              <button class="td2-qa td2-qa-outline" data-action="qa-reassign" type="button" aria-label="Reassign" title="Reassign"><i class="ti ti-user-share"></i><span class="td2-qa-lbl">Reassign</span></button>
               <div class="td2-qa-morewrap">
-                <button class="td2-qa td2-qa-more" data-action="qa-more" aria-haspopup="true" type="button">More <i class="ti ti-chevron-down"></i></button>
+                <button class="td2-qa td2-qa-more" data-action="qa-more" aria-haspopup="true" type="button" aria-label="More actions" title="More actions"><span class="td2-qa-lbl">More </span><i class="ti ti-chevron-down"></i></button>
                 <div class="td2-qa-menu hidden" id="td2QaMore" role="menu">
                   <button data-action="qa-subtask" type="button"><i class="ti ti-subtask"></i>Add subtask</button>
                   <button data-action="qa-logcall" type="button"><i class="ti ti-phone"></i>Log a call</button>

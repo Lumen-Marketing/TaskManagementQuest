@@ -134,6 +134,10 @@ App.TaskListView = class TaskListView {
       'approvals':      { eyebrow: 'Admin', title: 'Approvals' },
       'admin:clock':    { eyebrow: 'Admin', title: 'Clock dashboard' },
       'admin:reports':  { eyebrow: 'Admin', title: 'Problem reports' },
+      // The head-card is shared with the task list and otherwise goes stale
+      // ("All tasks") on the admin Task-setup page. Give it its own label; the
+      // map is re-applied on every view change, so other views self-heal.
+      'admin:task-setup': { eyebrow: 'Admin', title: 'Task detail' },
       'team:hierarchy': { eyebrow: 'Org', title: 'Team hierarchy' },
     };
     let t = titles[view];
