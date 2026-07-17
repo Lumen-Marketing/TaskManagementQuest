@@ -27,6 +27,17 @@ function esc(s: string): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 }
 
+// Build the email CTA href. APP_URL is a PROJECT-WIDE secret shared with
+// create-user, which uses it as the SITE ROOT (the sign-in link). The bell's
+// hash routes only resolve on the SPA entry (app.html), so normalize whatever
+// APP_URL holds — bare root, trailing slash, or already app.html — to the
+// app.html base, then append the mode's `#/...` route.
+function appHref(base: string, route: string): string {
+  let b = base.trim().replace(/\/+$/, "");        // drop trailing slash(es)
+  if (!/app\.html$/i.test(b)) b += "/app.html";   // ensure the SPA entry point
+  return b + route;                                // route already starts with '#'
+}
+
 // Ask Groq to reword `fallback` around `contextLines`; degrade to the fallback.
 async function wording(groqKey: string | undefined, sys: string, contextLines: string[], fallback: string): Promise<string> {
   if (!groqKey) return fallback;
@@ -119,7 +130,7 @@ Deno.serve(async (req: Request) => {
       const route = MODE_ROUTE[kind];
       const label = MODE_CTA_LABEL[kind];
       const btn = (appUrl && route && label)
-        ? `<p style="margin:16px 0"><a href="${esc(appUrl + route)}" style="display:inline-block;background:#ED4E0D;color:#ffffff;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;font-family:Arial,sans-serif;font-size:14px">${esc(label)} &rarr;</a></p>`
+        ? `<p style="margin:16px 0"><a href="${esc(appHref(appUrl, route))}" style="display:inline-block;background:#ED4E0D;color:#ffffff;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:8px;font-family:Arial,sans-serif;font-size:14px">${esc(label)} &rarr;</a></p>`
         : "";
       try {
         const r = await fetch(RESEND_ENDPOINT, {
