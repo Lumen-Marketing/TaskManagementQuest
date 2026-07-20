@@ -107,6 +107,14 @@ Cross-tenant support is a **separate, deliberate door**, not a normal login:
 - Billing, plans, seats, approval-gated signup (#4).
 - In-app support-mode impersonation (Layer 3).
 
+## Planning refinements (discovered while mapping the schema)
+
+These sharpen §2/§4 without changing the decisions:
+
+- **Use ONE `RESTRICTIVE` RLS policy per table for the tenant gate**, instead of hand-editing all ~15 existing permissive policies. Postgres ANDs a restrictive policy with every permissive one, so a single `USING (tenant_id = current_tenant_id())` / `WITH CHECK (...)` per table clamps *all* current and future policies to the caller's tenant. This is exactly the "AND it onto every policy" semantics the spec wants, but in one auditable place that no new policy can bypass.
+- **Company ids must stay globally unique** (`companies.id` is a global text primary key, referenced as text by `tasks.company_id`, `profiles.company_ids[]`, `team_members`, taxonomy, etc.). Existing Lumen slugs (`roofing`/`drafting`/`lumen`) are kept as-is; **new tenants get namespaced company ids** (a short unique token, e.g. `co_<random>`), so two businesses can both have a "Sales" company without colliding. No composite-key/FK restructuring.
+- **Shared buckets become per-tenant via a marker, not a magic id.** Today the RLS carve-outs match the literal id `'general-shift'` (and the `'overall'` company). Replace those with a boolean marker (`tasks.is_shared_bucket`, and a per-tenant `overall` company row), so each tenant gets its own bucket and the restrictive tenant policy scopes the carve-out automatically.
+
 ## Risks & notes
 - **Every** tenant-scoped table must be found and covered — a missed table is a silent leak. Enumerate the full schema during planning; the §1 list is the working set, not verified-complete.
 - Backfill ordering (data before constraints) is critical; wrap the migration in a transaction and verify counts.
