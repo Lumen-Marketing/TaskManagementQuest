@@ -95,8 +95,23 @@ After any runtime release begins writing organization/workspace-native data, do 
 
 ## Advisor record
 
-Record the read-only advisor review here before staging promotion:
+Read-only production baseline captured on 2026-07-21 before this migration was applied:
 
-- Security advisor: pending review against production baseline.
-- Performance advisor: pending review against production baseline.
-- New findings attributable to this migration: none recorded yet because production DDL has not been applied.
+- Security advisor: 16 existing notices — 3 RLS-without-policy informational notices, 1 mutable function search path, 1 extension in `public`, 1 public bucket listing warning, 9 exposed security-definer warnings, and leaked-password protection disabled.
+- Performance advisor: 27 existing notices — 4 unindexed foreign keys, 5 auth RLS initialization-plan warnings, 2 backup tables without primary keys, 9 unused indexes, and 7 multiple-permissive-policy warnings.
+- New findings attributable to this migration: none; the remote migration list and live schema confirm the migration has not been applied.
+- Reference: [Supabase database linter](https://supabase.com/docs/guides/database/database-linter).
+
+The migration uses a non-exposed `private` schema for new security-definer helpers, locks each helper's `search_path`, removes anonymous access, uses one permissive policy per role/action, and adds covering indexes for every new foreign key. Re-run both advisors after staging application and compare against the counts above.
+
+## Live compatibility snapshot
+
+Read-only production audit captured on 2026-07-21:
+
+- Project health: `ACTIVE_HEALTHY`, PostgreSQL 17.
+- Real legacy companies: `drafting`, `lumen`, and `roofing`; all IDs are valid workspace slugs.
+- Organization-wide pseudo-company: `overall`; intentionally excluded from workspace backfill.
+- Approved profiles available for deterministic ownership backfill: 16, including 4 developers and 3 admins.
+- Source rows: 77 tasks, 11 projects, 21 task types, 117 task statuses, and 9 task labels.
+- Every required legacy source column exists.
+- All five new tenant tables are absent, confirming no production DDL occurred.

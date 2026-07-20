@@ -137,15 +137,17 @@ create trigger prevent_workspace_organization_change
 before update of organization_id on public.workspaces
 for each row execute function private.prevent_workspace_organization_change();
 
+create index if not exists organizations_owner_user_idx
+  on public.organizations (owner_user_id);
 create index if not exists organization_memberships_user_idx
-  on public.organization_memberships (user_id, organization_id)
-  where status = 'active';
+  on public.organization_memberships (user_id, organization_id);
 create index if not exists workspaces_organization_idx
   on public.workspaces (organization_id, sort_order)
   where archived_at is null;
 create index if not exists workspace_memberships_user_idx
-  on public.workspace_memberships (user_id, workspace_id)
-  where status = 'active';
+  on public.workspace_memberships (user_id, workspace_id);
+create index if not exists legacy_company_workspace_map_organization_idx
+  on public.legacy_company_workspace_map (organization_id);
 
 do $$
 declare
@@ -358,14 +360,24 @@ for each row execute function private.sync_legacy_company_tenant_ownership();
 
 create index if not exists tasks_workspace_idx
   on public.tasks (workspace_id);
+create index if not exists tasks_organization_idx
+  on public.tasks (organization_id);
 create index if not exists projects_workspace_idx
   on public.projects (workspace_id);
+create index if not exists projects_organization_idx
+  on public.projects (organization_id);
 create index if not exists task_types_workspace_idx
   on public.task_types (workspace_id);
+create index if not exists task_types_organization_idx
+  on public.task_types (organization_id);
 create index if not exists task_type_statuses_workspace_idx
   on public.task_type_statuses (workspace_id, type_key);
+create index if not exists task_type_statuses_organization_idx
+  on public.task_type_statuses (organization_id);
 create index if not exists task_labels_workspace_idx
   on public.task_labels (workspace_id);
+create index if not exists task_labels_organization_idx
+  on public.task_labels (organization_id);
 
 create or replace function private.is_organization_member(p_organization_id uuid)
 returns boolean

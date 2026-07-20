@@ -64,3 +64,17 @@ test('legacy writes keep additive tenant ownership synchronized', () => {
     );
   }
 });
+
+test('new foreign keys have covering indexes for advisor-clean rollout', () => {
+  for (const index of [
+    'organizations_owner_user_idx',
+    'legacy_company_workspace_map_organization_idx',
+    'tasks_organization_idx',
+    'projects_organization_idx',
+    'task_types_organization_idx',
+    'task_type_statuses_organization_idx',
+    'task_labels_organization_idx'
+  ]) {
+    assert.match(sql, new RegExp(`create index if not exists ${index}\\b`, 'i'));
+  }
+});
