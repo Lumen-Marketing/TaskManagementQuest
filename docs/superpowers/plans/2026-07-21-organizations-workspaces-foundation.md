@@ -101,7 +101,7 @@ git commit -m "test: define workspace foundation migration contract"
 
 **Interfaces:**
 - Consumes: `auth.users`, `public.profiles`, `public.companies`, and legacy `company_id`/`company_ids` relationships
-- Produces: `public.organizations`, `public.organization_memberships`, `public.workspaces`, `public.workspace_memberships`, `public.legacy_company_workspace_map`, `private.is_organization_member(uuid, uuid)`, and `private.is_workspace_member(uuid, uuid)`
+- Produces: `public.organizations`, `public.organization_memberships`, `public.workspaces`, `public.workspace_memberships`, `public.legacy_company_workspace_map`, and membership-policy helpers in the non-exposed `private` schema
 
 - [ ] **Step 1: Generate the migration through the current Supabase CLI**
 
