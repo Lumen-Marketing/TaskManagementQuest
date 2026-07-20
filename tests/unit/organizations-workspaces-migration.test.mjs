@@ -45,3 +45,22 @@ test('foundation migration explicitly grants Data API access behind RLS', () => 
   assert.match(sql, /grant select, insert, update, delete on public\.workspace_memberships to authenticated/i);
   assert.doesNotMatch(sql, /grant [^;]+ to anon/i);
 });
+
+test('membership identity keys cannot be moved through update policies', () => {
+  assert.match(sql, /create trigger prevent_organization_membership_key_change/i);
+  assert.match(sql, /before update of organization_id, user_id on public\.organization_memberships/i);
+  assert.match(sql, /create trigger prevent_workspace_membership_key_change/i);
+  assert.match(sql, /before update of workspace_id, user_id on public\.workspace_memberships/i);
+  assert.match(sql, /create trigger prevent_workspace_organization_change/i);
+  assert.match(sql, /before update of organization_id on public\.workspaces/i);
+});
+
+test('legacy writes keep additive tenant ownership synchronized', () => {
+  assert.match(sql, /create or replace function private\.sync_legacy_company_tenant_ownership\(\)/i);
+  for (const table of ['tasks', 'projects', 'task_types', 'task_type_statuses', 'task_labels']) {
+    assert.match(
+      sql,
+      new RegExp(`before insert or update of company_id, organization_id, workspace_id on public\\.${table}`, 'i')
+    );
+  }
+});
