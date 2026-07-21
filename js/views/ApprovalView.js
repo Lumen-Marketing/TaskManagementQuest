@@ -254,10 +254,6 @@ App.ApprovalView = class ApprovalView {
         <input type="checkbox" value="${App.utils.escapeHtml(c.id)}" />
         <span>${App.utils.escapeHtml(c.label)}</span>
       </label>`).join('');
-    const supervisors = ['<option value="">— None —</option>']
-      .concat(this.supervisorOptions(null).map(s => `<option value="${App.utils.escapeHtml(s.id)}">${App.utils.escapeHtml(s.name)}</option>`))
-      .join('');
-
     const modal = document.createElement('div');
     modal.className = 'modal-backdrop';
     modal.id = 'addPersonModal';
@@ -276,8 +272,8 @@ App.ApprovalView = class ApprovalView {
             <select id="ap-role">${roles}</select></div>
           <div class="field" style="margin-top:12px;"><label class="field-label">Company</label>
             <div class="company-multi" id="ap-companies">${companies}</div></div>
-          <div class="field" style="margin-top:12px;"><label class="field-label" for="ap-supervisor">Reports to</label>
-            <select id="ap-supervisor">${supervisors}</select></div>
+          <div class="field" style="margin-top:12px;" id="ap-supervisors-field"><label class="field-label">Reports to</label>
+            ${this.renderSupervisorPicker(this.supervisorOptions(null), [])}</div>
           <div class="ap-result hidden" id="ap-result"></div>
           <div class="modal-actions">
             <button class="btn" data-action="close">Cancel</button>
@@ -292,6 +288,28 @@ App.ApprovalView = class ApprovalView {
     modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     modal.querySelectorAll('[data-action="close"]').forEach(el => el.addEventListener('click', close));
     modal.querySelector('[data-action="submit"]').addEventListener('click', () => this.submitAddPerson(modal, close));
+
+    // "Reports to" multi-picker (chips + add), scoped to the stable field wrapper
+    // so listeners survive the outerHTML re-render (same pattern as the table cell).
+    const supField = modal.querySelector('#ap-supervisors-field');
+    if (supField) {
+      const box = () => supField.querySelector('[data-field="supervisors"]');
+      const readIds = () => { try { return JSON.parse(box().dataset.supIds || '[]'); } catch { return []; } };
+      const rerender = (ids) => { box().outerHTML = this.renderSupervisorPicker(this.supervisorOptions(null), ids); };
+      supField.addEventListener('change', (e) => {
+        const sel = e.target.closest('[data-action="sup-add"]');
+        if (!sel || !sel.value) return;
+        const ids = readIds();
+        if (!ids.includes(sel.value)) ids.push(sel.value);
+        rerender(ids);
+      });
+      supField.addEventListener('click', (e) => {
+        const rm = e.target.closest('[data-action="sup-remove"]');
+        if (!rm) return;
+        rerender(readIds().filter(id => id !== rm.dataset.sup));
+      });
+    }
+
     setTimeout(() => { const n = modal.querySelector('#ap-name'); if (n) n.focus(); }, 50);
   }
 
@@ -299,7 +317,8 @@ App.ApprovalView = class ApprovalView {
     const name = modal.querySelector('#ap-name').value.trim();
     const email = modal.querySelector('#ap-email').value.trim();
     const role = modal.querySelector('#ap-role').value;
-    const supervisorId = modal.querySelector('#ap-supervisor').value || null;
+    let supervisorIds = [];
+    try { supervisorIds = JSON.parse(modal.querySelector('#ap-supervisors-field [data-field="supervisors"]').dataset.supIds || '[]'); } catch { supervisorIds = []; }
     const companyIds = Array.from(modal.querySelectorAll('#ap-companies input[type="checkbox"]:checked')).map(el => el.value);
     const result = modal.querySelector('#ap-result');
 
@@ -309,7 +328,7 @@ App.ApprovalView = class ApprovalView {
     const btn = modal.querySelector('[data-action="submit"]');
     btn.disabled = true; btn.textContent = 'Creating…';
     try {
-      const res = await this.dataStore.createUser({ fullName: name, email, role, companyIds, supervisorId });
+      const res = await this.dataStore.createUser({ fullName: name, email, role, companyIds, supervisorIds });
       this.controller.toastView.show({
         title: 'Person added',
         sub: res.emailSent ? 'Account created and emailed.' : 'Account created — email could not be sent.',

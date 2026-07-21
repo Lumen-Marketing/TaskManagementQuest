@@ -922,14 +922,14 @@ App.SupabaseDataStore = class SupabaseDataStore {
      profile with the chosen role/company/supervisor, and emails the person their
      default password. Returns { ok, profileId, memberId, emailSent }. Throws an
      Error carrying the function's message on failure (e.g. duplicate email). */
-  async createUser({ fullName, email, role, companyIds, supervisorId }) {
+  async createUser({ fullName, email, role, companyIds, supervisorIds }) {
     const { data, error } = await this.supabase.functions.invoke('create-user', {
       body: {
         fullName,
         email,
         role,
         companyIds: Array.isArray(companyIds) ? companyIds : [],
-        supervisorId: supervisorId || null,
+        supervisorIds: Array.isArray(supervisorIds) ? supervisorIds : [],
       },
     });
     if (error) {
