@@ -4938,6 +4938,48 @@ body.is-bulk .worker-row { position: relative; padding-left: 48px; }
 }
 .focus-row.exec-unordered:hover { opacity: 1; }
 
+/* ============================================================
+   Category Sequence Board (SequenceLayout) — the default list
+   surface: one rounded card per category, rows manually ordered
+   with a 1..n badge, drag/▲▼ inline. Theme-aware via tokens.
+   ============================================================ */
+.sequence-board { display: flex; flex-direction: column; gap: 22px; padding: 8px 0 24px; }
+
+.seq-group-head { display: flex; align-items: baseline; gap: 8px; padding: 0 4px 8px; }
+.seq-group-name { font-family: var(--mono, 'IBM Plex Mono', monospace); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+.seq-group-count { font-family: var(--mono, 'IBM Plex Mono', monospace); font-size: 11px; color: var(--ink-3); }
+
+.seq-group-list { background: var(--surface, #fff); border: 1px solid var(--border, #e2d3bc); border-radius: 12px; overflow: hidden; min-height: 48px; transition: box-shadow .15s; }
+.seq-group-list.droptarget { box-shadow: 0 0 0 1.5px var(--amber); }
+
+.seq-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line, #e2d3bc); background: var(--surface, #fff); user-select: none; touch-action: none; }
+.seq-row:last-child { border-bottom: none; }
+.seq-row.dragging { opacity: .35; }
+
+.seq-grip { cursor: grab; background: none; border: 0; color: var(--ink-4, #A59E96); padding: 6px 2px; font-size: 18px; line-height: 0; flex: none; }
+.seq-grip:active { cursor: grabbing; }
+
+.seq-badge { font-family: var(--mono, 'IBM Plex Mono', monospace); font-size: 12px; font-weight: 600; min-width: 26px; height: 26px; border: 1px solid var(--ink); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex: none; color: var(--ink); background: var(--surface, #fff); }
+
+.seq-body { flex: 1 1 auto; min-width: 0; }
+.seq-title { font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seq-meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.seq-pill { font-family: var(--mono, 'IBM Plex Mono', monospace); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border, #e2d3bc); color: var(--ink-2, #56504A); }
+
+.seq-movers { display: flex; flex-direction: column; flex: none; }
+.seq-movers button { border: none; background: none; color: var(--ink-4, #A59E96); cursor: pointer; padding: 2px 6px; line-height: 0; border-radius: 6px; }
+.seq-movers button:hover { color: var(--ink); background: var(--surface-2, #f3f0eb); }
+.seq-movers button:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* Drag placeholder — a thin insertion line while a row is airborne. */
+.seq-placeholder { height: 0; border-top: 2px solid var(--amber); margin: 0 14px; }
+.seq-ghost { position: fixed; pointer-events: none; z-index: 100; opacity: .96; box-shadow: var(--shadow-md, 0 10px 30px rgba(0,0,0,.25)); border-radius: 10px; border: 1px solid var(--border, #e2d3bc); background: var(--surface, #fff); }
+
+.seq-savebar { display: flex; justify-content: flex-end; padding: 0 4px 2px; }
+.seq-savebar .btn-primary { font-size: 13px; padding: 8px 18px; }
+
+@media (max-width: 720px) { .seq-row { padding: 12px 14px; } }
+
 /* Focus widget in the page head — same dark mini-dashboard card as Up next /
    Today's progress (same gradient, radius, shadow, 88px height) so they read
    as a set. */
