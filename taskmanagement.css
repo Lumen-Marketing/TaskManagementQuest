@@ -3648,10 +3648,13 @@ body.sidebar-minimized .topbar-left > div:not(.logo) { display: none; }
     grid-template-columns: 12px minmax(380px, 1fr) 104px 76px 92px 96px 116px 64px 22px 28px;
   }
   #taskViewWrap .list-header,
-  #taskViewWrap .task-group {
+  #taskViewWrap .task-group,
+  #taskViewWrap .focus-list {
     /* Fill the available width (leaving a 32px gutter each side) up to a wide
        cap that keeps rows readable on ultra-wide monitors. Same formula as the
-       toolbar/header/widgets bands so every edge still lines up. */
+       toolbar/header/widgets bands so every edge still lines up. The Execution-
+       order view lives in .focus-list, so it shares the centered box too — else
+       its rows go full-bleed while the header card stays capped. */
     max-width: min(1720px, calc(100% - 64px));
     margin-left: auto !important;
     margin-right: auto !important;
