@@ -33,7 +33,7 @@ App.AppController = class AppController {
       // `view` (so it isn't persisted, sidebar-listed, or canView-gated) — it
       // drives #newTaskWrap the way selectedTaskId drives the detail page.
       creatingTask: false,
-      layout: 'table',
+      layout: 'sequence',
       // Calendar view state: 'month' | 'week', and the focused anchor date
       // (ISO; null → today at render time).
       calendarMode: 'month',
@@ -43,7 +43,7 @@ App.AppController = class AppController {
       filtersOpen: false,
       sortBy: 'priority',
       sortDir: 'asc',
-      groupBy: 'due',
+      groupBy: 'type',
       collapsedGroups: new Set(),
       // Bulk-select mode: when on, list rows toggle selection instead of
       // opening the detail pane, and BulkActionsView shows a bottom action bar.
@@ -444,7 +444,7 @@ App.AppController = class AppController {
           } else {
             // Leaving execution order back to a plain list drops the focus sort.
             if (this.uiState.sortBy === 'focus') this.setSortBy('priority');
-            this.setLayout(['table', 'calendar', 'kanban', 'cards'].includes(a) ? a : 'table');
+            this.setLayout(['table', 'calendar', 'kanban', 'cards', 'sequence'].includes(a) ? a : 'sequence');
             if (a === 'calendar') {
               const iso = /^\d{4}-\d{2}-\d{2}$/.test(b || '') ? b : null;
               this.uiState.calendarAnchor = iso;
@@ -505,7 +505,7 @@ App.AppController = class AppController {
   }
 
   setLayout(layout) {
-    if (!['table', 'calendar', 'kanban', 'cards'].includes(layout)) return;
+    if (!['table', 'calendar', 'kanban', 'cards', 'sequence'].includes(layout)) return;
     this._commit({ layout });
   }
 
@@ -2501,7 +2501,7 @@ App.AppController = class AppController {
     if (v.sortBy && App.SORT_OPTIONS[v.sortBy]) patch.sortBy = v.sortBy;
     if (v.sortDir === 'asc' || v.sortDir === 'desc') patch.sortDir = v.sortDir;
     if (v.groupBy && App.GROUP_OPTIONS[v.groupBy]) patch.groupBy = v.groupBy;
-    if (['table', 'calendar', 'kanban', 'cards'].includes(v.layout)) patch.layout = v.layout;
+    if (['table', 'calendar', 'kanban', 'cards', 'sequence'].includes(v.layout)) patch.layout = v.layout;
     if (this.uiState.collapsedGroups.size) patch.collapsedGroups = new Set();
     this._commit(patch);
   }

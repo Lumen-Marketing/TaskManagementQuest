@@ -207,7 +207,7 @@ App.TaskListView = class TaskListView {
   _layoutKey() {
     if (this.controller.uiState.view === 'watching') return 'watching';
     const l = this.controller.uiState.layout;
-    if (l === 'kanban' || l === 'cards' || l === 'calendar') return l;
+    if (l === 'kanban' || l === 'cards' || l === 'calendar' || l === 'sequence') return l;
     // "Execution order" sort shows the owner's tasks as a single drag-rankable
     // list: ranked tasks on top, the rest below to drag up into the order.
     if (this.controller.uiState.sortBy === 'focus') return 'execution';

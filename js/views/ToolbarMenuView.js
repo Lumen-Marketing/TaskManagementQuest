@@ -129,6 +129,7 @@ App.ToolbarMenuView = class ToolbarMenuView {
       });
     } else if (this.menuFor === 'view') {
       const layouts = [
+        { key: 'sequence', label: 'Sequence', icon: 'ti-list-numbers' },
         { key: 'table',    label: 'Table',    icon: 'ti-table' },
         { key: 'cards',    label: 'Cards',    icon: 'ti-layout-grid' },
         { key: 'calendar', label: 'Calendar', icon: 'ti-calendar' },
@@ -267,9 +268,9 @@ App.ToolbarMenuView = class ToolbarMenuView {
       groupBtn.innerHTML = `<i class="ti ti-layout-rows"></i>Group: ${lbl}`;
     }
     if (viewBtn) {
-      const layoutIcons = { table: 'ti-table', cards: 'ti-layout-grid', calendar: 'ti-calendar', kanban: 'ti-layout-kanban' };
-      const layoutLabels = { table: 'Table', cards: 'Cards', calendar: 'Calendar', kanban: 'Kanban' };
-      const layout = ui.layout || 'table';
+      const layoutIcons = { sequence: 'ti-list-numbers', table: 'ti-table', cards: 'ti-layout-grid', calendar: 'ti-calendar', kanban: 'ti-layout-kanban' };
+      const layoutLabels = { sequence: 'Sequence', table: 'Table', cards: 'Cards', calendar: 'Calendar', kanban: 'Kanban' };
+      const layout = ui.layout || 'sequence';
       viewBtn.innerHTML = `<i class="ti ${layoutIcons[layout]}"></i>View: ${layoutLabels[layout]}`;
     }
   }
