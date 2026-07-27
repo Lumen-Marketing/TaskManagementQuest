@@ -204,7 +204,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   App.uiScale = new App.UiScaleView();
   new App.ProgressWidgetView({ taskModel, currentUser: App.CURRENT_USER });
   new App.UpNextWidgetView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
-  new App.FocusWidgetView({ taskModel, timeModel, controller, currentUser: App.CURRENT_USER });
+  // FocusWidgetView (the "Showing execution order" strip) retired: inline drag on
+  // the Category Sequence Board replaces its purpose. Source kept for the flat
+  // execution layout.
 
   // Reminder engine — scans tasks every minute, synthesizes in-app
   // notifications when a due-date threshold is crossed (keyed by priority).
