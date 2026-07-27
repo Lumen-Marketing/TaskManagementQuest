@@ -4996,12 +4996,14 @@ body.ui-command-center {
   --bg-2: #FAF9F7;     /* warm hover / section fill (boss-table row hover) */
   --bg-3: #F3F0EB;     /* warm well — segmented controls, deep fills */
   --surface: #FFFFFF;
+  --surface-2: #FAF6EF; /* warm sunk surface (exec-unordered rows, etc.) */
   --ink: #1C1A18;
   --ink-2: #56504A;
   --ink-3: #908981;
   --ink-4: #A59E96;
   --border: #EBE7E2;        /* warm hairline (boss-table reskin) */
   --border-strong: #DDD6CF;
+  --line: #EBE7E2;          /* hairline alias for focus/exec rows */
   --amber: #ED4E0D;       /* bold, saturated brand orange (was terracotta #E0552B) */
   --accent: var(--amber); /* single accent alias — tracks each theme's amber */
   --amber-bg: #FDEEE6;
@@ -6182,12 +6184,14 @@ body.ui-command-center .side-brand .side-minimize-btn:hover {
   --bg-2: #20252E;        /* hovers / raised fills */
   --bg-3: #262B33;        /* wells (segmented controls, tracks) */
   --surface: #1B1F27;     /* cards, topbar chrome, menus */
+  --surface-2: #20252E;   /* raised/sunk surface (exec-unordered rows, etc.) */
   --ink: #F2F4F6;         /* snow */
   --ink-2: #AEB6C2;       /* fog */
   --ink-3: #7C8696;       /* slate */
   --ink-4: #5A636F;
   --border: #2A2F39;      /* graphite hairline */
   --border-strong: #353B46; /* steel */
+  --line: #2A2F39;        /* hairline alias for focus/exec rows */
   --block-line: var(--border); /* card outlines follow the dark hairline (the
                                   base #ebe7e2 was bleeding white into dark) */
   --amber: #E0552B;       /* terracotta — the single accent */
