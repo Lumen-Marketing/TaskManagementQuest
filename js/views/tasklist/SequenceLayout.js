@@ -89,7 +89,13 @@
     });
   }
 
-  // Bind drag (Task 5) + chevrons/save (Tasks 6, 8) for the current render.
+  // Re-sequence one group from an ordered id list (1..n) via the controller.
+  function resequence(view, ids) {
+    App.sequenceOrder.positionsFor(ids)
+      .forEach(({ id, seq }) => view.controller.setFocusOrder(id, seq));
+  }
+
+  // Bind drag + chevrons + save for the current render. Returns a cleanup fn.
   App.sequenceBoardWire = function (view) {
     let dragCleanup = null;
     if (App.can('tasks.write') && App.makeGroupReorderable) {
@@ -100,7 +106,34 @@
         onDrop: (payload) => persistDrop(view, payload),
       });
     }
-    return function cleanup() { if (dragCleanup) dragCleanup(); };
+
+    function onClick(e) {
+      // "Save order" is reassurance only — order already persists on each move.
+      const save = e.target.closest('[data-action="seq-save"]');
+      if (save) {
+        if (view.controller.persistNow) view.controller.persistNow();
+        if (view.controller.toastView) view.controller.toastView.show({ title: 'Order saved' });
+        return;
+      }
+      const btn = e.target.closest('[data-action="seq-move"]');
+      if (!btn || !App.can('tasks.write')) return;
+      const row = btn.closest('.seq-row');
+      const list = row && row.closest('.seq-group-list');
+      if (!list) return;
+      const dir = parseInt(btn.dataset.dir, 10);
+      const ids = Array.from(list.querySelectorAll('.seq-row')).map(r => r.dataset.id);
+      const idx = ids.indexOf(row.dataset.id);
+      const target = idx + dir;
+      if (target < 0 || target >= ids.length) return;
+      [ids[idx], ids[target]] = [ids[target], ids[idx]]; // swap with neighbor
+      resequence(view, ids);
+    }
+    view.body.addEventListener('click', onClick);
+
+    return function cleanup() {
+      if (dragCleanup) dragCleanup();
+      view.body.removeEventListener('click', onClick);
+    };
   };
 
   layouts.sequence = {
