@@ -111,7 +111,9 @@
       // "Save order" is reassurance only — order already persists on each move.
       const save = e.target.closest('[data-action="seq-save"]');
       if (save) {
-        if (view.controller.persistNow) view.controller.persistNow();
+        // Order already persisted on each move; flush any in-flight save, then
+        // confirm. saveNow (PersistenceEngine barrier) is wired on the controller.
+        if (view.controller.saveNow) view.controller.saveNow();
         if (view.controller.toastView) view.controller.toastView.show({ title: 'Order saved' });
         return;
       }
@@ -161,6 +163,15 @@
           sub: 'Tasks assigned here will appear grouped by category so you can order them.',
         });
         return;
+      }
+
+      // "Save order" — reassurance only; order already auto-saves on each move.
+      // In the board head (not a fixed bottom bar — that collides w/ mobile nav).
+      if (canEdit) {
+        const savebar = document.createElement('div');
+        savebar.className = 'seq-savebar';
+        savebar.innerHTML = `<button type="button" class="btn btn-primary" data-action="seq-save">Save order</button>`;
+        view.body.appendChild(savebar);
       }
 
       groups.forEach(g => view.body.appendChild(renderGroup(view, g, canEdit)));
