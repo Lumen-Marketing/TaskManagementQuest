@@ -41,7 +41,7 @@ App.AppController = class AppController {
       calendarSelectedDay: null,
       filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' },
       filtersOpen: false,
-      sortBy: 'focus',
+      sortBy: 'manual',
       sortDir: 'asc',
       groupBy: 'type',
       collapsedGroups: new Set(),
@@ -272,10 +272,11 @@ App.AppController = class AppController {
   _persistUiState() {
     try {
       localStorage.setItem(this._uiStateKey(), JSON.stringify({
-        // v2 (2026-07-28): group-by-Type + Manual-order became the standing
-        // defaults. Bumping the version discards v1 blobs once so existing users
-        // pick up the new defaults instead of their old saved group/sort.
-        v: 2,
+        // v3 (2026-07-28): group-by-Type + the new 'manual' drag sort are the
+        // standing defaults. Bumping the version discards older blobs once so
+        // existing users pick up the new defaults — in particular the v2 blobs
+        // that got stuck on sortBy:'priority' from the old focus-reset bug.
+        v: 3,
         view: this.uiState.view,
         scope: this.uiState.scope,
         layout: this.uiState.layout,
@@ -297,7 +298,7 @@ App.AppController = class AppController {
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(this._uiStateKey()) || 'null'); }
     catch (e) { saved = null; }
-    if (!saved || saved.v !== 2) return;
+    if (!saved || saved.v !== 3) return;
     // The layout is deliberately NOT restored: All Tasks must always open in
     // table view (2026-07-04 walkthrough), whatever mode last session ended in.
     // Deep links (#/tasks/kanban) and saved views still set it explicitly.

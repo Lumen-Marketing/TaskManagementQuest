@@ -63,7 +63,7 @@ App.SORT_OPTIONS = {
   assignee: { label: 'Assignee' },
   status:   { label: 'Status' },
   created:  { label: 'Created' },
-  focus:    { label: 'Manual order' },
+  manual:   { label: 'Manual order' },
 };
 
 App.GROUP_OPTIONS = {
