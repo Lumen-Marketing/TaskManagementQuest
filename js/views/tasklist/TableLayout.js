@@ -363,6 +363,9 @@
       // grip + 1..n badge per row, drag within a group to reorder, drag across
       // type-groups to recategorise.
       const reorder = sortBy === 'focus' && App.can('tasks.write');
+      // In manual-order mode, completed tasks aren't part of the execution order —
+      // hide them so the drag list is just live work. (Switch Sort to see them.)
+      const shown = reorder ? tasks.filter(t => !App.taxonomy.isDone(t)) : tasks;
 
       view.wrap.classList.add('qt-skin');
       view.body.className = 'qt-body';
@@ -373,7 +376,7 @@
       wrap.appendChild(qtChipRow(view));
       wrap.appendChild(qtColsHeader(view, reorder));
 
-      if (tasks.length === 0) {
+      if (shown.length === 0) {
         const cfg = view._emptyConfig();
         const showCta = cfg.cta && App.can('tasks.write');
         const e = document.createElement('div');
@@ -391,7 +394,7 @@
         return;
       }
 
-      const groups = view.taskModel.groupTasks(tasks, { groupBy, sortBy, sortDir });
+      const groups = view.taskModel.groupTasks(shown, { groupBy, sortBy, sortDir });
 
       groups.forEach(g => {
         const collapsed = collapsedGroups.has(g.key);
