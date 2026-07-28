@@ -1,104 +1,87 @@
-/* Pointer drag-to-reorder ACROSS groups for the Category Sequence Board.
-   Unlike App.makeReorderable (single container), this tracks a ghost element
-   and reparents a row into whichever .seq-group-list the pointer is over, then
-   reports the final order of every affected list. Mouse + touch (Pointer
-   Events). Ported from the boss's approved mockup. */
+/* Pointer drag-to-reorder ACROSS groups. Unlike App.makeReorderable (single
+   container), this moves the REAL row between group-list containers as the
+   pointer travels, then reports the final order of every affected list. Moving
+   the real element (no floating ghost) keeps scoped skins like the qt-table
+   styled correctly during the drag. Mouse + touch (Pointer Events).
+
+   Contract: each group list matches groupListSelector and carries data-cat;
+   its reorderable rows are direct descendants matching rowSelector, each with
+   data-id; drag starts only on handleSelector. onDrop is called with
+   { id, fromCat, toCat, orderedIds } where orderedIds maps each AFFECTED cat to
+   its final [id,...] order read from the live DOM. */
 window.App = window.App || {};
 App.makeGroupReorderable = function (board, opts) {
   const { groupListSelector, rowSelector, handleSelector, onDrop } = opts || {};
-  let drag = null;
+  let dragEl = null, pointerId = null, fromCat = null, moved = false;
 
-  function lists() { return Array.from(board.querySelectorAll(groupListSelector)); }
-  function rowsIn(list) { return Array.from(list.querySelectorAll(rowSelector)); }
+  const lists = () => Array.from(board.querySelectorAll(groupListSelector));
+  const rowsIn = (l) => Array.from(l.querySelectorAll(rowSelector));
+  const listOf = (el) => el.closest(groupListSelector);
 
   function onDown(e) {
-    if (e.button != null && e.button !== 0) return;
+    if (e.button != null && e.button !== 0) return;      // primary / single touch
     const handle = e.target.closest(handleSelector);
     if (!handle) return;
     const row = handle.closest(rowSelector);
     if (!row) return;
     e.preventDefault();
-
-    const rect = row.getBoundingClientRect();
-    const ghost = row.cloneNode(true);
-    ghost.classList.add('seq-ghost');
-    ghost.style.width = rect.width + 'px';
-    document.body.appendChild(ghost);
-
-    const ph = document.createElement('div');
-    ph.className = 'seq-placeholder';
-
-    drag = {
-      row, ghost, ph,
-      id: row.dataset.id,
-      fromCat: row.dataset.cat,
-      offX: e.clientX - rect.left,
-      offY: e.clientY - rect.top,
-    };
+    dragEl = row;
+    pointerId = e.pointerId;
+    moved = false;
+    const l = listOf(row);
+    fromCat = l && l.dataset ? l.dataset.cat : null;
     row.classList.add('dragging');
-    position(e);
     document.addEventListener('pointermove', onMove, true);
     document.addEventListener('pointerup', onUp, true);
     document.addEventListener('pointercancel', onUp, true);
   }
 
-  function position(e) {
-    drag.ghost.style.left = (e.clientX - drag.offX) + 'px';
-    drag.ghost.style.top = (e.clientY - drag.offY) + 'px';
-  }
-
   function onMove(e) {
-    if (!drag) return;
+    if (!dragEl || e.pointerId !== pointerId) return;
     e.preventDefault();
-    position(e);
-    lists().forEach(l => l.classList.remove('droptarget'));
-    drag.ph.remove();
+    moved = true;
+    const x = e.clientX, y = e.clientY;
 
+    // Which group list is the pointer over? (small vertical slop so you can drop
+    // into an adjacent group's edge). Fall back to the row's current list.
     const target = lists().find(l => {
       const r = l.getBoundingClientRect();
-      return e.clientY >= r.top - 14 && e.clientY <= r.bottom + 14;
-    });
-    if (!target) { drag.over = null; return; }
-    target.classList.add('droptarget');
+      return x >= r.left && x <= r.right && y >= r.top - 20 && y <= r.bottom + 20;
+    }) || listOf(dragEl);
+    lists().forEach(l => l.classList.toggle('droptarget', l === target));
+    if (!target) return;
 
-    const siblings = rowsIn(target).filter(r => r.dataset.id !== drag.id);
+    // Insert before the first sibling whose vertical midpoint is below the
+    // pointer; past the last, append. Reparents the real row live.
+    const sibs = rowsIn(target).filter(r => r !== dragEl);
     let before = null;
-    for (const r of siblings) {
-      const rect = r.getBoundingClientRect();
-      if (e.clientY < rect.top + rect.height / 2) { before = r; break; }
+    for (const s of sibs) {
+      const r = s.getBoundingClientRect();
+      if (y < r.top + r.height / 2) { before = s; break; }
     }
-    if (before) target.insertBefore(drag.ph, before);
-    else target.appendChild(drag.ph);
-    drag.over = target;
+    if (before) target.insertBefore(dragEl, before);
+    else target.appendChild(dragEl);
   }
 
-  function onUp() {
+  function onUp(e) {
+    if (!dragEl || (e && e.pointerId != null && e.pointerId !== pointerId)) return;
     document.removeEventListener('pointermove', onMove, true);
     document.removeEventListener('pointerup', onUp, true);
     document.removeEventListener('pointercancel', onUp, true);
-    if (!drag) return;
-    const { id, fromCat, over, ghost, ph, row } = drag;
-    row.classList.remove('dragging');
-    ghost.remove();
-
-    let toCat = fromCat;
-    if (over) {
-      toCat = over.dataset.cat;
-      over.insertBefore(row, ph); // land the real row where the placeholder is
-    }
-    ph.remove();
+    const el = dragEl, from = fromCat, didMove = moved;
+    el.classList.remove('dragging');
     lists().forEach(l => l.classList.remove('droptarget'));
+    dragEl = null; pointerId = null;
+    if (!didMove) return; // a plain click on the handle isn't a reorder
 
-    // Collect the final order of the affected lists from the live DOM.
+    const toList = listOf(el);
+    const toCat = toList && toList.dataset ? toList.dataset.cat : from;
     const orderedIds = {};
-    const affected = new Set([fromCat, toCat]);
+    const affected = new Set([from, toCat]);
     lists().forEach(l => {
       if (affected.has(l.dataset.cat)) orderedIds[l.dataset.cat] = rowsIn(l).map(r => r.dataset.id);
     });
-
-    const payload = { id, fromCat, toCat, orderedIds };
-    drag = null;
-    if (typeof onDrop === 'function') onDrop(payload);
+    if (typeof onDrop === 'function') onDrop({ id: el.dataset.id, fromCat: from, toCat, orderedIds });
   }
 
   board.addEventListener('pointerdown', onDown);
@@ -107,6 +90,6 @@ App.makeGroupReorderable = function (board, opts) {
     document.removeEventListener('pointermove', onMove, true);
     document.removeEventListener('pointerup', onUp, true);
     document.removeEventListener('pointercancel', onUp, true);
-    if (drag) { drag.ghost.remove(); drag.ph.remove(); drag = null; }
+    if (dragEl) { dragEl.classList.remove('dragging'); dragEl = null; }
   };
 };

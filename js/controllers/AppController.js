@@ -33,7 +33,7 @@ App.AppController = class AppController {
       // `view` (so it isn't persisted, sidebar-listed, or canView-gated) — it
       // drives #newTaskWrap the way selectedTaskId drives the detail page.
       creatingTask: false,
-      layout: 'sequence',
+      layout: 'table',
       // Calendar view state: 'month' | 'week', and the focused anchor date
       // (ISO; null → today at render time).
       calendarMode: 'month',
@@ -41,7 +41,7 @@ App.AppController = class AppController {
       calendarSelectedDay: null,
       filters: { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' },
       filtersOpen: false,
-      sortBy: 'priority',
+      sortBy: 'focus',
       sortDir: 'asc',
       groupBy: 'type',
       collapsedGroups: new Set(),
@@ -272,7 +272,10 @@ App.AppController = class AppController {
   _persistUiState() {
     try {
       localStorage.setItem(this._uiStateKey(), JSON.stringify({
-        v: 1,
+        // v2 (2026-07-28): group-by-Type + Manual-order became the standing
+        // defaults. Bumping the version discards v1 blobs once so existing users
+        // pick up the new defaults instead of their old saved group/sort.
+        v: 2,
         view: this.uiState.view,
         scope: this.uiState.scope,
         layout: this.uiState.layout,
@@ -294,7 +297,7 @@ App.AppController = class AppController {
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(this._uiStateKey()) || 'null'); }
     catch (e) { saved = null; }
-    if (!saved || saved.v !== 1) return;
+    if (!saved || saved.v !== 2) return;
     // The layout is deliberately NOT restored: All Tasks must always open in
     // table view (2026-07-04 walkthrough), whatever mode last session ended in.
     // Deep links (#/tasks/kanban) and saved views still set it explicitly.
@@ -444,7 +447,7 @@ App.AppController = class AppController {
           } else {
             // Leaving execution order back to a plain list drops the focus sort.
             if (this.uiState.sortBy === 'focus') this.setSortBy('priority');
-            this.setLayout(['table', 'calendar', 'kanban', 'cards', 'sequence'].includes(a) ? a : 'sequence');
+            this.setLayout(['table', 'calendar', 'kanban', 'cards'].includes(a) ? a : 'table');
             if (a === 'calendar') {
               const iso = /^\d{4}-\d{2}-\d{2}$/.test(b || '') ? b : null;
               this.uiState.calendarAnchor = iso;
@@ -505,7 +508,7 @@ App.AppController = class AppController {
   }
 
   setLayout(layout) {
-    if (!['table', 'calendar', 'kanban', 'cards', 'sequence'].includes(layout)) return;
+    if (!['table', 'calendar', 'kanban', 'cards'].includes(layout)) return;
     this._commit({ layout });
   }
 
@@ -2501,7 +2504,7 @@ App.AppController = class AppController {
     if (v.sortBy && App.SORT_OPTIONS[v.sortBy]) patch.sortBy = v.sortBy;
     if (v.sortDir === 'asc' || v.sortDir === 'desc') patch.sortDir = v.sortDir;
     if (v.groupBy && App.GROUP_OPTIONS[v.groupBy]) patch.groupBy = v.groupBy;
-    if (['table', 'calendar', 'kanban', 'cards', 'sequence'].includes(v.layout)) patch.layout = v.layout;
+    if (['table', 'calendar', 'kanban', 'cards'].includes(v.layout)) patch.layout = v.layout;
     if (this.uiState.collapsedGroups.size) patch.collapsedGroups = new Set();
     this._commit(patch);
   }
