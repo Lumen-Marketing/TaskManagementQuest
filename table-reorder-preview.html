@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!-- Harness for the Table's manual-order (drag) mode. Mirrors TableLayout's
+     qt-skin markup with the reorder cells (grip + 1..n badge) so a render == the
+     real view. Verifies header/row column alignment + legibility in light/dark. -->
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Table Reorder Preview</title>
+<link rel="stylesheet" href="taskmanagement.css">
+<link rel="stylesheet" href="css/tasks.css">
+<style>body{padding:20px;}</style>
+</head>
+<body class="ui-command-center">
+  <div id="taskViewWrap" class="qt-skin">
+    <div id="listBody" class="qt-body">
+      <div class="qt-wrap qt-reorder">
+        <div class="qt-cols qt-cols-reorder">
+          <span class="qt-colcell"></span><span class="qt-colcell"></span>
+          <span class="qt-colcell"></span><span class="qt-colcell"></span>
+          <span class="qt-colcell" style="font-weight:600">TASK</span>
+          <button class="qt-colbtn">STATUS</button>
+          <button class="qt-colbtn">PRIORITY</button>
+          <button class="qt-colbtn qt-col-label">LABEL</button>
+          <button class="qt-colbtn qt-col-assignee">ASSIGNEE</button>
+          <button class="qt-colbtn">DUE</button>
+        </div>
+
+        <div class="qt-group">
+          <div class="qt-ghead plain"><span class="qt-chev"></span><span class="qt-gicon"></span><span class="qt-gname">Web development</span><span class="qt-gcount">3</span></div>
+          <div class="qt-gbody" data-cat="webdev">
+            <div class="qt-row qt-reorderable" data-id="w1">
+              <button class="qt-grip"><i class="ti ti-grip-vertical"></i></button>
+              <span class="qt-seqbadge">1</span>
+              <span class="qt-ck"><input type="checkbox"></span>
+              <span class="qt-pdot priority-critical"></span>
+              <div class="qt-tcell"><span class="qt-ttitle">Final test for HQ for the subscribers</span></div>
+              <div class="qt-cell-status"><span class="qt-cellbtn status-pending"><span class="dot"></span><span class="nm">Pending</span></span></div>
+              <div class="qt-cell-priority"><span class="qt-pbadge priority-critical">CRITICAL</span></div>
+              <div class="qt-cell-label"><span class="qt-cellbtn" style="color:#a8a39b"><span class="nm">—</span></span></div>
+              <div class="qt-cell-assignee"><span class="qt-cellbtn"><span class="qt-avatar" style="background:#c0563a">KI</span><span class="nm">Kristin</span></span></div>
+              <div class="qt-due late">Jul 21</div>
+            </div>
+            <div class="qt-row qt-reorderable" data-id="w2">
+              <button class="qt-grip"><i class="ti ti-grip-vertical"></i></button>
+              <span class="qt-seqbadge">2</span>
+              <span class="qt-ck"><input type="checkbox"></span>
+              <span class="qt-pdot priority-high"></span>
+              <div class="qt-tcell"><span class="qt-ttitle">Get drafting website live</span></div>
+              <div class="qt-cell-status"><span class="qt-cellbtn status-review"><span class="dot"></span><span class="nm">In review</span></span></div>
+              <div class="qt-cell-priority"><span class="qt-pbadge priority-high">HIGH</span></div>
+              <div class="qt-cell-label"><span class="qt-cellbtn" style="color:#a8a39b"><span class="nm">—</span></span></div>
+              <div class="qt-cell-assignee"><span class="qt-cellbtn"><span class="qt-avatar" style="background:#c0563a">KI</span><span class="nm">Kristin</span></span></div>
+              <div class="qt-due late">Jul 17</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="qt-group">
+          <div class="qt-ghead plain"><span class="qt-chev"></span><span class="qt-gicon"></span><span class="qt-gname">Lead</span><span class="qt-gcount">1</span></div>
+          <div class="qt-gbody" data-cat="lead">
+            <div class="qt-row qt-reorderable" data-id="l1">
+              <button class="qt-grip"><i class="ti ti-grip-vertical"></i></button>
+              <span class="qt-seqbadge">1</span>
+              <span class="qt-ck"><input type="checkbox"></span>
+              <span class="qt-pdot priority-medium"></span>
+              <div class="qt-tcell"><span class="qt-ttitle">Trainable AI/LLM for SOPs + manufacturer specs</span></div>
+              <div class="qt-cell-status"><span class="qt-cellbtn status-doing"><span class="dot"></span><span class="nm">Working on it</span></span></div>
+              <div class="qt-cell-priority"><span class="qt-pbadge priority-medium">MEDIUM</span></div>
+              <div class="qt-cell-label"><span class="qt-cellbtn" style="color:#a8a39b"><span class="nm">—</span></span></div>
+              <div class="qt-cell-assignee"><span class="qt-cellbtn"><span class="qt-avatar" style="background:#c0563a">KI</span><span class="nm">Kristin</span></span></div>
+              <div class="qt-due">Jul 17</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

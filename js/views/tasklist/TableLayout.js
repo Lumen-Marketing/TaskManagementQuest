@@ -41,9 +41,9 @@
 
   // The rendered column header. Each label is a filter button wired to the same
   // dropdown machinery as the static header (openColumnFilter → columnFilterModel).
-  function qtColsHeader(view) {
+  function qtColsHeader(view, reorder) {
     const cols = document.createElement('div');
-    cols.className = 'qt-cols';
+    cols.className = 'qt-cols' + (reorder ? ' qt-cols-reorder' : '');
     const f = view.controller.uiState.filters || {};
     const btn = (label, col, extraClass = '') => {
       const on = col === 'due' ? (f.dueRange && f.dueRange !== 'all') : ((f[col] || []).length > 0);
@@ -51,6 +51,7 @@
       return `<button type="button" class="qt-colbtn ${on ? 'filtered' : ''} ${extraClass}" data-filter-col="${col}" aria-haspopup="listbox" aria-expanded="false">${label}${on ? ` (${n})` : ''} <i class="ti ti-chevron-down"></i></button>`;
     };
     cols.innerHTML = `
+      ${reorder ? '<span class="qt-colcell"></span><span class="qt-colcell"></span>' : ''}
       <span class="qt-colcell"></span>
       <span class="qt-colcell"></span>
       <span class="qt-colcell" style="font-weight:600">TASK</span>
@@ -64,7 +65,7 @@
     return cols;
   }
 
-  function qtRow(view, t) {
+  function qtRow(view, t, reorder, seq) {
     const esc = App.utils.escapeHtml;
     const t0 = App.utils.todayISO(0);
     const person = App.directory.person(t.assignee) || { name: t.assignee || 'Unassigned', full: t.assignee || 'Unassigned', color: '#8a857e' };
@@ -127,9 +128,10 @@
     }
 
     const row = document.createElement('div');
-    row.className = 'qt-row' + (selected ? ' selected' : '') + (bulkSel ? ' bulk-selected' : '') + (isStuck ? ' qt-stuckrow' : '') + (isDone ? ' qt-done' : '');
+    row.className = 'qt-row' + (reorder ? ' qt-reorderable' : '') + (selected ? ' selected' : '') + (bulkSel ? ' bulk-selected' : '') + (isStuck ? ' qt-stuckrow' : '') + (isDone ? ' qt-done' : '');
     row.dataset.id = t.id;
     row.innerHTML = `
+      ${reorder ? `<button type="button" class="qt-grip" aria-label="Drag to reorder" title="Drag to reorder"><i class="ti ti-grip-vertical"></i></button><span class="qt-seqbadge">${seq}</span>` : ''}
       <span class="qt-ck"><input type="checkbox" ${isDone ? 'checked' : ''} data-action="toggle-done" ${canWrite ? '' : 'disabled'} aria-label="Complete task"></span>
       <span class="qt-pdot ${priority.cls}" title="${esc(priority.label)}"></span>
       <div class="qt-tcell">
@@ -156,6 +158,27 @@
     // Row clicks (actions + select) are handled by the module's delegated
     // _onRowClick — rows carry data-id + data-action, nothing to bind here.
     return row;
+  }
+
+  /* Translate a drag drop into persistence. Re-sequences the affected group(s)
+     from their final DOM order (1..n) via focus_seq. When grouped by Type, a
+     drop into a different group also reassigns the task's type. Dropping across
+     a non-Type grouping has no reassignment meaning here — re-render restores it. */
+  function persistReorder(view, groupBy, { id, fromCat, toCat, orderedIds }) {
+    const crossGroup = toCat !== fromCat;
+    if (crossGroup && groupBy !== 'type') { App.EventBus.emit('tasks:changed'); return; }
+    if (crossGroup) {
+      view.controller.updateTaskField(id, 'type', toCat);
+      if (view.controller.toastView) {
+        const pos = (orderedIds[toCat] || []).indexOf(id) + 1;
+        const label = (App.TASK_TYPES[toCat] && App.TASK_TYPES[toCat].label) || toCat;
+        view.controller.toastView.show({ title: `Moved to ${label} — position ${pos}` });
+      }
+    }
+    Object.keys(orderedIds).forEach(cat => {
+      App.sequenceOrder.positionsFor(orderedIds[cat])
+        .forEach(({ id: rid, seq }) => view.controller.setFocusOrder(rid, seq));
+    });
   }
 
   /* Prepend the project-detail folder header when the list is scoped to one
@@ -327,17 +350,28 @@
 
     unmount(view) {
       if (view._cfHandle) view._cfHandle.close('api');
+      if (view._seqDragCleanup) { view._seqDragCleanup(); view._seqDragCleanup = null; }
     },
 
     render(view, tasks) {
+      // Drag listeners are re-bound per render (the body is rebuilt); tear down
+      // the previous binding first so they don't stack.
+      if (view._seqDragCleanup) { view._seqDragCleanup(); view._seqDragCleanup = null; }
+
+      const { groupBy, sortBy, sortDir, collapsedGroups } = view.controller.uiState;
+      // Manual order ('focus' sort) turns the rows into a drag-rankable list:
+      // grip + 1..n badge per row, drag within a group to reorder, drag across
+      // type-groups to recategorise.
+      const reorder = sortBy === 'focus' && App.can('tasks.write');
+
       view.wrap.classList.add('qt-skin');
       view.body.className = 'qt-body';
       view.body.innerHTML = '';
 
       const wrap = document.createElement('div');
-      wrap.className = 'qt-wrap';
+      wrap.className = 'qt-wrap' + (reorder ? ' qt-reorder' : '');
       wrap.appendChild(qtChipRow(view));
-      wrap.appendChild(qtColsHeader(view));
+      wrap.appendChild(qtColsHeader(view, reorder));
 
       if (tasks.length === 0) {
         const cfg = view._emptyConfig();
@@ -357,7 +391,6 @@
         return;
       }
 
-      const { groupBy, sortBy, sortDir, collapsedGroups } = view.controller.uiState;
       const groups = view.taskModel.groupTasks(tasks, { groupBy, sortBy, sortDir });
 
       groups.forEach(g => {
@@ -380,7 +413,8 @@
         if (!collapsed) {
           const body = document.createElement('div');
           body.className = 'qt-gbody';
-          g.items.forEach(t => body.appendChild(qtRow(view, t)));
+          body.dataset.cat = g.key; // group key = drop-target id for the drag engine
+          g.items.forEach((t, i) => body.appendChild(qtRow(view, t, reorder, i + 1)));
           section.appendChild(body);
         }
 
@@ -389,6 +423,15 @@
 
       view.body.appendChild(wrap);
       prependProjectHeader(view);
+
+      if (reorder && App.makeGroupReorderable) {
+        view._seqDragCleanup = App.makeGroupReorderable(view.body, {
+          groupListSelector: '.qt-gbody',
+          rowSelector: '.qt-row',
+          handleSelector: '.qt-grip',
+          onDrop: (payload) => persistReorder(view, groupBy, payload),
+        });
+      }
     },
   };
 })();
