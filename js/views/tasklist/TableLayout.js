@@ -167,17 +167,20 @@
   function persistReorder(view, groupBy, { id, fromCat, toCat, orderedIds }) {
     const crossGroup = toCat !== fromCat;
     if (crossGroup && groupBy !== 'type') { App.EventBus.emit('tasks:changed'); return; }
-    if (crossGroup) {
-      view.controller.updateTaskField(id, 'type', toCat);
-      if (view.controller.toastView) {
-        const pos = (orderedIds[toCat] || []).indexOf(id) + 1;
-        const label = (App.TASK_TYPES[toCat] && App.TASK_TYPES[toCat].label) || toCat;
-        view.controller.toastView.show({ title: `Moved to ${label} — position ${pos}` });
+    // One drag = one undo step (a type change + many focusSeq writes grouped).
+    view.controller.undoable(crossGroup ? 'move' : 'reorder', () => {
+      if (crossGroup) {
+        view.controller.updateTaskField(id, 'type', toCat);
+        if (view.controller.toastView) {
+          const pos = (orderedIds[toCat] || []).indexOf(id) + 1;
+          const label = (App.TASK_TYPES[toCat] && App.TASK_TYPES[toCat].label) || toCat;
+          view.controller.toastView.show({ title: `Moved to ${label} — position ${pos}` });
+        }
       }
-    }
-    Object.keys(orderedIds).forEach(cat => {
-      App.sequenceOrder.positionsFor(orderedIds[cat])
-        .forEach(({ id: rid, seq }) => view.controller.setFocusOrder(rid, seq));
+      Object.keys(orderedIds).forEach(cat => {
+        App.sequenceOrder.positionsFor(orderedIds[cat])
+          .forEach(({ id: rid, seq }) => view.controller.setFocusOrder(rid, seq));
+      });
     });
   }
 
@@ -365,8 +368,9 @@
       // key it carries no execution-mode reset baggage.)
       const reorder = sortBy === 'manual' && App.can('tasks.write');
       // In manual-order mode, completed tasks aren't part of the execution order —
-      // hide them so the drag list is just live work. (Switch Sort to see them.)
-      const shown = reorder ? tasks.filter(t => !App.taxonomy.isDone(t)) : tasks;
+      // hide them so the drag list is just live work, unless "Show done" is on.
+      const hideDone = reorder && !view.controller.uiState.showCompleted;
+      const shown = hideDone ? tasks.filter(t => !App.taxonomy.isDone(t)) : tasks;
 
       view.wrap.classList.add('qt-skin');
       view.body.className = 'qt-body';

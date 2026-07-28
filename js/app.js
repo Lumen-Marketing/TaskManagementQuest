@@ -481,6 +481,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (typing) return;
+    // Ctrl/Cmd+Z (no Shift) undoes the last task action. Handled before the
+    // modifier early-return below; while typing we already returned so native
+    // text undo still works in inputs.
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+      e.preventDefault();
+      controller.undoLast();
+      return;
+    }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     if (e.key === '?') {

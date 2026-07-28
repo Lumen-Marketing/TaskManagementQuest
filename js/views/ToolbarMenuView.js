@@ -21,6 +21,10 @@ App.ToolbarMenuView = class ToolbarMenuView {
     if (viewsBtn) viewsBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('views', viewsBtn); });
     if (exportBtn) exportBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggle('export', exportBtn); });
     if (moreBtn)  moreBtn.addEventListener('click',  (e) => { e.stopPropagation(); this.toggle('more',  moreBtn); });
+    // "Show done" is a plain toggle, not a menu — flip uiState and restyle.
+    const showDoneBtn = document.getElementById('showDoneBtn');
+    if (showDoneBtn) showDoneBtn.addEventListener('click', (e) => { e.stopPropagation(); this.controller.toggleShowCompleted(); });
+    App.EventBus.on('controls:changed', () => this.syncButtonLabels());
     [sortBtn, groupBtn, viewBtn, viewsBtn, exportBtn, moreBtn].forEach(btn => {
       if (btn) { btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false'); }
     });
@@ -271,6 +275,13 @@ App.ToolbarMenuView = class ToolbarMenuView {
       const layoutLabels = { table: 'Table', cards: 'Cards', calendar: 'Calendar', kanban: 'Kanban' };
       const layout = ui.layout || 'table';
       viewBtn.innerHTML = `<i class="ti ${layoutIcons[layout]}"></i>View: ${layoutLabels[layout]}`;
+    }
+    const showDoneBtn = document.getElementById('showDoneBtn');
+    if (showDoneBtn) {
+      const on = !!ui.showCompleted;
+      showDoneBtn.classList.toggle('active', on);
+      showDoneBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      showDoneBtn.innerHTML = `<i class="ti ${on ? 'ti-eye-off' : 'ti-eye'}"></i>${on ? 'Hide done' : 'Show done'}`;
     }
   }
 };

@@ -45,6 +45,9 @@ App.AppController = class AppController {
       sortDir: 'asc',
       groupBy: 'type',
       collapsedGroups: new Set(),
+      // Show completed tasks in the manual-order list (default off — the drag
+      // list is live work only; toggle reveals done without leaving the view).
+      showCompleted: false,
       // Bulk-select mode: when on, list rows toggle selection instead of
       // opening the detail pane, and BulkActionsView shows a bottom action bar.
       bulkMode: false,
@@ -64,6 +67,13 @@ App.AppController = class AppController {
     // the single mutation signal every TaskModel write emits.
     this._visibleCache = { key: null, value: null };
     App.EventBus.on('tasks:changed', () => { this._visibleCache.key = null; });
+
+    // Undo: a capped stack of reversible field-changes. Each entry is one user
+    // action (a single inline edit, or a whole drag grouped via undoable()).
+    // Ctrl+Z pops the last and restores it. Deletes keep their own toast-undo.
+    this._undoStack = [];
+    this._undoTxn = null;   // active transaction (set inside undoable())
+    this._undoing = false;  // guard so restoring doesn't capture itself
   }
 
   attachViews({ toastView, newTaskPage, profileView, reportProblemView, newFolderView, textPromptView, chatDrawerView }) {
@@ -284,6 +294,7 @@ App.AppController = class AppController {
         sortBy: this.uiState.sortBy,
         sortDir: this.uiState.sortDir,
         groupBy: this.uiState.groupBy,
+        showCompleted: this.uiState.showCompleted,
         filters: this.uiState.filters,
       }));
     } catch (e) { /* localStorage unavailable / quota — last-state is best-effort */ }
@@ -309,6 +320,7 @@ App.AppController = class AppController {
     if (saved.sortBy && App.SORT_OPTIONS[saved.sortBy]) this.uiState.sortBy = saved.sortBy;
     if (saved.sortDir === 'asc' || saved.sortDir === 'desc') this.uiState.sortDir = saved.sortDir;
     if (saved.groupBy && App.GROUP_OPTIONS[saved.groupBy]) this.uiState.groupBy = saved.groupBy;
+    if (typeof saved.showCompleted === 'boolean') this.uiState.showCompleted = saved.showCompleted;
     if (saved.filters && typeof saved.filters === 'object') {
       const d = { assignees: [], companies: [], statuses: [], priorities: [], types: [], projects: [], labels: [], dueRange: 'all' };
       for (const k of ['assignees', 'companies', 'statuses', 'priorities', 'types', 'projects', 'labels']) {
@@ -1519,13 +1531,73 @@ App.AppController = class AppController {
   removeFromFocus(id) {
     const t = this.taskModel.find(id);
     if (!t || !this.canSetFocusFor(t)) return;
+    this._captureUndo(id, 'focusSeq', t.focusSeq, 'reorder');
     this.taskModel.removeFromFocus(id);
   }
 
   setFocusOrder(id, newSeq) {
     const t = this.taskModel.find(id);
     if (!t || !this.canSetFocusFor(t)) return;
+    this._captureUndo(id, 'focusSeq', t.focusSeq, 'reorder');
     this.taskModel.setFocusOrder(id, newSeq);
+  }
+
+  /* ---------- Undo (Ctrl+Z) ----------
+     Reverses the LAST action. Each reversible field-write is captured with its
+     PREVIOUS value; a single inline edit becomes its own one-op entry, while a
+     drag (many focusSeq writes + maybe a type change) is grouped into one entry
+     via undoable(). Restoring writes straight to the model (no re-capture, no
+     re-notify). Task deletes keep their existing 6s toast-undo — not this. */
+  undoable(label, fn) {
+    const parent = this._undoTxn;
+    this._undoTxn = { label, ops: [], seen: new Set() };
+    try { fn(); }
+    finally {
+      const txn = this._undoTxn;
+      this._undoTxn = parent;
+      if (txn.ops.length) this._pushUndo(txn);
+    }
+  }
+
+  _captureUndo(id, field, prevValue, label) {
+    if (this._undoing) return;
+    const key = id + '|' + field;
+    if (this._undoTxn) {
+      if (!this._undoTxn.seen.has(key)) {
+        this._undoTxn.seen.add(key);
+        this._undoTxn.ops.push({ id, field, value: prevValue });
+      }
+    } else {
+      this._pushUndo({ label: label || 'change', ops: [{ id, field, value: prevValue }] });
+    }
+  }
+
+  _pushUndo(txn) {
+    this._undoStack.push(txn);
+    if (this._undoStack.length > 40) this._undoStack.shift();
+  }
+
+  undoLast() {
+    const txn = this._undoStack.pop();
+    if (!txn) { if (this.toastView) this.toastView.show({ title: 'Nothing to undo' }); return; }
+    const name = this.getUserName(this.currentUser);
+    this._undoing = true;
+    try {
+      txn.ops.forEach(op => {
+        if (!this.taskModel.find(op.id)) return;
+        if (op.field === 'focusSeq') this.taskModel.setFocusOrder(op.id, op.value);
+        else this.taskModel.setField(op.id, op.field, op.value, name, 'undo');
+      });
+    } finally { this._undoing = false; }
+    if (this.toastView) this.toastView.show({ title: `Undid ${txn.label}` });
+  }
+
+  /* Reveal / hide completed tasks in the manual-order list. */
+  toggleShowCompleted() {
+    this.uiState.showCompleted = !this.uiState.showCompleted;
+    this._persistUiState();
+    App.EventBus.emit('tasks:changed');
+    App.EventBus.emit('controls:changed');
   }
 
   /* Soft-clear every done task, after a confirm prompt. Rows stay in
@@ -1557,6 +1629,7 @@ App.AppController = class AppController {
     // be left untouched.
     if (field === 'title' || field === 'description') value = App.utils.upper(value);
     const prev = task[field];
+    if (prev !== value) this._captureUndo(id, field, prev, `change ${field}`);
     this.taskModel.setField(id, field, value, this.getUserName(this.currentUser), activityText);
     const doneKey = App.taxonomy.doneStatus(task.company, task.type);
     if (field === 'status' && value === doneKey && prev !== doneKey) {
