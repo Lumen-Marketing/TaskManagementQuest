@@ -302,8 +302,8 @@ App.TaskModel = class TaskModel {
       else if (sortBy === 'assignee') c = assigneeName(a).localeCompare(assigneeName(b));
       else if (sortBy === 'status')   c = statusOrd(a) - statusOrd(b);
       else if (sortBy === 'created')  c = (a.id || '').localeCompare(b.id || '');
-      else if (sortBy === 'focus') {
-        // Nulls (not in Focus) sort last; otherwise ascending by focusSeq.
+      else if (sortBy === 'manual') {
+        // Manual (drag) order: ascending by focusSeq; unpositioned rows sort last.
         const av = a.focusSeq == null ? Infinity : a.focusSeq;
         const bv = b.focusSeq == null ? Infinity : b.focusSeq;
         c = av - bv;

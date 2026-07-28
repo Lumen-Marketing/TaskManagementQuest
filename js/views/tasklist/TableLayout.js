@@ -359,10 +359,11 @@
       if (view._seqDragCleanup) { view._seqDragCleanup(); view._seqDragCleanup = null; }
 
       const { groupBy, sortBy, sortDir, collapsedGroups } = view.controller.uiState;
-      // Manual order ('focus' sort) turns the rows into a drag-rankable list:
-      // grip + 1..n badge per row, drag within a group to reorder, drag across
-      // type-groups to recategorise.
-      const reorder = sortBy === 'focus' && App.can('tasks.write');
+      // Manual order turns the rows into a drag-rankable list: grip + 1..n badge
+      // per row, drag within a group to reorder, drag across type-groups to
+      // recategorise. ('manual' is a plain table sort — unlike the old 'focus'
+      // key it carries no execution-mode reset baggage.)
+      const reorder = sortBy === 'manual' && App.can('tasks.write');
       // In manual-order mode, completed tasks aren't part of the execution order —
       // hide them so the drag list is just live work. (Switch Sort to see them.)
       const shown = reorder ? tasks.filter(t => !App.taxonomy.isDone(t)) : tasks;
