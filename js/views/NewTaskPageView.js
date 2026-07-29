@@ -585,7 +585,14 @@ App.NewTaskPageView = class NewTaskPageView {
     if (key === this._sopKey) return;
     this._sopKey = key;
 
-    const next = App.taxonomy.activeSop(this.S.company, label);
+    // SOP checklists (App.taxonomy.activeSop) ship with migration 069. The
+    // caller/data-store landed on main ahead of the taxonomy implementation, so
+    // guard it: until activeSop exists, treat every label as having no SOP rather
+    // than throwing on each company/label change (surfaced as a "Something went
+    // wrong" toast via the global handler).
+    const next = (App.taxonomy && typeof App.taxonomy.activeSop === 'function')
+      ? App.taxonomy.activeSop(this.S.company, label)
+      : [];
     const limit = (App.validate.LIMITS && App.validate.LIMITS.subtasks) || 50;
     this.subtasks = App.utils.mergeSopSteps(this.subtasks, this.sopSteps, next, limit);
     this.sopSteps = next.slice();
