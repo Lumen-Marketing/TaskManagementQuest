@@ -58,11 +58,11 @@ App.TaskDetailView = class TaskDetailView {
     wrap.classList.remove('hidden');
 
     // Hide every sibling work-surface behind the detail page. A task can be
-    // opened from any view — the list (#listPane) but also the Home / Reports
-    // full-page surfaces (their Up next / recents rows call selectTask) — so all
-    // of them must be hidden or they'd stack in-flow above the detail. On close,
-    // _togglePanes restores whichever one the current view calls for.
-    ['listPane', 'homeWrap', 'reportsWrap'].forEach(id => {
+    // opened from any view — the list (#listPane) but also the Home / Reports /
+    // Projects / Wallboard full-page surfaces (their rows call selectTask) — so
+    // all of them must be hidden or they'd stack in-flow above the detail. On
+    // close, _togglePanes restores whichever one the current view calls for.
+    ['listPane', 'homeWrap', 'reportsWrap', 'projectsWrap', 'wallboardWrap'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add('hidden');
     });
