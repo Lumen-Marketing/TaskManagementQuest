@@ -639,22 +639,26 @@ App.NewTaskPageView = class NewTaskPageView {
     this._applySop();   // a brand-new label has no SOP → clears any previous SOP's steps
     this._closeMenus(); this._flash('✓ label created → ' + val); this.sync('lab');
   }
-  _createProject(val) {
-    // Auto-caps the project name on save (this inline path calls the data store
-    // directly rather than controller.createProject, so it needs its own upper()).
-    val = App.utils.upper(val);
-    const row = { name: val, company_id: this.S.company };
-    if (this.controller.dataStore && this.controller.dataStore.createProject) {
-      Promise.resolve(this.controller.dataStore.createProject(row)).then((res) => {
-        if (res && res.id) {
-          App.projects = App.projects || {};
-          App.projects[res.id] = { id: res.id, name: val, companyId: this.S.company, color: '', status: 'active' };
-          this.S.project = res.id; this._lockField('project'); this.sync('proj');
-        }
-      }).catch(() => {});
-    }
+  async _createProject(val) {
+    // Delegate to the controller: it generates the folder's text id (the
+    // projects PK has no DB default), auto-caps the name, persists, refreshes
+    // App.projects, and emits 'projects:changed'. The old inline path inserted
+    // { name, company_id } with NO id, so every insert failed the NOT NULL PK
+    // constraint — the folder never persisted and never showed in the picker,
+    // yet the optimistic flash still claimed success. Flash the real outcome.
     this._lockField('project');
-    this._closeMenus(); this._flash('✓ project created → ' + val); this.sync('proj');
+    this._closeMenus();
+    let id = null;
+    try {
+      id = await this.controller.createProject({ name: val, companyId: this.S.company });
+    } catch (e) { /* fall through to the failure flash */ }
+    if (id) {
+      this.S.project = id;
+      this._flash('✓ project created → ' + App.utils.upper(val));
+    } else {
+      this._flash("Couldn't create that project.");
+    }
+    this.sync('proj');
   }
 
   /* ---------------- title parser ---------------- */
