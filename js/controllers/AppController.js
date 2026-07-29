@@ -446,8 +446,12 @@ App.AppController = class AppController {
         if (head === 'folder' && a) {
           this.uiState.filters = this.uiState.filters || {};
           this.uiState.filters.projectId = a;
+          // Drill-down clears the "My work" scope so the folder isn't narrowed to
+          // the viewer's own tasks (mirrors openProject). Deep-link / refresh path.
+          this.uiState.scope = 'all';
           this.setView('all');
           App.EventBus.emit('filters:changed');
+          App.EventBus.emit('scope:changed');
         } else if (head === 'tasks') {
           if (this.uiState.filters) this.uiState.filters.projectId = null;
           this.setView('all');
@@ -1730,7 +1734,11 @@ App.AppController = class AppController {
   /* Scope the task list to a single folder (project detail). Sets a single-value
      projectId filter and switches to the list; the list renders a folder header. */
   openProject(projectId) {
-    this._commit({ filters: { ...(this.uiState.filters || {}), projectId: projectId || null } });
+    // Opening a folder is an explicit "show me THIS folder" drill-down, so drop
+    // the "My work" scope — otherwise a folder full of a teammate's tasks reads
+    // as empty under My-work. Reset to 'all' (rather than ignoring scope) so the
+    // visible scope segment stays honest.
+    this._commit({ filters: { ...(this.uiState.filters || {}), projectId: projectId || null }, scope: 'all' });
     this.setView('all');
   }
 
