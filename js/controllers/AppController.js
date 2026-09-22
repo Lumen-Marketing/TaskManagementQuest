@@ -40,7 +40,13 @@ App.AppController = class AppController {
       // `view` (so it isn't persisted, sidebar-listed, or canView-gated) — it
       // drives #newTaskWrap the way selectedTaskId drives the detail page.
       creatingTask: false,
-      layout: 'table',
+      // Phones boot straight onto the quick board (Abraham's v2 design). setView
+      // applies the same entry layout on every later trip to All tasks, but it
+      // early-returns when the view is unchanged — and the app boots already on
+      // 'all', so that path never fires for the first paint. Hence the default
+      // is set here as well as there.
+      layout: (typeof window !== 'undefined' && window.matchMedia
+        && window.matchMedia('(max-width: 720px)').matches) ? 'quick' : 'table',
       // Calendar view state: 'month' | 'week', and the focused anchor date
       // (ISO; null → today at render time).
       calendarMode: 'month',
@@ -249,9 +255,13 @@ App.AppController = class AppController {
     // off uiState on purpose: it's per-session breadcrumb, not persisted state.
     this.previousView = this.uiState.view;
     const patch = { view, selectedTaskId: null };
-    // All Tasks always OPENS in table view, whatever mode it was left in.
+    // All Tasks always OPENS in its entry layout, whatever mode it was left in.
     // Explicit switches after entry (View menu, openCalendarOn) still apply.
-    if (view === 'all' && this.uiState.layout !== 'table') patch.layout = 'table';
+    // On a phone that entry layout is the quick board — the same rule as the
+    // desktop one (2026-07-04 walkthrough), not an exception to it, so a phone
+    // opens on Abraham's v2 board every time without the layout being persisted.
+    const entryLayout = this._isPhone() ? 'quick' : 'table';
+    if (view === 'all' && this.uiState.layout !== entryLayout) patch.layout = entryLayout;
     // Focus is a shared cross-person list reached via the widget / Sort menu,
     // not tied to any view — so switching views exits Execution-order back to a
     // normal sort. The diff emits sort:changed only when this actually fires.
@@ -484,7 +494,11 @@ App.AppController = class AppController {
           } else {
             // Leaving execution order back to a plain list drops the focus sort.
             if (this.uiState.sortBy === 'focus') this.setSortBy('priority');
-            this.setLayout(['table', 'calendar', 'kanban', 'cards'].includes(a) ? a : 'table');
+            // A bare #/tasks names no layout, so it falls back to the entry
+            // layout rather than hardcoding the table — otherwise every boot
+            // and every plain tasks link would override the phone default.
+            this.setLayout(['table', 'calendar', 'kanban', 'cards', 'quick'].includes(a)
+              ? a : (this._isPhone() ? 'quick' : 'table'));
             if (a === 'calendar') {
               const iso = /^\d{4}-\d{2}-\d{2}$/.test(b || '') ? b : null;
               this.uiState.calendarAnchor = iso;
@@ -544,8 +558,26 @@ App.AppController = class AppController {
     this._commit({ searchQuery: q });
   }
 
+  /* Open a task in the mobile sheet's EDIT mode. The quick board's cards call
+     this; everything else still opens the full detail page, which the sheet
+     links out to for comments, watchers, time tracking and attachments. */
+  openTaskSheet(taskId) {
+    this._taskSheet = this._taskSheet || new App.TaskSheetView({ controller: this });
+    this._taskSheet.openEdit(taskId);
+  }
+
+  /* One breakpoint for the whole app — matches js/views/SidebarView.js:128 and
+     the ≤720px block in css/mobile.css. Read live rather than cached so a
+     rotation or a resized window is picked up on the next navigation. */
+  _isPhone() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+  }
+
+  // 'quick' is the phone board (QuickBoardLayout). Note this list is switcher-
+  // selectable layouts only: 'watching' and 'execution' are also registered
+  // adapters but are reached through a view / sort key, never through here.
   setLayout(layout) {
-    if (!['table', 'calendar', 'kanban', 'cards'].includes(layout)) return;
+    if (!['table', 'calendar', 'kanban', 'cards', 'quick'].includes(layout)) return;
     this._commit({ layout });
   }
 
@@ -2176,6 +2208,14 @@ App.AppController = class AppController {
       this.toastView.show({ title: 'No access', sub: 'Your role cannot create tasks.' });
       return;
     }
+    // Phones get the bottom sheet instead of the full page. Forking here rather
+    // than at each call site covers every entry at once: the bottom nav's ⊕, the
+    // keyboard shortcut, the #/new route and the header button all land here.
+    if (this._isPhone() && App.TaskSheetView) {
+      this._taskSheet = this._taskSheet || new App.TaskSheetView({ controller: this });
+      this._taskSheet.openNew(prefill);
+      return;
+    }
     if (this.uiState.creatingTask) return; // already open
     this._returnView = this.uiState.view;
     this._newTaskPrefill = prefill || {};
@@ -2234,6 +2274,12 @@ App.AppController = class AppController {
       assignee: lead,
       assigneeIds,
       woNumber,
+      // Marks the task as brand new for one render, so the quick board can pulse
+      // its border and Abraham can see where it landed. Set here rather than at
+      // the call site because tasks:changed fires from inside this method — a
+      // caller setting it afterwards would always be one render too late. The
+      // board clears it once consumed; every other layout ignores it.
+      _flash: true,
       reminderOffset: payload.reminderOffset || null,
       watchers: payload.watchers || [],
       subtasks: Array.isArray(payload.subtasks)
@@ -2323,21 +2369,30 @@ App.AppController = class AppController {
           App.EventBus.emit('selection:changed');
         },
       };
+      // A caller may supply the confirmation's subtitle — the mobile sheet
+      // passes the resolved schedule ("Tomorrow · 9:00 AM · Jesus") so a
+      // mis-parsed title token is caught the moment it is saved. It replaces
+      // this line rather than adding a second toast: two stacked confirmations
+      // for one action is clutter, and the later one hides the earlier.
       if (delegated) {
         this.toastView.show({
           title: `Task assigned to ${assigneeNames}`,
-          sub: leadEmail ? `Notifying ${assigneeNames}` : 'In-app notification sent',
+          sub: payload.toastSub || (leadEmail ? `Notifying ${assigneeNames}` : 'In-app notification sent'),
           action: viewAction,
         });
       } else {
         const watcherCount = (payload.watchers || []).length;
         this.toastView.show({
           title: 'Task created',
-          sub: watcherCount ? `${watcherCount} watcher${watcherCount > 1 ? 's' : ''} notified` : 'Tap View to open it',
+          sub: payload.toastSub
+            || (watcherCount ? `${watcherCount} watcher${watcherCount > 1 ? 's' : ''} notified` : 'Tap View to open it'),
           action: viewAction,
         });
       }
-      if (payload.notify.whatsapp) {
+      // Guarded like `payload.watchers || []` three lines above: a caller that
+      // omits `notify` should not take down the rest of createTask after the
+      // task has already been added to the model.
+      if (payload.notify && payload.notify.whatsapp) {
         this.toastView.show({ title: 'WhatsApp queued', sub: 'Ping will fire if marked urgent.' });
       }
     }

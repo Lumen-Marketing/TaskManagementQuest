@@ -133,10 +133,13 @@ App.ToolbarMenuView = class ToolbarMenuView {
       });
     } else if (this.menuFor === 'view') {
       const layouts = [
-        { key: 'table',    label: 'Table',    icon: 'ti-table' },
-        { key: 'cards',    label: 'Cards',    icon: 'ti-layout-grid' },
-        { key: 'calendar', label: 'Calendar', icon: 'ti-calendar' },
-        { key: 'kanban',   label: 'Kanban',   icon: 'ti-layout-kanban' },
+        { key: 'table',    label: 'Table',       icon: 'ti-table' },
+        { key: 'cards',    label: 'Cards',       icon: 'ti-layout-grid' },
+        { key: 'calendar', label: 'Calendar',    icon: 'ti-calendar' },
+        { key: 'kanban',   label: 'Kanban',      icon: 'ti-layout-kanban' },
+        // The phone default. Offered on desktop too, so the board Abraham sees
+        // can be checked without picking up a phone.
+        { key: 'quick',    label: 'Quick board', icon: 'ti-list-check' },
       ];
       this.menu.innerHTML = `
         <div class="toolbar-menu-title">View as</div>

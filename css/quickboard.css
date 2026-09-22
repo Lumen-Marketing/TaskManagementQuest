@@ -1,0 +1,107 @@
+/* Quick board — the phone default layout (Abraham's v2 handoff).
+   Built on the app's semantic tokens, NOT the handoff's fixed light hex, so
+   the board survives the dark theme (tokens.css defaults to dark). */
+
+.qb-board { display: block; padding: 0 0 calc(var(--m-navh, 58px) + 28px); }
+
+/* ---- controls ---- */
+.qb-controls { padding: 4px 0 10px; }
+
+.qb-seg {
+  display: flex; gap: 2px; margin-bottom: 10px;
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius-pill); padding: 3px;
+}
+.qb-seg button {
+  flex: 1; border: 0; background: none; cursor: pointer;
+  font: 600 13px/1 var(--font-body, inherit); color: var(--ink-2);
+  padding: 8px 0; border-radius: var(--radius-pill);
+  min-height: 34px;
+}
+.qb-seg button.is-on { background: var(--color-accent); color: var(--color-accent-ink); }
+
+/* One horizontal strip, like the existing mobile pill row — never wraps. */
+.qb-chips {
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+}
+.qb-chips::-webkit-scrollbar { display: none; }
+.qb-chips button {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+  border-radius: var(--radius-pill); padding: 7px 13px; min-height: 34px;
+  font: 600 12.5px/1 var(--font-body, inherit); cursor: pointer; white-space: nowrap;
+}
+.qb-chips button.is-on { border-color: var(--color-accent); color: var(--ink); background: var(--bg-3); }
+
+.qb-swatch { width: 8px; height: 8px; border-radius: 3px; display: inline-block; flex: none; }
+
+/* ---- cards ---- */
+.qb-list { display: flex; flex-direction: column; gap: 8px; }
+
+.qb-card {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 12px; cursor: pointer;
+}
+.qb-card.is-done { opacity: .55; }
+.qb-card.is-done .qb-title { text-decoration: line-through; }
+
+.qb-check {
+  flex: none; width: 26px; height: 26px; padding: 0; margin-top: 1px;
+  border: 0; background: none; color: var(--ink-3); cursor: pointer;
+  display: grid; place-items: center;
+}
+.qb-check i { font-size: 22px; }
+.qb-check.is-done { color: var(--green); }
+.qb-check.hidden { display: none; }
+
+.qb-body { flex: 1 1 auto; min-width: 0; }
+.qb-title {
+  font: 600 14.5px/1.3 var(--font-body, inherit); color: var(--ink);
+  margin: 0 0 7px; overflow-wrap: anywhere;
+}
+
+.qb-meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+
+/* Shape only. Colour is deliberately NOT set here: the priority pill carries
+   the app's own .priority-* class (taskmanagement.css:1104), which supplies a
+   themed background and ink in both light and dark. Setting a background on
+   the shared rule would out-order those classes — same specificity, and this
+   stylesheet loads later — and every priority would render flat grey. */
+.qb-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  border-radius: var(--radius-pill); padding: 3px 9px;
+  font: 600 11px/1.4 var(--font-mono, monospace);
+  border: 1px solid transparent;
+}
+.qb-pill:not(.qb-pill-priority) {
+  background: var(--bg-2); color: var(--ink-2); border-color: var(--border);
+}
+.qb-pill-who .avatar,
+.qb-pill-who .mini { width: 16px; height: 16px; font-size: 8px; }
+.qb-due.is-overdue { color: var(--u-critical, #D92D20); border-color: currentColor; }
+
+.qb-progress { display: flex; align-items: center; gap: 7px; margin-top: 8px; }
+.qb-progress-n { font: 600 10.5px/1 var(--font-mono, monospace); color: var(--ink-3); flex: none; }
+.qb-progress-track {
+  flex: 1 1 auto; height: 4px; border-radius: var(--radius-pill);
+  background: var(--bg-3); overflow: hidden;
+}
+.qb-progress-fill { display: block; height: 100%; background: var(--green); }
+
+.qb-detail {
+  margin: 7px 0 0; color: var(--ink-3);
+  font: 400 12.5px/1.4 var(--font-body, inherit);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* A new card announces itself, then settles. */
+.qb-card.is-new { animation: qb-pulse 1.2s ease-out 1; }
+@keyframes qb-pulse {
+  0%, 60% { border-color: var(--color-accent); }
+  100%    { border-color: var(--border); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qb-card.is-new { animation: none; }
+}

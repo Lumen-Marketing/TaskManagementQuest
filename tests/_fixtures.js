@@ -36,4 +36,23 @@ export const test = base.extend({
   },
 });
 
+/* Clear the two full-screen layers that swallow pointer events after boot.
+
+   Both are easy to get wrong by racing them. The WebGL boot loader removes
+   #appLoader from the DOM when it finishes, so waiting for the avatar to be
+   visible is NOT enough — the canvas can still be over everything. The
+   onboarding tour is worse: window.App.controller exists immediately, but
+   .tour-root only mounts a couple of seconds later, so an Escape pressed as
+   soon as the controller appears lands BEFORE the tour exists and leaves
+   .tour-catch to intercept every later click. Wait for it, then dismiss it
+   (Escape counts as seen); skip the wait when it never shows. */
+export async function dismissOverlays(page) {
+  await expect(page.locator('#appLoader')).toHaveCount(0, { timeout: 15_000 });
+  await page.locator('.tour-root').waitFor({ state: 'attached', timeout: 8_000 }).catch(() => {});
+  if (await page.locator('.tour-root').count()) {
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.tour-root')).toHaveCount(0);
+  }
+}
+
 export { expect };

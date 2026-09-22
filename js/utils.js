@@ -510,11 +510,33 @@ App.utils = {
     const t1 = App.utils.todayISO(1);
     if (iso === t0) return { text: 'Today', cls: 'due-today' };
     if (iso === t1) return { text: 'Tomorrow', cls: '' };
-    const d = new Date(iso);
+    // `new Date('2026-09-25')` is parsed as UTC midnight and then formatted in
+    // the viewer's zone, which names the PREVIOUS day everywhere west of UTC —
+    // including Phoenix, the HQ zone. The explicit time makes it parse local.
+    const d = new Date(iso + 'T00:00');
     if (iso < t0) {
       return { text: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), cls: 'due-overdue' };
     }
     return { text: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), cls: '' };
+  },
+
+  /* Accent colour for a company, for the mobile board and task sheet.
+     Companies are NOT part of the DB taxonomy — App.taxonomy.color is
+     color(kind, company, key, type) and serves types, statuses and labels — so
+     a company's colour comes from the app's accent tokens, picked by the
+     company's position in the list. Mirrors NewTaskPageView._accentToken.
+
+     ProjectsView has its OWN, different company->colour map (roofing is
+     --u-high there, --amber here); the two have never agreed, and unifying
+     them is not this feature's job. */
+  companyColor(companyId) {
+    const tokens = ['--amber', '--blue', '--rust', '--green'];
+    const ids = Object.keys(App.COMPANIES || {}).filter(id => id !== 'overall');
+    const i = Math.max(0, ids.indexOf(companyId));
+    try {
+      return getComputedStyle(document.documentElement)
+        .getPropertyValue(tokens[i % tokens.length]).trim() || 'var(--amber)';
+    } catch (e) { return 'var(--amber)'; }
   },
 
   formatClock(hhmm) {

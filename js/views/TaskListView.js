@@ -207,7 +207,7 @@ App.TaskListView = class TaskListView {
   _layoutKey() {
     if (this.controller.uiState.view === 'watching') return 'watching';
     const l = this.controller.uiState.layout;
-    if (l === 'kanban' || l === 'cards' || l === 'calendar') return l;
+    if (l === 'kanban' || l === 'cards' || l === 'calendar' || l === 'quick') return l;
     // Manual order ('focus' sort) now renders as drag-reorderable rows INSIDE
     // the table (see TableLayout), not a standalone layout.
     return 'table';
