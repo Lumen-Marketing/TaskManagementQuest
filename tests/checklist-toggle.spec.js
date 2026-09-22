@@ -1,14 +1,14 @@
 // @ts-check
-import { test, expect } from './_fixtures.js';
+import { test, expect, dismissOverlays } from './_fixtures.js';
 
 // Preview mode boots the app with seed data and no backend.
 async function boot(page, baseURL) {
   await page.goto(`${baseURL}/app.html?preview=1&role=admin&member=abraham`);
   await page.waitForFunction(() => !!window.App && !!window.App.controller);
-  // Dismiss the onboarding tour overlay (Esc counts as seen) so its .tour-catch
-  // layer can't intercept clicks on the checklist.
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(200);
+  // The tour mounts a couple of seconds AFTER App.controller appears, so the
+  // Escape that used to fire here landed before it existed and left .tour-catch
+  // intercepting the checklist clicks. dismissOverlays waits for it properly.
+  await dismissOverlays(page);
 }
 
 test.describe('task detail checklist', () => {

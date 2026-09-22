@@ -1,6 +1,6 @@
 // @ts-check
 /* Saving, editing, batch entry and the toasts. */
-import { test, expect } from './_fixtures.js';
+import { test, expect, dismissOverlays } from './_fixtures.js';
 
 const MOBILE = { width: 390, height: 844 };
 
@@ -13,6 +13,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize(MOBILE);
   await page.goto('/app.html?preview=1');
   await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
+  await dismissOverlays(page);
   await page.evaluate(() => { App.controller.setView('all'); App.controller.setLayout('quick'); });
 });
 

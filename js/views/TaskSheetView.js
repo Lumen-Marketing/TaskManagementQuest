@@ -412,6 +412,14 @@
       const extras = {
         project: this.form.project || null,
         reminderOffset: this.form.reminder || null,
+        // Same channels the desktop New Task page defaults to, so a task
+        // created on a phone notifies exactly like one created at a desk.
+        // WhatsApp dispatch is out of scope for mobile v1 per the handoff.
+        notify: { email: true, inapp: true, watchers: false, whatsapp: false },
+        // Rides the controller's own "Task created" toast instead of stacking a
+        // second one — it keeps the View action, and the later toast would
+        // otherwise hide this echo anyway.
+        toastSub: this._scheduleEcho(),
       };
 
       if (this.mode === 'edit') {
@@ -425,7 +433,6 @@
       }
 
       this.controller.createTask(Object.assign({}, clean, extras));
-      this.controller.toastView.show({ title: '✓ Added', sub: this._scheduleEcho() });
 
       if (!keepOpen) { this.close(); return; }
 
@@ -436,7 +443,10 @@
       input.value = '';
       el.querySelector('.ts-detail').value = '';
       this._renderChecklist();
-      input.focus();
+      // Deferred like the focus in _open: createTask selects the new task and
+      // emits selection:changed after this returns, and whatever reacts to that
+      // takes the focus back if it is claimed synchronously here.
+      setTimeout(() => { if (this._el) input.focus(); }, 50);
     }
   };
 })();

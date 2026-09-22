@@ -2,7 +2,7 @@
 /* The quick board is the phone default layout and carries Abraham's approved
    v2 design: an Open/Done/All segment, company chips, and flat cards sorted
    not-done -> priority -> due. Runs in preview mode, so no Supabase creds. */
-import { test, expect } from './_fixtures.js';
+import { test, expect, dismissOverlays } from './_fixtures.js';
 
 const MOBILE = { width: 390, height: 844 };
 
@@ -10,6 +10,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize(MOBILE);
   await page.goto('/app.html?preview=1');
   await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
+  await dismissOverlays(page);
   await page.evaluate(() => { App.controller.setView('all'); App.controller.setLayout('quick'); });
   await expect(page.locator('.qb-card').first()).toBeVisible();
 });

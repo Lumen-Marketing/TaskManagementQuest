@@ -2369,21 +2369,30 @@ App.AppController = class AppController {
           App.EventBus.emit('selection:changed');
         },
       };
+      // A caller may supply the confirmation's subtitle — the mobile sheet
+      // passes the resolved schedule ("Tomorrow · 9:00 AM · Jesus") so a
+      // mis-parsed title token is caught the moment it is saved. It replaces
+      // this line rather than adding a second toast: two stacked confirmations
+      // for one action is clutter, and the later one hides the earlier.
       if (delegated) {
         this.toastView.show({
           title: `Task assigned to ${assigneeNames}`,
-          sub: leadEmail ? `Notifying ${assigneeNames}` : 'In-app notification sent',
+          sub: payload.toastSub || (leadEmail ? `Notifying ${assigneeNames}` : 'In-app notification sent'),
           action: viewAction,
         });
       } else {
         const watcherCount = (payload.watchers || []).length;
         this.toastView.show({
           title: 'Task created',
-          sub: watcherCount ? `${watcherCount} watcher${watcherCount > 1 ? 's' : ''} notified` : 'Tap View to open it',
+          sub: payload.toastSub
+            || (watcherCount ? `${watcherCount} watcher${watcherCount > 1 ? 's' : ''} notified` : 'Tap View to open it'),
           action: viewAction,
         });
       }
-      if (payload.notify.whatsapp) {
+      // Guarded like `payload.watchers || []` three lines above: a caller that
+      // omits `notify` should not take down the rest of createTask after the
+      // task has already been added to the model.
+      if (payload.notify && payload.notify.whatsapp) {
         this.toastView.show({ title: 'WhatsApp queued', sub: 'Ping will fire if marked urgent.' });
       }
     }

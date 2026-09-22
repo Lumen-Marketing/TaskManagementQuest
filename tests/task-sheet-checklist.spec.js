@@ -1,7 +1,7 @@
 // @ts-check
 /* The checklist maps onto the app's subtasks, so a step added on a phone shows
    up on desktop and in the detail page instead of becoming a parallel list. */
-import { test, expect } from './_fixtures.js';
+import { test, expect, dismissOverlays } from './_fixtures.js';
 
 const MOBILE = { width: 390, height: 844 };
 
@@ -9,6 +9,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize(MOBILE);
   await page.goto('/app.html?preview=1');
   await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
+  await dismissOverlays(page);
   await page.locator('#bottomNav [data-nav="new"]').click();
   await expect(page.locator('.task-sheet')).toBeVisible();
 });

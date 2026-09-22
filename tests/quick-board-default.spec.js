@@ -1,7 +1,7 @@
 // @ts-check
 /* The quick board is the phone DEFAULT, not a lock: it is chosen when nothing
    else was, and an explicit choice from the layout switcher must survive. */
-import { test, expect } from './_fixtures.js';
+import { test, expect, dismissOverlays } from './_fixtures.js';
 
 const MOBILE = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 900 };
@@ -14,6 +14,7 @@ const fresh = async (page, size) => {
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
   await page.reload();
   await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
+  await dismissOverlays(page);
 };
 
 test('a phone lands on the quick board without being asked', async ({ page }) => {

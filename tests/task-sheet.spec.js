@@ -1,7 +1,7 @@
 // @ts-check
 /* The mobile task sheet's shell: how it opens, how it closes, and which
    footer each mode shows. Fields and trays are covered separately. */
-import { test, expect } from './_fixtures.js';
+import { test, expect, dismissOverlays } from './_fixtures.js';
 
 const MOBILE = { width: 390, height: 844 };
 
@@ -9,6 +9,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize(MOBILE);
   await page.goto('/app.html?preview=1');
   await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
+  await dismissOverlays(page);
 });
 
 test('the bottom nav plus opens the sheet, not the full page', async ({ page }) => {
