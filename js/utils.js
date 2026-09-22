@@ -512,8 +512,10 @@ App.utils = {
     if (iso === t1) return { text: 'Tomorrow', cls: '' };
     // `new Date('2026-09-25')` is parsed as UTC midnight and then formatted in
     // the viewer's zone, which names the PREVIOUS day everywhere west of UTC —
-    // including Phoenix, the HQ zone. The explicit time makes it parse local.
-    const d = new Date(iso + 'T00:00');
+    // including Phoenix, the HQ zone. Appending a time makes it parse as local
+    // midnight, matching how every other date renderer here already guards
+    // (HomeView._longDate, ReportsView._shortDate, TaskDetailView._formatDue).
+    const d = new Date(iso + 'T00:00:00');
     if (iso < t0) {
       return { text: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), cls: 'due-overdue' };
     }
