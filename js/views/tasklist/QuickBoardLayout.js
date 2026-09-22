@@ -38,6 +38,9 @@
     const card = document.createElement('article');
     card.className = 'qb-card' + (done ? ' is-done' : '') + (t._flash ? ' is-new' : '');
     card.dataset.id = t.id;
+    // One pulse, not one per render: consume the mark as soon as it is used, or
+    // every later re-render of an unchanged board would replay the animation.
+    if (t._flash) delete t._flash;
     card.innerHTML = `
       <button class="qb-check ${done ? 'is-done' : ''} ${App.can('tasks.write') ? '' : 'hidden'}"
               data-action="finish-task" type="button"

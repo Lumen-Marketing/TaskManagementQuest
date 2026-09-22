@@ -2274,6 +2274,12 @@ App.AppController = class AppController {
       assignee: lead,
       assigneeIds,
       woNumber,
+      // Marks the task as brand new for one render, so the quick board can pulse
+      // its border and Abraham can see where it landed. Set here rather than at
+      // the call site because tasks:changed fires from inside this method — a
+      // caller setting it afterwards would always be one render too late. The
+      // board clears it once consumed; every other layout ignores it.
+      _flash: true,
       reminderOffset: payload.reminderOffset || null,
       watchers: payload.watchers || [],
       subtasks: Array.isArray(payload.subtasks)
