@@ -510,7 +510,10 @@ App.utils = {
     const t1 = App.utils.todayISO(1);
     if (iso === t0) return { text: 'Today', cls: 'due-today' };
     if (iso === t1) return { text: 'Tomorrow', cls: '' };
-    const d = new Date(iso);
+    // `new Date('2026-09-25')` is parsed as UTC midnight and then formatted in
+    // the viewer's zone, which names the PREVIOUS day everywhere west of UTC —
+    // including Phoenix, the HQ zone. The explicit time makes it parse local.
+    const d = new Date(iso + 'T00:00');
     if (iso < t0) {
       return { text: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), cls: 'due-overdue' };
     }
