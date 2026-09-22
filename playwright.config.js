@@ -26,7 +26,11 @@ export default defineConfig({
   projects: [
     {
       name: 'local',
-      testMatch: ['auth.spec.js', 'tasks.spec.js', 'role-gate.spec.js', 'preview-bypass-dead.spec.js', 'add-person.spec.js', 'responsive.spec.js', 'focus-model.spec.js', 'focus-dragorder.spec.js', 'focus-e2e.spec.js', 'hq-time.spec.js', 'redesign-topbar.spec.js', 'home-reports.spec.js', 'mobile-quick-actions.spec.js', 'wallboard.spec.js', 'restyle-blocks.spec.js', 'report-problem.spec.js', 'checklist-toggle.spec.js'],
+      testMatch: ['auth.spec.js', 'tasks.spec.js', 'role-gate.spec.js', 'preview-bypass-dead.spec.js', 'add-person.spec.js', 'responsive.spec.js', 'focus-model.spec.js', 'focus-dragorder.spec.js', 'focus-e2e.spec.js', 'hq-time.spec.js', 'redesign-topbar.spec.js', 'home-reports.spec.js', 'mobile-quick-actions.spec.js', 'wallboard.spec.js', 'restyle-blocks.spec.js', 'report-problem.spec.js', 'checklist-toggle.spec.js',
+        // Mobile quick add v2. testMatch is an allowlist — a spec not named
+        // here never runs, however green the file looks.
+        'quick-board.spec.js', 'quick-board-default.spec.js', 'task-sheet.spec.js',
+        'task-sheet-fields.spec.js', 'task-sheet-checklist.spec.js', 'task-sheet-save.spec.js'],
       use: {
         baseURL: LOCAL_BASE,
         ...devices['Desktop Chrome'],

@@ -70,11 +70,23 @@ new cards pulse an orange border for 1.2s. Empty states for "no tasks" and "no m
 It reads the task list the same way the other adapters do, so filtering, permissions and
 per-person visibility keep working without special cases.
 
-**Default vs. preference.** On a phone the quick layout is the default, not a lock: it is
-chosen when the stored UI state names no layout, or names one the user last chose on a
-wider screen. If the user explicitly picks another layout from the switcher while on a
-phone, that choice persists and is honoured on the next visit — the default only applies
-until he overrides it. Desktop default is unchanged.
+**Default vs. preference.** On a phone the quick layout is the *entry* layout, not a lock.
+An explicit pick from the View-as menu applies immediately and holds for the session;
+re-entering All tasks returns to the entry layout.
+
+This mirrors an existing decision rather than inventing one: `restoreUiState` deliberately
+does not persist the layout, because "All Tasks must always open in table view
+(2026-07-04 walkthrough)". The phone default is that same rule with a different entry
+layout — `table` on desktop, `quick` on a phone — so nothing about layout persistence
+changes. An earlier draft of this document claimed a phone choice would survive a reload;
+that was wrong and would have reversed the walkthrough decision.
+
+**Four gates decide the layout, not one.** All must know the new key or it silently falls
+back to the table: `AppController.setLayout`'s own whitelist, the `#/tasks` route branch
+(a bare `#/tasks` names no layout and must fall back to the entry layout, not a hardcoded
+`table`), the `view === 'all'` entry force, and `TaskListView._layoutKey`'s passthrough
+list. The `uiState` initialiser needs it too, because the app boots already on `all` and
+`setView` early-returns when the view is unchanged.
 
 ### 4.2 `js/views/QuickSheetView.js`
 

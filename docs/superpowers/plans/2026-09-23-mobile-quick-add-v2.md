@@ -869,33 +869,41 @@ npm run test:local -- quick-board.spec.js
 ```
 Expected: FAIL — `setLayout('quick')` renders nothing, so `.qb-card` never appears.
 
-- [ ] **Step 3: Promote the company-colour helper**
+- [ ] **Step 3: Add a company-colour helper for the new UI**
 
-`NewTaskPageView._companyColor` and `ProjectsView._companyColor` are the same function twice. The board and the sheet both need it, so put it in `js/utils.js` rather than adding a third copy. Add beside the other formatters:
+CORRECTION to this plan's earlier claim that `NewTaskPageView._companyColor` and
+`ProjectsView._companyColor` are the same function. They are not:
+
+- `NewTaskPageView._accentToken` maps a company to `['--amber','--blue','--rust','--green']`
+  **by its index** in the company list, then resolves the token to a computed value.
+- `ProjectsView._companyColor` is a hardcoded map: `roofing → var(--u-high)`,
+  `drafting → var(--blue)`, `lumen → var(--amber)`.
+
+Roofing is `--amber` in one and `--u-high` in the other. Repointing both at a
+single helper would silently recolour one of those views. **Do not touch either.**
+
+Add the helper to `js/utils.js` for the new board and sheet only, matching the
+New Task page's behaviour — that is the create flow the sheet replaces, and its
+"no hardcoded hex" approach is the one worth carrying forward:
 
 ```js
-  /* Accent colour for a company. Companies are not part of the DB taxonomy —
-     their colour is a CSS accent token picked by the company's index — so this
-     is NOT App.taxonomy.color, which is color(kind, company, key, type) and
-     serves types, statuses and labels. Lifted out of NewTaskPageView and
-     ProjectsView, which each carried a private copy. */
+  /* Accent colour for a company, for the mobile board and task sheet.
+     Companies are NOT part of the DB taxonomy — App.taxonomy.color is
+     color(kind, company, key, type) and serves types, statuses and labels — so
+     a company's colour comes from the app's accent tokens, picked by the
+     company's position in the list. Mirrors NewTaskPageView._accentToken.
+
+     ProjectsView has its OWN, different company->colour map; the two have never
+     agreed, and unifying them is not this feature's job. */
   companyColor(companyId) {
-    const tokens = ['--accent-1', '--accent-2', '--accent-3', '--accent-4'];
-    const ids = Object.keys(App.COMPANIES || {});
+    const tokens = ['--amber', '--blue', '--rust', '--green'];
+    const ids = Object.keys(App.COMPANIES || {}).filter(id => id !== 'overall');
     const i = Math.max(0, ids.indexOf(companyId));
     try {
       return getComputedStyle(document.documentElement)
-        .getPropertyValue(tokens[i % tokens.length]).trim() || '#ED4E0D';
-    } catch (e) { return '#ED4E0D'; }
+        .getPropertyValue(tokens[i % tokens.length]).trim() || 'var(--amber)';
+    } catch (e) { return 'var(--amber)'; }
   },
-```
-
-Confirm the accent token names against `NewTaskPageView._accentToken` before writing this — copy whatever list it uses rather than the placeholder names above, and keep its ordering so no company changes colour.
-
-Leave the two private copies calling through to it, so nothing changes visually:
-
-```js
-  _companyColor(companyId) { return App.utils.companyColor(companyId); }
 ```
 
 - [ ] **Step 4: Write the implementation**

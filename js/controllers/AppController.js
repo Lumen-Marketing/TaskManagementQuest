@@ -40,7 +40,13 @@ App.AppController = class AppController {
       // `view` (so it isn't persisted, sidebar-listed, or canView-gated) — it
       // drives #newTaskWrap the way selectedTaskId drives the detail page.
       creatingTask: false,
-      layout: 'table',
+      // Phones boot straight onto the quick board (Abraham's v2 design). setView
+      // applies the same entry layout on every later trip to All tasks, but it
+      // early-returns when the view is unchanged — and the app boots already on
+      // 'all', so that path never fires for the first paint. Hence the default
+      // is set here as well as there.
+      layout: (typeof window !== 'undefined' && window.matchMedia
+        && window.matchMedia('(max-width: 720px)').matches) ? 'quick' : 'table',
       // Calendar view state: 'month' | 'week', and the focused anchor date
       // (ISO; null → today at render time).
       calendarMode: 'month',
@@ -249,9 +255,13 @@ App.AppController = class AppController {
     // off uiState on purpose: it's per-session breadcrumb, not persisted state.
     this.previousView = this.uiState.view;
     const patch = { view, selectedTaskId: null };
-    // All Tasks always OPENS in table view, whatever mode it was left in.
+    // All Tasks always OPENS in its entry layout, whatever mode it was left in.
     // Explicit switches after entry (View menu, openCalendarOn) still apply.
-    if (view === 'all' && this.uiState.layout !== 'table') patch.layout = 'table';
+    // On a phone that entry layout is the quick board — the same rule as the
+    // desktop one (2026-07-04 walkthrough), not an exception to it, so a phone
+    // opens on Abraham's v2 board every time without the layout being persisted.
+    const entryLayout = this._isPhone() ? 'quick' : 'table';
+    if (view === 'all' && this.uiState.layout !== entryLayout) patch.layout = entryLayout;
     // Focus is a shared cross-person list reached via the widget / Sort menu,
     // not tied to any view — so switching views exits Execution-order back to a
     // normal sort. The diff emits sort:changed only when this actually fires.
@@ -484,7 +494,11 @@ App.AppController = class AppController {
           } else {
             // Leaving execution order back to a plain list drops the focus sort.
             if (this.uiState.sortBy === 'focus') this.setSortBy('priority');
-            this.setLayout(['table', 'calendar', 'kanban', 'cards'].includes(a) ? a : 'table');
+            // A bare #/tasks names no layout, so it falls back to the entry
+            // layout rather than hardcoding the table — otherwise every boot
+            // and every plain tasks link would override the phone default.
+            this.setLayout(['table', 'calendar', 'kanban', 'cards', 'quick'].includes(a)
+              ? a : (this._isPhone() ? 'quick' : 'table'));
             if (a === 'calendar') {
               const iso = /^\d{4}-\d{2}-\d{2}$/.test(b || '') ? b : null;
               this.uiState.calendarAnchor = iso;
@@ -544,8 +558,18 @@ App.AppController = class AppController {
     this._commit({ searchQuery: q });
   }
 
+  /* One breakpoint for the whole app — matches js/views/SidebarView.js:128 and
+     the ≤720px block in css/mobile.css. Read live rather than cached so a
+     rotation or a resized window is picked up on the next navigation. */
+  _isPhone() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+  }
+
+  // 'quick' is the phone board (QuickBoardLayout). Note this list is switcher-
+  // selectable layouts only: 'watching' and 'execution' are also registered
+  // adapters but are reached through a view / sort key, never through here.
   setLayout(layout) {
-    if (!['table', 'calendar', 'kanban', 'cards'].includes(layout)) return;
+    if (!['table', 'calendar', 'kanban', 'cards', 'quick'].includes(layout)) return;
     this._commit({ layout });
   }
 
