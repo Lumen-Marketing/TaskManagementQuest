@@ -23,6 +23,7 @@
 - **Respect `prefers-reduced-motion`** — kill the sheet slide and the new-card pulse. `App.Motion` already centralises this.
 - **Priorities offered are the four, not the five.** `App.PRIORITIES` holds five keys, but `NewTaskPageView._priList()` deliberately offers only `low / medium / high / critical` — the comment there marks it "pro1 v1-FINAL" and says `urgent` stays in the data model but is intentionally not offered on the create path. That is exactly the handoff's four-segment bar. Never build the priority tray from `Object.keys(App.PRIORITIES)`; it would show five segments and reverse a deliberate product decision. (Existing tasks *carrying* `urgent` must still display it correctly — that is a read path, not an offer.)
 - **Company colour is not `App.taxonomy.color`.** That function is `color(kind, company, key, type)` for types, statuses and labels. Company accent colour comes from a CSS variable rotated by the company's index, duplicated privately today in `NewTaskPageView._companyColor` and `ProjectsView._companyColor`. Task 5 promotes it to `App.utils.companyColor(id)`; use that.
+- **The token parser's `atEnd` flag is not optional.** `App.parseTaskTitle` resolves a token only when a trailing boundary follows it — whitespace, or end-of-string when `ctx.atEnd` is true. Pass `false` on every keystroke (so `9a` typed on the way to `9am` does not resolve and vanish under the cursor) and `true` on save (or every saved title keeps its trailing token). `NewTaskPageView.submit()` does the same via `_applyParse(true)`.
 - **The assignee list is company-scoped.** Use `App.utils.peopleInCompany(companyId, currentUser)`, not `App.directory.people()` — the latter returns everyone regardless of company.
 - **Commit author must be** `ShanIngrid1207 <ShanIngrid1207@users.noreply.github.com>` — a different author silently blocks the Vercel build. Already set as local git config in this worktree.
 - Unit tests need no `node_modules`. Playwright tasks need `npm ci` and `npx playwright install chromium` once.
@@ -1571,18 +1572,24 @@ Create `js/views/TaskSheetView.js`:
       const el = this.handle && this.handle.el;
       if (!el) return;
       const raw = el.querySelector('.ts-title-in').value || '';
-      const applied = App.TaskSheet.form.applyTokens(this.form, raw, this._parseCtx());
+      const applied = App.TaskSheet.form.applyTokens(this.form, raw, this._parseCtx(true));
       if (!applied.cleanTitle.trim()) { this._rejectEmptyTitle(el); return; }
       // Task 10 wires the real create/update calls here.
       this._commit(applied, keepOpen);
     }
 
-    _parseCtx() {
+    /* atEnd decides whether the FINAL token counts as complete.
+       false while typing: "9a" on the way to "9am" must not resolve and vanish
+       under the cursor. true on save: the last token is finished by definition,
+       and without it every saved title keeps its trailing token. This mirrors
+       NewTaskPageView.submit(), which calls _applyParse(true). */
+    _parseCtx(atEnd) {
       return {
-        team: App.directory.people().map(p => ({ id: p.id, name: p.name })),
+        team: App.utils.peopleInCompany(this.form.company, this.controller.currentUser)
+          .map(p => ({ id: p.id, name: p.name })),
         companies: Object.values(App.COMPANIES || {}).map(c => ({ id: c.id, label: c.label })),
         today: App.utils.todayISO(0),
-        atEnd: false,
+        atEnd: !!atEnd,
       };
     }
 
@@ -2211,7 +2218,7 @@ Extend `_bind(el)` with row taps, the collapsed-group toggle, and live parsing:
       // Rows fill live as he types — the same parser the desktop page uses, and
       // the path that makes voice-to-text entry work.
       el.querySelector('.ts-title-in').addEventListener('input', (e) => {
-        const applied = App.TaskSheet.form.applyTokens(this.form, e.target.value, this._parseCtx());
+        const applied = App.TaskSheet.form.applyTokens(this.form, e.target.value, this._parseCtx(false));
         this.form = applied.form;
         ['company', 'assignee', 'priority', 'due', 'time'].forEach(f =>
           App.TaskSheet.rows.update(el, f, this._display(f)));
