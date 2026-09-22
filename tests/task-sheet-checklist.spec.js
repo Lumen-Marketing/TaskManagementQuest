@@ -52,11 +52,12 @@ test('steps are saved as real subtasks', async ({ page }) => {
   await page.locator('.ts-check-btn').click();
   await page.locator('.ts-save').click();
 
-  const subs = await page.evaluate(() => {
+  // createTask awaits a work-order number before adding to the model, so the
+  // task is not there the instant the click returns — poll instead of racing it.
+  await expect.poll(() => page.evaluate(() => {
     const t = App.controller.taskModel.all().find(x => /DRIP EDGE JOB/i.test(x.title));
-    return t ? t.subtasks.map(s => s.t) : [];
-  });
-  expect(subs.join(' ')).toMatch(/MEASURE THE RUN/i);
+    return t ? t.subtasks.map(s => s.t).join(' ') : '';
+  })).toMatch(/MEASURE THE RUN/i);
 });
 
 test('text left in the add box is captured on save', async ({ page }) => {
@@ -64,11 +65,10 @@ test('text left in the add box is captured on save', async ({ page }) => {
   await page.locator('.ts-check-in').fill('Forgot to press plus');
   await page.locator('.ts-save').click();
 
-  const subs = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const t = App.controller.taskModel.all().find(x => /NEVER PRESSED PLUS JOB/i.test(x.title));
-    return t ? t.subtasks.map(s => s.t) : [];
-  });
-  expect(subs.join(' ')).toMatch(/FORGOT TO PRESS PLUS/i);
+    return t ? t.subtasks.map(s => s.t).join(' ') : '';
+  })).toMatch(/FORGOT TO PRESS PLUS/i);
 });
 
 test('an existing task opens with its subtasks as checklist steps', async ({ page }) => {

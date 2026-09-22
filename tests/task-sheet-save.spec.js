@@ -32,9 +32,12 @@ test('the saved title has its tokens stripped', async ({ page }) => {
   await page.locator('.ts-title-in').fill('Order drip edge !high tmrw');
   await page.locator('.ts-save').click();
   // atEnd is true on save, so even the trailing token resolves and is removed.
-  const title = await page.evaluate(() =>
-    App.controller.taskModel.all().find(t => /ORDER DRIP EDGE/i.test(t.title)).title);
-  expect(title).not.toMatch(/!high|tmrw/i);
+  // Polled because createTask awaits a work-order number before the task
+  // reaches the model — reading it straight after the click is a race.
+  await expect.poll(() => page.evaluate(() => {
+    const t = App.controller.taskModel.all().find(x => /ORDER DRIP EDGE/i.test(x.title));
+    return t ? t.title : null;
+  })).not.toMatch(/!high|tmrw/i);
 });
 
 test('the toast echoes what got scheduled', async ({ page }) => {
