@@ -68,7 +68,7 @@ test('company chips filter the board', async ({ page }) => {
   const stray = await page.evaluate((co) => {
     const ids = [...document.querySelectorAll('.qb-card')].map(c => c.dataset.id);
     return ids.filter(id => {
-      const t = App.controller.tasks.find(x => x.id === id);
+      const t = App.controller.taskModel.all().find(x => x.id === id);
       return t && t.company !== co;
     }).length;
   }, company);

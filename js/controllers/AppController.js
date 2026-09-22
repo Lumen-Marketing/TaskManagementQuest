@@ -558,6 +558,14 @@ App.AppController = class AppController {
     this._commit({ searchQuery: q });
   }
 
+  /* Open a task in the mobile sheet's EDIT mode. The quick board's cards call
+     this; everything else still opens the full detail page, which the sheet
+     links out to for comments, watchers, time tracking and attachments. */
+  openTaskSheet(taskId) {
+    this._taskSheet = this._taskSheet || new App.TaskSheetView({ controller: this });
+    this._taskSheet.openEdit(taskId);
+  }
+
   /* One breakpoint for the whole app — matches js/views/SidebarView.js:128 and
      the ≤720px block in css/mobile.css. Read live rather than cached so a
      rotation or a resized window is picked up on the next navigation. */
@@ -2198,6 +2206,14 @@ App.AppController = class AppController {
   openNewTaskPage(prefill) {
     if (!App.can('tasks.write')) {
       this.toastView.show({ title: 'No access', sub: 'Your role cannot create tasks.' });
+      return;
+    }
+    // Phones get the bottom sheet instead of the full page. Forking here rather
+    // than at each call site covers every entry at once: the bottom nav's ⊕, the
+    // keyboard shortcut, the #/new route and the header button all land here.
+    if (this._isPhone() && App.TaskSheetView) {
+      this._taskSheet = this._taskSheet || new App.TaskSheetView({ controller: this });
+      this._taskSheet.openNew(prefill);
       return;
     }
     if (this.uiState.creatingTask) return; // already open

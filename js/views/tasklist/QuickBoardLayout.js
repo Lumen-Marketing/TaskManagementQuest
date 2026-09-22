@@ -60,6 +60,16 @@
         ${t.description ? `<p class="qb-detail">${App.utils.escapeHtml(t.description)}</p>` : ''}
       </div>`;
     App.utils.makeActivatable(card, null, `Open task: ${t.title}`);
+    // Card body taps open the edit sheet. The complete circle keeps its own
+    // data-action and is served by TaskListView's delegated vocabulary, so it
+    // must not be swallowed here. stopPropagation keeps the delegated handler
+    // from also running selectTask, which would open the detail page behind
+    // the sheet.
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('[data-action]')) return;
+      e.stopPropagation();
+      view.controller.openTaskSheet(t.id);
+    });
     return card;
   }
 
