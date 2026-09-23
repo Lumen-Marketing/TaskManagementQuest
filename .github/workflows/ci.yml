@@ -85,6 +85,31 @@ jobs:
           if [ $fail -ne 0 ]; then exit 1; fi
           echo "OK: all JS files parsed cleanly."
 
+  unit:
+    name: unit tests (${{ matrix.tz }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # UTC is the runner default; Phoenix is where the team works. Date
+        # bugs that only show west of UTC (formatDue, b4f655e) fail here.
+        tz: [UTC, America/Phoenix]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22, not 20: `node --test "tests/unit/*.test.mjs"` only expands the
+          # quoted glob from Node 21 on. On 20 it finds no files and fails.
+          node-version: '22'
+
+      - name: Run unit tests
+        # No npm install: the unit suite imports only node: built-ins and
+        # repo files, so this stays as fast as the syntax job.
+        env:
+          TZ: ${{ matrix.tz }}
+        run: npm run test:unit
+
   vercel-config:
     name: vercel + sql config sanity
     runs-on: ubuntu-latest
