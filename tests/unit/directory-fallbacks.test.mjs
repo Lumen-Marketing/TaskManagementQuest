@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url);
 // Minimal browser globals mock so Directory.js can load in Node.js
 globalThis.window = globalThis;
 globalThis.App = {};
-const { personFallback, companyFallback } = require('../../js/Directory.js');
+const { personFallback, companyFallback } = require('../../js/directory.js');
 
 test('personFallback: known id — uses id as name', () => {
   const p = personFallback('user-99');
