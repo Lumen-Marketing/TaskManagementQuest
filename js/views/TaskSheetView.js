@@ -222,6 +222,36 @@
           App.TaskSheet.rows.update(el, f, this._display(f)));
       });
 
+      // Drag-down on grab handle to dismiss sheet (like pulling down a notification shade)
+      const grab = el.querySelector('.ts-grab');
+      if (grab) {
+        let dragStarted = false;
+        let startY = 0;
+        grab.addEventListener('pointerdown', (e) => {
+          // Only primary touch/button
+          if (e.button != null && e.button !== 0) return;
+          dragStarted = true;
+          startY = e.clientY;
+          e.preventDefault(); // prevent text selection etc.
+        });
+        grab.addEventListener('pointermove', (e) => {
+          if (!dragStarted) return;
+          e.preventDefault(); // prevent scrolling
+          const deltaY = e.clientY - startY;
+          // If dragged down past threshold, dismiss
+          if (deltaY > 50) { // 50px threshold
+            this.close();
+            dragStarted = false;
+          }
+        });
+        grab.addEventListener('pointerup', () => {
+          dragStarted = false;
+        });
+        grab.addEventListener('pointercancel', () => {
+          dragStarted = false;
+        });
+      }
+
       el.querySelector('.ts-detail').addEventListener('input', (e) => {
         this.form.detail = e.target.value;
       });
