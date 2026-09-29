@@ -58,6 +58,18 @@ test('desktop is untouched — it still defaults to the table', async ({ page })
   await expect(page.locator('.qb-board')).toHaveCount(0);
 });
 
+test('desktop header and task table share the same width', async ({ page }) => {
+  await fresh(page, { width: 1920, height: 900 });
+  await page.evaluate(() => App.controller.setView('all'));
+  const edges = await page.evaluate(() => {
+    const head = document.querySelector('.page-head').getBoundingClientRect();
+    const table = document.querySelector('.qt-group').getBoundingClientRect();
+    return { headLeft: head.left, headRight: head.right, tableLeft: table.left, tableRight: table.right };
+  });
+  expect(Math.abs(edges.headLeft - edges.tableLeft)).toBeLessThanOrEqual(1);
+  expect(Math.abs(edges.headRight - edges.tableRight)).toBeLessThanOrEqual(1);
+});
+
 test('an old quick-board link restores the table on desktop', async ({ page }) => {
   await fresh(page, DESKTOP);
   await page.goto('/app.html?preview=1#/tasks/quick');
