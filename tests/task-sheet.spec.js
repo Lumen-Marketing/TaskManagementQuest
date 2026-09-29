@@ -53,6 +53,20 @@ test('tapping the scrim dismisses the sheet', async ({ page }) => {
   await expect(page.locator('.task-sheet')).toHaveCount(0);
 });
 
+test('dragging the header down dismisses without selecting its label', async ({ page }) => {
+  await page.locator('#bottomNav [data-nav="new"]').click();
+  const sheet = page.locator('.task-sheet');
+  const head = sheet.locator('.ts-head');
+  const box = await head.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 100, { steps: 5 });
+  await page.mouse.up();
+
+  await expect(sheet).toHaveCount(0);
+  expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
+});
+
 test('Escape dismisses the sheet', async ({ page }) => {
   await page.locator('#bottomNav [data-nav="new"]').click();
   await page.keyboard.press('Escape');

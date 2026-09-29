@@ -20,6 +20,16 @@
   background: var(--border-strong); margin: 10px auto 2px; flex: none;
 }
 
+.ts-grab,
+.ts-head {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.task-sheet.is-dragging .ts-grab,
+.task-sheet.is-dragging .ts-head { cursor: grabbing; }
+
 .ts-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 16px 2px; flex: none;

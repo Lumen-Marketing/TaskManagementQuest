@@ -497,8 +497,9 @@ App.AppController = class AppController {
             // A bare #/tasks names no layout, so it falls back to the entry
             // layout rather than hardcoding the table — otherwise every boot
             // and every plain tasks link would override the phone default.
-            this.setLayout(['table', 'calendar', 'kanban', 'cards', 'quick'].includes(a)
-              ? a : (this._isPhone() ? 'quick' : 'table'));
+            const requestedLayout = ['table', 'calendar', 'kanban', 'cards', 'quick'].includes(a)
+              ? a : (this._isPhone() ? 'quick' : 'table');
+            this.setLayout(requestedLayout);
             if (a === 'calendar') {
               const iso = /^\d{4}-\d{2}-\d{2}$/.test(b || '') ? b : null;
               this.uiState.calendarAnchor = iso;
@@ -578,6 +579,9 @@ App.AppController = class AppController {
   // adapters but are reached through a view / sort key, never through here.
   setLayout(layout) {
     if (!['table', 'calendar', 'kanban', 'cards', 'quick'].includes(layout)) return;
+    // Quick board is the phone UI. Old/shared quick links should retain the
+    // established desktop table instead of applying mobile presentation there.
+    if (layout === 'quick' && !this._isPhone()) layout = 'table';
     this._commit({ layout });
   }
 
