@@ -7323,12 +7323,18 @@ body.ui-command-center .controls-card .btn {
   }
 }
 
-/* Symmetry: on wide screens the whole Tasks page fills the width up to a wide
-   cap (leaving a 32px gutter each side). The header card + widget strip use the
-   SAME max-width formula as the task list (see the ≥1366px rule near the list
-   grid) so every band lines up edge-to-edge at any viewport width. */
+/* Symmetry: the rendered Table skin uses the full task surface with 24px side
+   gutters. Match that width here so the header card + widget strip share the
+   exact same left and right edges instead of stopping at the old 1720px cap. */
 @media (min-width: 1366px) {
-  body.ui-command-center .page-head,
+  body.ui-command-center .page-head {
+    width: calc(100% - 48px);
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0;
+    padding-right: 0;
+  }
   body.ui-command-center .breports {
     max-width: min(1720px, calc(100% - 64px));
     margin-left: auto;
