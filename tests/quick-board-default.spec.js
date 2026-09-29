@@ -58,16 +58,27 @@ test('desktop is untouched — it still defaults to the table', async ({ page })
   await expect(page.locator('.qb-board')).toHaveCount(0);
 });
 
-test('desktop header and task table share the same width', async ({ page }) => {
+test('desktop header, widget row, and task table share compact aligned edges', async ({ page }) => {
   await fresh(page, { width: 1920, height: 900 });
   await page.evaluate(() => App.controller.setView('all'));
-  const edges = await page.evaluate(() => {
+  const layout = await page.evaluate(() => {
     const head = document.querySelector('.page-head').getBoundingClientRect();
     const table = document.querySelector('.qt-group').getBoundingClientRect();
-    return { headLeft: head.left, headRight: head.right, tableLeft: table.left, tableRight: table.right };
+    const widgets = [...document.querySelectorAll('.page-head-widgets > :not(:empty)')]
+      .map(el => el.getBoundingClientRect());
+    return {
+      headLeft: head.left, headRight: head.right,
+      tableLeft: table.left, tableRight: table.right,
+      widgetLeft: widgets[0].left,
+      widgetRight: widgets[widgets.length - 1].right,
+      gaps: widgets.slice(1).map((box, i) => box.left - widgets[i].right),
+    };
   });
-  expect(Math.abs(edges.headLeft - edges.tableLeft)).toBeLessThanOrEqual(1);
-  expect(Math.abs(edges.headRight - edges.tableRight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(layout.headLeft - layout.tableLeft)).toBeLessThanOrEqual(1);
+  expect(Math.abs(layout.headRight - layout.tableRight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(layout.widgetLeft - layout.headLeft)).toBeLessThanOrEqual(1);
+  expect(Math.abs(layout.widgetRight - layout.headRight)).toBeLessThanOrEqual(1);
+  expect(layout.gaps.every(gap => gap <= 10.5)).toBe(true);
 });
 
 test('an old quick-board link restores the table on desktop', async ({ page }) => {
