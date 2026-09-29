@@ -7286,12 +7286,14 @@ body.ui-command-center .controls-card .btn {
   white-space: nowrap;
 }
 
-/* Desktop/tablet: three EQUAL metric columns + a content-sized controls
-   column, filling the row exactly. */
+/* Desktop/tablet: exactly three equal columns (Up next, progress, controls).
+   The old four-track declaration left an empty final track; its extra grid gap
+   made the cards look widely separated and stopped the controls card short of
+   the header/table's right edge. */
 @media (min-width: 721px) {
   body.ui-command-center .page-head-widgets {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   body.ui-command-center .page-head-widgets > .up-next-mount,
   body.ui-command-center .page-head-widgets > .focus-widget-mount,
