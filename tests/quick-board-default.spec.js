@@ -58,14 +58,12 @@ test('desktop is untouched — it still defaults to the table', async ({ page })
   await expect(page.locator('.qb-board')).toHaveCount(0);
 });
 
-test('the quick board is offered in the View-as menu', async ({ page }) => {
+test('an old quick-board link restores the table on desktop', async ({ page }) => {
   await fresh(page, DESKTOP);
-  await page.evaluate(() => App.controller.setView('all'));
-  const keys = await page.evaluate(() => {
-    // The menu is built by ToolbarMenuView; assert the layout is selectable at
-    // all rather than driving the menu chrome.
-    App.controller.setLayout('quick');
-    return App.controller.uiState.layout;
-  });
-  expect(keys).toBe('quick');
+  await page.goto('/app.html?preview=1#/tasks/quick');
+  await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
+  await dismissOverlays(page);
+  expect(await page.evaluate(() => App.controller.uiState.layout)).toBe('table');
+  await expect(page.locator('.qb-board')).toHaveCount(0);
+  await expect(page.locator('#taskViewWrap.qt-skin')).toBeVisible();
 });

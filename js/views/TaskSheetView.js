@@ -222,41 +222,62 @@
           App.TaskSheet.rows.update(el, f, this._display(f)));
       });
 
-      // Drag-down on grab handle to dismiss sheet (like pulling down a notification shade)
-      const grab = el.querySelector('.ts-grab');
-      if (grab) {
-        let dragStarted = false;
-        let startY = 0;
-        grab.addEventListener('pointerdown', (e) => {
-          // Only primary touch/button
-          if (e.button != null && e.button !== 0) return;
-          dragStarted = true;
-          startY = e.clientY;
-          e.preventDefault(); // prevent text selection etc.
-        });
-        grab.addEventListener('pointermove', (e) => {
-          if (!dragStarted) return;
-          e.preventDefault(); // prevent scrolling
-          const deltaY = e.clientY - startY;
-          // If dragged down past threshold, dismiss
-          if (deltaY > 50) { // 50px threshold
-            this.close();
-            dragStarted = false;
-          }
-        });
-        grab.addEventListener('pointerup', () => {
-          dragStarted = false;
-        });
-        grab.addEventListener('pointercancel', () => {
-          dragStarted = false;
-        });
-      }
+      this._bindDragToDismiss(el);
 
       el.querySelector('.ts-detail').addEventListener('input', (e) => {
         this.form.detail = e.target.value;
       });
 
       this._bindChecklist(el);
+    }
+
+    _bindDragToDismiss(el) {
+      const surfaces = [...el.querySelectorAll('.ts-grab, .ts-head')];
+      let pointerId = null;
+      let startY = 0;
+      let deltaY = 0;
+
+      const reset = () => {
+        pointerId = null;
+        deltaY = 0;
+        el.classList.remove('is-dragging');
+        el.style.transform = '';
+        el.style.transition = '';
+      };
+      const finish = (e) => {
+        if (pointerId == null || (e.pointerId != null && e.pointerId !== pointerId)) return;
+        if (deltaY >= 72) {
+          pointerId = null;
+          this.close();
+          return;
+        }
+        el.style.transition = 'transform 160ms ease-out';
+        el.style.transform = '';
+        el.classList.remove('is-dragging');
+        window.setTimeout(reset, 170);
+      };
+
+      surfaces.forEach(surface => {
+        surface.addEventListener('pointerdown', (e) => {
+          if (e.button != null && e.button !== 0) return;
+          if (e.target.closest('.ts-close')) return;
+          pointerId = e.pointerId;
+          startY = e.clientY;
+          deltaY = 0;
+          el.style.transition = 'none';
+          el.classList.add('is-dragging');
+          if (surface.setPointerCapture) surface.setPointerCapture(e.pointerId);
+          e.preventDefault();
+        });
+        surface.addEventListener('pointermove', (e) => {
+          if (e.pointerId !== pointerId) return;
+          deltaY = Math.max(0, e.clientY - startY);
+          el.style.transform = `translateY(${deltaY}px)`;
+          e.preventDefault();
+        });
+        surface.addEventListener('pointerup', finish);
+        surface.addEventListener('pointercancel', finish);
+      });
     }
 
     _openTray(field) {
