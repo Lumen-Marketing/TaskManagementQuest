@@ -67,6 +67,29 @@ test('dragging the header down dismisses without selecting its label', async ({ 
   expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
 });
 
+test('dragging a field row down dismisses instead of selecting its text', async ({ page }) => {
+  await page.locator('#bottomNav [data-nav="new"]').click();
+  const sheet = page.locator('.task-sheet');
+  const row = sheet.locator('.ts-row').first();
+  expect(await row.evaluate((node) => getComputedStyle(node).userSelect)).toBe('none');
+
+  await row.evaluate((node) => {
+    const touch = (y) => ({ identifier: 7, clientY: y });
+    const fire = (type, y, active = true) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'touches', { value: active ? [touch(y)] : [] });
+      Object.defineProperty(event, 'changedTouches', { value: [touch(y)] });
+      node.dispatchEvent(event);
+    };
+    fire('touchstart', 300);
+    fire('touchmove', 400);
+    fire('touchend', 400, false);
+  });
+
+  await expect(sheet).toHaveCount(0);
+  expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
+});
+
 test('Escape dismisses the sheet', async ({ page }) => {
   await page.locator('#bottomNav [data-nav="new"]').click();
   await page.keyboard.press('Escape');

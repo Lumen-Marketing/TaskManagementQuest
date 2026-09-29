@@ -77,7 +77,9 @@
   min-height: 48px; padding: 8px 12px; cursor: pointer;
   border: 0; border-bottom: 1px solid var(--border);
   background: none; color: var(--ink); text-align: left;
+  user-select: none; -webkit-user-select: none;
 }
+.ts-row * { user-select: none; -webkit-user-select: none; }
 .ts-row:last-child { border-bottom: 0; }
 .ts-row.is-open { background: var(--bg-3); }
 .ts-row.is-invalid { box-shadow: inset 2px 0 0 var(--u-critical); }
