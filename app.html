@@ -239,15 +239,14 @@
   </main>
 </div>
 
-<!-- Floating quick-add button — legacy. Retired on phones (≤720px) in favour of
-     the bottom-nav center ⊕; still present for any non-phone edge use. -->
+<!-- Floating quick-add button — the signed-off storyboard's phone entry point.
+     It is revealed only for users with tasks.write permission. -->
 <button type="button" id="fab" class="fab hidden" aria-label="New task" title="New task">
   <i class="ti ti-plus"></i>
 </button>
 
-<!-- Phone-only bottom tab bar (Instagram-style): Home · Tasks · ⊕ · Projects ·
-     Profile. Painted + wired by BottomNavView; CSS-hidden above 720px. The
-     center ⊕ is the only New-Task entry point on phones. -->
+<!-- Retained as an inert mount for compatibility with BottomNavView. The
+     storyboard mobile skin keeps it hidden in favour of the FAB above. -->
 <nav id="bottomNav" aria-label="Primary (mobile)"></nav>
 
 <!-- Bulk-select action bar (BulkActionsView mounts here). Fixed to the bottom,

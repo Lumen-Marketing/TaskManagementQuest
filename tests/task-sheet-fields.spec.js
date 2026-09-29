@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/app.html?preview=1');
   await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
   await dismissOverlays(page);
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   await expect(page.locator('.task-sheet')).toBeVisible();
 });
 

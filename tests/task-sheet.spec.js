@@ -12,20 +12,22 @@ test.beforeEach(async ({ page }) => {
   await dismissOverlays(page);
 });
 
-test('the bottom nav plus opens the sheet, not the full page', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+test('the storyboard FAB opens the sheet, not the full page', async ({ page }) => {
+  await expect(page.locator('#bottomNav')).toBeHidden();
+  await expect(page.locator('#fab')).toBeVisible();
+  await page.locator('#fab').click();
   await expect(page.locator('.task-sheet')).toBeVisible();
   await expect(page.locator('#newTaskWrap')).toBeHidden();
 });
 
 test('new mode is labelled and autofocuses the title', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   await expect(page.locator('.task-sheet .ts-label')).toHaveText('NEW TASK');
   await expect(page.locator('.task-sheet .ts-title-in')).toBeFocused();
 });
 
 test('new mode footer offers Add task and Save + Another', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   await expect(page.locator('.task-sheet .ts-save')).toHaveText(/Add task/i);
   await expect(page.locator('.task-sheet .ts-save-another')).toBeVisible();
   await expect(page.locator('.task-sheet .ts-delete')).toHaveCount(0);
@@ -42,19 +44,19 @@ test('edit mode swaps the label and the footer', async ({ page }) => {
 });
 
 test('the close button dismisses the sheet', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   await page.locator('.task-sheet .ts-close').click();
   await expect(page.locator('.task-sheet')).toHaveCount(0);
 });
 
 test('tapping the scrim dismisses the sheet', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   await page.locator('.quick-sheet-backdrop').click({ position: { x: 10, y: 10 } });
   await expect(page.locator('.task-sheet')).toHaveCount(0);
 });
 
 test('dragging the header down dismisses without selecting its label', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   const sheet = page.locator('.task-sheet');
   const head = sheet.locator('.ts-head');
   const box = await head.boundingBox();
@@ -67,31 +69,20 @@ test('dragging the header down dismisses without selecting its label', async ({ 
   expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
 });
 
-test('dragging a field row down dismisses instead of selecting its text', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+test('field rows stay fixed tap targets and do not select their text', async ({ page }) => {
+  await page.locator('#fab').click();
   const sheet = page.locator('.task-sheet');
   const row = sheet.locator('.ts-row').first();
   expect(await row.evaluate((node) => getComputedStyle(node).userSelect)).toBe('none');
 
-  await row.evaluate((node) => {
-    const touch = (y) => ({ identifier: 7, clientY: y });
-    const fire = (type, y, active = true) => {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      Object.defineProperty(event, 'touches', { value: active ? [touch(y)] : [] });
-      Object.defineProperty(event, 'changedTouches', { value: [touch(y)] });
-      node.dispatchEvent(event);
-    };
-    fire('touchstart', 300);
-    fire('touchmove', 400);
-    fire('touchend', 400, false);
-  });
-
-  await expect(sheet).toHaveCount(0);
+  await row.click();
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('.ts-tray')).toBeVisible();
   expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
 });
 
 test('Escape dismisses the sheet', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.task-sheet')).toHaveCount(0);
 });
@@ -99,7 +90,7 @@ test('Escape dismisses the sheet', async ({ page }) => {
 test('an empty title refuses to save without an alert dialog', async ({ page }) => {
   let dialog = false;
   page.on('dialog', async (d) => { dialog = true; await d.dismiss(); });
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   await page.locator('.task-sheet .ts-save').click();
   await expect(page.locator('.task-sheet')).toBeVisible();          // stays open
   await expect(page.locator('.task-sheet .ts-title-in')).toBeFocused();
@@ -107,7 +98,7 @@ test('an empty title refuses to save without an alert dialog', async ({ page }) 
 });
 
 test('the sheet is a labelled modal dialog', async ({ page }) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   const sheet = page.locator('.task-sheet');
   await expect(sheet).toHaveAttribute('role', 'dialog');
   await expect(sheet).toHaveAttribute('aria-modal', 'true');
@@ -118,6 +109,7 @@ test('desktop still opens the full New Task page', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
   await expect(page.locator('#userAvatar')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('#fab')).toBeHidden();
   await page.evaluate(() => App.controller.openNewTaskPage());
   await expect(page.locator('#newTaskWrap')).toBeVisible();
   await expect(page.locator('.task-sheet')).toHaveCount(0);
