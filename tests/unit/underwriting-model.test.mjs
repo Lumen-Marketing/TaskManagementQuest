@@ -241,3 +241,132 @@ test('trace is built from the saved record, never from an unsaved draft', () => 
   const total = m.trace('t1').find(s => s.key === 'total_estimated_cost');
   assert.equal(total.result, '$15000.00');
 });
+
+/* ---------- storage limits: no more bare "numeric field overflow" ---------- */
+
+test('inputs beyond a column\'s capacity get a clear field error, not a database overflow', () => {
+  const m = new App.UnderwritingModel();
+  m.hydrate('t1', { record: rec() });
+  fill(m, 't1', { ...good, roofAreaSqft: '100000000', wastePercent: '10000', materialCost: '10000000000' });
+  const ev = m.evaluateDraft('t1');
+  assert.equal(ev.ok, false);
+  assert.match(ev.errors.roofAreaSqft, /too large \(maximum 99,999,999\.99 sqft\)/);
+  assert.match(ev.errors.wastePercent, /too large \(maximum 9,999\.99%\)/);
+  assert.match(ev.errors.materialCost, /too large \(maximum \$9,999,999,999\.99\)/);
+});
+
+test('the largest storable inputs are accepted', () => {
+  const m = new App.UnderwritingModel();
+  m.hydrate('t1', { record: rec() });
+  fill(m, 't1', { ...good, roofAreaSqft: '1', wastePercent: '9999.99', materialCost: '1000', laborCost: '0', otherCost: '0' });
+  assert.equal(m.evaluateDraft('t1').ok, true);
+});
+
+test('a DERIVED figure that would overflow is rejected even when every input fits (cost sum / sale price)', () => {
+  const m = new App.UnderwritingModel();
+  m.hydrate('t1', { record: rec() });
+  // each cost fits numeric(12,2); their SUM does not
+  fill(m, 't1', { ...good, materialCost: '9999999999.99', laborCost: '9999999999.99', otherCost: '0' });
+  let ev = m.evaluateDraft('t1');
+  assert.equal(ev.ok, false);
+  assert.match(ev.errors.form, /too large to store/);
+  // the total fits, the sale price at a 99.99% margin does not
+  fill(m, 't1', { ...good, materialCost: '5000000', laborCost: '0', otherCost: '0', targetMarginPercent: '99.99' });
+  ev = m.evaluateDraft('t1');
+  assert.equal(ev.ok, false);
+  assert.match(ev.errors.form, /recommended sale price is too large/);
+  // adjusted area overflow from a legal area and a legal waste
+  fill(m, 't1', { ...good, roofAreaSqft: '99999999.99', wastePercent: '100' });
+  ev = m.evaluateDraft('t1');
+  assert.equal(ev.ok, false);
+  assert.match(ev.errors.form, /adjusted roof area is too large/);
+});
+
+test('an over-limit draft never reaches the datastore', async () => {
+  let called = false;
+  const m = new App.UnderwritingModel({ saveEstimate: async () => { called = true; } });
+  m.hydrate('t1', { record: rec() });
+  fill(m, 't1', { ...good, materialCost: '9999999999.99', laborCost: '9999999999.99' });
+  const res = await m.saveDraft('t1');
+  assert.equal(res.ok, false);
+  assert.equal(called, false);
+});
+
+/* ---------- double-submit: one request in flight ---------- */
+
+test('concurrent createFor calls share one request', async () => {
+  let calls = 0, release;
+  const gate = new Promise(r => { release = r; });
+  const m = new App.UnderwritingModel({
+    create: async (id) => { calls++; await gate; return rec({ taskId: id }); },
+    load: async () => ({ record: rec(), history: [] }),
+  });
+  const a = m.createFor('t1'), b = m.createFor('t1');
+  release();
+  await Promise.all([a, b]);
+  assert.equal(calls, 1, 'a double-click must not fire two creates');
+  await m.createFor('t1'); // after settling, a new call is allowed again
+  assert.equal(calls, 2);
+});
+
+test('concurrent saveDraft calls share one save (Enter + click)', async () => {
+  let calls = 0, release;
+  const gate = new Promise(r => { release = r; });
+  let current = rec();
+  const m = new App.UnderwritingModel({
+    load: async () => ({ record: current, history: [] }),
+    saveEstimate: async () => { calls++; await gate; current = calculated(); },
+  });
+  await m.ensureLoaded('t1');
+  fill(m, 't1', good);
+  const a = m.saveDraft('t1'), b = m.saveDraft('t1');
+  release();
+  const [ra, rb] = await Promise.all([a, b]);
+  assert.equal(calls, 1);
+  assert.equal(ra.ok, true);
+  assert.equal(rb.ok, true);
+});
+
+test('a status change is refused while another is in flight, and the guard always clears', async () => {
+  let release, calls = 0;
+  const gate = new Promise(r => { release = r; });
+  const m = new App.UnderwritingModel({ setStatus: async () => { calls++; await gate; } });
+  m.hydrate('t1', { record: calculated({ status: 'ready_for_review' }) });
+  const first = m.transition('t1', 'approved');
+  // Raced against a timer so a regression FAILS here rather than hanging the suite
+  // (an unguarded second call would wait on the same gate forever).
+  const second = await Promise.race([
+    m.transition('t1', 'declined'),
+    new Promise(r => setTimeout(() => r({ ok: 'timed out waiting', error: 'second change was not refused' }), 200)),
+  ]);
+  assert.equal(second.ok, false, second.error);
+  assert.match(second.error, /in progress/);
+  release();
+  assert.equal((await first).ok, true);
+  assert.equal(calls, 1);
+
+  // a FAILED change must not leave the guard stuck
+  const m2 = new App.UnderwritingModel({ setStatus: async () => { throw new Error('boom'); } });
+  m2.hydrate('t1', { record: calculated({ status: 'ready_for_review' }) });
+  await assert.rejects(() => m2.transition('t1', 'approved'), /boom/);
+  await assert.rejects(() => m2.transition('t1', 'approved'), /boom/, 'second attempt is allowed to try again');
+});
+
+/* ---------- history: stable, readable order ---------- */
+
+test('history is newest-first, and one save lists its fields in form order (not random uuid order)', () => {
+  const t0 = '2026-09-30T10:00:00Z', t1 = '2026-09-30T11:00:00Z';
+  const rows = [
+    { id: 'z', fieldName: 'status',              createdAt: t0 },
+    { id: 'b', fieldName: 'other_cost',          createdAt: t1 },
+    { id: 'a', fieldName: 'roof_area_sqft',      createdAt: t1 },
+    { id: 'q', fieldName: 'target_margin_percent', createdAt: t1 },
+    { id: 'c', fieldName: 'waste_percent',       createdAt: t1 },
+  ];
+  const out = App.UnderwritingModel.orderHistory(rows).map(r => r.fieldName);
+  assert.deepEqual(out, ['roof_area_sqft', 'waste_percent', 'other_cost', 'target_margin_percent', 'status']);
+  assert.deepEqual(App.UnderwritingModel.orderHistory(null), []);
+  const m = new App.UnderwritingModel();
+  m.hydrate('t1', { record: rec(), history: rows });
+  assert.equal(m.history('t1')[0].fieldName, 'roof_area_sqft');
+});

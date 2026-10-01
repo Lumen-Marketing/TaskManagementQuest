@@ -136,8 +136,9 @@ App.UnderwritingView = class UnderwritingView {
       <span class="uw-f-l">${label}</span>
       <span class="uw-f-box">${unit === '$' ? '<span class="uw-f-u">$</span>' : ''}<input class="uw-in" inputmode="decimal" autocomplete="off"
         data-uw-field="${key}" value="${this._esc(draft[key])}" ${editable ? '' : 'disabled'}
+        ${err ? `aria-invalid="true" aria-describedby="uwErr-${key}"` : ''}
         placeholder="${key === 'roofAreaSqft' ? 'optional' : '0.00'}" />${unit && unit !== '$' ? `<span class="uw-f-u">${unit}</span>` : ''}</span>
-      ${err ? `<span class="uw-f-err">${this._esc(err)}</span>` : ''}
+      ${err ? `<span class="uw-f-err" id="uwErr-${key}" role="alert">${this._esc(err)}</span>` : ''}
     </label>`;
   }
 
@@ -275,7 +276,13 @@ App.UnderwritingView = class UnderwritingView {
         this._refreshLive(host, id);
       });
       el.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && el.dataset.uwField !== 'reason') { e.preventDefault(); this._save(id); }
+        if (e.key === 'Enter' && el.dataset.uwField !== 'reason') {
+          e.preventDefault();
+          // Enter is a shortcut for the Save button: do nothing when Save is disabled
+          // (nothing changed), instead of re-submitting an identical estimate.
+          const saveBtn = host.querySelector('[data-uw-action="save"]');
+          if (saveBtn && !saveBtn.disabled) this._save(id);
+        }
       });
     });
 

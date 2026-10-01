@@ -100,6 +100,11 @@ PSQL -f "$BS/002_dev_underwriting_extras.sql" > "$WORK/last.out" 2>&1 || fail "0
 grep -q "073 extras: ALL CHECKS PASSED" "$WORK/last.out" || fail "073 extras (no pass marker)"
 say "ok   073 extras: ALL CHECKS PASSED"
 
+say "== 11b. PostgREST call shape (json_to_record numerics) + SQLSTATE contract =="
+PSQL -f "$BS/004_dev_postgrest_shape_check.sql" > "$WORK/last.out" 2>&1 || fail "postgrest shape check"
+grep -q "postgrest-shape: ALL CHECKS PASSED" "$WORK/last.out" || fail "postgrest shape check (no pass marker)"
+say "ok   postgrest-shape: ALL CHECKS PASSED"
+
 say "== 12. JS engine <-> DB CHECK parity =="
 node "$REPO/tools/gen-underwriting-parity.mjs" > "$WORK/parity.sql" || fail "parity generation"
 PSQL -At -f "$WORK/parity.sql" > "$WORK/last.out" 2>&1 || fail "parity"

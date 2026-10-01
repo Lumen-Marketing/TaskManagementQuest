@@ -31,7 +31,7 @@ App.UnderwritingModel = class UnderwritingModel {
   _entry(taskId) {
     let e = this._entries.get(taskId);
     if (!e) {
-      e = { record: null, history: [], loaded: false, inflight: null, draft: null, error: null };
+      e = { record: null, history: [], loaded: false, inflight: null, draft: null, error: null, creating: null, saving: null, busy: false };
       this._entries.set(taskId, e);
     }
     return e;
@@ -73,7 +73,7 @@ App.UnderwritingModel = class UnderwritingModel {
     return started
       .then(res => {
         e.record = (res && res.record) || null;
-        e.history = (res && Array.isArray(res.history)) ? res.history : [];
+        e.history = App.UnderwritingModel.orderHistory(res && res.history);
         e.loaded = true;
         e.error = null;
       })
@@ -98,13 +98,32 @@ App.UnderwritingModel = class UnderwritingModel {
   hydrate(taskId, { record, history } = {}) {
     const e = this._entry(taskId);
     e.record = record || null;
-    e.history = Array.isArray(history) ? history.slice() : [];
+    e.history = App.UnderwritingModel.orderHistory(history);
     e.loaded = true;
     e.draft = null;
     return e;
   }
 
   /* ---------- draft (unsaved form state) ---------- */
+
+  /* The largest values migration 073's columns can store, in hundredths:
+       roof_area_sqft / adjusted_roof_area_sqft / squares   numeric(10,2)  < 10^8
+       waste_percent                                         numeric(6,2)   < 10^4
+       material / labor / other / total / sale price         numeric(12,2)  < 10^10
+     Assigned below the class as App.UnderwritingModel.LIMITS (this codebase avoids
+     static-field syntax). The inputs can each fit while a DERIVED figure (the sum of three costs, the
+     sale price at a high margin) does not — the database then answers with a bare
+     "numeric field overflow". Validating here turns that into a clear message. */
+  // Newest change first; inside one save (one timestamp) keep the form's field order.
+  static orderHistory(rows) {
+    const order = ['roof_area_sqft', 'waste_percent', 'material_cost', 'labor_cost',
+                   'other_cost', 'target_margin_percent', 'status'];
+    const t = (r) => { const n = Date.parse(r.createdAt); return Number.isNaN(n) ? 0 : n; };
+    return (Array.isArray(rows) ? rows : []).slice().sort((a, b) =>
+      (t(b) - t(a))
+      || (order.indexOf(a.fieldName) - order.indexOf(b.fieldName))
+      || String(a.id).localeCompare(String(b.id)));
+  }
 
   static blankDraft() {
     return { roofAreaSqft: '', wastePercent: '', materialCost: '', laborCost: '', otherCost: '',
@@ -157,7 +176,8 @@ App.UnderwritingModel = class UnderwritingModel {
     const calc = App.UnderwritingCalc;
     const d = this.draft(taskId);
     const errors = {};
-    const field = (key, label, { required, min, maxExclusive, minExclusive }) => {
+    const L = App.UnderwritingModel.LIMITS;
+    const field = (key, label, { required, min, maxExclusive, minExclusive, maxInclusive, maxLabel }) => {
       const raw = String(d[key] == null ? '' : d[key]).trim();
       if (raw === '') {
         if (required) errors[key] = label + ' is required (enter 0 if none).';
@@ -169,41 +189,65 @@ App.UnderwritingModel = class UnderwritingModel {
       if (min !== undefined && h < BigInt(min)) { errors[key] = label + ' cannot be negative.'; return null; }
       if (minExclusive !== undefined && h <= BigInt(minExclusive)) { errors[key] = label + ' must be greater than 0%.'; return null; }
       if (maxExclusive !== undefined && h >= BigInt(maxExclusive)) { errors[key] = label + ' must be less than 100%.'; return null; }
+      if (maxInclusive !== undefined && h > maxInclusive) { errors[key] = label + ' is too large (maximum ' + maxLabel + ').'; return null; }
       return calc.hundredthsToString(h);
     };
 
     const input = {
-      roofAreaSqft: field('roofAreaSqft', 'Roof area', { required: false, min: 0 }),
-      wastePercent: field('wastePercent', 'Waste %', { required: true, min: 0 }),
-      materialCost: field('materialCost', 'Material cost', { required: true, min: 0 }),
-      laborCost: field('laborCost', 'Labor cost', { required: true, min: 0 }),
-      otherCost: field('otherCost', 'Other cost', { required: true, min: 0 }),
+      roofAreaSqft: field('roofAreaSqft', 'Roof area', { required: false, min: 0, maxInclusive: L.area, maxLabel: '99,999,999.99 sqft' }),
+      wastePercent: field('wastePercent', 'Waste %', { required: true, min: 0, maxInclusive: L.percent, maxLabel: '9,999.99%' }),
+      materialCost: field('materialCost', 'Material cost', { required: true, min: 0, maxInclusive: L.money, maxLabel: '$9,999,999,999.99' }),
+      laborCost: field('laborCost', 'Labor cost', { required: true, min: 0, maxInclusive: L.money, maxLabel: '$9,999,999,999.99' }),
+      otherCost: field('otherCost', 'Other cost', { required: true, min: 0, maxInclusive: L.money, maxLabel: '$9,999,999,999.99' }),
       targetMarginPercent: field('targetMarginPercent', 'Target margin', { required: true, minExclusive: 0, maxExclusive: 10000 }),
     };
     if (Object.keys(errors).length) return { ok: false, errors };
     const r = calc.calculate(input);
     if (!r.ok) return { ok: false, errors: { form: r.error } };
-    return { ok: true, input, data: r.data };
+    // Derived figures must also fit their columns (see LIMITS).
+    const dv = r.data;
+    const over = (v, max) => v !== null && calc.parseToHundredths(v) > max;
+    if (over(dv.adjustedRoofAreaSqft, L.area) || over(dv.squares, L.area)) {
+      return { ok: false, errors: { form: 'The adjusted roof area is too large to store (maximum 99,999,999.99 sqft). Reduce the roof area or the waste %.' } };
+    }
+    if (over(dv.totalEstimatedCost, L.money) || over(dv.recommendedSalePrice, L.money)) {
+      return { ok: false, errors: { form: 'The total cost or recommended sale price is too large to store (maximum $9,999,999,999.99). Reduce a cost or the target margin.' } };
+    }
+    return { ok: true, input, data: dv };
   }
 
   /* ---------- writes ---------- */
 
   // Create (or fetch) the underwriting for a Bid task. Throws on failure — the
   // caller toasts it.
-  async createFor(taskId) {
-    if (!this._create) throw new Error('Underwriting is unavailable.');
-    const record = await this._create(taskId);
+  createFor(taskId) {
+    if (!this._create) return Promise.reject(new Error('Underwriting is unavailable.'));
     const e = this._entry(taskId);
-    e.record = record || null;
-    e.loaded = true;
-    e.draft = null;
-    await this._reloadAll(taskId);
-    return e.record;
+    // A double-click (or two tabs' worth of impatience) must not fire two creates:
+    // concurrent callers share the one in-flight request.
+    if (e.creating) return e.creating;
+    e.creating = (async () => {
+      const record = await this._create(taskId);
+      e.record = record || null;
+      e.loaded = true;
+      e.draft = null;
+      await this._reloadAll(taskId);
+      return e.record;
+    })().finally(() => { e.creating = null; });
+    return e.creating;
   }
 
   /* Validate the draft, persist inputs + derived snapshot, reload record and
      history. Returns { ok, errors? }. Throws only on a transport/DB failure. */
-  async saveDraft(taskId) {
+  saveDraft(taskId) {
+    const e = this._entry(taskId);
+    // Enter-then-click, or a double-click: one save in flight at a time.
+    if (e.saving) return e.saving;
+    e.saving = this._saveDraft(taskId).finally(() => { e.saving = null; });
+    return e.saving;
+  }
+
+  async _saveDraft(taskId) {
     const e = this._entry(taskId);
     if (!e.record) return { ok: false, errors: { form: 'No underwriting to save.' } };
     if (!App.UnderwritingCalc.isEditable(e.record.status)) {
@@ -234,8 +278,12 @@ App.UnderwritingModel = class UnderwritingModel {
       return { ok: false, error: 'Save or discard your unsaved changes first.' };
     }
     if (!this._setStatus) throw new Error('Underwriting is unavailable.');
-    await this._setStatus(e.record.id, next, String(reason || '').trim() || null);
-    await this._reloadAll(taskId);
+    if (e.busy) return { ok: false, error: 'Another change is already in progress.' };
+    e.busy = true;
+    try {
+      await this._setStatus(e.record.id, next, String(reason || '').trim() || null);
+      await this._reloadAll(taskId);
+    } finally { e.busy = false; }
     return { ok: true };
   }
 
@@ -252,6 +300,13 @@ App.UnderwritingModel = class UnderwritingModel {
     if (!r) return [];
     return App.UnderwritingTrace.build(r);
   }
+};
+
+// Largest storable values, in hundredths — the columns' limits (see the comment on orderHistory).
+App.UnderwritingModel.LIMITS = {
+  area:    BigInt('9999999999'),     // numeric(10,2): 99,999,999.99
+  percent: BigInt('999999'),         // numeric(6,2):  9,999.99
+  money:   BigInt('999999999999'),   // numeric(12,2): 9,999,999,999.99
 };
 
 /* Node test harness (tests/unit) requires this file directly. */

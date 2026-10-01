@@ -866,18 +866,27 @@ App.AppController = class AppController {
     App.EventBus.emit('underwriting:changed', taskId);
   }
 
-  // Returns { ok, errors? } so the view can show field-level messages.
-  async saveUnderwritingDraft(taskId) {
-    let res;
-    try {
-      res = await this.underwriting.saveDraft(taskId);
-    } catch (e) {
-      this._underwritingFail('Estimate not saved', e);
-      return { ok: false, errors: {} };
-    }
-    if (res.ok && this.toastView) this.toastView.show({ title: 'Estimate saved', sub: 'Breakdown and history updated.' });
-    App.EventBus.emit('underwriting:changed', taskId);
-    return res;
+  // Returns { ok, errors? } so the view can show field-level messages. A second call while
+  // one is in flight (double-click, Enter + click) shares the first call's whole outcome,
+  // so the toast and the re-render happen once, not twice.
+  saveUnderwritingDraft(taskId) {
+    if (!this._underwritingSaves) this._underwritingSaves = new Map();
+    const running = this._underwritingSaves.get(taskId);
+    if (running) return running;
+    const run = (async () => {
+      let res;
+      try {
+        res = await this.underwriting.saveDraft(taskId);
+      } catch (e) {
+        this._underwritingFail('Estimate not saved', e);
+        return { ok: false, errors: {} };
+      }
+      if (res.ok && this.toastView) this.toastView.show({ title: 'Estimate saved', sub: 'Breakdown and history updated.' });
+      App.EventBus.emit('underwriting:changed', taskId);
+      return res;
+    })().finally(() => this._underwritingSaves.delete(taskId));
+    this._underwritingSaves.set(taskId, run);
+    return run;
   }
 
   async setUnderwritingStatus(taskId, status, reason) {
