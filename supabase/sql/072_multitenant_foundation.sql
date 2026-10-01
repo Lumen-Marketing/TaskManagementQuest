@@ -31,6 +31,11 @@
 -- migration must wall is missing (e.g. a skipped earlier migration). The per-loop
 -- `to_regclass` guards below exist only for legacy tables; they must never be able
 -- to hide a missing REQUIRED table.
+--
+-- public.task_label_sops is deliberately NOT required: production currently lacks
+-- it (confirmed against the prod catalog). Every loop below that lists it is guarded
+-- by to_regclass, so an absent table is skipped with a notice, and an environment
+-- that does have it gets tenant_id / stamp trigger / wall like any other table.
 ------------------------------------------------------------------------
 do $$
 declare t text;
@@ -38,7 +43,7 @@ begin
   foreach t in array array[
     'profiles','companies','team_members','tasks','task_comments','comment_reactions','projects','schedules',
     'time_entries','active_timers','notifications','reminder_log',
-    'task_types','task_type_statuses','task_labels','task_label_sops',
+    'task_types','task_type_statuses','task_labels',
     'bug_reports','checkin_settings','checkin_log','wo_counters'
   ] loop
     if to_regclass('public.' || t) is null then

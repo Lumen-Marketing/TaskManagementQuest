@@ -1168,6 +1168,60 @@ App.SupabaseDataStore = class SupabaseDataStore {
     this._throwUnderwritingError(res, 'set_underwriting_status');
   }
 
+  // ----- Proposals (migration 074) -----
+  _mapProposalRow(r) {
+    return {
+      id: r.id,
+      underwritingId: r.underwriting_id,
+      taskId: r.task_id || null,
+      projectId: r.project_id || null,
+      number: r.proposal_number,
+      companyName: r.company_name || '',
+      projectName: r.project_name || '',
+      clientName: r.client_name || '',
+      jobAddress: r.job_address || '',
+      title: r.title || '',
+      scopeOfWork: r.scope_of_work || '',
+      terms: r.terms || '',
+      total: this._num2(r.total),
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    };
+  }
+
+  // The proposal generated from this underwriting, or null. RLS: staff roles only.
+  async loadProposalForUnderwriting(underwritingId) {
+    const res = await this.supabase.from('proposals').select('*')
+      .eq('underwriting_id', underwritingId).maybeSingle();
+    this._throwIfError(res, 'proposals');
+    return res.data ? this._mapProposalRow(res.data) : null;
+  }
+
+  // Idempotent: returns the existing proposal for an underwriting. The database
+  // derives price / company / project / number itself and refuses anything but an
+  // APPROVED underwriting. (`ctx` is only used by the offline preview.)
+  async createProposalForUnderwriting(underwritingId) {
+    const res = await this.supabase.rpc('create_proposal_for_underwriting', { p_underwriting_id: underwritingId });
+    this._throwUnderwritingError(res, 'create_proposal_for_underwriting');
+    const row = await this.loadProposalForUnderwriting(underwritingId);
+    if (!row) throw new Error('Proposal was created but could not be read back.');
+    return row;
+  }
+
+  // Only the editable fields; the database rejects anything else (number, total, source).
+  async saveProposal(id, patch) {
+    const res = await this.supabase.from('proposals').update({
+      title: patch.title,
+      scope_of_work: patch.scopeOfWork,
+      terms: patch.terms,
+      client_name: patch.clientName,
+      job_address: patch.jobAddress,
+    }).eq('id', id).select('*');
+    this._throwUnderwritingError(res, 'proposals');
+    if (!res.data || !res.data.length) throw new Error('Proposal not saved (not found or no access).');
+    return this._mapProposalRow(res.data[0]);
+  }
+
   _throwIfError(result, label) {
     if (result && result.error) {
       // Defensive: App.errors should always be loaded (errors.js precedes this

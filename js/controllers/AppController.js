@@ -889,6 +889,73 @@ App.AppController = class AppController {
     return run;
   }
 
+  /* ---------- Proposals (migration 074) ----------
+     One proposal per approved underwriting, kept off the task rows (same reason as the
+     underwriting itself). State: underwritingId -> { proposal|null, loaded, inflight }. */
+  _proposalEntry(uwId) {
+    if (!this._proposals) this._proposals = new Map();
+    let e = this._proposals.get(uwId);
+    if (!e) { e = { proposal: null, loaded: false, inflight: null, error: null, generating: null }; this._proposals.set(uwId, e); }
+    return e;
+  }
+
+  proposalFor(uwId) { return this._proposalEntry(uwId); }
+
+  canProposal() { return App.can('underwriting.manage'); }
+
+  async loadProposal(uwId, taskId) {
+    const e = this._proposalEntry(uwId);
+    if (e.loaded || e.inflight || e.error || !this.dataStore || !this.dataStore.loadProposalForUnderwriting) return;
+    e.inflight = (async () => {
+      try { e.proposal = await this.dataStore.loadProposalForUnderwriting(uwId); e.loaded = true; }
+      catch (err) { e.error = err; console.error('[proposal] load', err); }
+    })().finally(() => { e.inflight = null; });
+    await e.inflight;
+    App.EventBus.emit('underwriting:changed', taskId);
+  }
+
+  // Generate (or fetch) the proposal. Repeat clicks / a second tab get the SAME
+  // proposal back — the database enforces one per underwriting. Returns it, or null.
+  generateProposal(task, rec) {
+    const e = this._proposalEntry(rec.id);
+    if (e.generating) return e.generating;
+    const proj = task.project ? App.directory.project(task.project) : null;
+    const co = App.directory.company(task.company);
+    const ctx = {   // used by the offline preview only; the database reads these itself
+      companyId: task.company, companyName: co ? co.label : '', projectId: task.project || null,
+      projectName: proj ? proj.name : '', clientName: proj ? proj.client : '', jobAddress: proj ? proj.address : '',
+    };
+    e.generating = (async () => {
+      try {
+        e.proposal = await this.dataStore.createProposalForUnderwriting(rec.id, ctx);
+        e.loaded = true;
+        if (this.toastView) this.toastView.show({ title: 'Proposal ' + App.ProposalDoc.numberLabel(e.proposal.number), sub: 'Review the text, then print or save as PDF.' });
+        return e.proposal;
+      } catch (err) {
+        console.error('[proposal] generate', err);
+        const sub = (App.errors && App.errors.userMessage) ? App.errors.userMessage(err) : 'Please try again.';
+        if (this.toastView) this.toastView.show({ title: 'Proposal not generated', sub });
+        return null;
+      }
+    })().finally(() => { e.generating = null; App.EventBus.emit('underwriting:changed', task.id); });
+    return e.generating;
+  }
+
+  // Returns { ok, proposal? }; failures toast and leave the caller's text untouched.
+  async saveProposal(uwId, patch) {
+    const e = this._proposalEntry(uwId);
+    if (!e.proposal) return { ok: false };
+    try {
+      e.proposal = await this.dataStore.saveProposal(e.proposal.id, patch);
+      return { ok: true, proposal: e.proposal };
+    } catch (err) {
+      console.error('[proposal] save', err);
+      const sub = (App.errors && App.errors.userMessage) ? App.errors.userMessage(err) : 'Please try again.';
+      if (this.toastView) this.toastView.show({ title: 'Proposal not saved', sub });
+      return { ok: false };
+    }
+  }
+
   async setUnderwritingStatus(taskId, status, reason) {
     let res;
     try {

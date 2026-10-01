@@ -19,6 +19,7 @@ App.UnderwritingView = class UnderwritingView {
     this.controller = controller;
     this._errors = {};   // taskId -> { field: message } from the last failed save
     this._focus = null;  // { taskId, field, start, end }
+    this.proposalView = App.ProposalView ? new App.ProposalView({ controller }) : null;
     // A click anywhere that is not one of our inputs ends the "keep my caret"
     // window — otherwise a re-render would steal focus back from wherever the user went.
     document.addEventListener('mousedown', (e) => {
@@ -72,8 +73,12 @@ App.UnderwritingView = class UnderwritingView {
     // Kick off the lazy load the first time this panel is drawn for the task.
     if (!this.model.isLoaded(id)) this.controller.loadTaskUnderwriting(id);
 
+    const rec0 = this.model.record(id);
+    if (this.proposalView && rec0) this.proposalView.prepare(task, rec0);
+
     host.innerHTML = this._html(task);
     this._wire(host, task);
+    if (this.proposalView && rec0) this.proposalView.wire(host, task, rec0);
     this._restoreFocus(host, id);
   }
 
@@ -96,6 +101,7 @@ App.UnderwritingView = class UnderwritingView {
     return `<div class="uw">
       ${this._headerHtml(task, rec)}
       ${this._formHtml(task, rec)}
+      ${this.proposalView ? this.proposalView.sectionHtml(task, rec) : ''}
       ${this._breakdownHtml(id)}
       ${this._historyHtml(id)}
     </div>`;

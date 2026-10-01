@@ -1,5 +1,9 @@
--- DEV-ONLY — NOT a production migration. Fills the slot of the never-committed
--- migration 069 (task_label_sops). Run AFTER 068 and BEFORE 070/072.
+-- DEV-ONLY / PROVISIONAL — NOT a production migration, and OPTIONAL.
+-- Production does NOT have public.task_label_sops (catalog-confirmed), and 072 no
+-- longer requires it: it skips the table when absent and walls it when present.
+-- Run this only to exercise the "table present" path (tools/dev-rehearse.sh with
+-- WITH_TASK_LABEL_SOPS=1). Fills the slot of the never-committed migration 069.
+-- If used: AFTER 068 and BEFORE 070/072.
 -- See 000_dev_baseline.sql for the evidence trail and why this is provisional.
 --
 -- NOT production-faithful. The repo establishes only that a table of this name exists with an

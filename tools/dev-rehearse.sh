@@ -49,16 +49,23 @@ for f in $(ls "$SQL"/[0-9]*.sql | sort); do
   run "$b" "$f"
 done
 
-say "== 3. slot of the never-committed 069: task_label_sops (PROVISIONAL) =="
-run "000b_dev_baseline_task_label_sops" "$BS/000b_dev_baseline_task_label_sops.sql"
+say "== 3. task_label_sops is OPTIONAL (absent in production) =="
+# Default: leave it ABSENT, as in production — 072 must succeed without it.
+# WITH_TASK_LABEL_SOPS=1 installs the DEV-ONLY PROVISIONAL stand-in first, to prove
+# 072 also walls the table safely where it does exist.
+if [ "${WITH_TASK_LABEL_SOPS:-0}" = "1" ]; then
+  run "000b_dev_baseline_task_label_sops (PROVISIONAL, opt-in)" "$BS/000b_dev_baseline_task_label_sops.sql"
+else
+  say "skip 000b (task_label_sops stays absent, like production)"
+fi
 
 say "== 4. 070, 071 =="
 for b in 070_checkin_settings.sql 071_checkin_log.sql; do run "$b" "$SQL/$b"; done
 
 say "== 5. every table 072 will wall must exist =="
-PSQL -At -c "select t from unnest(array['profiles','companies','team_members','tasks','task_comments','comment_reactions','projects','schedules','time_entries','active_timers','notifications','reminder_log','task_types','task_type_statuses','task_labels','task_label_sops','bug_reports','checkin_settings','checkin_log','wo_counters']) t where to_regclass('public.'||t) is null" > "$WORK/last.out" 2>&1
+PSQL -At -c "select t from unnest(array['profiles','companies','team_members','tasks','task_comments','comment_reactions','projects','schedules','time_entries','active_timers','notifications','reminder_log','task_types','task_type_statuses','task_labels','bug_reports','checkin_settings','checkin_log','wo_counters']) t where to_regclass('public.'||t) is null" > "$WORK/last.out" 2>&1
 [ -s "$WORK/last.out" ] && { say "missing tables:"; cat "$WORK/last.out" | tee -a "$LOG"; exit 1; }
-say "ok   all 20 required pre-072 tables present (task_watchers, task_subtasks, task_activity were dropped by 013)"
+say "ok   all 19 required pre-072 tables present (task_watchers, task_subtasks, task_activity were dropped by 013)"
 for fn in current_profile_role current_member_id current_company_ids can_manage_roles assign_wo_number handle_new_user; do
   [ "$(PSQL -At -c "select count(*) from pg_proc where proname='$fn' and pronamespace='public'::regnamespace")" = "1" ] || { say "missing function $fn"; exit 1; }
 done
@@ -66,6 +73,15 @@ say "ok   helper functions present"
 
 say "== 6. 072 multitenant foundation =="
 run "072_multitenant_foundation" "$SQL/072_multitenant_foundation.sql"
+if [ "${WITH_TASK_LABEL_SOPS:-0}" = "1" ]; then
+  [ "$(PSQL -At -c "select count(*) from pg_policies where tablename='task_label_sops' and policyname='tenant_isolation_task_label_sops' and permissive='RESTRICTIVE'")" = "1" ] \
+    && [ "$(PSQL -At -c "select attnotnull from pg_attribute where attrelid='public.task_label_sops'::regclass and attname='tenant_id'")" = "t" ] \
+    || { say "FAILED: present task_label_sops was not walled by 072"; exit 1; }
+  say "ok   present task_label_sops: tenant_id NOT NULL + RESTRICTIVE wall + stamp trigger"
+else
+  [ "$(PSQL -At -c "select to_regclass('public.task_label_sops') is null")" = "t" ] || { say "FAILED: 072 created task_label_sops"; exit 1; }
+  say "ok   absent task_label_sops: 072 succeeded and did not create it"
+fi
 
 say "== 7. dev identities AFTER 072, through BOTH signup paths (handle_new_user, 072 TASK 8) =="
 run "local_seed_auth_users" "$BS/local_seed_auth_users.sql"
@@ -104,6 +120,13 @@ say "== 11b. PostgREST call shape (json_to_record numerics) + SQLSTATE contract 
 PSQL -f "$BS/004_dev_postgrest_shape_check.sql" > "$WORK/last.out" 2>&1 || fail "postgrest shape check"
 grep -q "postgrest-shape: ALL CHECKS PASSED" "$WORK/last.out" || fail "postgrest shape check (no pass marker)"
 say "ok   postgrest-shape: ALL CHECKS PASSED"
+
+say "== 11c. 074 proposals (apply, re-apply, verify) =="
+run "074_proposals" "$SQL/074_proposals.sql"
+run "074_proposals (again)" "$SQL/074_proposals.sql"
+PSQL -f "$BS/005_dev_proposals_check.sql" > "$WORK/last.out" 2>&1 || fail "074 proposals check"
+grep -q "074 proposals: ALL CHECKS PASSED" "$WORK/last.out" || fail "074 proposals check (no pass marker)"
+say "ok   074 proposals: ALL CHECKS PASSED"
 
 say "== 12. JS engine <-> DB CHECK parity =="
 node "$REPO/tools/gen-underwriting-parity.mjs" > "$WORK/parity.sql" || fail "parity generation"

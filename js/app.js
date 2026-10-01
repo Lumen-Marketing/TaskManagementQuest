@@ -125,6 +125,42 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (status === 'approved') { r.approvedBy = App.CURRENT_USER; r.approvedAt = now; }
           r.updatedAt = now;
         },
+        /* Proposals in preview/offline mode: in-memory, mirrors migration 074 (approved
+           underwriting only, one per underwriting, per-company number, price inherited). */
+        loadProposalForUnderwriting: async (uwId) => {
+          const pr = (App._previewProposals = App._previewProposals || {});
+          return pr[uwId] ? { ...pr[uwId] } : null;
+        },
+        createProposalForUnderwriting: async (uwId, ctx) => {
+          const pr = (App._previewProposals = App._previewProposals || {});
+          if (pr[uwId]) return { ...pr[uwId] };
+          const e = Object.values(App._previewUw || {}).find(x => x.record.id === uwId);
+          if (!e) throw new Error('underwriting not found');
+          if (e.record.status !== 'approved') throw new Error('a proposal can only be generated from an approved underwriting (this one is ' + e.record.status + ')');
+          const c = ctx || {};
+          const d = App.ProposalDoc.defaults(c);
+          const co = c.companyId || 'preview';
+          const counters = (App._previewProposalCounters = App._previewProposalCounters || {});
+          counters[co] = (counters[co] || 0) + 1;
+          const now = new Date().toISOString();
+          pr[uwId] = {
+            id: App.utils.uid('pp'), underwritingId: uwId, taskId: e.record.taskId, projectId: c.projectId || null,
+            number: counters[co], companyName: c.companyName || '', projectName: c.projectName || '',
+            clientName: c.clientName || '', jobAddress: c.jobAddress || '',
+            title: d.title, scopeOfWork: d.scopeOfWork, terms: d.terms,
+            total: e.record.recommendedSalePrice, createdAt: now, updatedAt: now,
+          };
+          return { ...pr[uwId] };
+        },
+        saveProposal: async (id, patch) => {
+          const p = Object.values(App._previewProposals || {}).find(x => x.id === id);
+          if (!p) throw new Error('Proposal not saved (not found or no access).');
+          Object.assign(p, {
+            title: patch.title, scopeOfWork: patch.scopeOfWork, terms: patch.terms,
+            clientName: patch.clientName, jobAddress: patch.jobAddress, updatedAt: new Date().toISOString(),
+          });
+          return { ...p };
+        },
         deleteProfile: async (id) => {
           App.PROFILES = (App.PROFILES || []).filter(pr => pr.id !== id);
           return { emailFreed: true };
