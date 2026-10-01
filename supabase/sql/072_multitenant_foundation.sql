@@ -255,13 +255,21 @@ commit;
 --     where policyname like 'tenant_isolation_%' order by tablename;
 
 ------------------------------------------------------------------------
--- TASK 5 (part b): rewrite the four tasks policies from migration 028 to
--- match the shared bucket by MARKER (is_shared_bucket) instead of the literal
--- id 'general-shift'. The restrictive wall (Task 4) already scopes the row to
--- the caller's own tenant, so each tenant sees only its own bucket.
--- Reproduced verbatim from 028 lines 78-191 with `id = 'general-shift'`
--- replaced by `is_shared_bucket` (SELECT + UPDATE only; INSERT/DELETE never
--- referenced general-shift and are recreated unchanged for completeness).
+-- TASK 5 (part b): re-create the four tasks policies so the shared bucket is matched
+-- by MARKER (is_shared_bucket) instead of the literal id 'general-shift'. The restrictive
+-- wall (Task 4) already scopes the row to the caller's own tenant, so each tenant sees
+-- only its own bucket.
+--
+-- Each policy is reproduced from its CURRENT definition, NOT from 028. Later migrations
+-- redefined the same four names, and an earlier draft of this file recreated 028's text,
+-- which silently REVERTED them:
+--   read   051  (watchers ? member; creator_id for workers; builds on 043)
+--   update 046  (workers update tasks they created; assignee must be in their company)
+--   insert 041  (a worker may only assign within their own company: assignee_in_company)
+--   delete 044  (a worker may delete tasks they created)
+-- The ONLY change vs those files is `id = 'general-shift'` -> `is_shared_bucket`.
+-- tools/dev-rehearse.sh asserts this: tasks policies before vs after 072 must be identical
+-- modulo that substitution (supabase/sql/verify/072_policy_parity_check.sql).
 ------------------------------------------------------------------------
 begin;
 
@@ -270,7 +278,7 @@ drop policy if exists "role users can insert tasks"  on public.tasks;
 drop policy if exists "role users can update tasks"  on public.tasks;
 drop policy if exists "role users can delete tasks"  on public.tasks;
 
--- SELECT
+-- SELECT (051)
 create policy "role users can read tasks" on public.tasks
 for select to authenticated
 using (
@@ -284,6 +292,7 @@ using (
         and (
           assignee_id = public.current_member_id()
           or creator_id = public.current_member_id()
+          or watchers ? public.current_member_id()
           or exists (
             select 1 from public.profiles p
             where p.member_id = public.tasks.assignee_id
@@ -293,25 +302,35 @@ using (
       )
       or (
         public.current_profile_role() = 'worker'
-        and (assignee_id = public.current_member_id() or is_shared_bucket)
+        and (
+          assignee_id = public.current_member_id()
+          or creator_id = public.current_member_id()
+          or watchers ? public.current_member_id()
+          or is_shared_bucket
+        )
       )
     )
   )
 );
 
--- INSERT (workers allowed, scoped to their companies)
+-- INSERT (041)
 create policy "role users can insert tasks" on public.tasks
 for insert to authenticated
 with check (
   public.current_profile_role() = 'developer'
   or (
     company_id = any(public.current_company_ids())
-    and public.current_profile_role() in
-      ('admin', 'supervisor', 'worker', 'construction_supervisor', 'sales')
+    and (
+      public.current_profile_role() in ('admin', 'supervisor', 'construction_supervisor', 'sales')
+      or (
+        public.current_profile_role() = 'worker'
+        and public.assignee_in_company(assignee_id, company_id)
+      )
+    )
   )
 );
 
--- UPDATE
+-- UPDATE (046)
 create policy "role users can update tasks" on public.tasks
 for update to authenticated
 using (
@@ -334,7 +353,11 @@ using (
       )
       or (
         public.current_profile_role() = 'worker'
-        and (assignee_id = public.current_member_id() or is_shared_bucket)
+        and (
+          assignee_id = public.current_member_id()
+          or creator_id = public.current_member_id()
+          or is_shared_bucket
+        )
       )
     )
   )
@@ -359,21 +382,33 @@ with check (
       )
       or (
         public.current_profile_role() = 'worker'
-        and (assignee_id = public.current_member_id() or is_shared_bucket)
+        and (
+          assignee_id = public.current_member_id()
+          or (
+            creator_id = public.current_member_id()
+            and public.assignee_in_company(assignee_id, company_id)
+          )
+          or is_shared_bucket
+        )
       )
     )
   )
 );
 
--- DELETE (management roles, in-company)
+-- DELETE (044)
 create policy "role users can delete tasks" on public.tasks
 for delete to authenticated
 using (
   public.current_profile_role() = 'developer'
   or (
     company_id = any(public.current_company_ids())
-    and public.current_profile_role() in
-      ('admin', 'supervisor', 'construction_supervisor', 'sales')
+    and (
+      public.current_profile_role() in ('admin', 'supervisor', 'construction_supervisor', 'sales')
+      or (
+        public.current_profile_role() = 'worker'
+        and creator_id = public.current_member_id()
+      )
+    )
   )
 );
 
