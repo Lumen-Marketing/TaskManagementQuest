@@ -21,6 +21,10 @@ App.TaskDetailView = class TaskDetailView {
     this.editingId = null;
     this.editDraft = null;
 
+    // Underwriting tab (Bid tasks only). The view owns no routing — it is mounted
+    // into this page's "Underwriting" tab panel on each render.
+    this.underwritingView = App.UnderwritingView ? new App.UnderwritingView({ controller }) : null;
+
     this.subscribe();
     this.render();
   }
@@ -31,6 +35,10 @@ App.TaskDetailView = class TaskDetailView {
     App.EventBus.on('selection:changed', () => this.render());
     App.EventBus.on('view:changed', () => this.render());
     App.EventBus.on('comments:changed', () => this.render());
+    // Only the open task's underwriting matters; other tasks' loads must not re-render this page.
+    App.EventBus.on('underwriting:changed', (taskId) => {
+      if (taskId === this.controller.uiState.selectedTaskId) this.render();
+    });
     App.EventBus.on('clock:tick', () => this.tickLive());
   }
 
@@ -278,8 +286,11 @@ App.TaskDetailView = class TaskDetailView {
           : '<span class="detail-val">—</span>');
     // Remember which tab the user is on so a background re-render (a posted
     // comment, a sync poll) doesn't yank them off it. Tabs are
-    // Comments / Activity / History; default to Comments.
-    if (!['comments', 'activity', 'history'].includes(this._activeTab)) this._activeTab = 'comments';
+    // Comments / Activity / History (+ Underwriting on Bid tasks); default to Comments.
+    const showUnderwriting = !!(this.underwritingView && this.controller.canUnderwrite(t));
+    const tabNames = ['comments', 'activity', 'history'];
+    if (showUnderwriting) tabNames.push('underwriting');
+    if (!tabNames.includes(this._activeTab)) this._activeTab = 'comments';
     const tabActive = (name) => this._activeTab === name ? ' active' : '';
 
     // Inline per-field editing: Details-card values are click-to-edit for users
@@ -399,10 +410,12 @@ App.TaskDetailView = class TaskDetailView {
               <button class="td2-tab${tabActive('comments')}" data-tab="comments" type="button"><i class="ti ti-message"></i>Comments${commentsCount ? ` <span class="td2-tabcount">${commentsCount}</span>` : ''}</button>
               <button class="td2-tab${tabActive('activity')}" data-tab="activity" type="button"><i class="ti ti-bolt"></i>Activity</button>
               <button class="td2-tab${tabActive('history')}" data-tab="history" type="button"><i class="ti ti-history"></i>History</button>
+              ${showUnderwriting ? `<button class="td2-tab${tabActive('underwriting')}" data-tab="underwriting" type="button"><i class="ti ti-calculator"></i>Underwriting</button>` : ''}
             </div>
             <div class="td2-tabpanel${tabActive('comments')}" data-panel="comments">${this._commentsInner(t)}</div>
             <div class="td2-tabpanel${tabActive('activity')}" data-panel="activity"><div class="td2-feed">${activityHtml}</div></div>
             <div class="td2-tabpanel${tabActive('history')}" data-panel="history"><div class="td2-feed">${entriesHtml}</div></div>
+            ${showUnderwriting ? `<div class="td2-tabpanel${tabActive('underwriting')}" data-panel="underwriting" id="uwHost"></div>` : ''}
           </div>
         </div>
 
@@ -441,6 +454,10 @@ App.TaskDetailView = class TaskDetailView {
     `;
 
     this.bindHandlers(t);
+
+    // Underwriting panel: rendered from the controller's UnderwritingModel, so a
+    // half-typed estimate survives this wholesale re-render.
+    if (showUnderwriting) this.underwritingView.mount(this.pane.querySelector('#uwHost'), t);
 
     // Auto-save feedback: the field that just saved gets a quiet green tick +
     // pulse (see .tdp-saved-flash). One-shot — the next render replaces the DOM.

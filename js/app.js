@@ -58,6 +58,73 @@ document.addEventListener('DOMContentLoaded', async () => {
         projectRollup: async () => ({ ok: false, error: 'AI project rollup is not available in preview mode.' }),
         draftTask: async () => ({ ok: false, error: 'AI drafting is not available in preview mode.' }),
         chat: async () => ({ ok: false, error: 'AI chat is not available in preview mode.' }),
+        /* Underwriting in preview/offline mode: in-memory only, no database. It
+           mirrors what migration 073's triggers do (history rows on change, first
+           calculation logs old = not entered, approval stamps who/when) so the
+           panel can be exercised without Supabase. The real rules — and the only
+           ones that count — live in the database. */
+        loadUnderwritingForTask: async (taskId) => {
+          const st = (App._previewUw = App._previewUw || {});
+          const e = st[taskId];
+          return e ? { record: { ...e.record }, history: e.history.slice().reverse() } : { record: null, history: [] };
+        },
+        createUnderwritingForTask: async (taskId) => {
+          const st = (App._previewUw = App._previewUw || {});
+          if (!st[taskId]) {
+            const now = new Date().toISOString();
+            st[taskId] = {
+              record: {
+                id: App.utils.uid('uw'), taskId, companyId: null, projectId: null,
+                status: 'draft', roofAreaSqft: null, wastePercent: '0.00', materialCost: '0.00', laborCost: '0.00',
+                otherCost: '0.00', targetMarginPercent: null, adjustedRoofAreaSqft: null, squares: null,
+                totalEstimatedCost: '0.00', recommendedSalePrice: null, calculatedAt: null, notes: '',
+                createdBy: App.CURRENT_USER, approvedBy: null, approvedAt: null, createdAt: now, updatedAt: now,
+              },
+              history: [{ id: App.utils.uid('uh'), fieldName: 'status', oldValue: null, newValue: 'draft', changedBy: App.CURRENT_USER, reason: null, createdAt: now }],
+            };
+          }
+          return { ...st[taskId].record };
+        },
+        saveUnderwritingEstimate: async (id, payload, reason) => {
+          const e = Object.values(App._previewUw || {}).find(x => x.record.id === id);
+          if (!e) throw new Error('underwriting not found');
+          const r = e.record, i = payload.input, d = payload.data, now = new Date().toISOString();
+          if (r.status === 'approved' || r.status === 'declined') throw new Error('a ' + r.status + ' underwriting is locked');
+          const first = !r.calculatedAt;
+          const next = {
+            roof_area_sqft: i.roofAreaSqft, waste_percent: i.wastePercent, material_cost: i.materialCost,
+            labor_cost: i.laborCost, other_cost: i.otherCost, target_margin_percent: i.targetMarginPercent,
+          };
+          const cur = {
+            roof_area_sqft: r.roofAreaSqft, waste_percent: r.wastePercent, material_cost: r.materialCost,
+            labor_cost: r.laborCost, other_cost: r.otherCost, target_margin_percent: r.targetMarginPercent,
+          };
+          Object.keys(next).forEach(f => {
+            const old = (first && f !== 'target_margin_percent') ? null : cur[f];
+            if ((old ?? null) !== (next[f] ?? null)) {
+              e.history.push({ id: App.utils.uid('uh'), fieldName: f, oldValue: old ?? null, newValue: next[f] ?? null, changedBy: App.CURRENT_USER, reason: reason || null, createdAt: now });
+            }
+          });
+          Object.assign(r, {
+            roofAreaSqft: i.roofAreaSqft, wastePercent: i.wastePercent, materialCost: i.materialCost,
+            laborCost: i.laborCost, otherCost: i.otherCost, targetMarginPercent: i.targetMarginPercent,
+            adjustedRoofAreaSqft: d.adjustedRoofAreaSqft, squares: d.squares,
+            totalEstimatedCost: d.totalEstimatedCost, recommendedSalePrice: d.recommendedSalePrice,
+            calculatedAt: now, updatedAt: now,
+          });
+        },
+        setUnderwritingStatus: async (id, status, reason) => {
+          const e = Object.values(App._previewUw || {}).find(x => x.record.id === id);
+          if (!e) throw new Error('underwriting not found');
+          const r = e.record, now = new Date().toISOString();
+          if (!App.UnderwritingCalc.allowedNextStatuses(r.status).includes(status)) {
+            throw new Error('cannot move underwriting from ' + r.status + ' to ' + status);
+          }
+          e.history.push({ id: App.utils.uid('uh'), fieldName: 'status', oldValue: r.status, newValue: status, changedBy: App.CURRENT_USER, reason: reason || null, createdAt: now });
+          r.status = status;
+          if (status === 'approved') { r.approvedBy = App.CURRENT_USER; r.approvedAt = now; }
+          r.updatedAt = now;
+        },
         deleteProfile: async (id) => {
           App.PROFILES = (App.PROFILES || []).filter(pr => pr.id !== id);
           return { emailFreed: true };
@@ -397,6 +464,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         await controller.refreshOpenThread();
       } catch (e) { ok = false; console.warn('[app] comment refresh failed', e); }
+      try {
+        await controller.refreshOpenUnderwriting();
+      } catch (e) { ok = false; console.warn('[app] underwriting refresh failed', e); }
       try {
         const fresh = await dataStore.loadNotifications();
         const arrivals = fresh.filter(n => !seenNotifIds.has(n.id) && !n.read);

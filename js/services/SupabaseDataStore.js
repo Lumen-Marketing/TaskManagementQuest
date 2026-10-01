@@ -1046,6 +1046,128 @@ App.SupabaseDataStore = class SupabaseDataStore {
     return this._mapProjects(res.data || []);
   }
 
+  // ----- Underwriting (migration 073) -----
+  // numeric columns can arrive as a JSON number (100 for 100.00) or a string;
+  // normalise to a fixed 2-decimal string so the engine never sees a float.
+  _num2(v) {
+    if (v === null || v === undefined) return null;
+    const C = App.UnderwritingCalc;
+    return C.hundredthsToString(C.parseToHundredths(C.normalizeNumeric(v)));
+  }
+
+  /* Like _throwIfError, but a `raise exception` from migration 073's triggers/RPCs
+     (SQLSTATE P0001) carries a message AUTHORED for people ("only an admin can
+     approve an estimate", "a approved underwriting is locked") — surface it
+     instead of the generic "Could not …" that _throwIfError would substitute. */
+  _throwUnderwritingError(res, label) {
+    if (res && res.error && res.error.code === 'P0001' && App.errors && App.errors.AppError) {
+      throw new App.errors.AppError(res.error.message, { code: 'underwriting/rejected', cause: res.error, expose: true });
+    }
+    this._throwIfError(res, label);
+  }
+
+  _mapUnderwritingRow(r, taskId) {
+    return {
+      id: r.id,
+      taskId,
+      companyId: r.company_id,
+      projectId: r.project_id || null,
+      status: r.status,
+      roofAreaSqft: this._num2(r.roof_area_sqft),
+      wastePercent: this._num2(r.waste_percent),
+      materialCost: this._num2(r.material_cost),
+      laborCost: this._num2(r.labor_cost),
+      otherCost: this._num2(r.other_cost),
+      targetMarginPercent: this._num2(r.target_margin_percent),
+      adjustedRoofAreaSqft: this._num2(r.adjusted_roof_area_sqft),
+      squares: this._num2(r.squares),
+      totalEstimatedCost: this._num2(r.total_estimated_cost),
+      recommendedSalePrice: this._num2(r.recommended_sale_price),
+      calculatedAt: r.calculated_at || null,
+      notes: r.notes || '',
+      createdBy: r.created_by || null,
+      approvedBy: r.approved_by || null,
+      approvedAt: r.approved_at || null,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    };
+  }
+
+  _mapUnderwritingChange(r) {
+    return {
+      id: r.id,
+      fieldName: r.field_name,
+      oldValue: r.old_value,
+      newValue: r.new_value,
+      changedBy: r.changed_by || null,
+      reason: r.reason || null,
+      createdAt: r.created_at,
+    };
+  }
+
+  /* The Bid task's underwriting + its Estimate History, newest change first.
+     { record: null, history: [] } when the task has no underwriting yet. RLS
+     limits this to admin/construction-supervisor/supervisor/developer. */
+  async loadUnderwritingForTask(taskId) {
+    const linkRes = await this.supabase
+      .from('task_underwriting_links')
+      .select('underwriting_id, underwritings(*)')
+      .eq('task_id', taskId)
+      .maybeSingle();
+    this._throwIfError(linkRes, 'task_underwriting_links');
+    const row = linkRes.data && linkRes.data.underwritings;
+    if (!row) return { record: null, history: [] };
+    const histRes = await this.supabase
+      .from('underwriting_field_changes')
+      .select('*')
+      .eq('underwriting_id', row.id)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false });
+    this._throwIfError(histRes, 'underwriting_field_changes');
+    return {
+      record: this._mapUnderwritingRow(row, taskId),
+      history: (histRes.data || []).map(h => this._mapUnderwritingChange(h)),
+    };
+  }
+
+  // Idempotent: returns the existing underwriting when the Bid task already has one.
+  async createUnderwritingForTask(taskId) {
+    const res = await this.supabase.rpc('create_underwriting_for_task', { p_task_id: taskId });
+    this._throwUnderwritingError(res, 'create_underwriting_for_task');
+    const loaded = await this.loadUnderwritingForTask(taskId);
+    if (!loaded.record) throw new Error('Underwriting was created but could not be read back.');
+    return loaded.record;
+  }
+
+  // `payload` = { input, data } from UnderwritingModel.evaluateDraft(): the inputs
+  // and the derived snapshot, written in one statement. The database CHECKs reject
+  // any derived figure that disagrees with the inputs.
+  async saveUnderwritingEstimate(id, payload, reason) {
+    const i = payload.input, d = payload.data;
+    const res = await this.supabase.rpc('save_underwriting_estimate', {
+      p_id: id,
+      p_roof_area_sqft: i.roofAreaSqft,
+      p_waste_percent: i.wastePercent,
+      p_material_cost: i.materialCost,
+      p_labor_cost: i.laborCost,
+      p_other_cost: i.otherCost,
+      p_target_margin_percent: i.targetMarginPercent,
+      p_adjusted_roof_area_sqft: d.adjustedRoofAreaSqft,
+      p_squares: d.squares,
+      p_total_estimated_cost: d.totalEstimatedCost,
+      p_recommended_sale_price: d.recommendedSalePrice,
+      p_reason: reason || null,
+    });
+    this._throwUnderwritingError(res, 'save_underwriting_estimate');
+  }
+
+  async setUnderwritingStatus(id, status, reason) {
+    const res = await this.supabase.rpc('set_underwriting_status', {
+      p_id: id, p_status: status, p_reason: reason || null,
+    });
+    this._throwUnderwritingError(res, 'set_underwriting_status');
+  }
+
   _throwIfError(result, label) {
     if (result && result.error) {
       // Defensive: App.errors should always be loaded (errors.js precedes this

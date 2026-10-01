@@ -28,6 +28,18 @@ App.AppController = class AppController {
       load: (dataStore && dataStore.loadComments) ? (id) => dataStore.loadComments(id) : null,
     });
 
+    /* Underwriting (migration 073) is likewise kept OFF the task rows — and its
+       unsaved estimate draft with it, so a background re-render of the detail page
+       can't wipe a half-typed estimate. See UnderwritingModel. */
+    const ds = dataStore;
+    this.underwriting = new App.UnderwritingModel({
+      load: (ds && ds.loadUnderwritingForTask) ? (id) => ds.loadUnderwritingForTask(id) : null,
+      create: (ds && ds.createUnderwritingForTask) ? (id) => ds.createUnderwritingForTask(id) : null,
+      saveEstimate: (ds && ds.saveUnderwritingEstimate) ? (id, p, r) => ds.saveUnderwritingEstimate(id, p, r) : null,
+      setStatus: (ds && ds.setUnderwritingStatus) ? (id, st, r) => ds.setUnderwritingStatus(id, st, r) : null,
+    });
+    this._underwritingTried = new Set(); // task ids whose load was attempted this session
+
     this.uiState = {
       view: App.can('tasks.view') ? 'all' : 'time:mine',
       // Scope segment ("My work" / "Company"): an orthogonal narrowing applied
@@ -799,6 +811,87 @@ App.AppController = class AppController {
     const changed = await this.comments.refresh(taskId);
     if (changed) App.EventBus.emit('comments:changed', taskId);
     return changed;
+  }
+
+  /* ---------- Underwriting (Bid tasks) ----------
+     Each op re-emits 'underwriting:changed' so the detail page re-renders from the
+     model. Failures toast and leave the draft intact; nothing here navigates. */
+
+  // Whether this viewer may see/manage underwriting for this task: a Bid task and
+  // a role the database RLS will actually serve (migration 073).
+  canUnderwrite(task) {
+    return !!task && task.type === 'bid' && App.can('underwriting.view');
+  }
+
+  // Lazy-load once per session per task. Re-renders only when the load actually
+  // changed what's on screen, and a FAILED load is not retried by the next render
+  // (that would loop while offline) — the panel offers an explicit Retry instead.
+  async loadTaskUnderwriting(taskId, { force = false } = {}) {
+    if (force) this._underwritingTried.delete(taskId);
+    if (this.underwriting.isLoaded(taskId) || this._underwritingTried.has(taskId)) return;
+    this._underwritingTried.add(taskId);
+    await this.underwriting.ensureLoaded(taskId);
+    App.EventBus.emit('underwriting:changed', taskId);
+  }
+
+  // Keep the open Bid task's underwriting current with other people's changes.
+  // Called from the same 30s poll; re-renders only if the record or history moved.
+  async refreshOpenUnderwriting() {
+    const taskId = this.uiState.selectedTaskId;
+    if (!taskId || !this.underwriting.isLoaded(taskId)) return false;
+    const changed = await this.underwriting.refresh(taskId);
+    if (changed) App.EventBus.emit('underwriting:changed', taskId);
+    return changed;
+  }
+
+  _underwritingFail(title, e) {
+    console.error('[underwriting]', title, e);
+    const sub = (App.errors && App.errors.userMessage) ? App.errors.userMessage(e) : 'Please try again.';
+    if (this.toastView) this.toastView.show({ title, sub });
+  }
+
+  async createTaskUnderwriting(taskId) {
+    try {
+      await this.underwriting.createFor(taskId);
+    } catch (e) { this._underwritingFail('Underwriting not created', e); }
+    App.EventBus.emit('underwriting:changed', taskId);
+  }
+
+  setUnderwritingDraftField(taskId, field, value) {
+    this.underwriting.setDraftField(taskId, field, value);
+  }
+
+  discardUnderwritingDraft(taskId) {
+    this.underwriting.discardDraft(taskId);
+    App.EventBus.emit('underwriting:changed', taskId);
+  }
+
+  // Returns { ok, errors? } so the view can show field-level messages.
+  async saveUnderwritingDraft(taskId) {
+    let res;
+    try {
+      res = await this.underwriting.saveDraft(taskId);
+    } catch (e) {
+      this._underwritingFail('Estimate not saved', e);
+      return { ok: false, errors: {} };
+    }
+    if (res.ok && this.toastView) this.toastView.show({ title: 'Estimate saved', sub: 'Breakdown and history updated.' });
+    App.EventBus.emit('underwriting:changed', taskId);
+    return res;
+  }
+
+  async setUnderwritingStatus(taskId, status, reason) {
+    let res;
+    try {
+      res = await this.underwriting.transition(taskId, status, reason);
+    } catch (e) {
+      this._underwritingFail('Status not changed', e);
+      App.EventBus.emit('underwriting:changed', taskId);
+      return { ok: false };
+    }
+    if (!res.ok && this.toastView) this.toastView.show({ title: 'Status not changed', sub: res.error });
+    App.EventBus.emit('underwriting:changed', taskId);
+    return res;
   }
 
   async addTaskComment(taskId, body, mentions, kind) {
