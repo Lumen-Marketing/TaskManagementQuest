@@ -17,6 +17,13 @@
 
 begin;
 
+-- The tasks below need a REAL creator (tasks.creator_id is NOT NULL): the admin's roster id.
+do $$ begin
+  if (select member_id from public.profiles where id = 'a0000000-0000-0000-0000-000000000001') is null then
+    raise exception 'seed: the admin has no member_id (signup ran without app_metadata.tenant_id) — run bootstrap/006_dev_identity_repair.sql first';
+  end if;
+end $$;
+
 update public.profiles set approved = true, role = 'admin',      company_ids = '{roofing}', tenant_id = '00000000-0000-0000-0000-000000000000' where id = 'a0000000-0000-0000-0000-000000000001';
 update public.profiles set approved = true, role = 'supervisor', company_ids = '{roofing}', tenant_id = '00000000-0000-0000-0000-000000000000' where id = 'a0000000-0000-0000-0000-000000000002';
 update public.profiles set approved = true, role = 'worker',     company_ids = '{roofing}', tenant_id = '00000000-0000-0000-0000-000000000000' where id = 'a0000000-0000-0000-0000-000000000003';
