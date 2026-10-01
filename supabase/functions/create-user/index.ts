@@ -99,6 +99,18 @@ Deno.serve(async (req: Request) => {
       return json(req, { error: "Not authorized to add people." }, 403);
     }
 
+    // -------- tenant (migration 072) -----------------------------------------
+    // The new person joins the CALLER's tenant. It is passed to handle_new_user() via
+    // app_metadata (server-only; user_metadata is client-writable and is never trusted
+    // for this). Tolerates a database that has not had 072 applied yet: the column is
+    // absent, the lookup errors, and the user is created exactly as before.
+    let callerTenantId: string | null = null;
+    {
+      const t = await admin.from("profiles").select("tenant_id").eq("id", callerUser.user.id).maybeSingle();
+      const v = (t.data as { tenant_id?: string | null } | null)?.tenant_id;
+      if (!t.error && typeof v === "string" && v) callerTenantId = v;
+    }
+
     // -------- input ----------------------------------------------------------
     const lenHeader = req.headers.get("content-length");
     if (lenHeader && Number(lenHeader) > MAX_PAYLOAD_BYTES) return json(req, { error: "Payload too large." }, 413);
@@ -132,6 +144,8 @@ Deno.serve(async (req: Request) => {
       password: defaultPassword,
       email_confirm: true,
       user_metadata: { full_name: fullName },
+      // Trusted tenant assignment for handle_new_user() (migration 072, TASK 8).
+      ...(callerTenantId ? { app_metadata: { tenant_id: callerTenantId } } : {}),
     });
     if (created.error || !created.data?.user) {
       const msg = (created.error?.message ?? "").toLowerCase();

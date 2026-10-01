@@ -1,5 +1,6 @@
 -- DEV-ONLY SEED — test identities and fixtures for verifying 072 and 073.
--- Run AFTER 072 (so tenant 0 exists) and AFTER the five auth users below exist.
+-- Run AFTER 072 and AFTER the six auth users below exist (created post-072 through the
+-- two signup paths: five with app_metadata.tenant_id = tenant 0, bob with none).
 --
 -- On a HOSTED dev project create the auth users through the dashboard / Auth admin
 -- API (never by inserting into auth.users) with these fixed ids or substitute them.
@@ -22,8 +23,7 @@ update public.profiles set approved = true, role = 'worker',     company_ids = '
 update public.profiles set approved = true, role = 'sales',      company_ids = '{roofing}', tenant_id = '00000000-0000-0000-0000-000000000000' where id = 'a0000000-0000-0000-0000-000000000004';
 update public.profiles set approved = true, role = 'developer',  company_ids = '{roofing}', tenant_id = '00000000-0000-0000-0000-000000000000' where id = 'a0000000-0000-0000-0000-000000000006';
 -- bob (…005): approved, role member, tenant_id NULL — exactly the pre-workspace signup state.
--- (072's backfill put every existing profile in tenant 0; bob is reset to the no-tenant state.)
-update public.profiles set approved = true, tenant_id = null where id = 'a0000000-0000-0000-0000-000000000005';
+update public.profiles set approved = true where id = 'a0000000-0000-0000-0000-000000000005';
 
 insert into public.projects (id, company_id, name, client, tenant_id)
 values ('dev-proj-1', 'roofing', 'Paradise Valley re-roof', 'CNL Properties', '00000000-0000-0000-0000-000000000000')

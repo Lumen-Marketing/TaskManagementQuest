@@ -15,9 +15,37 @@
 -- (project qqvmcsvdxhgjooirznrj): this migration enforces NOT NULL across every
 -- table and rewrites RLS, so a bad run can lock users out.
 --
+-- NOTE (task_watchers / task_subtasks / task_activity): migration 013 DROPPED these
+-- three tables (their data moved into JSONB columns on tasks), so they are no longer
+-- listed below. Every loop also skips any listed table that does not exist
+-- (`to_regclass` guard), so the migration stays safe on a historical environment that
+-- unexpectedly still has one of them — an existing leftover table would simply not be
+-- walled, which is acceptable for a dead, unused table (drop it instead).
+--
 -- The scoped-table array below is the single source of truth reused by every
 -- loop. profiles is handled specially (excluded from the auto-stamp trigger:
 -- a signing-up user has no tenant yet — create_workspace()/invites set it).
+
+------------------------------------------------------------------------
+-- TASK 0: prerequisites. Fail LOUDLY, before anything is changed, if a table this
+-- migration must wall is missing (e.g. a skipped earlier migration). The per-loop
+-- `to_regclass` guards below exist only for legacy tables; they must never be able
+-- to hide a missing REQUIRED table.
+------------------------------------------------------------------------
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'profiles','companies','team_members','tasks','task_comments','comment_reactions','projects','schedules',
+    'time_entries','active_timers','notifications','reminder_log',
+    'task_types','task_type_statuses','task_labels','task_label_sops',
+    'bug_reports','checkin_settings','checkin_log','wo_counters'
+  ] loop
+    if to_regclass('public.' || t) is null then
+      raise exception '072 prerequisite missing: public.% does not exist — apply the migration that creates it first', t;
+    end if;
+  end loop;
+end $$;
 
 ------------------------------------------------------------------------
 -- TASK 1: tenants table, tenant_id columns (nullable), current_tenant_id().
@@ -37,12 +65,15 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'profiles','companies','team_members','tasks','task_watchers','task_subtasks',
-    'task_activity','task_comments','comment_reactions','projects','schedules',
+    'profiles','companies','team_members','tasks','task_comments','comment_reactions','projects','schedules',
     'time_entries','active_timers','notifications','reminder_log',
     'task_types','task_type_statuses','task_labels','task_label_sops',
     'bug_reports','checkin_settings','checkin_log','wo_counters'
   ] loop
+    if to_regclass('public.' || t) is null then
+      raise notice '072: skipping absent table public.%', t;
+      continue;
+    end if;
     execute format('alter table public.%I add column if not exists tenant_id uuid references public.tenants(id)', t);
     execute format('create index if not exists %I on public.%I(tenant_id)', t||'_tenant_idx', t);
   end loop;
@@ -82,12 +113,15 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'profiles','companies','team_members','tasks','task_watchers','task_subtasks',
-    'task_activity','task_comments','comment_reactions','projects','schedules',
+    'profiles','companies','team_members','tasks','task_comments','comment_reactions','projects','schedules',
     'time_entries','active_timers','notifications','reminder_log',
     'task_types','task_type_statuses','task_labels','task_label_sops',
     'bug_reports','checkin_settings','checkin_log','wo_counters'
   ] loop
+    if to_regclass('public.' || t) is null then
+      raise notice '072: skipping absent table public.%', t;
+      continue;
+    end if;
     execute format(
       'update public.%I set tenant_id = ''00000000-0000-0000-0000-000000000000'' where tenant_id is null', t);
   end loop;
@@ -129,12 +163,15 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'companies','team_members','tasks','task_watchers','task_subtasks',
-    'task_activity','task_comments','comment_reactions','projects','schedules',
+    'companies','team_members','tasks','task_comments','comment_reactions','projects','schedules',
     'time_entries','active_timers','notifications','reminder_log',
     'task_types','task_type_statuses','task_labels','task_label_sops',
     'bug_reports','checkin_settings','checkin_log','wo_counters'
   ] loop
+    if to_regclass('public.' || t) is null then
+      raise notice '072: skipping absent table public.%', t;
+      continue;
+    end if;
     execute format('drop trigger if exists %I on public.%I', 'stamp_tenant_'||t, t);
     execute format(
       'create trigger %I before insert on public.%I for each row execute function public.stamp_tenant_id()',
@@ -174,12 +211,15 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'companies','team_members','tasks','task_watchers','task_subtasks',
-    'task_activity','task_comments','comment_reactions','projects','schedules',
+    'companies','team_members','tasks','task_comments','comment_reactions','projects','schedules',
     'time_entries','active_timers','notifications','reminder_log',
     'task_types','task_type_statuses','task_labels','task_label_sops',
     'bug_reports','checkin_settings','checkin_log','wo_counters'
   ] loop
+    if to_regclass('public.' || t) is null then
+      raise notice '072: skipping absent table public.%', t;
+      continue;
+    end if;
     execute format('alter table public.%I alter column tenant_id set not null', t);
 
     execute format('drop policy if exists %I on public.%I', 'tenant_isolation_'||t, t);
@@ -363,6 +403,10 @@ as $$
 declare
   new_tenant uuid;
   new_company text;
+  v_email text;
+  v_base text;
+  v_member text;
+  v_full text;
 begin
   if auth.uid() is null then
     raise exception 'must be authenticated';
@@ -392,6 +436,24 @@ begin
          full_name   = coalesce(nullif(create_workspace.full_name, ''), public.profiles.full_name)
    where id = auth.uid();
 
+  -- A tenant-less signup (handle_new_user, TASK 8) created the profile ONLY — no
+  -- team_members row. Create the new admin's roster entry here, inside the new tenant,
+  -- with the same slug + collision rules handle_new_user uses.
+  select p.email, p.full_name into v_email, v_full from public.profiles p where p.id = auth.uid();
+  if (select member_id from public.profiles where id = auth.uid()) is null then
+    v_base := coalesce(nullif(public.slugify_member_id(split_part(v_email, '@', 1)), ''),
+                       'member-' || left(auth.uid()::text, 8));
+    v_member := v_base;
+    if exists (select 1 from public.profiles p where p.member_id = v_base and p.id <> auth.uid())
+       or exists (select 1 from public.team_members t where t.id = v_base) then
+      v_member := v_base || '-' || left(auth.uid()::text, 8);
+    end if;
+    insert into public.team_members (id, name, full_name, email, color, tenant_id)
+    values (v_member, split_part(coalesce(v_full, v_base), ' ', 1), coalesce(v_full, v_base),
+            v_email, '#' || substr(md5(coalesce(v_email, v_member)), 1, 6), new_tenant);
+    update public.profiles set member_id = v_member where id = auth.uid();
+  end if;
+
   -- Seed a minimal default taxonomy (Working on it -> Done) for the default company.
   insert into public.task_types (company_id, key, label, sort_order, tenant_id)
   values (new_company, 'general', 'General', 0, new_tenant);
@@ -412,3 +474,103 @@ commit;
 
 -- Verify Task 7: exercised by supabase/sql/verify/072_isolation_check.sql
 -- (a fresh user creates tenant B via this RPC, then isolation is asserted).
+
+------------------------------------------------------------------------
+-- TASK 8: handle_new_user() must work once tenant_id is NOT NULL.
+--
+-- Migration 029/033's signup trigger inserted a team_members row with no tenant. With
+-- team_members.tenant_id NOT NULL (TASK 4) that insert aborts the whole auth signup.
+-- It also ran for tenant-less signups that have no business to join yet.
+--
+-- New behaviour (supersedes 033's definition):
+--   A. raw_app_meta_data->>'tenant_id' present -> profile AND team_members row are
+--      created inside that tenant (the admin "create-user" flow sets it).
+--   B. absent -> profile ONLY (tenant_id NULL, member_id NULL, no team_members row).
+--      create_workspace() (TASK 7) creates the roster entry when they make a business.
+--
+-- SECURITY: the tenant is read ONLY from raw_APP_meta_data, which only the service
+-- role / Auth admin API can write. raw_USER_meta_data is attacker-controlled
+-- (supabase.auth.signUp({options:{data:...}})) and is NEVER used to choose a tenant.
+-- A malformed or non-existent tenant id RAISES (failing the signup) rather than
+-- silently falling back to "no tenant".
+--
+-- team_members.id is a GLOBAL text key, so a slug that already belongs to another
+-- tenant's roster entry (or another profile) gets a uuid suffix instead of being
+-- adopted; the conflict-update only ever touches a row of the SAME tenant.
+------------------------------------------------------------------------
+begin;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_tenant_raw text := nullif(btrim(new.raw_app_meta_data ->> 'tenant_id'), '');
+  v_tenant uuid;
+  v_base text := coalesce(
+    nullif(public.slugify_member_id(split_part(new.email, '@', 1)), ''),
+    'member-' || left(new.id::text, 8)
+  );
+  v_member_id text := v_base;
+  v_full_name text := coalesce(
+    nullif(new.raw_user_meta_data ->> 'full_name', ''),
+    nullif(new.raw_user_meta_data ->> 'name', ''),
+    split_part(new.email, '@', 1)
+  );
+begin
+  if v_tenant_raw is not null then
+    begin
+      v_tenant := v_tenant_raw::uuid;
+    exception when invalid_text_representation then
+      raise exception 'handle_new_user: app_metadata.tenant_id is not a valid uuid: %', v_tenant_raw;
+    end;
+    if not exists (select 1 from public.tenants where id = v_tenant) then
+      raise exception 'handle_new_user: tenant % does not exist', v_tenant;
+    end if;
+  end if;
+
+  -- B. No tenant: profile only. Never trust user_metadata for this.
+  if v_tenant is null then
+    insert into public.profiles (id, email, full_name, approved, role, email_verified)
+    values (new.id, new.email, v_full_name, false, 'worker', false)
+    on conflict (id) do update set
+      email = excluded.email,
+      full_name = excluded.full_name;
+    return new;
+  end if;
+
+  -- A. Tenant-scoped signup. Collision-proof member id (global key).
+  if exists (select 1 from public.profiles p where p.member_id = v_base and p.id <> new.id)
+     or exists (select 1 from public.team_members t where t.id = v_base and t.tenant_id is distinct from v_tenant) then
+    v_member_id := v_base || '-' || left(new.id::text, 8);
+  end if;
+
+  insert into public.team_members (id, name, full_name, email, color, tenant_id)
+  values (v_member_id, split_part(v_full_name, ' ', 1), v_full_name, new.email,
+          '#' || substr(md5(new.email), 1, 6), v_tenant)
+  on conflict (id) do update set
+    name = excluded.name,
+    full_name = excluded.full_name,
+    email = excluded.email
+  where public.team_members.tenant_id = excluded.tenant_id;
+
+  insert into public.profiles (id, email, full_name, approved, role, email_verified, member_id, tenant_id)
+  values (new.id, new.email, v_full_name, false, 'worker', false, v_member_id, v_tenant)
+  on conflict (id) do update set
+    email = excluded.email,
+    full_name = excluded.full_name,
+    member_id = excluded.member_id,
+    tenant_id = coalesce(public.profiles.tenant_id, excluded.tenant_id);
+  return new;
+end;
+$$;
+
+revoke execute on function public.handle_new_user() from anon, authenticated, public;
+
+commit;
+
+-- Verify Task 8: tools/dev-rehearse.sh creates users through BOTH paths (with and
+-- without app_metadata.tenant_id) and asserts the results, a forged user_metadata
+-- tenant is ignored, and a malformed / unknown tenant id aborts the signup.

@@ -55,33 +55,23 @@ run "000b_dev_baseline_task_label_sops" "$BS/000b_dev_baseline_task_label_sops.s
 say "== 4. 070, 071 =="
 for b in 070_checkin_settings.sql 071_checkin_log.sql; do run "$b" "$SQL/$b"; done
 
-say "== 4b. DEV WORKAROUND: 013 dropped three tables that 072 still loops over =="
-say "     (defect in 072, not a bootstrap gap — see 000c_dev_workaround_072_child_tables.sql)"
-run "000c_dev_workaround_072_child_tables" "$BS/000c_dev_workaround_072_child_tables.sql"
-
 say "== 5. every table 072 will wall must exist =="
-PSQL -At -c "select t from unnest(array['profiles','companies','team_members','tasks','task_watchers','task_subtasks','task_activity','task_comments','comment_reactions','projects','schedules','time_entries','active_timers','notifications','reminder_log','task_types','task_type_statuses','task_labels','task_label_sops','bug_reports','checkin_settings','checkin_log','wo_counters']) t where to_regclass('public.'||t) is null" > "$WORK/last.out" 2>&1
+PSQL -At -c "select t from unnest(array['profiles','companies','team_members','tasks','task_comments','comment_reactions','projects','schedules','time_entries','active_timers','notifications','reminder_log','task_types','task_type_statuses','task_labels','task_label_sops','bug_reports','checkin_settings','checkin_log','wo_counters']) t where to_regclass('public.'||t) is null" > "$WORK/last.out" 2>&1
 [ -s "$WORK/last.out" ] && { say "missing tables:"; cat "$WORK/last.out" | tee -a "$LOG"; exit 1; }
-say "ok   all 23 pre-072 tables present"
+say "ok   all 20 required pre-072 tables present (task_watchers, task_subtasks, task_activity were dropped by 013)"
 for fn in current_profile_role current_member_id current_company_ids can_manage_roles assign_wo_number handle_new_user; do
   [ "$(PSQL -At -c "select count(*) from pg_proc where proname='$fn' and pronamespace='public'::regnamespace")" = "1" ] || { say "missing function $fn"; exit 1; }
 done
 say "ok   helper functions present"
 
-say "== 5b. dev identities are created BEFORE 072 (see KNOWN DEFECT probe after 072) =="
-run "local_seed_auth_users" "$BS/local_seed_auth_users.sql"
-
 say "== 6. 072 multitenant foundation =="
 run "072_multitenant_foundation" "$SQL/072_multitenant_foundation.sql"
 
-say "== 7. KNOWN DEFECT probe: signup AFTER 072 =="
-# 029's handle_new_user inserts team_members without a tenant; 072 made tenant_id NOT NULL
-# and never redefined the trigger. Expected today: the auth insert FAILS. Recorded, not hidden.
-if PSQL -c "insert into auth.users (id,email) values ('a0000000-0000-0000-0000-0000000000ff','probe@quest.test')" > "$WORK/last.out" 2>&1; then
-  say "PROBE: post-072 signup SUCCEEDED (defect no longer present)"
-else
-  say "PROBE: post-072 signup FAILS as predicted: $(grep -m1 ERROR "$WORK/last.out" | cut -c1-140)"
-fi
+say "== 7. dev identities AFTER 072, through BOTH signup paths (handle_new_user, 072 TASK 8) =="
+run "local_seed_auth_users" "$BS/local_seed_auth_users.sql"
+PSQL -f "$BS/003_dev_signup_assertions.sql" > "$WORK/last.out" 2>&1 || fail "signup assertions"
+grep -q "signup assertions: ALL CHECKS PASSED" "$WORK/last.out" || fail "signup assertions (no pass marker)"
+say "ok   signup assertions: ALL CHECKS PASSED (tenant path, tenant-less path, forged user_metadata ignored, bad/unknown tenant rejected, cross-tenant slug collision, create_workspace roster entry)"
 
 say "== 7b. seed fixtures =="
 run "001_dev_seed" "$BS/001_dev_seed.sql"
