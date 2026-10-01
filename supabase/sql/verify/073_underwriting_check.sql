@@ -40,6 +40,19 @@ begin
   raise exception 'FAIL: expected an error but none was raised for: %', sql;
 end $$;
 
+create function pg_temp.project_error(pid text) returns text[] language plpgsql as $$
+declare state text; message text; detail text; hint text;
+begin
+  begin
+    insert into public.underwritings (company_id, project_id) values ((select c from _co), pid);
+  exception when others then
+    get stacked diagnostics state=returned_sqlstate, message=message_text,
+      detail=pg_exception_detail, hint=pg_exception_hint;
+    return array[state,message,detail,hint];
+  end;
+  raise exception 'FAIL: unavailable project accepted';
+end $$;
+
 ------------------------------------------------------------------------
 -- 1. Structure
 ------------------------------------------------------------------------
@@ -60,6 +73,14 @@ begin
       raise exception 'FAIL: % has no tenant stamp trigger', t;
     end if;
   end loop;
+end $$;
+
+-- Hardening present: project guard trigger, and the create RPC takes the advisory lock.
+do $$ begin
+  if not exists (select 1 from pg_trigger where tgrelid = 'public.underwritings'::regclass and tgname = 'underwritings_project_guard' and tgenabled = 'O') then
+    raise exception 'FAIL: underwritings_project_guard trigger missing/disabled'; end if;
+  if pg_get_functiondef('public.create_underwriting_for_task(text)'::regprocedure) not like '%pg_advisory_xact_lock%' then
+    raise exception 'FAIL: create_underwriting_for_task does not take the advisory lock'; end if;
 end $$;
 
 -- The history table is append-only for clients: SELECT only.
@@ -231,6 +252,69 @@ select pg_temp.expect_error($q$
     2500, 10, 9999, 6000, 1000, 35, 2750.00, 27.50, 16999.00, 26152.31, 'sneaky') $q$, 'locked');
 select pg_temp.expect_error($q$ select public.set_underwriting_status((select uw from _ctx), 'draft') $q$, 'cannot move');
 select pg_temp.expect_error($q$ update public.underwritings set approved_by = null, status = 'draft' where id = (select uw from _ctx) $q$);
+
+reset role;
+
+------------------------------------------------------------------------
+-- 6. Project guard: a foreign tenant's project cannot be referenced, and "foreign" is
+--    indistinguishable from "does not exist". Own-company projects still work.
+------------------------------------------------------------------------
+-- (as owner, with NO caller identity so the tenant stamp trigger does not clamp us) a second tenant
+-- with its own company and project
+select set_config('request.jwt.claims', '{}', true);
+insert into public.tenants (id, name) values ('99999999-9999-9999-9999-999999999999', 'Foreign verify tenant');
+insert into public.companies (id, label, pill, tenant_id) values ('zz_foreign_co', 'Foreign', 'pill-lumen', '99999999-9999-9999-9999-999999999999');
+insert into public.projects (id, company_id, name, tenant_id) values ('zz-foreign-proj', 'zz_foreign_co', 'Foreign project', '99999999-9999-9999-9999-999999999999');
+
+select pg_temp.act_as('<ADMIN_UUID>'::uuid);
+create temp table _co (c text) on commit drop;
+grant all on _co to authenticated;
+insert into _co select company_id from public.tasks where id = '<BID_TASK_ID>';
+
+-- Compare the complete public error contract, not just a shared substring.
+
+do $$
+declare foreign_error text[]; missing_error text[]; own_proj text;
+begin
+  foreign_error := pg_temp.project_error('zz-foreign-proj');
+  missing_error := pg_temp.project_error('zz-no-such-project');
+  if foreign_error is distinct from missing_error or
+     foreign_error[1] <> 'P0001' or foreign_error[2] <> 'project is not available for this company' then
+    raise exception 'FAIL: project existence oracle / unexpected rejection: % vs %', foreign_error, missing_error;
+  end if;
+  select project_id into own_proj from public.tasks where id = '<BID_TASK_ID>';
+  if own_proj is null then raise exception 'FAIL: verification requires a Bid with an own-company project'; end if;
+  insert into public.underwritings (company_id, project_id) values ((select c from _co), own_proj);
+  insert into public.underwritings (company_id, project_id) values ((select c from _co), null);
+end $$;
+
+-- Same tenant but a different company also fails; fixtures remain owner-only.
+reset role;
+select set_config('request.jwt.claims', '{}', true);
+insert into public.companies (id,label,pill,tenant_id)
+select 'zz_other_co','Other verify company','pill-lumen',tenant_id from public.profiles where id='<ADMIN_UUID>';
+insert into public.projects (id,company_id,name,tenant_id)
+select 'zz-other-proj','zz_other_co','Other company project',tenant_id from public.profiles where id='<ADMIN_UUID>';
+update public.profiles set company_ids=array_append(company_ids,'zz_other_co') where id='<ADMIN_UUID>';
+select pg_temp.act_as('<ADMIN_UUID>'::uuid);
+do $$ begin
+  if not exists(select 1 from public.projects where id='zz-other-proj') then
+    raise exception 'FAIL: other-company fixture must be visible to exercise company guard';
+  end if;
+  if pg_temp.project_error('zz-other-proj') is distinct from pg_temp.project_error('zz-no-such-project') then
+    raise exception 'FAIL: other-company project rejection differs';
+  end if;
+end $$;
+-- The existing update guard must continue to reject re-pointing to any non-null id.
+select pg_temp.expect_error($q$ update public.underwritings set project_id='zz-foreign-proj' where id=(select uw from _ctx) $q$, 'project cannot be changed');
+select pg_temp.expect_error($q$ update public.underwritings set project_id='zz-no-such-project' where id=(select uw from _ctx) $q$, 'project cannot be changed');
+
+-- existing behaviour unchanged: the RPC still carries the Bid task's project
+do $$ begin
+  if (select u.project_id from public.underwritings u join _ctx on u.id = _ctx.uw)
+     is distinct from (select project_id from public.tasks where id = '<BID_TASK_ID>') then
+    raise exception 'FAIL: RPC no longer carries the Bid task project'; end if;
+end $$;
 
 reset role;
 select 'ok' as _; -- keep psql output tidy

@@ -4,6 +4,7 @@
 -- Flow:  Project (job) -> Bid task -> Underwriting -> Estimate Breakdown -> Approval
 --
 -- ADDITIVE ONLY. Creates three tables, their triggers/policies, and three RPCs.
+-- (Hardened before first production use: advisory-lock concurrent create; project guard.)
 -- Does not alter any existing table, policy, function or migration, and does not
 -- touch task_type_statuses (the Bid pipeline) or the wo_counters numbering.
 --
@@ -254,6 +255,36 @@ create trigger underwritings_guard
   for each row execute function public.guard_underwriting_update();
 
 ------------------------------------------------------------------------
+-- 4b. underwritings project guard (BEFORE INSERT): the project must be visible to the
+--     caller and belong to the underwriting's company.
+--     A foreign-key check ignores RLS, so without this a caller using the REST API could
+--     insert project_id = ANOTHER tenant's project: accepted vs "violates foreign key"
+--     would reveal whether that id exists. This trigger runs as the caller (not definer),
+--     so the lookup below is itself subject to the tenant wall: a foreign project is
+--     invisible and rejected with the SAME message as a non-existent one.
+------------------------------------------------------------------------
+create or replace function public.guard_underwriting_project()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if new.project_id is not null and not exists (
+    select 1 from public.projects p where p.id = new.project_id
+      and p.company_id = new.company_id and p.tenant_id = new.tenant_id
+  ) then
+    raise exception 'project is not available for this company';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists underwritings_project_guard on public.underwritings;
+create trigger underwritings_project_guard
+  before insert on public.underwritings
+  for each row execute function public.guard_underwriting_project();
+
+------------------------------------------------------------------------
 -- 5. Estimate History writer (AFTER INSERT/UPDATE, SECURITY DEFINER)
 --    Fields tracked: roof area, waste, material, labor, other cost, margin, status.
 --    On the first real calculation the "old" value of an input is NULL (it was a
@@ -415,6 +446,12 @@ begin
   if t.type is distinct from 'bid' then
     raise exception 'underwriting can only be created for a Bid task';
   end if;
+
+  -- Concurrent callers for the SAME Bid task (double-click in two tabs, two people):
+  -- the second waits here until the first commits, then finds the link and returns the
+  -- same id, instead of failing on the link's primary key after an underwriting exists.
+  -- Transaction-scoped; released automatically on commit/rollback.
+  perform pg_advisory_xact_lock(hashtextextended('underwriting:' || p_task_id, 0));
 
   select underwriting_id into existing from public.task_underwriting_links where task_id = p_task_id;
   if existing is not null then
