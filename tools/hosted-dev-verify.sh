@@ -26,8 +26,9 @@ step() { # step <label> <file> <pass-marker|->
   echo "ok   $1"; }
 
 step "006 identity repair (idempotent)" "$BS/006_dev_identity_repair.sql" -
-BAD=$(PSQL -At -c "select count(*) from auth.users u left join public.profiles p on p.id=u.id left join public.team_members t on t.id=p.member_id where u.email in ('abraham@quest.test','sam@quest.test','wanda@quest.test','sally@quest.test','dana@quest.test') and (p.member_id is null or t.id is null or p.tenant_id is null)")
-[ "$BAD" = "0" ] || die "$BAD of 5 Lumen dev users still lack member_id/team_members/tenant after repair"
+# Count the LINKED users (not "the unlinked ones"), so a missing/renamed user can never pass vacuously.
+GOOD=$(PSQL -At -c "select count(*) from auth.users u join public.profiles p on p.id=u.id join public.team_members t on t.id=p.member_id and t.tenant_id=p.tenant_id where u.email in ('abraham@quest.test','sam@quest.test','wanda@quest.test','sally@quest.test','dana@quest.test')")
+[ "$GOOD" = "5" ] || die "only $GOOD of 5 Lumen dev users are linked (profile + member_id + team_members + tenant) after repair"
 echo "ok   five Lumen dev users have profile + member_id + team_members + tenant"
 step "001_dev_seed (persists)" "$(sub "$BS/001_dev_seed.sql")" -
 { echo "begin;"; sed -e "s/<USER_A_UUID>/$U_abraham/g" -e "s/<USER_B_UUID>/$U_bob/g" "$SQL/verify/072_isolation_check.sql"; echo "rollback;"; } > "$W/v072.sql"
