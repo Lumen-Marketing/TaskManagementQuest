@@ -3,16 +3,18 @@
 # Hosted Auth assigns its own UUIDs, so the fixed a0000000-…-00000000000N ids in the seed/verify
 # scripts are substituted (in temp copies) from auth.users by email. Verify scripts roll back;
 # only 001_dev_seed (tenant-0 project + 3 tasks) persists. Same ref guards as phase 1.
-set -u
+set -euo pipefail
 DEV_REF="ydrekmghdbpkothhmbut"; PROD_REF="qqvmcsvdxhgjooirznrj"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"; SQL="$REPO/supabase/sql"; BS="$SQL/bootstrap"
 die() { echo "ABORT: $*" >&2; exit 1; }
 case "${DEV_DB_URL:-}" in *"$PROD_REF"*) die "production ref";; *"$DEV_REF"*) ;; *) die "DEV_DB_URL must contain $DEV_REF";; esac
+QHQ_DB_URL="$DEV_DB_URL" python3 "$REPO/tools/assert-dev-db.py"
 PSQL() { psql "$DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 "$@"; }
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 id() { PSQL -At -c "select id from auth.users where email='$1@quest.test'"; }
 for n in abraham sam wanda sally bob dana; do
   v="$(id $n)"; [ -n "$v" ] || die "login $n@quest.test not found — run phase 2"
+  [[ "$v" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] || die "invalid DEV user id"
   eval "U_$n=\$v"        # plain variables: macOS ships bash 3.2 (no associative arrays)
 done
 SUBST=(-e "s/a0000000-0000-0000-0000-000000000001/$U_abraham/g" -e "s/a0000000-0000-0000-0000-000000000002/$U_sam/g"
@@ -20,7 +22,22 @@ SUBST=(-e "s/a0000000-0000-0000-0000-000000000001/$U_abraham/g" -e "s/a0000000-0
        -e "s/a0000000-0000-0000-0000-000000000005/$U_bob/g" -e "s/a0000000-0000-0000-0000-000000000006/$U_dana/g")
 sub() { sed "${SUBST[@]}" "$1" > "$W/$(basename "$1")"; echo "$W/$(basename "$1")"; }
 step() { # step <label> <file> <pass-marker|-> 
-  PSQL -f "$2" > "$W/out" 2>&1 || { echo "FAILED: $1"; tail -15 "$W/out"; exit 1; }
+  local test_file="$2"
+  if [ "${QHQ_VERIFY_ISOLATE_FEATURES:-0}" = 1 ] && [ "$3" != '-' ]; then
+    # Feature checks require empty estimates/counters. Delete only inside the
+    # test's existing BEGIN ... ROLLBACK; browser fixtures remain committed.
+    python3 - "$2" "$W/isolated.sql" <<'PYTEST'
+from pathlib import Path
+import sys,re
+s=Path(sys.argv[1]).read_text()
+assert len(re.findall(r'^begin;',s,re.M)) == 1
+assert re.search(r'^rollback;\s*$',s,re.M)
+s=s.replace('begin;', "begin;\nset local lock_timeout='5s';\nselect set_config('request.jwt.claims','{}',true);\ndelete from public.proposals;\ndelete from public.proposal_counters;\ndelete from public.underwritings;",1)
+Path(sys.argv[2]).write_text(s)
+PYTEST
+    test_file="$W/isolated.sql"
+  fi
+  PSQL -f "$test_file" > "$W/out" 2>&1 || { echo "FAILED: $1"; tail -15 "$W/out"; exit 1; }
   grep -qE "FAIL" "$W/out" && { echo "FAILED: $1"; tail -15 "$W/out"; exit 1; }
   [ "$3" = "-" ] || grep -q "$3" "$W/out" || { echo "FAILED: $1 (no pass marker)"; tail -15 "$W/out"; exit 1; }
   echo "ok   $1"; }

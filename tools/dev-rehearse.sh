@@ -5,18 +5,25 @@
 # per-step comments for every skip and insertion.
 #
 # usage: tools/dev-rehearse.sh [workdir]        (needs postgres/initdb/psql/node on PATH)
-set -u
+set -uo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 SQL="$REPO/supabase/sql"; BS="$SQL/bootstrap"
-WORK="${1:-${TMPDIR:-/tmp}/questhq-rehearsal}"
-SOCK="${PGSOCK:-/tmp/qhq-rehearsal-sock}"     # short path: unix sockets cap at ~100 bytes
+WORK="${1:-$(mktemp -d "${TMPDIR:-/tmp}/questhq-rehearsal.XXXXXX")}"
+SOCK="${PGSOCK:-$(mktemp -d /tmp/qhq-sock.XXXXXX)}"     # short path: unix sockets cap at ~100 bytes
 D="$WORK/pgdata"; LOG="$WORK/replay.log"
-rm -rf "$WORK" "$SOCK"; mkdir -p "$WORK" "$SOCK"
+# Never remove a caller-supplied directory or reuse another cluster's socket.
+for dir in "$WORK" "$SOCK"; do
+  if [ -L "$dir" ] || { [ -e "$dir" ] && { [ ! -d "$dir" ] || [ -n "$(ls -A "$dir")" ]; }; }; then
+    echo "ABORT: rehearsal requires new or empty work/socket directories"; exit 1
+  fi
+done
+mkdir -p "$WORK" "$SOCK"
 : > "$LOG"
 say()  { echo "$@" | tee -a "$LOG"; }
 fail() { say "FAILED at: $1"; say "--- last output ---"; tail -15 "$WORK/last.out" | tee -a "$LOG"; exit 1; }
 
-initdb -D "$D" -U postgres --auth=trust >/dev/null 2>&1 || { echo "initdb failed"; exit 1; }
+say "Rehearsal directory: $WORK"
+initdb -D "$D" -U postgres --auth=trust > "$WORK/initdb.log" 2>&1 || { echo "initdb failed"; tail -12 "$WORK/initdb.log"; exit 1; }
 pg_ctl -D "$D" -o "-c listen_addresses='' -c unix_socket_directories=$SOCK" -l "$WORK/pg.log" -w start >/dev/null 2>&1 \
   || { echo "pg start failed"; tail -5 "$WORK/pg.log"; exit 1; }
 trap 'pg_ctl -D "$D" -m immediate stop >/dev/null 2>&1; rm -rf "$SOCK"; echo "[teardown] local cluster stopped" | tee -a "$LOG"' EXIT
@@ -72,7 +79,20 @@ done
 say "ok   helper functions present"
 
 say "== 6. 072 multitenant foundation =="
+PSQL -c "create table public._pre072_policies as select policyname, cmd, permissive, roles, qual, with_check from pg_policies where schemaname='public' and tablename='tasks'" > "$WORK/last.out" 2>&1 || fail "policy snapshot"
+# Negative control: the previous, regressing 072 MUST fail this same parity check.
+git -C "$REPO" show 2e364e7:supabase/sql/072_multitenant_foundation.sql > "$WORK/old072.sql" || fail "old 072 control unavailable"
+run "old 072 negative-control setup" "$WORK/old072.sql"
+if PSQL -f "$SQL/verify/072_policy_parity_check.sql" > "$WORK/last.out" 2>&1; then
+  fail "parity accepted the old regressing 072"
+fi
+grep -q 'changed beyond the shared-bucket substitution' "$WORK/last.out" || fail "negative control failed for unexpected reason"
+say "ok   parity rejects old 072"
 run "072_multitenant_foundation" "$SQL/072_multitenant_foundation.sql"
+PSQL -f "$SQL/verify/072_policy_parity_check.sql" > "$WORK/last.out" 2>&1 || fail "072 policy parity"
+grep -q "072 policy parity: ALL CHECKS PASSED" "$WORK/last.out" || fail "072 policy parity (no pass marker)"
+PSQL -c "drop table public._pre072_policies" > /dev/null 2>&1
+say "ok   072 policy parity: tasks policies unchanged except the shared-bucket marker (041/043/044/046/051 preserved)"
 if [ "${WITH_TASK_LABEL_SOPS:-0}" = "1" ]; then
   [ "$(PSQL -At -c "select count(*) from pg_policies where tablename='task_label_sops' and policyname='tenant_isolation_task_label_sops' and permissive='RESTRICTIVE'")" = "1" ] \
     && [ "$(PSQL -At -c "select attnotnull from pg_attribute where attrelid='public.task_label_sops'::regclass and attname='tenant_id'")" = "t" ] \
@@ -100,6 +120,9 @@ cat "$WORK/v072.out" >> "$LOG"
 grep -vE "^\s*$|^-+$|^\([0-9]+ rows?\)$" "$WORK/v072.out" | sed 's#psql:[^ ]*: ##' | tee -a "$LOG"
 grep -qE "FAIL" "$WORK/v072.out" && { cp "$WORK/v072.out" "$WORK/last.out"; fail "072 verify reported FAIL"; }
 
+# Catalog snapshots let rollback rehearsal prove exact restoration (including ACLs).
+snapshot() { pg_dump -h "$SOCK" -U postgres -d quest --schema-only --schema=public | sed '/^\\restrict /d; /^\\unrestrict /d'; }
+snapshot > "$WORK/pre073.sql" || fail "pre073 snapshot"
 say "== 9. 073 underwriting =="
 run "073_underwriting" "$SQL/073_underwriting.sql"
 say "== 9b. 073 re-apply (idempotency) =="
@@ -110,6 +133,12 @@ sed -e 's/<ADMIN_UUID>/a0000000-0000-0000-0000-000000000001/g' -e 's/<SUPERVISOR
 PSQL -f "$WORK/v073.sql" > "$WORK/last.out" 2>&1 || fail "073 verify"
 grep -q "073 verify: ALL CHECKS PASSED" "$WORK/last.out" || fail "073 verify (no pass marker)"
 say "ok   073 verify: ALL CHECKS PASSED"
+
+say "== 10b. REAL concurrent create (two sessions, advisory lock) =="
+bash "$REPO/tools/concurrency-check.sh" "postgresql://postgres@/quest?host=$SOCK" a0000000-0000-0000-0000-000000000001 dev-bid-2 > "$WORK/last.out" 2>&1 || fail "concurrency check"
+grep -q "concurrency: ALL CHECKS PASSED" "$WORK/last.out" || fail "concurrency check (no pass marker)"
+say "ok   $(grep '^A=' "$WORK/last.out")"
+say "ok   concurrency: second caller waited, got the SAME underwriting, one link"
 
 say "== 11. role / tenant / project-delete extras =="
 PSQL -f "$BS/002_dev_underwriting_extras.sql" > "$WORK/last.out" 2>&1 || fail "073 extras"
@@ -122,6 +151,7 @@ grep -q "postgrest-shape: ALL CHECKS PASSED" "$WORK/last.out" || fail "postgrest
 say "ok   postgrest-shape: ALL CHECKS PASSED"
 
 say "== 11c. 074 proposals (apply, re-apply, verify) =="
+snapshot > "$WORK/pre074.sql" || fail "pre074 snapshot"
 run "074_proposals" "$SQL/074_proposals.sql"
 run "074_proposals (again)" "$SQL/074_proposals.sql"
 PSQL -f "$BS/005_dev_proposals_check.sql" > "$WORK/last.out" 2>&1 || fail "074 proposals check"
@@ -133,4 +163,7 @@ node "$REPO/tools/gen-underwriting-parity.mjs" > "$WORK/parity.sql" || fail "par
 PSQL -At -f "$WORK/parity.sql" > "$WORK/last.out" 2>&1 || fail "parity"
 grep -E "^parity:" "$WORK/last.out" | tee -a "$LOG"
 
+say "== 13. rollback refusal, down, catalog parity, and re-apply =="
+bash "$REPO/tools/rollback-check.sh" "postgresql://postgres@/quest?host=$SOCK" "$WORK" > "$WORK/last.out" 2>&1 || fail "rollback rehearsal"
+cat "$WORK/last.out" | tee -a "$LOG"
 say "ALL STAGES PASSED"
