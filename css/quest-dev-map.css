@@ -1,0 +1,234 @@
+/* ---------------------------------------------------------
+   QUEST OS — DEV MAP
+   Developer walkthrough + annotation layer
+   --------------------------------------------------------- */
+
+.quest-dev-map-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  min-height: 30px;
+  padding: 6px 10px;
+
+  border: 1px solid currentColor;
+  border-radius: 999px;
+
+  background: #f8f7f4;
+  color: #161616;
+
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+
+  cursor: pointer;
+  z-index: 9998;
+}
+
+.quest-dev-map-toggle[data-active="true"] {
+  background: #161616;
+  color: #f8f7f4;
+}
+
+.quest-dev-map-toggle__count {
+  display: inline-grid;
+  place-items: center;
+
+  min-width: 18px;
+  height: 18px;
+
+  border: 1px solid currentColor;
+  border-radius: 50%;
+
+  font-size: 9px;
+}
+
+.quest-dev-map-toggle__state {
+  opacity: 0.55;
+}
+
+.quest-dev-map-layer {
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+  z-index: 9995;
+}
+
+.quest-dev-sticker {
+  position: absolute;
+
+  pointer-events: auto;
+
+  padding: 5px 8px;
+
+  border: 1px solid #171717;
+  border-radius: 2px;
+
+  background: #fffdf7;
+  color: #171717;
+
+  box-shadow:
+    2px 2px 0 rgba(0, 0, 0, 0.12);
+
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+
+  cursor: pointer;
+}
+
+.quest-dev-sticker::before {
+  content: "";
+  display: inline-block;
+
+  width: 6px;
+  height: 6px;
+
+  margin-right: 5px;
+
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.quest-dev-sticker[data-status="LOCK"] {
+  border-style: double;
+}
+
+.quest-dev-sticker[data-status="BUILD"] {
+  transform: rotate(-1deg);
+}
+
+.quest-dev-sticker[data-status="WIRE"] {
+  border-style: dashed;
+}
+
+.quest-dev-sticker[data-status="CHECK"]::before {
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.quest-dev-sticker[data-status="DECIDE"]::before {
+  background: transparent;
+  border: 1px solid currentColor;
+}
+
+.quest-dev-note {
+  position: absolute;
+
+  width: min(320px, calc(100vw - 32px));
+
+  padding: 14px;
+
+  border: 1px solid #151515;
+  border-radius: 3px;
+
+  background: #f8f7f4;
+  color: #151515;
+
+  box-shadow:
+    5px 5px 0 rgba(0, 0, 0, 0.13);
+
+  font-family: inherit;
+
+  z-index: 9999;
+}
+
+.quest-dev-note__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 12px;
+
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.quest-dev-note__header button {
+  margin-left: auto;
+
+  border: 0;
+  background: transparent;
+
+  font-size: 18px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.quest-dev-note__author {
+  opacity: 0.5;
+}
+
+.quest-dev-note h3 {
+  margin: 0 0 8px;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.quest-dev-note p {
+  margin: 0 0 14px;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.quest-dev-note__section {
+  display: grid;
+  gap: 5px;
+
+  margin-top: 12px;
+
+  font-size: 10px;
+}
+
+.quest-dev-note__section strong {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.quest-dev-note code {
+  display: block;
+
+  padding: 5px 6px;
+
+  background: rgba(0, 0, 0, 0.05);
+
+  font-size: 10px;
+}
+
+.quest-dev-note ul {
+  margin: 3px 0 0;
+  padding-left: 18px;
+}
+
+.quest-dev-note li {
+  margin: 4px 0;
+  line-height: 1.35;
+}
+
+.quest-dev-map-target {
+  outline: 1px dashed rgba(20, 20, 20, 0.55);
+  outline-offset: 4px;
+}
+
+.quest-dev-tour-active {
+  position: relative;
+
+  outline: 2px solid #161616 !important;
+  outline-offset: 7px;
+
+  z-index: 3;
+}
+
+@media (max-width: 1023px) {
+  .quest-dev-map-toggle {
+    display: none;
+  }
+}
