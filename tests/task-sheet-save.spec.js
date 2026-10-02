@@ -5,7 +5,7 @@ import { test, expect, dismissOverlays } from './_fixtures.js';
 const MOBILE = { width: 390, height: 844 };
 
 const openSheet = async (page) => {
-  await page.locator('#bottomNav [data-nav="new"]').click();
+  await page.locator('#fab').click();
   await expect(page.locator('.task-sheet')).toBeVisible();
 };
 

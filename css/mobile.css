@@ -8,7 +8,7 @@
    Fixes the four complaints:
      1. Topbar — mismatched shapes/sizes → one search pill + a row
         of identical round controls.
-     2. Bottom nav — new Instagram-style tab bar (BottomNavView).
+     2. Quick add — storyboard's fixed bottom-right orange FAB.
      3. Pills — wrapping clutter → one horizontal scrolling strip.
      4. Widgets — stacked cards → true 2×2 bento; table → cards.
    ============================================================ */
@@ -168,57 +168,28 @@
   body.ui-command-center .topbar-right { gap: 8px; }
 
   /* ========================================================
-     2. BOTTOM NAV BAR (Instagram-style)
+     2. STORYBOARD QUICK ADD
+     The signed-off handoff uses one bottom-right orange FAB and no
+     persistent bottom navigation. This entire override is phone-only.
      ======================================================== */
   #bottomNav {
-    display: flex;
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
-    height: calc(var(--m-navh) + env(safe-area-inset-bottom, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: var(--bg-2);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.28);
-    align-items: stretch;
+    display: none;
   }
-  #bottomNav .bn-tab {
-    flex: 1 1 0; min-width: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 3px; padding: 6px 2px;
-    background: none; border: none; cursor: pointer;
-    color: var(--ink-3);
-    transition: color var(--dur-fast, .12s) var(--ease-out, ease);
+  #fab.fab:not(.hidden) {
+    display: inline-flex !important;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: var(--accent, #ED4E0D);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(237, 78, 13, 0.4);
   }
-  #bottomNav .bn-tab i { font-size: 22px; line-height: 1; }
-  #bottomNav .bn-tab .bn-label {
-    font-size: 10px; font-weight: 600; letter-spacing: .01em;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
-  }
-  #bottomNav .bn-tab.active { color: var(--accent, #ED4E0D); }
-  #bottomNav .bn-tab:active { transform: scale(.94); }
 
-  /* Center ⊕ — raised orange circle, the only mobile New-Task entry. */
-  #bottomNav .bn-tab.bn-center {
-    flex: 0 0 auto; justify-content: flex-start;
-  }
-  #bottomNav .bn-tab.bn-center i {
-    width: 52px; height: 52px; margin-top: -18px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 50%; font-size: 26px;
-    background: var(--accent, #ED4E0D); color: #fff;
-    box-shadow: 0 6px 16px rgba(237, 78, 13, 0.45);
-  }
-  #bottomNav .bn-tab.bn-center .bn-label { color: var(--ink-3); }
-  #bottomNav .bn-tab.bn-center:active i { transform: scale(.94); }
-
-  /* Give the scroll area room so the last row / group clears the bar, and
-     retire the floating FAB (the center ⊕ replaces it). */
+  /* Give the scroll area room so the final card clears the FAB. */
   body.ui-command-center .main,
   body.ui-command-center .list-pane {
-    padding-bottom: calc(var(--m-navh) + env(safe-area-inset-bottom, 0px) + 8px);
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
-  #fab { display: none !important; }
-  /* The bulk-action bar must clear the nav too. */
-  .bulk-bar:not(.hidden) { bottom: calc(var(--m-navh) + env(safe-area-inset-bottom, 0px)); }
+  .bulk-bar:not(.hidden) { bottom: env(safe-area-inset-bottom, 0px); }
 
   /* ========================================================
      3. PILLS — single horizontal scrolling strip
@@ -293,8 +264,8 @@
   }
   body.ui-command-center .head-card-actions .btn i { margin: 0; font-size: 17px; }
   body.ui-command-center .head-card-actions .btn-more { width: var(--m-ctl, 38px); }
-  /* New task is dropped here, not shrunk: the bottom nav's raised orange ⊕ is
-     already the mobile New-Task entry (BottomNavView `new` → openNewTaskPage(),
+  /* New task is dropped here, not shrunk: the fixed orange FAB is
+     already the mobile New-Task entry (`#fab` → openNewTaskPage(),
      behind the same App.can('tasks.write') gate), so this was a second button
      for the same action. Removing it is also what buys the row enough width to
      fit a 320px screen without shrinking the touch targets below 38px. */

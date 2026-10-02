@@ -279,73 +279,8 @@
         surface.addEventListener('pointercancel', finish);
       });
 
-      // iOS users naturally pull the sheet from a field row, not only from the
-      // four-pixel grabber. Safari otherwise interprets that hold-and-drag as a
-      // text selection. Touch events let us wait until the intent is clearly a
-      // downward pull before taking over, so ordinary taps and upward scrolling
-      // continue to work. Inputs, trays, and footer controls remain native.
-      const body = el.querySelector('.ts-body');
-      let touchStartY = 0;
-      let touchDeltaY = 0;
-      let touchDragging = false;
-      let touchIdentifier = null;
-
-      const touchPoint = (list) => Array.from(list).find(t => t.identifier === touchIdentifier);
-      const resetTouch = () => {
-        touchDragging = false;
-        touchIdentifier = null;
-        touchDeltaY = 0;
-        el.classList.remove('is-dragging');
-        el.style.transform = '';
-        el.style.transition = '';
-      };
-      const finishTouch = () => {
-        if (touchIdentifier == null) return;
-        if (touchDragging && touchDeltaY >= 72) {
-          touchIdentifier = null;
-          this.close();
-          return;
-        }
-        if (touchDragging) {
-          el.style.transition = 'transform 160ms ease-out';
-          el.style.transform = '';
-          el.classList.remove('is-dragging');
-          window.setTimeout(resetTouch, 170);
-        } else resetTouch();
-      };
-
-      el.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        // Header/grabber already use the pointer path above; excluding them
-        // prevents one physical gesture from being handled twice on iOS.
-        if (e.target.closest('input, textarea, select, .ts-tray, .ts-foot, .ts-close, .ts-head, .ts-grab')) return;
-        touchIdentifier = e.touches[0].identifier;
-        touchStartY = e.touches[0].clientY;
-        touchDeltaY = 0;
-        touchDragging = false;
-      }, { passive: true });
-
-      el.addEventListener('touchmove', (e) => {
-        if (touchIdentifier == null) return;
-        const touch = touchPoint(e.touches);
-        if (!touch) return;
-        const dy = touch.clientY - touchStartY;
-        // Let the body scroll normally until it is already at the top. Only a
-        // deliberate downward movement becomes a sheet drag.
-        if (!touchDragging) {
-          if (dy <= 8 || (body && body.scrollTop > 0)) return;
-          touchDragging = true;
-          el.style.transition = 'none';
-          el.classList.add('is-dragging');
-          try { window.getSelection().removeAllRanges(); } catch (_) { /* noop */ }
-        }
-        touchDeltaY = Math.max(0, dy);
-        el.style.transform = `translateY(${touchDeltaY}px)`;
-        e.preventDefault();
-      }, { passive: false });
-
-      el.addEventListener('touchend', finishTouch);
-      el.addEventListener('touchcancel', finishTouch);
+      // The signed-off mobile storyboard keeps field rows as fixed tap targets.
+      // Only the grabber/header moves the whole sheet; rows open their trays.
     }
 
     _openTray(field) {
