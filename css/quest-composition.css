@@ -1,0 +1,1559 @@
+/**
+ * QUEST OS — FILE STATUS
+ * File: css/quest-composition.css
+ * Role: Desktop shell composition authority
+ * Status: ACTIVE — SHELL CONTRACT
+ *
+ * Current:
+ * - Owns desktop 3-pane Quest OS geometry.
+ * - Owns lifecycle rail + center canvas + contextual sidecar.
+ * - Owns task-detail containment.
+ * - Keeps Relay anchored without changing Relay behavior.
+ * - Does not own application behavior.
+ *
+ * Next:
+ * - Lock Phase 1 + Phase 2.
+ * - Freeze structural shell geometry.
+ * - Continue page-level refinement inside the shell.
+ *
+ * Last reviewed: 2026-10-02
+ */
+
+@media (min-width: 1024px) {
+
+  /* ========================================================
+     TOKENS
+     ======================================================== */
+
+  :root {
+    --quest-engine-w: 220px;
+    --quest-sidecar-w: 340px;
+
+    --quest-bg: #f8f7f4;
+    --quest-sidebar: #fbfaf8;
+    --quest-surface: #ffffff;
+
+    --quest-line: #e2dfd7;
+
+    --quest-ink: #111111;
+    --quest-ink-2: #1c1c1c;
+    --quest-muted: #666666;
+
+    --quest-accent: #e64a19;
+  }
+
+
+  /* ========================================================
+     1. ROOT APP RESET
+     ======================================================== */
+
+  html,
+  body,
+  body > .app,
+  #mainPane {
+    height: 100%;
+    min-height: 0;
+
+    margin: 0;
+    padding: 0;
+  }
+
+  html,
+  body {
+    overflow: hidden;
+    background: var(--quest-bg);
+  }
+
+  body > .app {
+    display: block !important;
+    width: 100%;
+  }
+
+  body > .app > .topbar {
+    display: none !important;
+  }
+
+  #mainPane {
+    position: relative;
+
+    width: 100%;
+
+    overflow: hidden;
+  }
+
+
+  /* ========================================================
+     2. STRICT 3-PANE QUEST SHELL
+     ======================================================== */
+
+  #questFrame {
+    display: grid !important;
+
+    grid-template-columns:
+      var(--quest-engine-w)
+      minmax(500px, 1fr)
+      var(--quest-sidecar-w) !important;
+
+    grid-template-rows:
+      minmax(0, 1fr) !important;
+
+    width: 100vw !important;
+    height: 100vh !important;
+
+    min-width: 0;
+    min-height: 0;
+
+    overflow: hidden;
+
+    background: var(--quest-bg);
+  }
+
+
+  /* ========================================================
+     3. LEFT LIFECYCLE PLANE
+     Flat architectural index.
+     ======================================================== */
+
+  #questLeftZone {
+    grid-column: 1;
+    grid-row: 1;
+
+    position: relative;
+
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+
+    min-width: 0;
+    min-height: 0;
+
+    padding: 0 !important;
+
+    overflow: visible !important;
+
+    background:
+      #fbfaf8 !important;
+
+    border-right:
+      1px solid
+      var(--quest-line) !important;
+
+    box-shadow:
+      none !important;
+  }
+
+
+  /* future Quest mark / icon territory */
+  #questConsoleLifecycle {
+    width: 100% !important;
+
+    padding-top:
+      132px !important;
+  }
+
+
+  #questConsoleLifecycle::before {
+    content: "";
+
+    display: block;
+
+    width: 100%;
+    height: 44px;
+
+    margin-bottom:
+      24px;
+
+    pointer-events:
+      none;
+  }
+
+
+  /* ========================================================
+     4. LIFECYCLE STACK
+     ======================================================== */
+
+  #questConsoleLifecycle #primaryNav.primary-nav,
+  #questConsoleLifecycle #primaryNav {
+    display: flex !important;
+    flex-direction: column !important;
+
+    width: 100% !important;
+
+    gap:
+      12px !important;
+
+    margin:
+      0 !important;
+
+    padding:
+      0 !important;
+  }
+
+
+  #questConsoleLifecycle #primaryNav .pnav-item {
+    position: relative;
+
+    display: flex !important;
+    align-items: center !important;
+
+    width:
+      100% !important;
+
+    height:
+      52px !important;
+
+    min-height:
+      52px !important;
+
+    margin:
+      0 !important;
+
+    padding:
+      0
+      28px !important;
+
+    background:
+      transparent !important;
+
+    border:
+      0 !important;
+
+    border-radius:
+      0 !important;
+
+    box-shadow:
+      none !important;
+
+    color:
+      #77736f !important;
+
+    font-size:
+      14px !important;
+
+    font-weight:
+      520 !important;
+
+    letter-spacing:
+      -.01em !important;
+
+    transform:
+      none !important;
+  }
+
+
+  #questConsoleLifecycle #primaryNav .pnav-item:hover {
+    color:
+      var(--quest-ink) !important;
+
+    background:
+      rgba(255,255,255,.34) !important;
+  }
+
+
+  /* current lifecycle position */
+  #questConsoleLifecycle #primaryNav .pnav-item.active,
+  #questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+    z-index: 2;
+
+    width:
+      calc(100% + 1px) !important;
+
+    height:
+      64px !important;
+
+    min-height:
+      64px !important;
+
+    margin-right:
+      -1px !important;
+
+    padding-left:
+      30px !important;
+
+    background:
+      #ffffff !important;
+
+    color:
+      #111111 !important;
+
+    font-size:
+      15px !important;
+
+    font-weight:
+      760 !important;
+
+    border-top:
+      1px solid
+      var(--quest-line) !important;
+
+    border-bottom:
+      1px solid
+      var(--quest-line) !important;
+
+    border-left:
+      0 !important;
+
+    border-right:
+      1px solid
+      #ffffff !important;
+
+    border-radius:
+      4px 0 0 4px !important;
+
+    box-shadow:
+      none !important;
+
+    transform:
+      none !important;
+  }
+
+
+  #questConsoleLifecycle #primaryNav .pnav-item.active::before,
+  #questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::before {
+    content: "";
+
+    position: absolute;
+
+    left:
+      0 !important;
+
+    top:
+      10px !important;
+
+    bottom:
+      10px !important;
+
+    width:
+      3px !important;
+
+    background:
+      #e64a19 !important;
+
+    border-radius:
+      0 2px 2px 0 !important;
+
+    box-shadow:
+      none !important;
+  }
+
+
+  #questConsoleLifecycle #primaryNav .pnav-item.active::after,
+  #questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::after {
+    display:
+      none !important;
+  }
+
+  /* ========================================================
+     5. CENTER ACTIVE PHASE CANVAS
+     ======================================================== */
+
+  #questCoreZone {
+    grid-column: 2;
+    grid-row: 1;
+
+    position: relative;
+
+    min-width: 0;
+    min-height: 0;
+
+    padding:
+      72px
+      56px
+      120px !important;
+
+    overflow-x:
+      hidden !important;
+
+    overflow-y:
+      auto !important;
+
+    background:
+      #ffffff !important;
+
+    border:
+      0 !important;
+
+    box-shadow:
+      none !important;
+
+    scrollbar-width:
+      none !important;
+  }
+
+
+  #questCoreZone::-webkit-scrollbar {
+    display:
+      none !important;
+  }
+
+
+  #questCoreZone > .quest-frame-surface,
+  #questCoreZone > #homeWrap,
+  #questCoreZone > #projectsWrap,
+  #questCoreZone > #reportsWrap,
+  #questCoreZone > #listPane,
+  #questCoreZone > #taskDetailWrap,
+  #questCoreZone > #newTaskWrap {
+    width:
+      100% !important;
+
+    min-width:
+      0 !important;
+
+    margin-left:
+      0 !important;
+
+    margin-right:
+      auto !important;
+  }
+
+
+  body:not([data-quest-domain="tasks"])
+  #questCoreZone > .quest-frame-surface {
+    max-width:
+      820px;
+  }
+
+
+  body[data-quest-domain="tasks"]
+  #questCoreZone > #listPane,
+  body[data-quest-domain="tasks"]
+  #questCoreZone > #taskDetailWrap {
+    max-width:
+      none !important;
+  }
+
+
+  #questCoreZone h1,
+  #questCoreZone h2 {
+    color:
+      var(--quest-ink);
+
+    letter-spacing:
+      -.035em;
+  }
+
+
+  #questCoreZone p {
+    line-height:
+      1.55;
+  }
+
+  /* ========================================================
+     6. RIGHT CONTEXTUAL PLANE
+     ======================================================== */
+
+  #questRightZone {
+    grid-column: 3;
+    grid-row: 1;
+
+    position: relative !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    min-width: 0;
+    min-height: 0;
+
+    padding:
+      70px
+      24px
+      110px !important;
+
+    overflow-x:
+      hidden !important;
+
+    overflow-y:
+      auto !important;
+
+    background:
+      #f8f7f4 !important;
+
+    border-left:
+      1px solid
+      var(--quest-line) !important;
+
+    box-shadow:
+      none !important;
+
+    scrollbar-width:
+      none !important;
+  }
+
+
+  #questRightZone::-webkit-scrollbar {
+    display:
+      none !important;
+  }
+
+
+  /* ========================================================
+     7. RIGHT TOOL TABS
+     Dedicated top console bar.
+     ======================================================== */
+
+  #questRightZone .quest-sidecar-tabs {
+    position:
+      absolute !important;
+
+    top:
+      0 !important;
+
+    right:
+      16px !important;
+
+    left:
+      -72px !important;
+
+    z-index:
+      30 !important;
+
+    display:
+      flex !important;
+
+    align-items:
+      stretch !important;
+
+    justify-content:
+      flex-end !important;
+
+    gap:
+      0 !important;
+
+    height:
+      54px !important;
+
+    margin:
+      0 !important;
+
+    padding:
+      0 !important;
+
+    background:
+      transparent !important;
+
+    border-bottom:
+      1px solid
+      var(--quest-line) !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab {
+    position: relative;
+
+    display:
+      flex !important;
+
+    align-items:
+      center !important;
+
+    justify-content:
+      center !important;
+
+    min-width:
+      76px !important;
+
+    height:
+      54px !important;
+
+    padding:
+      0
+      14px !important;
+
+    background:
+      #f1efea !important;
+
+    border:
+      0 !important;
+
+    border-right:
+      1px solid
+      var(--quest-line) !important;
+
+    border-radius:
+      0 !important;
+
+    box-shadow:
+      none !important;
+
+    color:
+      #66615c !important;
+
+    font-size:
+      11px !important;
+
+    font-weight:
+      600 !important;
+
+    white-space:
+      nowrap !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab:first-child {
+    border-left:
+      1px solid
+      var(--quest-line) !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab:hover {
+    color:
+      #111111 !important;
+
+    background:
+      #f6f4f1 !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab.is-active {
+    background:
+      #ffffff !important;
+
+    color:
+      #111111 !important;
+
+    font-weight:
+      750 !important;
+
+    border-top:
+      1px solid
+      var(--quest-line) !important;
+
+    border-bottom:
+      1px solid
+      #ffffff !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab.is-active::before {
+    content: "";
+
+    position: absolute;
+
+    left:
+      18px;
+
+    right:
+      18px;
+
+    top:
+      0;
+
+    height:
+      3px;
+
+    background:
+      #e64a19;
+
+    box-shadow:
+      none;
+  }
+
+
+  #questRightZone .quest-sidecar-tab-new {
+    min-width:
+      94px !important;
+
+    background:
+      #e64a19 !important;
+
+    color:
+      #ffffff !important;
+
+    border-color:
+      #e64a19 !important;
+
+    font-weight:
+      700 !important;
+  }
+
+
+  /* sidecar body starts below the console tabs */
+  #questRightZone .quest-sidecar-content {
+    position:
+      relative !important;
+
+    margin-top:
+      4px !important;
+
+    padding-top:
+      0 !important;
+  }
+
+  /* ========================================================
+     8. INTELLIGENCE TYPOGRAPHY
+     ======================================================== */
+
+  #questRightZone .quest-intelligence-kicker,
+  #questRightZone .quest-intelligence-phase {
+    font-family:
+      "IBM Plex Mono",
+      ui-monospace,
+      monospace;
+
+    font-size: 9px;
+    font-weight: 650;
+
+    letter-spacing: .08em;
+
+    text-transform: uppercase;
+  }
+
+
+  #questRightZone .quest-intelligence-head h2 {
+    margin:
+      16px
+      0
+      26px;
+
+    font-size: 20px;
+    line-height: 1.15;
+
+    font-weight: 700;
+
+    letter-spacing: -.025em;
+  }
+
+
+  /* ========================================================
+     9. TOTAL — EDITORIAL RHYTHM
+     ======================================================== */
+
+  body[data-quest-domain="transform"]
+  #questTransformPanel {
+    max-width: 780px !important;
+
+    margin: 0 !important;
+
+    padding:
+      0
+      0
+      140px !important;
+  }
+
+
+  body[data-quest-domain="transform"]
+  .quest-transform-head {
+    margin-bottom:
+      32px !important;
+  }
+
+
+  body[data-quest-domain="transform"]
+  .quest-proof-card,
+
+  body[data-quest-domain="transform"]
+  .quest-proof-evidence,
+
+  body[data-quest-domain="transform"]
+  .quest-proof-impact {
+    margin-top:
+      30px !important;
+  }
+
+
+  /* ========================================================
+     10. TASK DETAIL — EXECUTE DETAIL SURFACE
+     ======================================================== */
+
+  #questCoreZone > #taskDetailWrap {
+    width: 100% !important;
+    max-width: none !important;
+
+    margin: 0 !important;
+
+    padding:
+      0
+      0
+      140px !important;
+
+    background:
+      transparent !important;
+
+    border: 0 !important;
+
+    box-shadow:
+      none !important;
+  }
+
+
+  #questCoreZone > #taskDetailWrap .detail,
+
+  #questCoreZone > #taskDetailWrap .detail:not(.hidden) {
+    position:
+      static !important;
+
+    width:
+      100% !important;
+
+    max-width:
+      none !important;
+
+    margin:
+      0 !important;
+
+    background:
+      transparent !important;
+
+    border:
+      0 !important;
+
+    box-shadow:
+      none !important;
+  }
+
+
+  #questCoreZone > #taskDetailWrap .detail-head {
+    margin-bottom:
+      28px !important;
+
+    padding-bottom:
+      18px !important;
+
+    border-bottom:
+      1px solid
+      var(--quest-line) !important;
+  }
+
+
+  /* ========================================================
+     11. RELAY
+     Keep controller behavior intact for this baseline.
+     ======================================================== */
+
+  #relayDock {
+    position:
+      fixed !important;
+
+    left:
+      50% !important;
+
+    bottom:
+      12px !important;
+
+    transform:
+      translateX(-50%) !important;
+
+    z-index:
+      100 !important;
+  }
+
+
+  /* reserve content space under Relay */
+
+  #questCoreZone,
+  #questRightZone {
+    padding-bottom:
+      120px !important;
+  }
+
+
+  /* ========================================================
+     12. EXECUTE SIGNAL
+     ======================================================== */
+
+  body:not([data-quest-domain="tasks"])
+  #questSignalZone {
+    display:
+      none !important;
+  }
+
+  body[data-quest-domain="tasks"]
+  #questSignalZone {
+    display:
+      block;
+  }
+
+}
+
+/* ==========================================================
+   QUEST OS — EMERGENCY STABLE SHELL
+   Purpose: stop rail blowout and keep the app usable for handoff.
+   ========================================================== */
+
+@media (min-width: 1024px) {
+
+  /* ---------- frame ---------- */
+
+  #questFrame {
+    grid-template-columns:
+      180px
+      minmax(0, 1fr)
+      320px !important;
+  }
+
+
+  /* ---------- left rail ---------- */
+
+  #questLeftZone {
+    position: relative !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    padding: 96px 0 24px !important;
+
+    background: #fbfaf8 !important;
+
+    overflow: hidden !important;
+  }
+
+
+  #questConsoleLifecycle {
+    width: 100% !important;
+
+    padding: 0 !important;
+
+    margin: 0 !important;
+  }
+
+
+  #questConsoleLifecycle::before {
+    display: none !important;
+  }
+
+
+  #questConsoleLifecycle #primaryNav {
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 4px !important;
+
+    width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+
+  /* normal lifecycle items */
+
+  #questConsoleLifecycle #primaryNav .pnav-item {
+    position: relative !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    width: 100% !important;
+
+    height: 52px !important;
+    min-height: 52px !important;
+    max-height: 52px !important;
+
+    margin: 0 !important;
+
+    padding: 0 22px !important;
+
+    background: transparent !important;
+
+    border: 0 !important;
+    border-radius: 0 !important;
+
+    box-shadow: none !important;
+
+    color: #77736f !important;
+
+    font-size: 14px !important;
+    font-weight: 600 !important;
+
+    line-height: 1 !important;
+
+    transform: none !important;
+
+    flex: 0 0 52px !important;
+  }
+
+
+  /* active item */
+
+  #questConsoleLifecycle #primaryNav .pnav-item.active,
+  #questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+    width: 100% !important;
+
+    height: 58px !important;
+    min-height: 58px !important;
+    max-height: 58px !important;
+
+    margin: 0 !important;
+
+    padding-left: 26px !important;
+
+    background: #ffffff !important;
+
+    color: #111111 !important;
+
+    font-weight: 800 !important;
+
+    border-top: 1px solid #e2dfd7 !important;
+    border-bottom: 1px solid #e2dfd7 !important;
+    border-right: 0 !important;
+    border-left: 0 !important;
+
+    border-radius: 0 !important;
+
+    box-shadow: none !important;
+
+    flex: 0 0 58px !important;
+  }
+
+
+  #questConsoleLifecycle #primaryNav .pnav-item.active::before,
+  #questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::before {
+    content: "" !important;
+
+    position: absolute !important;
+
+    left: 0 !important;
+    top: 10px !important;
+    bottom: 10px !important;
+
+    width: 3px !important;
+
+    background: #e64a19 !important;
+
+    border-radius: 0 2px 2px 0 !important;
+  }
+
+
+  #questConsoleLifecycle #primaryNav .pnav-item.active::after,
+  #questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::after {
+    display: none !important;
+  }
+
+
+  /* ---------- center ---------- */
+
+  #questCoreZone {
+    padding:
+      56px
+      42px
+      110px !important;
+
+    overflow-y: auto !important;
+
+    background: #ffffff !important;
+  }
+
+
+  /* ---------- right ---------- */
+
+  #questRightZone {
+    padding:
+      58px
+      20px
+      100px !important;
+
+    background: #ffffff !important;
+
+    overflow-y: auto !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tabs {
+    position: absolute !important;
+
+    top: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+
+    height: 48px !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+      64px
+      64px
+      1fr
+      1fr !important;
+
+    gap: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border-bottom: 1px solid #e2dfd7 !important;
+
+    background: #ffffff !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab {
+    height: 48px !important;
+
+    border-radius: 0 !important;
+
+    background: #f4f2ee !important;
+
+    box-shadow: none !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab.is-active {
+    background: #ffffff !important;
+
+    color: #111111 !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab-new {
+    background: #e64a19 !important;
+
+    color: #ffffff !important;
+  }
+
+
+  /* ---------- Relay ---------- */
+
+  #relayDock {
+    bottom: 10px !important;
+
+    transform:
+      translateX(-50%) scale(.9) !important;
+
+    transform-origin:
+      bottom center !important;
+  }
+
+}
+
+/* QUEST OS — SIDECAR WIDTH TUNE */
+
+@media (min-width: 1024px) {
+
+  #questFrame {
+    grid-template-columns:
+      180px
+      minmax(0, 1fr)
+      380px !important;
+  }
+
+  #questRightZone {
+    padding-left: 28px !important;
+    padding-right: 28px !important;
+  }
+
+  #questRightZone .quest-sidecar-tabs {
+    grid-template-columns:
+      72px
+      72px
+      minmax(110px, 1fr)
+      minmax(118px, 1fr) !important;
+  }
+
+  #questRightZone .quest-sidecar-content,
+  #questRightZone .quest-intelligence-head,
+  #questRightZone .quest-intelligence-section {
+    max-width: 100% !important;
+  }
+
+}
+
+
+/* ==========================================================
+   QUEST OS — BOTTOM LEFT OPERATING TOOLS
+   Underwriting + Proposal skeleton tabs
+   ========================================================== */
+
+@media (min-width: 1024px) {
+
+  #questLeftZone .quest-console-engine {
+    display: flex !important;
+    flex-direction: column !important;
+
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+
+  .quest-console-tools {
+    margin-top: auto !important;
+
+    padding:
+      18px
+      0
+      22px !important;
+
+    border-top:
+      1px solid
+      rgba(28,28,28,.06) !important;
+  }
+
+
+  .quest-console-tools-label {
+    padding:
+      0
+      22px
+      10px !important;
+
+    font-family:
+      "IBM Plex Mono",
+      ui-monospace,
+      monospace !important;
+
+    font-size:
+      8px !important;
+
+    font-weight:
+      700 !important;
+
+    letter-spacing:
+      .12em !important;
+
+    color:
+      rgba(28,28,28,.38) !important;
+  }
+
+
+  .quest-tool-tab {
+    display: flex !important;
+    align-items: center !important;
+
+    gap:
+      9px !important;
+
+    width:
+      100% !important;
+
+    height:
+      44px !important;
+
+    padding:
+      0
+      20px !important;
+
+    margin:
+      0 !important;
+
+    border:
+      0 !important;
+
+    border-left:
+      3px solid
+      transparent !important;
+
+    background:
+      transparent !important;
+
+    color:
+      #57534f !important;
+
+    font-family:
+      inherit !important;
+
+    font-size:
+      12px !important;
+
+    font-weight:
+      650 !important;
+
+    text-align:
+      left !important;
+
+    cursor:
+      default !important;
+
+    box-shadow:
+      none !important;
+
+    border-radius:
+      0 !important;
+  }
+
+
+  .quest-tool-tab:hover {
+    background:
+      rgba(255,255,255,.48) !important;
+
+    color:
+      #111111 !important;
+
+    border-left-color:
+      rgba(230,74,25,.35) !important;
+  }
+
+
+  .quest-tool-icon {
+    display:
+      inline-flex !important;
+
+    align-items:
+      center !important;
+
+    justify-content:
+      center !important;
+
+    width:
+      18px !important;
+
+    color:
+      #e64a19 !important;
+
+    font-size:
+      13px !important;
+  }
+
+}
+
+
+/* ==========================================================
+   QUEST OS — TOP RIGHT TABS / STABLE ATTACHED STATE
+   ========================================================== */
+
+@media (min-width: 1024px) {
+
+  /* give intelligence body a clean landing zone */
+  #questRightZone {
+    position: relative !important;
+
+    padding:
+      76px
+      24px
+      100px !important;
+  }
+
+
+  /* tabs stay INSIDE the contextual plane */
+  #questRightZone .quest-sidecar-tabs {
+    position: absolute !important;
+
+    top: 14px !important;
+    left: 18px !important;
+    right: 18px !important;
+
+    width: auto !important;
+    height: 44px !important;
+
+    z-index: 30 !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+      .8fr
+      .8fr
+      1.15fr
+      1.15fr !important;
+
+    align-items: stretch !important;
+
+    gap: 6px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+
+    border: 0 !important;
+  }
+
+
+  /* quiet page-native tabs */
+  #questRightZone .quest-sidecar-tab {
+    min-width: 0 !important;
+
+    height: 44px !important;
+    min-height: 44px !important;
+
+    padding: 0 10px !important;
+
+    background: transparent !important;
+
+    color: rgba(28,28,28,.52) !important;
+
+    border:
+      1px solid
+      rgba(28,28,28,.07) !important;
+
+    border-radius:
+      8px !important;
+
+    box-shadow: none !important;
+
+    font-size: 10px !important;
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+  }
+
+
+  /* selected tool */
+  #questRightZone .quest-sidecar-tab.is-active {
+    background: #ffffff !important;
+
+    color: #111111 !important;
+
+    font-weight: 750 !important;
+
+    border-color:
+      rgba(28,28,28,.11) !important;
+
+    box-shadow:
+      0 5px 14px rgba(28,28,28,.035) !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab.is-active::before {
+    content: "" !important;
+
+    position: absolute !important;
+
+    top: -1px !important;
+    left: 18px !important;
+    right: 18px !important;
+
+    height: 3px !important;
+
+    background: #e64a19 !important;
+
+    border-radius:
+      0 0 3px 3px !important;
+  }
+
+
+  /* New Task belongs to same object family */
+  #questRightZone .quest-sidecar-tab-new {
+    background: #ffffff !important;
+
+    color: #e64a19 !important;
+
+    border-color:
+      rgba(230,74,25,.22) !important;
+
+    font-weight: 750 !important;
+
+    box-shadow: none !important;
+  }
+
+
+  #questRightZone .quest-sidecar-tab-new:hover {
+    background:
+      rgba(230,74,25,.035) !important;
+  }
+
+
+  /* intelligence begins clearly beneath tabs */
+  #questRightZone .quest-sidecar-content {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+}
+
+
+/* QUEST OS — SIDECAR BODY FLOW FIX */
+
+@media (min-width: 1024px) {
+
+  #questRightZone {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* fixed tool row area */
+  #questRightZone .quest-sidecar-tabs {
+    flex: 0 0 44px !important;
+  }
+
+  /* actual populated content gets its own clear section */
+  #questRightZone .quest-sidecar-content {
+    position: relative !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    flex: 1 1 auto !important;
+
+    min-height: 0 !important;
+
+    margin-top: 22px !important;
+
+    padding-top: 18px !important;
+
+    border-top:
+      1px solid
+      rgba(28,28,28,.045) !important;
+  }
+
+  /* keep intelligence heading from colliding with tabs */
+  #questRightZone .quest-intelligence-head {
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 10px !important;
+
+    margin: 0 0 20px !important;
+
+    padding: 0 !important;
+  }
+
+  #questRightZone .quest-intelligence-kicker {
+    margin: 0 !important;
+  }
+
+  #questRightZone .quest-intelligence-head h2 {
+    margin: 0 !important;
+  }
+
+  /* sections flow consistently */
+  #questRightZone .quest-intelligence-section {
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 12px !important;
+
+    margin-top: 22px !important;
+  }
+
+}
+
+
+/* QUEST OS — SIDECAR BODY +20% CLEARANCE */
+
+@media (min-width: 1024px) {
+
+  #questRightZone .quest-sidecar-content {
+    margin-top: 28px !important;
+    padding-top: 22px !important;
+  }
+
+  #questRightZone .quest-intelligence-head {
+    gap: 12px !important;
+    margin-bottom: 24px !important;
+  }
+
+}
+
+
+/* QUEST OS — SIDECAR BODY +30% CLEARANCE */
+
+@media (min-width: 1024px) {
+
+  #questRightZone .quest-sidecar-content {
+    margin-top: 36px !important;
+    padding-top: 28px !important;
+  }
+
+  #questRightZone .quest-intelligence-head {
+    gap: 14px !important;
+    margin-bottom: 28px !important;
+  }
+
+}
+
+
+/* QUEST OS — SIDECAR BODY +30% CLEARANCE */
+
+@media (min-width: 1024px) {
+
+  #questRightZone .quest-sidecar-content {
+    margin-top: 36px !important;
+    padding-top: 28px !important;
+  }
+
+  #questRightZone .quest-intelligence-head {
+    gap: 14px !important;
+    margin-bottom: 28px !important;
+  }
+
+}
