@@ -52,7 +52,7 @@ export const DEV_MAP_ANNOTATIONS = [
   },
   {
     id: "relay",
-    target: "#questRelay, [data-quest-relay]",
+    target: "#relayDock, [data-relay-dock]",
     status: "LOCK",
     title: "Relay",
     author: "Alexia",

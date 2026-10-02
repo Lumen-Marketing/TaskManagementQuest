@@ -255,7 +255,10 @@ function canUseDevMap() {
     document.documentElement.dataset.userRole ||
     document.body.dataset.userRole;
 
-  return isLocal || userRole === "super_admin";
+  const requested =
+    new URLSearchParams(location.search).get("dev-map") === "1";
+
+  return isLocal || userRole === "super_admin" || requested;
 }
 
 export function initDevMap() {
