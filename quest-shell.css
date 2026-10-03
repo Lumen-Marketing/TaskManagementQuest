@@ -1,0 +1,2009 @@
+/**
+ * QUEST OS — FILE STATUS
+ * File: quest-shell.css
+ * Role: Quest OS structural shell
+ * Status: ACTIVE — REBUILDING
+ *
+ * Current:
+ * - Owns the 3-pane frame, lifecycle rail, sidecar, and shell-level presentation.
+ *
+ * Next:
+ * - Freeze shell geometry; only keep narrowly scoped Execute integration here.
+ *
+ * Last reviewed: 2026-10-02
+ */
+
+/* ==========================================================
+   QUEST OS — PRODUCTION AUTHORITATIVE SHELL LAYOUT
+   ========================================================== */
+
+:root {
+  --quest-engine-w: 148px;
+  --quest-sidecar-w: 360px;
+  --quest-bg: #f6f4f1;
+  --quest-surface: #ffffff;
+  --quest-line: rgba(30, 26, 22, 0.12);
+  --quest-amber: #ed4e0d;
+  --quest-ink: #1f1d1a;
+  --quest-ink-muted: #777571;
+}
+
+/* Base surface reset */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--quest-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+#questFrame, #questFrame * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Hide legacy topbar headers & floating action overlays */
+.topbar,
+header.topbar,
+#questConsoleBrand,
+#questGlobalActions,
+#questRightToolRail,
+.topbar-left,
+.topbar-right,
+.topbar .tb-logo {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ---------- 1. Authoritative 3-Pane Frame ---------- */
+body #questFrame.quest-frame {
+  display: grid !important;
+  grid-template-columns: var(--quest-engine-w) minmax(0, 1fr) var(--quest-sidecar-w) !important;
+  height: 100vh !important;
+  width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ---------- 2. Left Lifecycle Rail ---------- */
+body #questLeftZone.quest-frame-left {
+  grid-column: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 16px 0 80px 0 !important;
+  border-right: 1px solid var(--quest-line) !important;
+  background: color-mix(in srgb, var(--quest-bg) 96%, #000 4%) !important;
+}
+
+.quest-engine-label,
+.quest-console-scope,
+#questTaskScopeSlot,
+.qf-task-path {
+  display: none !important;
+}
+
+#questConsoleLifecycle #primaryNav.primary-nav {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 4px !important;
+  padding-left: 10px !important;
+  position: static !important;
+  transform: none !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 46px !important;
+  padding: 0 16px !important;
+  border-radius: 10px 0 0 10px !important;
+  color: var(--quest-ink-muted) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+  writing-mode: horizontal-tb !important;
+  transform: none !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item.active,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+  z-index: 10 !important;
+  margin-right: -1px !important;
+  background: var(--quest-surface) !important;
+  color: var(--quest-ink) !important;
+  font-weight: 800 !important;
+  border: 1px solid var(--quest-line) !important;
+  border-right: 1px solid var(--quest-surface) !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item.active::before,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 8px !important;
+  bottom: 8px !important;
+  width: 3px !important;
+  background: var(--quest-amber) !important;
+  border-radius: 0 3px 3px 0 !important;
+}
+
+/* ---------- 3. Center Active-Phase Canvas ---------- */
+body #questCoreZone.quest-frame-core {
+  grid-column: 2 !important;
+  padding: 28px 36px 100px 36px !important;
+  overflow-y: auto !important;
+  background: var(--quest-surface) !important;
+}
+
+/* Page Header Standard Specification */
+.phase-page-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  margin-bottom: 28px !important;
+  padding-bottom: 16px !important;
+  border-bottom: 1px solid var(--quest-line) !important;
+}
+
+.phase-header-titles .phase-meta-tag {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--quest-amber) !important;
+  margin-bottom: 4px !important;
+}
+
+.phase-header-titles h1 {
+  font-size: 22px !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--quest-ink) !important;
+  margin-bottom: 4px !important;
+}
+
+.phase-header-titles p {
+  font-size: 12px !important;
+  color: var(--quest-ink-muted) !important;
+}
+
+.phase-header-controls {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+/* ---------- 4. Execute Phase Table & Compact Card Breakpoints ---------- */
+.execute-table-wrap {
+  width: 100% !important;
+  border: 1px solid var(--quest-line) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: var(--quest-surface) !important;
+}
+
+.execute-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  text-align: left !alignment;
+  font-size: 13px !important;
+}
+
+.execute-table th {
+  padding: 12px 16px !important;
+  background: color-mix(in srgb, var(--quest-bg) 75%, #000 25%) !important;
+  border-bottom: 1px solid var(--quest-line) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: var(--quest-ink-muted) !important;
+}
+
+.execute-table td {
+  padding: 14px 16px !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--quest-line) 40%, transparent) !important;
+}
+
+/* Container query / Breakpoint threshold for Execute Cards */
+@container (max-width: 720px) or (max-width: 900px) {
+  .execute-table, .execute-table thead, .execute-table tbody, .execute-table tr, .execute-table td {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .execute-table thead { display: none !important; }
+
+  .execute-table tr {
+    padding: 14px 16px !important;
+    border-bottom: 1px solid var(--quest-line) !important;
+  }
+
+  .execute-table td {
+    padding: 2px 0 !important;
+    border: 0 !important;
+  }
+
+  .execute-table td.cell-task-title {
+    font-size: 14px !important;
+    font-weight: 750 !important;
+    margin-bottom: 6px !important;
+  }
+
+  .execute-table td.cell-task-meta {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    font-size: 11px !important;
+    color: var(--quest-ink-muted) !important;
+  }
+}
+
+/* ---------- 5. Right Contextual Sidecar ---------- */
+body #questRightZone.quest-frame-right {
+  grid-column: 3 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 16px 100px 16px !important;
+  border-left: 1px solid var(--quest-line) !important;
+  background: var(--quest-surface) !important;
+  overflow-y: auto !important;
+}
+
+.quest-sidecar-tabs {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: 56px 56px minmax(70px, 1fr) minmax(80px, 1fr) !important;
+  margin-top: 0 !important;
+  margin-bottom: 20px !important;
+  border-bottom: 1px solid var(--quest-line) !important;
+}
+
+.quest-sidecar-tab {
+  height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 10px !important;
+  font-weight: 650 !important;
+  border: 1px solid var(--quest-line) !important;
+  border-bottom: 0 !important;
+  border-right: 0 !important;
+  background: color-mix(in srgb, var(--quest-bg) 80%, #000 20%) !important;
+  color: var(--quest-ink-muted) !important;
+  cursor: pointer !important;
+}
+
+.quest-sidecar-tab:first-child { border-radius: 8px 0 0 0 !important; }
+.quest-sidecar-tab:last-child {
+  border-right: 1px solid var(--quest-line) !important;
+  border-radius: 0 8px 0 0 !important;
+}
+
+.quest-sidecar-tab.is-active {
+  position: relative !important;
+  background: var(--quest-surface) !important;
+  color: var(--quest-ink) !important;
+  border-bottom: 1px solid var(--quest-surface) !important;
+  margin-bottom: -1px !important;
+  font-weight: 800 !important;
+}
+
+.quest-sidecar-tab.is-active::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 6px !important;
+  right: 6px !important;
+  top: -1px !important;
+  height: 3px !important;
+  background: var(--quest-amber) !important;
+  border-radius: 0 0 999px 999px !important;
+}
+
+.quest-sidecar-tab-new {
+  background: var(--quest-amber) !important;
+  color: #fff !important;
+  border-color: var(--quest-amber) !important;
+}
+
+/* ---------- 6. Bottom Integrated Operator Instrument ---------- */
+[data-relay-root], #relayDock {
+  position: fixed !important;
+  bottom: 14px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 9999 !important;
+}
+
+.relay-v2-collapsed, #relayDock .relay-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  padding: 4px 8px !important;
+  border: 1px solid var(--quest-line) !important;
+  border-radius: 999px !important;
+  background: var(--quest-surface) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+#relayUserChip, .relay-operator-chip {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 2px 12px 2px 4px !important;
+  border-right: 1px solid var(--quest-line) !important;
+  margin-right: 10px !important;
+}
+
+.relay-avatar {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 50% !important;
+  background: var(--quest-amber) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+
+/* QUEST SURGICAL RESTORE — 2026-10-02
+   Preserve recovered spatial shell; refine only lifecycle + operator instrument.
+   -------------------------------------------------------------------------- */
+
+/* lifecycle plane */
+#questLeftZone {
+  overflow: visible;
+}
+
+/*
+ * Recover the connected sheet / folder-tab relationship.
+ * Inactive phases stay quiet; active phase physically joins the canvas.
+ */
+#questLeftZone #primaryNav {
+  overflow: visible;
+}
+
+#questLeftZone #primaryNav .pnav-item {
+  position: relative;
+  width: calc(100% - 14px);
+  min-height: 46px;
+  margin: 0;
+  padding-left: 16px;
+  padding-right: 12px;
+
+  background: transparent;
+  border: 1px solid transparent;
+  border-right: 0;
+  border-radius: 0;
+
+  box-shadow: none;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    width 140ms ease,
+    transform 140ms ease;
+}
+
+#questLeftZone #primaryNav .pnav-item::after {
+  content: "";
+  position: absolute;
+
+  top: -1px;
+  right: -12px;
+
+  width: 12px;
+  height: calc(100% + 2px);
+
+  background: transparent;
+
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+
+  pointer-events: none;
+}
+
+#questLeftZone #primaryNav .pnav-item:hover {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+#questLeftZone #primaryNav .pnav-item.active {
+  width: calc(100% - 2px);
+
+  background: var(--quest-surface, #fbfaf8);
+  border-color: var(--quest-line, rgba(28, 27, 25, 0.12));
+
+  color: var(--quest-ink, #1d1c1a);
+  font-weight: 600;
+}
+
+#questLeftZone #primaryNav .pnav-item.active::before {
+  content: "";
+  position: absolute;
+
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+
+  width: 3px;
+
+  background: #f04b17;
+}
+
+#questLeftZone #primaryNav .pnav-item.active::after {
+  background: var(--quest-surface, #fbfaf8);
+
+  border-top-color: var(--quest-line, rgba(28, 27, 25, 0.12));
+  border-bottom-color: var(--quest-line, rgba(28, 27, 25, 0.12));
+}
+
+/* operator + Relay stays one instrument, but less visually heavy */
+#relayDock {
+  font-size: 11px;
+}
+
+#relayDock .relay-v2-pill {
+  min-height: 44px;
+  box-shadow:
+    0 10px 30px rgba(26, 22, 18, 0.08),
+    0 0 0 1px rgba(26, 22, 18, 0.05);
+}
+
+#relayDock .relay-v2-operator {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+#relayDock .relay-v2-operator-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+
+/*
+ * Execution instrumentation belongs to Execute.
+ * The route fix above should prevent it mounting elsewhere;
+ * this also prevents any stale rendered shelf from leaking.
+ */
+body:not([data-quest-domain="tasks"]) #questSignalZone,
+body:not([data-quest-domain="tasks"]) .quest-frame-signal {
+  display: none;
+}
+
+body[data-quest-domain="tasks"] #questSignalZone,
+body[data-quest-domain="tasks"] .quest-frame-signal {
+  display: block;
+}
+
+
+/* QUEST TOTAL PHASE FIX — 2026-10-02 */
+
+/*
+ * Sight owns reporting.
+ * Total owns Proof of Change.
+ */
+body[data-quest-domain="transform"]
+#reportsWrap[data-quest-report-mode="transform"]
+.qhq-rpt {
+  display: none;
+}
+
+body[data-quest-domain="transform"]
+#questReportModeBar {
+  display: none;
+}
+
+body[data-quest-domain="transform"]
+#questTransformPanel {
+  display: block;
+}
+
+/* Total should read as one primary operating surface. */
+body[data-quest-domain="transform"]
+#questTransformPanel {
+  padding-top: 0;
+}
+
+body[data-quest-domain="transform"]
+.quest-transform-head {
+  margin-top: 0;
+}
+
+/* QUEST OS — RETIRE LEGACY DESKTOP TOPBAR ROW
+   The topbar is hidden; do not reserve its old 64px grid track. */
+body.ui-command-center > .app {
+  grid-template-rows: 1fr !important;
+  grid-template-columns: 1fr !important;
+  height: 100vh !important;
+}
+
+body.ui-command-center > .app > .topbar {
+  display: none !important;
+}
+
+body.ui-command-center > .app > .main {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  height: 100vh !important;
+}
+
+
+/* QUEST OS — LEFT LIFECYCLE RAIL POLISH
+   More centered, thicker tabs, lighter integrated background. */
+
+#questLeftZone {
+  background: #f4f2ef !important;
+  border-right: 1px solid rgba(31, 29, 26, 0.08) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+#questConsoleLifecycle {
+  width: 100% !important;
+}
+
+#questConsoleLifecycle #primaryNav.primary-nav {
+  display: flex !important;
+  flex-direction: column !important;
+
+  gap: 12px !important;
+
+  width: 100% !important;
+
+  padding: 0 0 0 14px !important;
+  margin: 0 !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item {
+  min-height: 56px !important;
+  height: 56px !important;
+
+  padding: 0 20px !important;
+
+  margin: 0 !important;
+
+  border-radius: 14px 0 0 14px !important;
+
+  font-size: 14px !important;
+  font-weight: 650 !important;
+
+  color: #706d68 !important;
+
+  background: transparent !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item:hover {
+  background: rgba(255,255,255,.38) !important;
+  color: #2a2724 !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item.active,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+  min-height: 60px !important;
+  height: 60px !important;
+
+  margin-right: -1px !important;
+
+  background: #fbfaf8 !important;
+
+  border: 1px solid rgba(31,29,26,.09) !important;
+  border-right-color: #fbfaf8 !important;
+
+  color: #1f1d1a !important;
+
+  font-weight: 800 !important;
+
+  box-shadow:
+    10px 0 0 #fbfaf8 !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item.active::before,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::before {
+  top: 10px !important;
+  bottom: 10px !important;
+
+  width: 4px !important;
+
+  background: #ed4e0d !important;
+
+  border-radius: 0 4px 4px 0 !important;
+}
+
+
+/* QUEST OS — ACTIVE LIFECYCLE TAB HEIGHT TUNE */
+
+#questConsoleLifecycle #primaryNav .pnav-item.active,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+  min-height: 72px !important;
+  height: 72px !important;
+
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+
+  border-radius: 16px 0 0 16px !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item.active::before,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::before {
+  top: 12px !important;
+  bottom: 12px !important;
+}
+
+
+/* QUEST OS — LEFT RAIL FINAL TUNE */
+
+#questLeftZone {
+  background: #f8f7f5 !important;
+  border-right: 1px solid rgba(31, 29, 26, 0.06) !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item.active,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+  min-height: 80px !important;
+  height: 80px !important;
+
+  border-radius: 18px 0 0 18px !important;
+
+  background: #fff !important;
+  border-color: rgba(31, 29, 26, 0.07) !important;
+  border-right-color: #fff !important;
+
+  box-shadow:
+    12px 0 0 #fff !important;
+}
+
+#questConsoleLifecycle #primaryNav .pnav-item.active::before,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::before {
+  top: 14px !important;
+  bottom: 14px !important;
+}
+
+
+/* QUEST OS — LEFT RAIL INTELLIGENCE PASS
+   Lighter material, stronger active state, upper-third positioning. */
+
+#questLeftZone {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.88) 0%,
+      rgba(250,249,247,.82) 100%
+    ) !important;
+
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+
+  border-right:
+    1px solid
+    rgba(31,29,26,.055) !important;
+
+  justify-content: flex-start !important;
+
+  padding-top: 17vh !important;
+  padding-bottom: 0 !important;
+}
+
+
+/* lifecycle stack sits in upper third */
+#questConsoleLifecycle {
+  width: 100% !important;
+}
+
+#questConsoleLifecycle #primaryNav.primary-nav {
+  gap: 14px !important;
+
+  padding:
+    0
+    0
+    0
+    14px !important;
+
+  margin: 0 !important;
+}
+
+
+/* inactive = quiet navigation state */
+#questConsoleLifecycle #primaryNav .pnav-item {
+  min-height: 58px !important;
+  height: 58px !important;
+
+  padding:
+    0
+    22px !important;
+
+  font-size: 14px !important;
+  font-weight: 560 !important;
+
+  letter-spacing: -.01em !important;
+
+  color:
+    rgba(31,29,26,.52) !important;
+
+  background: transparent !important;
+
+  transition:
+    color .16s ease,
+    background .16s ease,
+    transform .16s ease,
+    font-weight .16s ease !important;
+}
+
+
+/* inactive hover = intelligent preview */
+#questConsoleLifecycle #primaryNav .pnav-item:hover {
+  color:
+    rgba(31,29,26,.86) !important;
+
+  background:
+    rgba(255,255,255,.48) !important;
+
+  transform:
+    translateX(3px) !important;
+}
+
+
+/* active = unmistakable current system space */
+#questConsoleLifecycle #primaryNav .pnav-item.active,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+  min-height: 84px !important;
+  height: 84px !important;
+
+  padding-left: 26px !important;
+
+  background:
+    rgba(255,255,255,.97) !important;
+
+  color:
+    #171513 !important;
+
+  font-size: 15px !important;
+  font-weight: 820 !important;
+
+  letter-spacing:
+    -.015em !important;
+
+  border:
+    1px solid
+    rgba(31,29,26,.07) !important;
+
+  border-right-color:
+    rgba(255,255,255,.97) !important;
+
+  border-radius:
+    20px 0 0 20px !important;
+
+  box-shadow:
+    12px 0 0 rgba(255,255,255,.97),
+    0 10px 28px rgba(31,29,26,.035) !important;
+
+  transform:
+    translateX(2px) !important;
+}
+
+
+/* active orange system datum */
+#questConsoleLifecycle #primaryNav .pnav-item.active::before,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::before {
+  top: 15px !important;
+  bottom: 15px !important;
+
+  width: 4px !important;
+
+  background:
+    #ed4e0d !important;
+
+  box-shadow:
+    0 0 14px rgba(237,78,13,.18) !important;
+
+  border-radius:
+    0 4px 4px 0 !important;
+}
+
+
+/* subtle active text indicator */
+#questConsoleLifecycle #primaryNav .pnav-item.active::after,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::after {
+  content: "";
+
+  position: absolute;
+
+  right: 14px;
+  top: 50%;
+
+  width: 5px;
+  height: 5px;
+
+  transform: translateY(-50%);
+
+  border-radius: 50%;
+
+  background: #ed4e0d;
+
+  opacity: .9;
+}
+
+
+/* QUEST OS — LEFT RAIL POSITION + MATERIAL TUNE
+   Reserve top-left icon zone and make the rail nearly white. */
+
+#questLeftZone {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.985) 0%,
+      rgba(252,251,249,.975) 100%
+    ) !important;
+
+  border-right:
+    1px solid
+    rgba(31,29,26,.045) !important;
+
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+
+  justify-content: flex-start !important;
+
+  /* leaves room for the future top-left icon */
+  padding-top: 132px !important;
+}
+
+
+/* lifecycle stack sits below the icon zone */
+#questConsoleLifecycle #primaryNav.primary-nav {
+  margin-top: 18px !important;
+}
+
+
+/* inactive tabs recede without feeling gray */
+#questConsoleLifecycle #primaryNav .pnav-item {
+  color:
+    rgba(31,29,26,.50) !important;
+
+  background:
+    transparent !important;
+}
+
+
+/* keep selected state obvious */
+#questConsoleLifecycle #primaryNav .pnav-item.active,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+  background:
+    rgba(255,255,255,.995) !important;
+
+  color:
+    #171513 !important;
+
+  border-color:
+    rgba(31,29,26,.065) !important;
+
+  border-right-color:
+    rgba(255,255,255,.995) !important;
+
+  box-shadow:
+    12px 0 0 rgba(255,255,255,.995),
+    0 10px 24px rgba(31,29,26,.028) !important;
+}
+
+
+/* ==========================================================
+   QUEST OS — DUAL RAIL COHESION
+   White planes, soft AI-system state, no gray slabs.
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   LEFT RAIL — white structural plane
+   ---------------------------------------------------------- */
+
+#questLeftZone {
+  background: #fff !important;
+
+  border-right:
+    1px solid
+    rgba(31,29,26,.045) !important;
+
+  box-shadow:
+    inset -1px 0 0 rgba(31,29,26,.018) !important;
+
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  justify-content: flex-start !important;
+
+  /* pretend there is a future icon/control tab above lifecycle */
+  padding-top: 118px !important;
+}
+
+
+/* create the visual reservation for the future icon zone */
+#questLeftZone::before {
+  content: "";
+
+  display: block;
+
+  width: 100%;
+  height: 54px;
+
+  margin-bottom: 26px;
+
+  pointer-events: none;
+}
+
+
+/* lifecycle stack */
+#questConsoleLifecycle #primaryNav.primary-nav {
+  gap: 16px !important;
+
+  padding:
+    0
+    0
+    0
+    18px !important;
+
+  margin: 0 !important;
+}
+
+
+/* inactive states = almost invisible until needed */
+#questConsoleLifecycle #primaryNav .pnav-item {
+  min-height: 58px !important;
+  height: 58px !important;
+
+  padding:
+    0
+    24px !important;
+
+  margin: 0 !important;
+
+  border: 1px solid transparent !important;
+  border-radius: 18px 0 0 18px !important;
+
+  background: transparent !important;
+
+  color:
+    rgba(31,29,26,.48) !important;
+
+  font-size: 14px !important;
+  font-weight: 560 !important;
+
+  box-shadow: none !important;
+
+  transform: none !important;
+
+  transition:
+    color .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease,
+    background .16s ease,
+    transform .16s ease !important;
+}
+
+
+/* inactive hover */
+#questConsoleLifecycle #primaryNav .pnav-item:hover {
+  color:
+    rgba(31,29,26,.82) !important;
+
+  background:
+    rgba(251,250,248,.55) !important;
+
+  border-color:
+    rgba(31,29,26,.045) !important;
+
+  transform:
+    translateX(2px) !important;
+}
+
+
+/* active state = outlined + softly illuminated */
+#questConsoleLifecycle #primaryNav .pnav-item.active,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"] {
+  min-height: 80px !important;
+  height: 80px !important;
+
+  padding-left: 26px !important;
+
+  background:
+    rgba(255,255,255,.995) !important;
+
+  color:
+    #171513 !important;
+
+  font-size: 15px !important;
+  font-weight: 820 !important;
+
+  border:
+    1px solid
+    rgba(31,29,26,.075) !important;
+
+  border-right-color:
+    rgba(255,255,255,.995) !important;
+
+  border-radius:
+    20px 0 0 20px !important;
+
+  box-shadow:
+    10px 0 0 #fff,
+    0 0 0 1px rgba(237,78,13,.025),
+    0 10px 34px rgba(237,78,13,.055),
+    0 4px 18px rgba(31,29,26,.028) !important;
+
+  transform:
+    translateX(2px) !important;
+}
+
+
+/* orange datum */
+#questConsoleLifecycle #primaryNav .pnav-item.active::before,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::before {
+  top: 16px !important;
+  bottom: 16px !important;
+
+  width: 4px !important;
+
+  background:
+    #ed4e0d !important;
+
+  box-shadow:
+    0 0 16px rgba(237,78,13,.20) !important;
+
+  border-radius:
+    0 4px 4px 0 !important;
+}
+
+
+/* remove the extra active dot — cleaner */
+#questConsoleLifecycle #primaryNav .pnav-item.active::after,
+#questConsoleLifecycle #primaryNav .pnav-item[aria-selected="true"]::after {
+  display: none !important;
+}
+
+
+/* ----------------------------------------------------------
+   RIGHT RAIL — same material language as left
+   ---------------------------------------------------------- */
+
+#questRightZone {
+  background: #fff !important;
+
+  border-left:
+    1px solid
+    rgba(31,29,26,.035) !important;
+
+  box-shadow:
+    inset 1px 0 0 rgba(31,29,26,.015) !important;
+
+  padding:
+    0
+    18px
+    100px
+    18px !important;
+}
+
+
+/* soften the sidecar itself */
+#questRightZone .quest-sidecar-content {
+  padding-top: 18px !important;
+}
+
+
+/* top tools become white connected tabs */
+#questRightZone .quest-sidecar-tabs {
+  display: grid !important;
+
+  grid-template-columns:
+    minmax(72px,.8fr)
+    minmax(72px,.8fr)
+    minmax(104px,1.1fr)
+    minmax(116px,1.15fr) !important;
+
+  gap: 8px !important;
+
+  width: 100% !important;
+
+  margin:
+    0
+    0
+    24px !important;
+
+  padding:
+    12px
+    0
+    0 !important;
+
+  border: 0 !important;
+
+  background: transparent !important;
+}
+
+
+/* inactive right tabs mirror left: white + quiet */
+#questRightZone .quest-sidecar-tab {
+  min-height: 48px !important;
+  height: 48px !important;
+
+  padding:
+    0
+    12px !important;
+
+  border:
+    1px solid
+    rgba(31,29,26,.045) !important;
+
+  border-radius:
+    14px !important;
+
+  background:
+    rgba(255,255,255,.98) !important;
+
+  color:
+    rgba(31,29,26,.50) !important;
+
+  font-size: 11px !important;
+  font-weight: 600 !important;
+
+  box-shadow:
+    none !important;
+
+  transition:
+    color .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease,
+    background .16s ease !important;
+}
+
+
+/* active right tab = same outlined/glow state */
+#questRightZone .quest-sidecar-tab.is-active {
+  position: relative !important;
+
+  background:
+    #fff !important;
+
+  color:
+    #171513 !important;
+
+  font-weight:
+    800 !important;
+
+  border-color:
+    rgba(31,29,26,.075) !important;
+
+  box-shadow:
+    0 0 0 1px rgba(237,78,13,.025),
+    0 8px 24px rgba(237,78,13,.05),
+    0 3px 14px rgba(31,29,26,.025) !important;
+
+  margin-bottom: 0 !important;
+}
+
+
+/* tiny orange datum instead of gray selected block */
+#questRightZone .quest-sidecar-tab.is-active::before {
+  content: "" !important;
+
+  position: absolute !important;
+
+  top: -1px !important;
+  left: 16px !important;
+  right: 16px !important;
+
+  height: 3px !important;
+
+  background:
+    #ed4e0d !important;
+
+  border-radius:
+    0 0 999px 999px !important;
+
+  box-shadow:
+    0 0 12px rgba(237,78,13,.16) !important;
+}
+
+
+/* new task stays actionable, but less like a separate orange brick */
+#questRightZone .quest-sidecar-tab-new {
+  background:
+    rgba(237,78,13,.96) !important;
+
+  color:
+    #fff !important;
+
+  border-color:
+    rgba(237,78,13,.28) !important;
+
+  box-shadow:
+    0 7px 18px rgba(237,78,13,.08) !important;
+}
+
+
+/* remove harsh tab separators */
+#questRightZone .quest-sidecar-tab:first-child,
+#questRightZone .quest-sidecar-tab:last-child {
+  border-radius:
+    14px !important;
+}
+
+
+/* ----------------------------------------------------------
+   SIDE PLANE SPACING — softer transition into center
+   ---------------------------------------------------------- */
+
+#questCoreZone {
+  box-shadow:
+    none !important;
+}
+
+#questLeftZone,
+#questRightZone,
+#questCoreZone {
+  background-color:
+    #fff !important;
+}
+
+
+/* ==========================================================
+   QUEST OS — RIGHT PLANE INTEGRATION
+   Tabs belong to the page. Scrollbar becomes a shadow-line.
+   ========================================================== */
+
+/* ---------- ultra-light scrollbar ---------- */
+
+#questRightZone {
+  scrollbar-width: thin !important;
+  scrollbar-color:
+    rgba(31,29,26,.14)
+    transparent !important;
+}
+
+#questRightZone::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+#questRightZone::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+#questRightZone::-webkit-scrollbar-thumb {
+  background:
+    rgba(31,29,26,.12) !important;
+
+  border-radius: 999px !important;
+
+  box-shadow:
+    0 0 8px rgba(31,29,26,.06) !important;
+}
+
+#questRightZone::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(31,29,26,.20) !important;
+}
+
+
+/* ---------- right rail becomes continuous white plane ---------- */
+
+#questRightZone {
+  background: #fff !important;
+
+  border-left:
+    1px solid
+    rgba(31,29,26,.025) !important;
+
+  box-shadow:
+    -10px 0 30px rgba(31,29,26,.018) !important;
+
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+
+/* ---------- tabs become part of the page itself ---------- */
+
+#questRightZone .quest-sidecar-tabs {
+  display: flex !important;
+  align-items: stretch !important;
+
+  gap: 4px !important;
+
+  width: 100% !important;
+
+  margin:
+    0
+    0
+    30px !important;
+
+  padding:
+    18px
+    0
+    0 !important;
+
+  background: transparent !important;
+
+  border: 0 !important;
+}
+
+
+/* remove button-card appearance */
+#questRightZone .quest-sidecar-tab {
+  position: relative !important;
+
+  flex:
+    1 1 0 !important;
+
+  min-width: 0 !important;
+  height: 52px !important;
+
+  padding:
+    0
+    12px !important;
+
+  background:
+    transparent !important;
+
+  border:
+    1px solid transparent !important;
+
+  border-radius:
+    12px !important;
+
+  box-shadow:
+    none !important;
+
+  color:
+    rgba(31,29,26,.48) !important;
+
+  font-size:
+    11px !important;
+
+  font-weight:
+    600 !important;
+}
+
+
+/* hover = slight surface response only */
+#questRightZone .quest-sidecar-tab:hover {
+  background:
+    rgba(31,29,26,.018) !important;
+
+  color:
+    rgba(31,29,26,.80) !important;
+}
+
+
+/* active = page state, not a button */
+#questRightZone .quest-sidecar-tab.is-active {
+  background:
+    rgba(255,255,255,.96) !important;
+
+  color:
+    #171513 !important;
+
+  font-weight:
+    800 !important;
+
+  border-color:
+    rgba(31,29,26,.055) !important;
+
+  box-shadow:
+    0 8px 24px rgba(237,78,13,.035),
+    0 2px 10px rgba(31,29,26,.025) !important;
+}
+
+
+/* tiny orange state marker */
+#questRightZone .quest-sidecar-tab.is-active::before {
+  content: "" !important;
+
+  position: absolute !important;
+
+  top: -1px !important;
+  left: 22% !important;
+  right: 22% !important;
+
+  height: 3px !important;
+
+  background:
+    #ed4e0d !important;
+
+  border-radius:
+    0 0 999px 999px !important;
+
+  box-shadow:
+    0 0 10px rgba(237,78,13,.18) !important;
+}
+
+
+/* New task stays actionable, but no giant orange brick */
+#questRightZone .quest-sidecar-tab-new {
+  background:
+    transparent !important;
+
+  color:
+    #ed4e0d !important;
+
+  border-color:
+    rgba(237,78,13,.12) !important;
+
+  font-weight:
+    750 !important;
+
+  box-shadow:
+    0 6px 18px rgba(237,78,13,.025) !important;
+}
+
+#questRightZone .quest-sidecar-tab-new:hover {
+  background:
+    rgba(237,78,13,.035) !important;
+
+  border-color:
+    rgba(237,78,13,.18) !important;
+}
+
+
+/* ---------- Intel content flows directly from tab plane ---------- */
+
+#questRightZone .quest-sidecar-content {
+  padding-top: 0 !important;
+}
+
+#questRightZone .quest-intelligence-head {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+
+/* QUEST OS — RIGHT SCROLL SHADOW-LINE */
+
+#questRightZone {
+  border-left: 0 !important;
+  box-shadow:
+    -1px 0 0 rgba(31,29,26,.025),
+    -8px 0 18px rgba(31,29,26,.012) !important;
+
+  scrollbar-width: thin !important;
+  scrollbar-color:
+    rgba(31,29,26,.10)
+    transparent !important;
+}
+
+#questRightZone::-webkit-scrollbar {
+  width: 2px !important;
+}
+
+#questRightZone::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+#questRightZone::-webkit-scrollbar-thumb {
+  background:
+    rgba(31,29,26,.09) !important;
+
+  border-radius: 999px !important;
+
+  box-shadow:
+    0 0 5px rgba(31,29,26,.035) !important;
+}
+
+#questRightZone::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(31,29,26,.14) !important;
+}
+
+
+/* QUEST OS — RIGHT SCROLL INDICATOR FINAL TUNE */
+
+#questRightZone {
+  scrollbar-color:
+    rgba(31,29,26,.055)
+    transparent !important;
+}
+
+#questRightZone::-webkit-scrollbar {
+  width: 1px !important;
+}
+
+#questRightZone::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+#questRightZone::-webkit-scrollbar-thumb {
+  min-height: 34px !important;
+
+  background:
+    rgba(31,29,26,.055) !important;
+
+  border-radius: 999px !important;
+
+  box-shadow:
+    0 0 4px rgba(31,29,26,.02) !important;
+}
+
+#questRightZone::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(31,29,26,.085) !important;
+}
+
+
+/* ==========================================================
+   QUEST OS — RELAY / CODED INTELLIGENCE UPGRADE
+   Compact system instrument. Not a floating consumer pill.
+   ========================================================== */
+
+#relayDock {
+  left: 50% !important;
+  bottom: 12px !important;
+
+  transform: translateX(-50%) !important;
+
+  width: auto !important;
+  max-width: min(520px, calc(100vw - 40px)) !important;
+
+  filter: none !important;
+}
+
+
+/* ----------------------------------------------------------
+   OUTER INSTRUMENT
+   ---------------------------------------------------------- */
+
+#relayDock .relay-v2-collapsed {
+  display: grid !important;
+
+  grid-template-columns:
+    minmax(128px, auto)
+    minmax(176px, 210px)
+    42px !important;
+
+  align-items: stretch !important;
+
+  min-height: 48px !important;
+  height: 48px !important;
+
+  padding: 0 !important;
+
+  overflow: hidden !important;
+
+  border:
+    1px solid
+    rgba(31,29,26,.075) !important;
+
+  border-radius:
+    16px !important;
+
+  background:
+    rgba(255,255,255,.88) !important;
+
+  backdrop-filter:
+    blur(18px) saturate(1.06) !important;
+
+  -webkit-backdrop-filter:
+    blur(18px) saturate(1.06) !important;
+
+  box-shadow:
+    0 10px 34px rgba(31,29,26,.055),
+    0 0 0 1px rgba(255,255,255,.65),
+    0 0 28px rgba(237,78,13,.045) !important;
+}
+
+
+/* subtle intelligence datum across the top */
+#relayDock .relay-v2-collapsed::before {
+  content: "";
+
+  position: absolute;
+
+  left: 158px;
+  right: 48px;
+  top: 0;
+
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(237,78,13,.60),
+      rgba(237,78,13,.16),
+      transparent
+    );
+
+  pointer-events: none;
+}
+
+
+/* ----------------------------------------------------------
+   ACCOUNT
+   ---------------------------------------------------------- */
+
+#relayDock .relay-v2-operator {
+  display: grid !important;
+
+  grid-template-columns:
+    28px
+    minmax(0,1fr) !important;
+
+  align-items: center !important;
+
+  gap: 8px !important;
+
+  height: 48px !important;
+
+  margin: 0 !important;
+  padding:
+    0
+    14px
+    0
+    10px !important;
+
+  border: 0 !important;
+
+  border-right:
+    1px solid
+    rgba(31,29,26,.065) !important;
+
+  border-radius:
+    0 !important;
+
+  background:
+    transparent !important;
+
+  box-shadow:
+    none !important;
+
+  text-align: left !important;
+}
+
+
+#relayDock .relay-v2-operator-avatar {
+  display: grid !important;
+  place-items: center !important;
+
+  width: 28px !important;
+  height: 28px !important;
+
+  margin: 0 !important;
+
+  border-radius:
+    9px !important;
+
+  background:
+    rgba(31,29,26,.045) !important;
+
+  border:
+    1px solid
+    rgba(31,29,26,.065) !important;
+
+  color:
+    #1f1d1a !important;
+
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace !important;
+
+  font-size:
+    8px !important;
+
+  font-weight:
+    700 !important;
+
+  letter-spacing:
+    .04em !important;
+}
+
+
+#relayDock .relay-v2-operator-copy {
+  display: block !important;
+
+  min-width: 0 !important;
+  max-width: 120px !important;
+}
+
+
+#relayDock .relay-v2-operator-copy strong {
+  display: block !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+
+  font-size:
+    10px !important;
+
+  line-height:
+    1.15 !important;
+
+  font-weight:
+    700 !important;
+
+  color:
+    #27231f !important;
+}
+
+
+#relayDock .relay-v2-operator-copy small {
+  display: none !important;
+}
+
+
+/* ----------------------------------------------------------
+   RELAY CORE
+   ---------------------------------------------------------- */
+
+#relayDock .relay-v2-pill {
+  position: relative !important;
+
+  display: grid !important;
+
+  grid-template-columns:
+    34px
+    minmax(0,1fr)
+    auto !important;
+
+  align-items: center !important;
+
+  gap: 10px !important;
+
+  height: 48px !important;
+  min-height: 48px !important;
+
+  margin: 0 !important;
+
+  padding:
+    0
+    12px !important;
+
+  border: 0 !important;
+
+  border-right:
+    1px solid
+    rgba(31,29,26,.065) !important;
+
+  border-radius:
+    0 !important;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(237,78,13,.022),
+      rgba(255,255,255,.18)
+    ) !important;
+
+  box-shadow:
+    none !important;
+}
+
+
+/* intelligence core */
+#relayDock .relay-v2-orb {
+  position: relative !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  width: 32px !important;
+  height: 32px !important;
+
+  margin: 0 !important;
+
+  border-radius:
+    50% !important;
+
+  background:
+    #ed4e0d !important;
+
+  border:
+    1px solid
+    rgba(237,78,13,.38) !important;
+
+  box-shadow:
+    0 0 0 6px rgba(237,78,13,.065),
+    0 0 18px rgba(237,78,13,.18) !important;
+}
+
+
+/* white center node */
+#relayDock .relay-v2-orb::after {
+  content: "";
+
+  width: 7px;
+  height: 7px;
+
+  border-radius:
+    50%;
+
+  background:
+    #fff;
+
+  box-shadow:
+    0 0 8px rgba(255,255,255,.72);
+}
+
+
+#relayDock .relay-v2-live {
+  display: none !important;
+}
+
+
+/* text hierarchy */
+#relayDock .relay-v2-pill-main {
+  min-width: 0 !important;
+}
+
+
+#relayDock .relay-v2-pill-main strong {
+  display: block !important;
+
+  font-size:
+    10px !important;
+
+  line-height:
+    1.05 !important;
+
+  font-weight:
+    750 !important;
+
+  letter-spacing:
+    -.01em !important;
+
+  color:
+    #201d1a !important;
+}
+
+
+#relayDock .relay-v2-pill-main small {
+  display: block !important;
+
+  margin-top:
+    3px !important;
+
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace !important;
+
+  font-size:
+    8px !important;
+
+  line-height:
+    1 !important;
+
+  font-weight:
+    500 !important;
+
+  letter-spacing:
+    .05em !important;
+
+  text-transform:
+    uppercase !important;
+
+  color:
+    rgba(31,29,26,.48) !important;
+}
+
+
+/* count becomes telemetry */
+#relayDock .relay-v2-count {
+  display: grid !important;
+  place-items: center !important;
+
+  width: 22px !important;
+  min-width: 22px !important;
+  height: 22px !important;
+
+  padding: 0 !important;
+
+  border-radius:
+    7px !important;
+
+  background:
+    rgba(237,78,13,.10) !important;
+
+  border:
+    1px solid
+    rgba(237,78,13,.15) !important;
+
+  color:
+    #ed4e0d !important;
+
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace !important;
+
+  font-size:
+    8px !important;
+
+  font-weight:
+    700 !important;
+}
+
+
+/* ----------------------------------------------------------
+   LAUNCH
+   ---------------------------------------------------------- */
+
+#relayDock .relay-v2-focus-launch {
+  display: grid !important;
+  place-items: center !important;
+
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 48px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border:
+    0 !important;
+
+  border-radius:
+    0 !important;
+
+  background:
+    rgba(237,78,13,.035) !important;
+
+  color:
+    #ed4e0d !important;
+
+  box-shadow:
+    none !important;
+}
+
+
+#relayDock .relay-v2-focus-launch:hover {
+  background:
+    rgba(237,78,13,.075) !important;
+}
+
+
+/* remove oversized glow blobs from old treatment */
+#relayDock .relay-v2-focus-launch::before,
+#relayDock .relay-v2-focus-launch::after {
+  display: none !important;
+}
+
+
+/* ----------------------------------------------------------
+   HOVER = intelligent activation, not bounce
+   ---------------------------------------------------------- */
+
+#relayDock .relay-v2-operator:hover,
+#relayDock .relay-v2-pill:hover {
+  background:
+    rgba(31,29,26,.018) !important;
+}
+
+
+#relayDock .relay-v2-pill:hover .relay-v2-orb {
+  box-shadow:
+    0 0 0 6px rgba(237,78,13,.08),
+    0 0 22px rgba(237,78,13,.24) !important;
+}
+
+
+/* no drag styling */
+#relayDock,
+#relayDock * {
+  transform-style: flat !important;
+}

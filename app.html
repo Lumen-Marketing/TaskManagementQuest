@@ -19,12 +19,18 @@
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="taskmanagement.css">
 <link rel="stylesheet" href="css/taskdetail.css">
+<link rel="stylesheet" href="css/underwriting.css">
+<link rel="stylesheet" href="css/proposal.css">
 <link rel="stylesheet" href="css/newtask.css">
 <link rel="stylesheet" href="css/tasks.css">
 <link rel="stylesheet" href="css/quickboard.css">
 <link rel="stylesheet" href="css/tasksheet.css">
 <link rel="stylesheet" href="css/mobile.css">
 <script src="js/theme-boot.js"></script>
+  <link rel="stylesheet" href="quest-shell.css">
+  <link rel="stylesheet" href="css/quest-execute.css">
+  <link rel="stylesheet" href="css/quest-composition.css">
+  <link rel="stylesheet" href="css/quest-dev-map.css">
 </head>
 <body class="ui-command-center">
 <!-- Boot loading screen (FaultyTerminal port). The static brand frame below paints
@@ -284,6 +290,10 @@
 <script defer src="js/models/TimeModel.js"></script>
 <script defer src="js/models/NotificationModel.js"></script>
 <script defer src="js/models/CommentStore.js"></script>
+<script defer src="js/models/UnderwritingCalc.js"></script>
+<script defer src="js/models/UnderwritingTrace.js"></script>
+<script defer src="js/models/UnderwritingModel.js"></script>
+<script defer src="js/models/ProposalDoc.js"></script>
 <script defer src="js/services/SupabaseDataStore.js"></script>
 <script defer src="js/services/BriefingClient.js"></script>
 <script defer src="js/services/DigestClient.js"></script>
@@ -297,17 +307,21 @@
 <script defer src="js/services/ReminderEngine.js"></script>
 
 <!-- Views -->
+<script defer src="js/layout/Sidecar.js"></script>
+<script defer src="js/layout/QuestShell.js"></script>
 <script defer src="js/views/ToastView.js"></script>
 <script defer src="js/views/ConnectionView.js"></script>
 <script defer src="js/views/BulkActionsView.js"></script>
 <script defer src="js/views/dragOrder.js"></script>
 <script defer src="js/views/TopbarView.js"></script>
+<!-- <script defer src="js/layout/DomainSubnav.js"></script> TEMP disabled 2026-10-02 -->
 <script defer src="js/views/SidebarView.js"></script>
 <script defer src="js/views/BottomNavView.js"></script>
 <script defer src="js/views/ProjectPickerView.js"></script>
 <script defer src="js/views/DateTimePickerView.js"></script>
 <script defer src="js/views/tasklist/quickBoardModel.js"></script>
 <script defer src="js/views/tasklist/QuickBoardLayout.js"></script>
+<script defer src="js/views/tasklist/LanesLayout.js"></script>
 <script defer src="js/views/tasklist/TableLayout.js"></script>
 <script defer src="js/views/tasklist/KanbanLayout.js"></script>
 <script defer src="js/views/tasklist/CardsLayout.js"></script>
@@ -317,6 +331,10 @@
 <script defer src="js/views/tasklist/sequenceOrder.js"></script>
 <script defer src="js/views/tasklist/sequenceDrag.js"></script>
 <script defer src="js/views/TaskListView.js"></script>
+<script defer src="js/views/ProposalView.js"></script>
+<script defer src="js/views/UnderwritingView.js"></script>
+<script defer src="js/views/taskdetail/TaskCoherence.js"></script>
+<script defer src="js/views/relay/RelayDock.js"></script>
 <script defer src="js/views/TaskDetailView.js"></script>
 <script defer src="js/views/ProjectsView.js"></script>
 <script defer src="js/views/TimeView.js"></script>
@@ -359,6 +377,8 @@
 <script defer src="js/views/UpdateWatcher.js"></script>
 
 <!-- Bootstrap -->
+<script defer src="js/views/navigation/NavigationCoherence.js"></script>
+  <script type="module" src="js/dev-map/dev-map-entry.js"></script>
 <script defer src="js/app.js"></script>
 <script defer src="js/register-sw.js"></script>
 </body>

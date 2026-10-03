@@ -1,0 +1,77 @@
+/* Proposal (Bid task → Underwriting → Proposal → Print).
+   Screen chrome uses tokens; the DOCUMENT is a fixed white sheet with dark ink in
+   both themes, because it is a paper artefact that gets printed / saved as PDF. */
+
+/* ---- section in the Underwriting tab ---- */
+#taskDetailWrap .pp-card {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm);
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px;
+}
+#taskDetailWrap .pp-card-main { font-size: 13px; color: var(--ink-2); max-width: 60ch; line-height: 1.5; }
+#taskDetailWrap .pp-card-total { margin-left: 8px; font-family: var(--font-mono); color: var(--green-ink); }
+
+/* ---- overlay ---- */
+#proposalOverlay {
+  position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column;
+  background: var(--bg); color: var(--ink);
+}
+#proposalOverlay .pp-bar {
+  display: flex; align-items: center; gap: var(--space-sm); padding: 10px 16px;
+  border-bottom: 1px solid var(--border); background: var(--bg-2);
+}
+#proposalOverlay .pp-bar-title { flex: 1; font-weight: 600; min-width: 0; }
+#proposalOverlay .pp-src { font-weight: 400; color: var(--ink-3); font-size: 12.5px; }
+#proposalOverlay .pp-saved { font-size: 12px; color: var(--ink-3); font-family: var(--font-mono); }
+#proposalOverlay .pp-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 400px) 1fr; }
+#proposalOverlay .pp-edit {
+  overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; border-right: 1px solid var(--border);
+}
+#proposalOverlay .pp-ro { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--ink-3); }
+#proposalOverlay .pp-ro b { font-size: 15px; color: var(--ink); font-family: var(--font-mono); }
+#proposalOverlay .pp-ro em { font-style: normal; font-size: 11.5px; }
+#proposalOverlay .pp-f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); }
+#proposalOverlay .pp-f input, #proposalOverlay .pp-f textarea {
+  font: inherit; font-size: 13.5px; color: var(--ink); background: var(--bg-2);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px 10px; resize: vertical;
+}
+#proposalOverlay .pp-paper { overflow: auto; padding: 24px; background: var(--bg-3); }
+
+/* ---- the document (paper) ---- */
+.pp-doc {
+  box-sizing: border-box; max-width: 8.5in; margin: 0 auto; padding: 0.7in 0.75in; background: #fff; color: #111;
+  font: 14px/1.5 "Hanken Grotesk", system-ui, sans-serif; box-shadow: 0 2px 14px rgba(0,0,0,0.25);
+}
+.pp-doc-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 10px; }
+.pp-doc .pp-co { font-size: 20px; font-weight: 700; }
+.pp-doc .pp-ref { text-align: right; font-size: 13px; color: #333; }
+.pp-doc .pp-title { font-size: 22px; margin: 22px 0 6px; }
+.pp-doc .pp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+.pp-doc .pp-sec { margin-top: 16px; break-inside: avoid; }
+.pp-doc .pp-sec h2 { margin: 0 0 4px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #555; font-weight: 600; }
+.pp-doc .pp-text { margin: 0; white-space: pre-wrap; }
+.pp-doc .pp-strong { margin: 0; font-weight: 600; }
+.pp-doc .pp-blank { margin: 0; color: #999; font-style: italic; }
+.pp-doc .pp-price { border: 1px solid #111; padding: 10px 14px; }
+.pp-doc .pp-total { font-size: 26px; font-weight: 700; }
+.pp-doc .pp-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-top: 38px; break-inside: avoid; }
+.pp-doc .pp-line { height: 34px; border-bottom: 1px solid #111; }
+.pp-doc .pp-sign span { display: block; margin-top: 4px; font-size: 11.5px; color: #444; }
+
+@media (max-width: 900px) {
+  #proposalOverlay .pp-body { grid-template-columns: 1fr; overflow: auto; }
+  #proposalOverlay .pp-edit { border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
+  #proposalOverlay .pp-paper { padding: 8px; overflow: visible; }
+  .pp-doc { padding: 20px; }
+}
+
+/* ---- print: the document and nothing else ---- */
+@page { margin: 0.5in; }
+@media print {
+  body.pp-open > *:not(#proposalOverlay) { display: none !important; }
+  body.pp-open { background: #fff !important; overflow: visible !important; height: auto !important; }
+  #proposalOverlay { position: static !important; display: block !important; background: #fff !important; }
+  #proposalOverlay .pp-bar, #proposalOverlay .pp-edit { display: none !important; }
+  #proposalOverlay .pp-body { display: block !important; overflow: visible !important; }
+  #proposalOverlay .pp-paper { padding: 0 !important; overflow: visible !important; background: #fff !important; }
+  .pp-doc { max-width: none; padding: 0; box-shadow: none; }
+}

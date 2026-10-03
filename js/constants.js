@@ -89,18 +89,21 @@ App.ROLES = {
 };
 
 App.ROLE_PERMISSIONS = {
+  // 'underwriting.*' mirrors migration 073's RLS: estimates expose costs and margins,
+  // so workers (and sales, which resolves to worker) get none of them. view/manage:
+  // admin, developer, supervisor, construction_supervisor. approve: admin, developer.
   // 'home.view' is granted to every role (the Home landing screen is universal);
   // 'reports.view' is limited to supervisors/admins (company analytics).
   worker: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write', 'home.view'],
   // Identical to worker — keep these two arrays in sync.
   sales: ['app.use', 'clock.use', 'time.own', 'tasks.view', 'tasks.write', 'home.view'],
-  supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view', 'home.view', 'reports.view', 'task-setup.manage'],
-  admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view', 'task-setup.manage', 'checkins.manage'],
-  developer: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view', 'debug.access', 'task-setup.manage', 'bug-reports.manage', 'checkins.manage'],
+  supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view', 'home.view', 'reports.view', 'task-setup.manage', 'underwriting.view', 'underwriting.manage'],
+  admin: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view', 'task-setup.manage', 'checkins.manage', 'underwriting.view', 'underwriting.manage', 'underwriting.approve'],
+  developer: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'roles.manage', 'clock.admin', 'team.view', 'home.view', 'reports.view', 'debug.access', 'task-setup.manage', 'bug-reports.manage', 'checkins.manage', 'underwriting.view', 'underwriting.manage', 'underwriting.approve'],
   // Construction supervisor: supervisor tools + task-taxonomy editing. Mirrors the
   // DB RLS write policy on task_types/task_type_statuses/task_labels (developer,
   // admin, construction_supervisor). None may exist yet; harmless until one does.
-  construction_supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view', 'home.view', 'reports.view', 'task-setup.manage'],
+  construction_supervisor: ['app.use', 'tasks.view', 'tasks.write', 'clock.use', 'time.own', 'time.team', 'team.view', 'home.view', 'reports.view', 'task-setup.manage', 'underwriting.view', 'underwriting.manage'],
 };
 
 App.DEFAULT_CLOCK_TASK_ID = 'general-shift';
