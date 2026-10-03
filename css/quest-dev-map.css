@@ -1,18 +1,43 @@
 /* ---------------------------------------------------------
    QUEST OS — DEV MAP
-   Developer walkthrough + annotation layer
+   Persistent developer walkthrough + annotation layer.
+
+   PURPOSE
+   - Make implementation intent visible inside Quest itself.
+   - Anchor guidance to live shell surfaces.
+   - Preserve the production UI when DEV MAP is disabled.
+
+   OWNERSHIP
+   - DEV MAP owns only its toggle, stickers, notes, highlights,
+     and walkthrough presentation.
+   - DEV MAP does NOT own Quest shell geometry, routing, auth,
+     application state, data, mutations, or operational behavior.
+
+   CANONICAL CONTROL LOCATION
+   - The toggle belongs at the top of #questRightZone.
+   --------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------
+   TOGGLE
    --------------------------------------------------------- */
 
 .quest-dev-map-toggle {
   position: relative;
+
   display: inline-flex;
   align-items: center;
   gap: 7px;
 
+  width: fit-content;
   min-height: 30px;
+
   padding: 6px 10px;
 
-  border: 1px solid currentColor;
+  border:
+    1px solid
+    rgba(22, 22, 22, 0.28);
+
   border-radius: 999px;
 
   background: #f8f7f4;
@@ -21,15 +46,43 @@
   font-family: inherit;
   font-size: 10px;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.08em;
 
   cursor: pointer;
+
   z-index: 9998;
+}
+
+#questRightZone > .quest-dev-map-toggle {
+  flex: 0 0 auto;
+
+  margin:
+    12px
+    12px
+    16px;
+
+  align-self: flex-start;
+}
+
+.quest-dev-map-toggle:hover {
+  border-color:
+    rgba(22, 22, 22, 0.55);
+}
+
+.quest-dev-map-toggle:focus-visible {
+  outline: 2px solid #161616;
+  outline-offset: 2px;
 }
 
 .quest-dev-map-toggle[data-active="true"] {
   background: #161616;
   color: #f8f7f4;
+}
+
+.quest-dev-map-toggle__label,
+.quest-dev-map-toggle__state {
+  white-space: nowrap;
 }
 
 .quest-dev-map-toggle__count {
@@ -39,26 +92,50 @@
   min-width: 18px;
   height: 18px;
 
+  padding: 0 4px;
+
   border: 1px solid currentColor;
-  border-radius: 50%;
+  border-radius: 999px;
 
   font-size: 9px;
+  line-height: 1;
 }
 
 .quest-dev-map-toggle__state {
   opacity: 0.55;
 }
 
+
+/* ---------------------------------------------------------
+   GLOBAL ANNOTATION LAYER
+   --------------------------------------------------------- */
+
 .quest-dev-map-layer {
   position: absolute;
   inset: 0;
 
+  width: 100%;
+  min-height: 100%;
+
   pointer-events: none;
+
   z-index: 9995;
 }
 
+.quest-dev-map-layer[hidden] {
+  display: none !important;
+}
+
+
+/* ---------------------------------------------------------
+   STICKERS
+   --------------------------------------------------------- */
+
 .quest-dev-sticker {
   position: absolute;
+
+  display: inline-flex;
+  align-items: center;
 
   pointer-events: auto;
 
@@ -71,26 +148,43 @@
   color: #171717;
 
   box-shadow:
-    2px 2px 0 rgba(0, 0, 0, 0.12);
+    2px 2px 0
+    rgba(0, 0, 0, 0.12);
 
   font-family: inherit;
   font-size: 9px;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.08em;
+
+  white-space: nowrap;
 
   cursor: pointer;
 }
 
+.quest-dev-sticker:hover {
+  transform: translateY(-1px);
+}
+
+.quest-dev-sticker:focus-visible {
+  outline: 2px solid #161616;
+  outline-offset: 2px;
+}
+
 .quest-dev-sticker::before {
   content: "";
+
   display: inline-block;
 
   width: 6px;
   height: 6px;
 
+  flex: 0 0 6px;
+
   margin-right: 5px;
 
   border-radius: 50%;
+
   background: currentColor;
 }
 
@@ -99,7 +193,7 @@
 }
 
 .quest-dev-sticker[data-status="BUILD"] {
-  transform: rotate(-1deg);
+  rotate: -1deg;
 }
 
 .quest-dev-sticker[data-status="WIRE"] {
@@ -116,21 +210,39 @@
   border: 1px solid currentColor;
 }
 
+
+/* ---------------------------------------------------------
+   NOTE CARD
+   --------------------------------------------------------- */
+
 .quest-dev-note {
   position: absolute;
 
-  width: min(320px, calc(100vw - 32px));
+  width:
+    min(
+      320px,
+      calc(100vw - 32px)
+    );
+
+  max-height:
+    calc(100vh - 32px);
+
+  overflow: auto;
 
   padding: 14px;
 
-  border: 1px solid #151515;
+  border:
+    1px solid
+    #151515;
+
   border-radius: 3px;
 
   background: #f8f7f4;
   color: #151515;
 
   box-shadow:
-    5px 5px 0 rgba(0, 0, 0, 0.13);
+    5px 5px 0
+    rgba(0, 0, 0, 0.13);
 
   font-family: inherit;
 
@@ -146,19 +258,40 @@
 
   font-size: 9px;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.08em;
 }
 
-.quest-dev-note__header button {
+.quest-dev-note__status {
+  padding:
+    3px
+    5px;
+
+  border:
+    1px solid
+    currentColor;
+}
+
+.quest-dev-note__close {
   margin-left: auto;
 
-  border: 0;
-  background: transparent;
+  padding: 0;
 
+  border: 0;
+
+  background: transparent;
+  color: inherit;
+
+  font: inherit;
   font-size: 18px;
   line-height: 1;
 
   cursor: pointer;
+}
+
+.quest-dev-note__close:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .quest-dev-note__author {
@@ -166,14 +299,21 @@
 }
 
 .quest-dev-note h3 {
-  margin: 0 0 8px;
+  margin:
+    0
+    0
+    8px;
 
   font-size: 16px;
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .quest-dev-note p {
-  margin: 0 0 14px;
+  margin:
+    0
+    0
+    14px;
 
   font-size: 12px;
   line-height: 1.5;
@@ -196,39 +336,68 @@
 .quest-dev-note code {
   display: block;
 
+  overflow-wrap: anywhere;
+
   padding: 5px 6px;
 
-  background: rgba(0, 0, 0, 0.05);
+  background:
+    rgba(0, 0, 0, 0.05);
 
   font-size: 10px;
 }
 
 .quest-dev-note ul {
-  margin: 3px 0 0;
+  margin:
+    3px
+    0
+    0;
+
   padding-left: 18px;
 }
 
 .quest-dev-note li {
-  margin: 4px 0;
+  margin:
+    4px
+    0;
+
   line-height: 1.35;
 }
 
+
+/* ---------------------------------------------------------
+   TARGET / TOUR HIGHLIGHTS
+   --------------------------------------------------------- */
+
 .quest-dev-map-target {
-  outline: 1px dashed rgba(20, 20, 20, 0.55);
+  outline:
+    1px dashed
+    rgba(20, 20, 20, 0.55);
+
   outline-offset: 4px;
 }
 
 .quest-dev-tour-active {
   position: relative;
 
-  outline: 2px solid #161616 !important;
+  outline:
+    2px solid
+    #161616 !important;
+
   outline-offset: 7px;
 
   z-index: 3;
 }
 
+
+/* ---------------------------------------------------------
+   RESPONSIVE
+   Desktop system-authoring tool only for V1.
+   --------------------------------------------------------- */
+
 @media (max-width: 1023px) {
-  .quest-dev-map-toggle {
-    display: none;
+  .quest-dev-map-toggle,
+  .quest-dev-map-layer,
+  .quest-dev-note {
+    display: none !important;
   }
 }
