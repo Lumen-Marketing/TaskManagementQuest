@@ -563,6 +563,15 @@ export function initDevMap() {
   createLayer();
   createToggle();
 
+  // Explicit URL opt-in opens DEV MAP immediately.
+  if (
+    new URLSearchParams(window.location.search).get("dev-map") === "1"
+  ) {
+    enabled = true;
+    updateToggleState();
+    renderAnnotations();
+  }
+
   createDevTour({
     annotations: DEV_MAP_ANNOTATIONS,
 
@@ -590,7 +599,9 @@ export function initDevMap() {
    * canonical right zone instead of remaining in a fallback host.
    */
   observer = new MutationObserver(() => {
-    ensureToggleMount();
+    // QuestShell can replace the sidecar contents entirely.
+    // Re-create the DEV MAP control if that render removed it.
+    createToggle();
 
     const nextPhase = getActivePhase();
 
