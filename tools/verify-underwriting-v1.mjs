@@ -16,7 +16,11 @@ try {
   const fixture=JSON.parse(await readFile('tests/fixtures/gaf/gilbert.json','utf8'));
   await page.evaluate(f=>{
     window.model=new App.UnderwritingModel();model.hydrate('bid',{record:{id:'u',status:'draft',calculatedAt:null}});
-    const controller={underwriting:model};window.view=new App.UnderwritingView({controller});window.task={id:'bid',type:'bid'};
+    const controller={
+      underwriting:model,
+      setUnderwritingDraftField:(id,field,value)=>model.setDraftField(id,field,value)
+    };
+    window.view=new App.UnderwritingView({controller});window.task={id:'bid',type:'bid'};
     model.importMeasurement('bid',f);view.mount(document.querySelector('#uwHost'),task);
   },fixture);
   for (const width of [1440,1024,768]) {
