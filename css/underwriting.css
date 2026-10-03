@@ -114,3 +114,13 @@
   #taskDetailWrap .uw-step summary { grid-template-columns: minmax(0, 1fr) auto; }
   #taskDetailWrap .uw-src { grid-column: 1 / -1; justify-self: start; }
 }
+
+/* Underwriting V1 remains inside the existing Bid detail surface. */
+.uw-material-scroll { overflow-x: auto; }
+.uw-materials { width: 100%; border-collapse: collapse; }
+.uw-materials th, .uw-materials td { text-align: left; vertical-align: top; padding: 12px; border-bottom: 1px solid var(--border, #ddd); }
+.uw-materials small { display: block; }
+.uw-materials input { max-width: 180px; }
+.uw-review { display: block; margin: 10px 0; }
+.uw-review input { margin-right: 8px; }
+.uw [data-uw-import] { width: 100%; font-family: monospace; }

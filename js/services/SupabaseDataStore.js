@@ -1084,6 +1084,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
       totalEstimatedCost: this._num2(r.total_estimated_cost),
       recommendedSalePrice: this._num2(r.recommended_sale_price),
       calculatedAt: r.calculated_at || null,
+      workflow: r.workflow || null,
       notes: r.notes || '',
       createdBy: r.created_by || null,
       approvedBy: r.approved_by || null,
@@ -1144,7 +1145,7 @@ App.SupabaseDataStore = class SupabaseDataStore {
   // any derived figure that disagrees with the inputs.
   async saveUnderwritingEstimate(id, payload, reason) {
     const i = payload.input, d = payload.data;
-    const res = await this.supabase.rpc('save_underwriting_estimate', {
+    const res = await this.supabase.rpc(payload.workflow ? 'save_underwriting_v1' : 'save_underwriting_estimate', {
       p_id: id,
       p_roof_area_sqft: i.roofAreaSqft,
       p_waste_percent: i.wastePercent,
@@ -1157,7 +1158,9 @@ App.SupabaseDataStore = class SupabaseDataStore {
       p_total_estimated_cost: d.totalEstimatedCost,
       p_recommended_sale_price: d.recommendedSalePrice,
       p_reason: reason || null,
+      ...(payload.workflow ? { p_workflow: payload.workflow } : {}),
     });
+    if (payload.workflow && ['PGRST202','42883'].includes(res?.error?.code)) throw new Error('Underwriting V1 requires migration 075 on an isolated DEV database before saving.');
     this._throwUnderwritingError(res, 'save_underwriting_estimate');
   }
 

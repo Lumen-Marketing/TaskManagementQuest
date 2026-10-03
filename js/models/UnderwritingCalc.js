@@ -171,10 +171,118 @@ App.UnderwritingCalc = (function () {
     return { verified: r.data.recommendedSalePrice === stored, recomputedSalePrice: r.data.recommendedSalePrice };
   }
 
+  // Whole-report/order figures are deliberately separate from migration 073's
+  // decimal adjusted area and fractional squares. Never repurpose those columns.
+  function orderQuantity(area, waste) {
+    const a = parseToHundredths(area), w = parseToHundredths(waste);
+    if (a <= ZERO || w < ZERO) throw new Error('Positive roof area and nonnegative waste are required.');
+    const numerator = a * (TEN_THOUSAND + w);
+    return { adjustedAreaSqft: divideRoundHalfUp(numerator, BigInt(1000000)).toString(),
+      orderSquares: ((numerator + BigInt(99999999)) / BigInt(100000000)).toString() };
+  }
+
+  function calculateWorkflow(workflow, selectedWaste) {
+    const importedRoof = App.RoofMeasurement.normalize(workflow.measurement);
+    const roof = workflow.measurementOverrides?.roofAreaSqft != null
+      ? App.RoofMeasurement.normalize({ ...importedRoof, roofAreaSqft: workflow.measurementOverrides.roofAreaSqft }) : importedRoof;
+    const waste = parseToHundredths(selectedWaste);
+    const calculatedOrder = orderQuantity(roof.roofAreaSqft, selectedWaste);
+    const reportOrder = !workflow.measurementOverrides?.roofAreaSqft
+      && roof.reportWasteTable.find(row => parseToHundredths(row.wastePercent) === waste);
+    // PDF summary values were rounded by the report provider before import.
+    // Preserve its printed waste table; rounded base SF cannot recover hidden precision.
+    const order = reportOrder ? { adjustedAreaSqft: (parseToHundredths(reportOrder.adjustedAreaSqft) / HUNDRED).toString(),
+      orderSquares: (parseToHundredths(reportOrder.orderSquares) / HUNDRED).toString() } : calculatedOrder;
+    const scope = App.RoofMeasurement.pitchScope(roof);
+    const formulas = App.RoofMeasurement.geometry(roof);
+    const length = k => roof.reportedAccessories[k] ?? formulas[k];
+    const ceilCoverage = (area, coverage, applyWaste = true) => {
+      if (area == null) return null;
+      const n = parseToHundredths(area) * (applyWaste ? TEN_THOUSAND + waste : TEN_THOUSAND);
+      const d = parseToHundredths(coverage) * TEN_THOUSAND;
+      return ((n + d - 1n) / d).toString();
+    };
+    const derived = {
+      shingles: ceilCoverage(scope.shingleSqft, '32.80'),
+      deckProtection: ceilCoverage(roof.roofAreaSqft, '1000'),
+      starter: ceilCoverage(length('starter'), '120'),
+      ridgeCap: ceilCoverage(length('ridgeCap'), '25'),
+      dripEdge: ceilCoverage(length('dripEdge'), '10'),
+      leakBarrier: length('leakBarrier') == null ? null : ceilCoverage(
+        hundredthsToString(parseToHundredths(length('leakBarrier')) * 3n), '200'),
+      lowSlopeBase: ceilCoverage(scope.lowSlopeSqft, '200'),
+      lowSlopeCap: ceilCoverage(scope.lowSlopeSqft, '100'),
+    };
+    derived.stepFlashing = ceilCoverage(roof.lengths.step, '10');
+    ['coilNails','capNails'].forEach(key => {
+      const recommendation = roof.materialRecommendations.find(r => r.key === key && parseToHundredths(r.wastePercent) === waste);
+      derived[key] = recommendation?.quantity ?? null;
+    });
+    const defaults = [
+      ['shingles','Timberline HDZ','bundle'], ['deckProtection','Deck protection 10 SQ','roll'],
+      ['starter','Pro-Start 120 FT','bundle'], ['ridgeCap','Seal-A-Ridge 25 FT','bundle'],
+      ['dripEdge','Drip edge 10 FT','piece'], ['leakBarrier','Leak barrier 2 SQ','roll'],
+      ['lowSlopeBase','Low-slope base 2 SQ','roll'], ['lowSlopeCap','Low-slope cap 1 SQ','roll'],
+      ['coilNails','Coil nails 1.25 inch','box'], ['capNails','Cap nails','box'], ['stepFlashing','Step flashing 10 FT','piece'],
+    ];
+    const nonnegative = (v, label) => {
+      const n = parseToHundredths(v);
+      if (n < ZERO) throw new Error(label + ' cannot be negative.');
+      return n;
+    };
+    const lines = defaults.map(([key,name,unit]) => {
+      const input = workflow.materials?.[key] || {};
+      const overridden = input.quantity !== '' && input.quantity != null;
+      if (input.product && input.product !== name && !overridden) throw new Error('Confirm quantity for the selected '+input.product+' product.');
+      const quantity = overridden ? hundredthsToString(nonnegative(input.quantity, name + ' quantity')) : derived[key];
+      const price = input.unitPrice === '' || input.unitPrice == null ? null : hundredthsToString(nonnegative(input.unitPrice, name + ' price'));
+      const total = quantity == null || price == null ? null : hundredthsToString(divideRoundHalfUp(parseToHundredths(quantity) * parseToHundredths(price), HUNDRED));
+      return { key, product: input.product || name, unit, quantity, unitPrice: price, total, overridden,
+        source: overridden ? 'underwriter_override' : (['coilNails','capNails'].includes(key) && derived[key] != null ? 'gaf_report' : 'calculated'), supplier: input.supplier || '', pricedAt: input.pricedAt || '',
+        rule: 'gaf-guidance-v1', coverageQuantity: derived[key] };
+    });
+    const priced = lines.every(l => l.quantity != null && (parseToHundredths(l.quantity) === ZERO || l.total != null));
+    const material = lines.reduce((n,l) => n + (l.total == null ? ZERO : parseToHundredths(l.total)), ZERO);
+    const tax = nonnegative(workflow.taxPercent ?? '8.5', 'Tax');
+    if (tax > TEN_THOUSAND) throw new Error('Tax must not exceed 100%.');
+    const taxed = material + divideRoundHalfUp(material * tax, TEN_THOUSAND);
+    const laborRate = workflow.laborRate === '' || workflow.laborRate == null ? null : nonnegative(workflow.laborRate, 'Labor rate');
+    const labor = laborRate == null ? ZERO : BigInt(order.orderSquares) * laborRate;
+    const jobCosts = Object.entries(workflow.jobCosts || {}).map(([key,value]) => ({ key, amount: hundredthsToString(nonnegative(value || '0', key)) }));
+    const other = jobCosts.reduce((n,c) => n + parseToHundredths(c.amount), ZERO);
+    const quote = nonnegative(workflow.clientPrice || '0', 'Client price');
+    const commissionRate = nonnegative(workflow.commissionPercent ?? '10', 'Commission');
+    const overheadRate = nonnegative(workflow.overheadPercent ?? '0', 'Overhead');
+    if (commissionRate + overheadRate >= TEN_THOUSAND) throw new Error('Commission plus overhead must be less than 100%.');
+    const commission = divideRoundHalfUp(quote * commissionRate, TEN_THOUSAND);
+    const overhead = divideRoundHalfUp(quote * overheadRate, TEN_THOUSAND);
+    const hard = taxed + labor + other, gross = quote - hard, net = gross - commission - overhead;
+    const netMargin = quote > ZERO ? hundredthsToString(divideRoundHalfUp(net * TEN_THOUSAND, quote)) : null;
+    const evidence = workflow.review || {};
+    const validPriceDate = value => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const parsed = new Date(value+'T00:00:00Z');
+      return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0,10) === value;
+    };
+    const checks = {
+      measurementsVerified: evidence.measurementsVerified === true && roof.pitchAreas.length > 0,
+      wasteConfirmed: evidence.wasteConfirmed === true,
+      materialTakeoffReviewed: evidence.materialTakeoffReviewed === true && priced,
+      laborConfirmed: evidence.laborConfirmed === true && laborRate != null,
+      pricingCurrent: evidence.pricingCurrent === true && lines.every(l => l.quantity != null && (parseToHundredths(l.quantity) === ZERO || (l.total != null && l.supplier && validPriceDate(l.pricedAt)))),
+      marginWithinPolicy: quote > ZERO && netMargin != null && parseToHundredths(netMargin) >= parseToHundredths(workflow.targetMarginPercent || '35'),
+    };
+    const dollars = hundredthsToString;
+    return { roof, order, scope, formulas, lines, checks, ready: Object.values(checks).every(Boolean),
+      materialCost: dollars(taxed), laborCost: dollars(labor), otherCost: dollars(other + commission + overhead),
+      materialBeforeTax: dollars(material), jobCosts, hardCost: dollars(hard), clientPrice: dollars(quote),
+      commission: dollars(commission), overhead: dollars(overhead), grossProfit: dollars(gross), netProfit: dollars(net), netMarginPercent: netMargin };
+  }
+
   const api = {
     STATUSES, STATUS_LABELS, isEditable, allowedNextStatuses, canApprove,
     parseToHundredths, hundredthsToString, divideRoundHalfUp, normalizeNumeric,
-    calculate, grossProfit, achievedMarginPercent, verifyRecommendedSalePrice,
+    orderQuantity, calculateWorkflow, calculate, grossProfit, achievedMarginPercent, verifyRecommendedSalePrice,
   };
   return api;
 })();

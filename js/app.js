@@ -1,3 +1,5 @@
+// Beta: unit planning is available only through its explicit direct link.
+document.documentElement.dataset.unitPlanning = new URLSearchParams(location.search).get('unitPlanning') === '1' ? 'visible' : 'hidden';
 /* Bootstrap - wires the three layers together.
    1. Construct models, hydrate from Supabase
    2. Construct controller
@@ -111,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             adjustedRoofAreaSqft: d.adjustedRoofAreaSqft, squares: d.squares,
             totalEstimatedCost: d.totalEstimatedCost, recommendedSalePrice: d.recommendedSalePrice,
             calculatedAt: now, updatedAt: now,
+            ...(payload.workflow ? { workflow: JSON.parse(JSON.stringify(payload.workflow)) } : {}),
           });
         },
         setUnderwritingStatus: async (id, status, reason) => {
@@ -357,6 +360,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // restore on refresh. Must run after restoreUiState so a deep link wins.
   controller.initHistory();
 
+  // Async sign-in/data boot is complete; reconcile the shared console now.
+  App.workspaceReady = true;
+  App.EventBus.emit('app:ready');
+
   // Data + views are ready and the last view is restored — fade out the boot loader.
   if (App.hideAppLoader) App.hideAppLoader();
 
@@ -569,11 +576,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       return !(data && data.onboarded);
     } catch (e) { return false; } // no onboarded column yet → don't nag
   };
-  App.startTour = () => App.tour.start({ onFinish: markOnboarded });
+  // Temporarily disabled for the beta; restore this flag to re-enable the tour.
+  const welcomeTourEnabled = false;
+  App.startTour = () => {
+    if (welcomeTourEnabled) App.tour.start({ onFinish: markOnboarded });
+  };
 
   const forceTour = new URLSearchParams(window.location.search).get('tour') === '1';
   window.setTimeout(async () => {
-    if (forceTour || await shouldAutoStartTour()) App.startTour();
+    if (welcomeTourEnabled && (forceTour || await shouldAutoStartTour())) App.startTour();
   }, 600);
 
   document.addEventListener('keydown', (e) => {

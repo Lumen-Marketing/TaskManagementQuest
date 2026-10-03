@@ -42,6 +42,7 @@ App.UnderwritingView = class UnderwritingView {
   static historyValue(field, v) {
     if (v === null || v === undefined || v === '') return 'Not entered';
     const P = App.UnderwritingView.pretty;
+    if (field === 'workflow') return 'Measurement / material / cost / review snapshot updated';
     if (field === 'status') return App.UnderwritingCalc.STATUS_LABELS[v] || v;
     if (field === 'roof_area_sqft') return P(v) + ' sqft';
     if (field === 'waste_percent' || field === 'target_margin_percent') return v + '%';
@@ -100,11 +101,54 @@ App.UnderwritingView = class UnderwritingView {
 
     return `<div class="uw">
       ${this._headerHtml(task, rec)}
+      ${this._workflowHtml(task, rec)}
       ${this._formHtml(task, rec)}
       ${this.proposalView ? this.proposalView.sectionHtml(task, rec) : ''}
       ${this._breakdownHtml(id)}
       ${this._historyHtml(id)}
     </div>`;
+  }
+
+  _workflowHtml(task, rec) {
+    const w = this.model.draft(task.id).workflow;
+    const editable = App.can('underwriting.manage') && this.model.isEditable(task.id);
+    const disabled = editable ? '' : 'disabled';
+    const E = v => this._esc(v);
+    const entry = (path, label, value, type = 'text') => `<label class="uw-f"><span class="uw-f-l">${E(label)}</span><input class="uw-in" type="${type}" data-uw-workflow="${E(path)}" value="${E(value ?? '')}" ${disabled} /></label>`;
+    if (!w) {
+      const field = (key,label,type='text') => `<label class="uw-f"><span class="uw-f-l">${E(label)}</span><input class="uw-in" type="${type}" data-uw-import-field="${key}" /></label>`;
+      return `<section class="uw-sec"><h3 class="uw-h">01 / MEASURE</h3><p>GAF supplies the roof measurements. Quest selects products, prices and the readiness decision.</p>
+      ${editable ? `<details><summary>Enter measurements from a GAF report</summary><p>Attach the PDF to the Bid's files first, then enter its report reference and printed values. Leave unknown measurements blank; enter 0 only when confirmed.</p><div class="uw-grid">
+      ${field('property','Property address')}${field('reportName','Report filename')}${field('reference','Source reference or Files link')}${field('reportDate','Report date','date')}${field('page','Summary page','number')}${field('roofAreaSqft','Roof area (SF)')}${field('facetCount','Facet count','number')}${field('suggestedWastePercent','GAF suggested waste (%)')}${field('adjustedAreaSqft','Printed adjusted area at suggested waste (SF)')}${field('orderSquares','Printed squares at suggested waste')}
+      ${App.RoofMeasurement.LENGTHS.map(k=>field(k,k+' (FT)')).join('')}${App.RoofMeasurement.ACCESSORIES.map(k=>field(k,'Reported '+k+' (FT)')).join('')}${field('coilNails','Reported coil nail boxes')}${field('capNails','Reported cap nail boxes')}
+      </div><label class="uw-f"><span class="uw-f-l">Pitch areas, one per line: 1/12: 276</span><textarea class="uw-in" data-uw-pitches rows="4"></textarea></label><button class="btn" type="button" data-uw-action="import">Import measurements</button><div data-uw-import-error role="alert"></div></details>` : ''}</section>`;
+    }
+    let r;
+    try { r = App.UnderwritingCalc.calculateWorkflow(w, this.model.draft(task.id).wastePercent); }
+    catch (e) { return `<section class="uw-sec"><div role="alert">${E(e.message)}</div><button class="btn" data-uw-action="discard">Discard changes</button></section>`; }
+    const roof = w.measurement, src = roof.source;
+    const geom = Object.entries(roof.lengths).map(([k,v]) => `<span>${E(k)} <b>${v == null ? 'Unknown' : E(v) + ' FT'}</b></span>`).join(' · ');
+    const accessories = Object.entries(r.formulas).map(([k,v]) => `<div>${E(k)}: reported ${E(roof.reportedAccessories[k] ?? 'Unknown')} FT · formula ${E(v ?? 'Unknown')} FT</div>`).join('');
+    const rows = r.lines.map(l => {
+      const item = w.materials[l.key] || {};
+      return `<tr data-uw-material-row="${E(l.key)}"><td>${entry('materials.'+l.key+'.product','Product',item.product || l.product)}<small>${E(l.rule)} · ${E(l.unit)}</small></td>
+        <td><b data-uw-material-quantity>${E(l.quantity ?? 'Unknown')}</b><small data-uw-material-source>${l.overridden ? 'Underwriter override' : l.source === 'gaf_report' ? 'GAF report' : 'Coverage calculation'}</small>${entry('materials.'+l.key+'.quantity','Override quantity',item.quantity)}</td>
+        <td>${entry('materials.'+l.key+'.unitPrice','Unit price',item.unitPrice)}${entry('materials.'+l.key+'.supplier','Supplier',item.supplier)}${entry('materials.'+l.key+'.pricedAt','Price checked on',item.pricedAt,'date')}</td><td data-uw-material-total>${l.total == null ? 'Unpriced' : '$'+E(l.total)}</td></tr>`;
+    }).join('');
+    const labels = { measurementsVerified: 'Measurements verified against source', wasteConfirmed: 'Waste confirmed', materialTakeoffReviewed: 'Material takeoff reviewed', laborConfirmed: 'Labor confirmed', pricingCurrent: 'Pricing current' };
+    return `<section class="uw-sec"><h3 class="uw-h">01 / MEASURE</h3><b>${E(roof.property)}</b><p>${E(src.provider)} · ${E(src.reportName)} · ${E(src.reportDate)} · page ${E(src.page)}</p><p>Source reference: ${E(src.reference)}</p><p>Imported area: ${E(roof.roofAreaSqft)} SF · ${E(roof.facetCount ?? 'Unknown')} facets</p><p>${geom}</p><p>Pitch areas: ${roof.pitchAreas.map(p => E(p.pitchRise)+'/12: '+E(p.areaSqft)+' SF').join(' · ') || 'Unknown'}</p><details><summary>Reported accessory lengths and printed formulas</summary>${accessories}</details></section>
+      <section class="uw-sec"><h3 class="uw-h">02 / CALCULATE</h3><div class="uw-grid">${this._field("roofAreaSqft", "Selected roof area", "SF", this.model.draft(task.id), this._errors[task.id] || {}, editable)}${this._field("wastePercent", "Underwriter waste", "%", this.model.draft(task.id), this._errors[task.id] || {}, editable)}</div><p>GAF suggested waste: ${E(roof.suggestedWastePercent ?? 'Unknown')}% · selected: ${E(this.model.draft(task.id).wastePercent)}%</p><p><strong data-uw-order>${E(r.order.adjustedAreaSqft)} SF · ${E(r.order.orderSquares)} order SQ</strong></p><p>Low-slope area: ${E(r.scope.lowSlopeSqft ?? 'Unknown')} SF · shingle area (2/12 and above): ${E(r.scope.shingleSqft ?? 'Unknown')} SF</p><p>Pitch-area rounding difference: ${E(r.scope.discrepancySqft ?? 'Unknown')} SF. Source values are retained.</p></section>
+      <section class="uw-sec"><h3 class="uw-h">03 / MATERIALS</h3><p>Coverage guidance is a starting quantity. Confirm installation coverage, laps and scope; enter any adjustment with a change reason. Prices start blank.</p><div class="uw-material-scroll"><table class="uw-materials"><thead><tr><th>Quest product</th><th>Quantity</th><th>Supplier pricing</th><th>Cost</th></tr></thead><tbody>${rows}</tbody></table></div></section>
+      <section class="uw-sec"><h3 class="uw-h">04 / COST</h3><div class="uw-grid">${this._field('targetMarginPercent','Target net margin','%',this.model.draft(task.id),this._errors[task.id] || {},editable)}${entry('laborRate','Labor / order SQ',w.laborRate)}${entry('clientPrice','Client price',w.clientPrice)}${entry('taxPercent','Material tax %',w.taxPercent)}${entry('commissionPercent','Commission % of client price',w.commissionPercent)}${entry('overheadPercent','Overhead % of client price',w.overheadPercent)}${['dumpster','delivery','permit','plywood','solar','flashing','other'].map(k=>entry('jobCosts.'+k,k,w.jobCosts[k] ?? '0')).join('')}</div><div data-uw-economics>${this._economicsHtml(r)}</div></section>
+      <section class="uw-sec"><h3 class="uw-h">05 / PROVE</h3>${Object.entries(labels).map(([key,label])=>`<label class="uw-review"><input type="checkbox" data-uw-review="${key}" ${w.review[key] === true ? 'checked' : ''} ${disabled} />${E(label)}</label>`).join('')}<p data-uw-readiness>${this._readinessHtml(r)}</p><p>Save the reviewed snapshot before submitting. Approval remains restricted to existing approvers.</p></section>`;
+  }
+
+  _economicsHtml(r) {
+    return `Materials before tax $${this._esc(r.materialBeforeTax)} · taxed materials $${this._esc(r.materialCost)} · labor $${this._esc(r.laborCost)}<br>Hard cost $${this._esc(r.hardCost)} · commission $${this._esc(r.commission)} · overhead $${this._esc(r.overhead)}<br>Gross profit $${this._esc(r.grossProfit)} · net profit $${this._esc(r.netProfit)} · net margin ${this._esc(r.netMarginPercent ?? 'Unknown')}%`;
+  }
+  _readinessHtml(r) {
+    const missing = Object.entries(r.checks).filter(([,v]) => !v).map(([k]) => k.replace(/([A-Z])/g,' $1').toLowerCase());
+    return r.ready ? 'Ready for sales review' : 'Not ready: '+this._esc(missing.join(', '));
   }
 
   _emptyHtml(task) {
@@ -159,17 +203,17 @@ App.UnderwritingView = class UnderwritingView {
     const dirty = m.isDirty(id);
 
     return `<section class="uw-sec" aria-label="Estimate inputs">
-      <h3 class="uw-h"><i class="ti ti-calculator"></i>Estimate</h3>
+      <h3 class="uw-h"><i class="ti ti-calculator"></i>${draft.workflow ? "Selected waste, margin and saved decision" : "Estimate"}</h3>
       ${!C.isEditable(rec.status) ? `<div class="uw-lock"><i class="ti ti-lock"></i>This estimate is ${this._esc((C.STATUS_LABELS[rec.status] || rec.status).toLowerCase())} — the numbers that were reviewed are locked.</div>` : ''}
       ${errors.form ? `<div class="uw-err-form" role="alert">${this._esc(errors.form)}</div>` : ''}
-      <div class="uw-grid">
+      ${draft.workflow ? `<p>Costs are carried from the material and job-cost lines above. The legacy recommendation remains calculated from the saved allocated costs and target margin. Readiness uses the actual client price and net margin shown in COST.</p>` : `<div class="uw-grid">
         ${this._field('roofAreaSqft', 'Base roof area', 'sqft', draft, errors, editable)}
         ${this._field('wastePercent', 'Waste', '%', draft, errors, editable)}
-        ${this._field('materialCost', 'Material cost', '$', draft, errors, editable)}
-        ${this._field('laborCost', 'Labor cost', '$', draft, errors, editable)}
-        ${this._field('otherCost', 'Other cost', '$', draft, errors, editable)}
+        ${this._field('materialCost', 'Material cost', '$', draft, errors, editable && !draft.workflow)}
+        ${this._field('laborCost', 'Labor cost', '$', draft, errors, editable && !draft.workflow)}
+        ${this._field('otherCost', 'Other cost (includes commission / overhead)', '$', draft, errors, editable && !draft.workflow)}
         ${this._field('targetMarginPercent', 'Target margin', '%', draft, errors, editable)}
-      </div>
+      </div>`}
       ${editable ? `
         <label class="uw-f uw-f-reason">
           <span class="uw-f-l">Reason for this change <span class="uw-opt">(optional — recorded in history)</span></span>
@@ -292,7 +336,36 @@ App.UnderwritingView = class UnderwritingView {
       });
     });
 
+    host.querySelectorAll('[data-uw-workflow], [data-uw-review]').forEach(el => {
+      el.addEventListener(el.dataset.uwReview ? 'change' : 'input', () => {
+        this.model.setWorkflowField(id, el.dataset.uwReview ? 'review.'+el.dataset.uwReview : el.dataset.uwWorkflow, el.dataset.uwReview ? el.checked : el.value);
+        this._refreshLive(host,id);
+      });
+    });
     const on = (sel, fn) => { const el = q(sel); if (el) el.addEventListener('click', fn); };
+    on('[data-uw-action="import"]', () => {
+      try {
+        const values = {}; host.querySelectorAll('[data-uw-import-field]').forEach(el=> { values[el.dataset.uwImportField]=el.value.trim(); });
+        const page=Number(values.page), waste=values.suggestedWastePercent;
+        const pitches=q('[data-uw-pitches]').value.trim();
+        const pitchAreas=pitches ? pitches.split(/\n/).map(line=> {
+          const match=/^\s*(\d+)\/12\s*:\s*(\d+(?:\.\d{1,2})?)\s*$/.exec(line);
+          if (!match) throw new Error('Enter each pitch area as 1/12: 276.');
+          return {pitchRise:Number(match[1]),areaSqft:match[2],page};
+        }) : [];
+        if ((values.adjustedAreaSqft === '') !== (values.orderSquares === '')) throw new Error('Enter both printed adjusted area and squares, or leave both blank.');
+        const measurement={schemaVersion:1,property:values.property,roofAreaSqft:values.roofAreaSqft,
+          facetCount:values.facetCount ? Number(values.facetCount) : null, pitchAreas,
+          source:{provider:'GAF QuickMeasure',reportName:values.reportName,reference:values.reference,reportDate:values.reportDate,page},
+          lengths:Object.fromEntries(App.RoofMeasurement.LENGTHS.map(k=>[k,values[k] || null])),
+          reportedAccessories:Object.fromEntries(App.RoofMeasurement.ACCESSORIES.map(k=>[k,values[k] || null])),
+          suggestedWastePercent:waste || null,
+          reportWasteTable:values.adjustedAreaSqft ? [{wastePercent:waste,adjustedAreaSqft:values.adjustedAreaSqft,orderSquares:values.orderSquares}] : [],
+          materialRecommendations:['coilNails','capNails'].filter(k=>values[k]).map(k=>({key:k,quantity:values[k],wastePercent:waste,page:page+1,unit:'box'}))};
+        this.model.importMeasurement(id,measurement); this.mount(host,task);
+      }
+      catch (e) { q('[data-uw-import-error]').textContent = e.message; }
+    });
     on('[data-uw-action="create"]', () => ctl.createTaskUnderwriting(id));
     on('[data-uw-action="retry"]', () => ctl.loadTaskUnderwriting(id, { force: true }));
     on('[data-uw-action="save"]', () => this._save(id));
@@ -323,12 +396,29 @@ App.UnderwritingView = class UnderwritingView {
     const discard = host.querySelector('[data-uw-action="discard"]');
     const rec = m.record(id);
     const dirty = m.isDirty(id);
+    const w = m.syncWorkflow(id);
+    if (!w && m.draft(id).workflow) {
+      const cost = host.querySelector('[data-uw-economics]'); if (cost) cost.textContent = 'Correct the invalid input to recalculate costs.';
+      const readiness = host.querySelector('[data-uw-readiness]'); if (readiness) readiness.textContent = 'Not ready: invalid input.';
+    }
+    if (w) {
+      host.querySelectorAll('[data-uw-review]').forEach(el => { el.checked = m.draft(id).workflow.review[el.dataset.uwReview] === true; });
+      const order = host.querySelector('[data-uw-order]'); if (order) order.textContent = w.order.adjustedAreaSqft+' SF · '+w.order.orderSquares+' order SQ';
+      w.lines.forEach(l => {
+        const row = host.querySelector('[data-uw-material-row="'+l.key+'"]');
+        if (row) { row.querySelector('[data-uw-material-quantity]').textContent = l.quantity ?? 'Unknown'; row.querySelector('[data-uw-material-total]').textContent = l.total == null ? 'Unpriced' : '$'+l.total; row.querySelector('[data-uw-material-source]').textContent = l.overridden ? 'Underwriter override' : l.source === 'gaf_report' ? 'GAF report' : 'Coverage calculation'; }
+      });
+      const cost = host.querySelector('[data-uw-economics]'); if (cost) cost.innerHTML = this._economicsHtml(w);
+      const readiness = host.querySelector('[data-uw-readiness]'); if (readiness) readiness.innerHTML = this._readinessHtml(w);
+      ['materialCost','laborCost','otherCost'].forEach(k => { const el = host.querySelector('[data-uw-field="'+k+'"]'); if (el) el.value = m.draft(id)[k]; });
+    }
     if (save && rec) save.disabled = !(dirty || !rec.calculatedAt);
     if (discard) discard.disabled = !dirty;
     if (!prev) return;
     if (!dirty && rec && rec.calculatedAt) { prev.innerHTML = ''; return; }
     const ev = m.evaluateDraft(id);
     const P = App.UnderwritingView.pretty;
+    if (!ev.ok && m.draft(id).workflow) { prev.textContent = ev.errors.form || Object.values(ev.errors).join(' '); return; }
     if (ev.ok) {
       prev.innerHTML = `<i class="ti ti-eye"></i>Unsaved preview: recommended sale price <b>$${this._esc(P(ev.data.recommendedSalePrice))}</b> on a total cost of <b>$${this._esc(P(ev.data.totalEstimatedCost))}</b>. Save to record it in the breakdown and history.`;
     } else {
@@ -350,5 +440,5 @@ App.UnderwritingView = class UnderwritingView {
 App.UnderwritingView.FIELD_LABELS = {
   roof_area_sqft: 'Roof area', waste_percent: 'Waste %', material_cost: 'Material cost',
   labor_cost: 'Labor cost', other_cost: 'Other cost', target_margin_percent: 'Target margin %',
-  status: 'Status',
+  status: 'Status', workflow: 'Underwriting V1 snapshot',
 };

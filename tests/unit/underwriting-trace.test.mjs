@@ -100,9 +100,9 @@ test('never fabricates a source: untouched column defaults are "not_entered", no
   }
 });
 
-test('only the three real sources exist (no imported / measurement / override)', () => {
+test('V1 source labels are available while legacy records still use only their real sources)', () => {
   assert.deepEqual(Object.keys(App.UnderwritingTrace.SOURCE_LABELS).sort(),
-    ['calculated', 'manual', 'not_entered']);
+    ['calculated', 'gaf_report', 'manual', 'not_entered', 'underwriter_override']);
   const used = new Set(App.UnderwritingTrace.build(saved).map(s => s.source));
   for (const s of used) assert.ok(['manual', 'calculated', 'not_entered'].includes(s));
 });

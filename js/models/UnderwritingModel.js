@@ -140,6 +140,7 @@ App.UnderwritingModel = class UnderwritingModel {
       materialCost: r.materialCost || '', laborCost: r.laborCost || '',
       otherCost: r.otherCost || '', targetMarginPercent: r.targetMarginPercent || '',
       reason: '',
+      ...(r.workflow ? { workflow: JSON.parse(JSON.stringify(r.workflow)) } : {}),
     };
   }
 
@@ -152,7 +153,61 @@ App.UnderwritingModel = class UnderwritingModel {
   setDraftField(taskId, field, value) {
     const d = this.draft(taskId);
     if (!(field in d)) return;
+    if (!this.isEditable(taskId)) return;
     d[field] = String(value == null ? '' : value);
+    if (d.workflow) {
+      if (field === 'roofAreaSqft') {
+        d.workflow.measurementOverrides = { roofAreaSqft: d[field] };
+        d.workflow.review = {};
+      }
+      if (field === 'wastePercent') d.workflow.review = {};
+      this.syncWorkflow(taskId);
+    }
+  }
+
+  importMeasurement(taskId, payload) {
+    if (!this.isEditable(taskId)) throw new Error('This estimate is locked.');
+    const roof = App.RoofMeasurement.importReport('pdf-manual', payload);
+    const d = this.draft(taskId);
+    d.workflow = { schemaVersion: 1, measurement: roof, materials: {}, jobCosts: {}, review: {},
+      taxPercent: '8.5', commissionPercent: '10', overheadPercent: '0', targetMarginPercent: d.targetMarginPercent || '35',
+      laborRate: '', clientPrice: '', provenance: { importMethod: 'pdf-manual' } };
+    d.roofAreaSqft = roof.roofAreaSqft;
+    d.wastePercent = roof.suggestedWastePercent ?? '';
+    d.targetMarginPercent = d.workflow.targetMarginPercent;
+    this.syncWorkflow(taskId);
+  }
+
+  setWorkflowField(taskId, path, value) {
+    if (!this.isEditable(taskId)) return;
+    const d = this.draft(taskId), w = d.workflow;
+    if (!w) return;
+    const keys = path.split('.');
+    // Only the UI's whitelisted editable fields; no prototype or source edits.
+    const valid = /^(laborRate|clientPrice|taxPercent|commissionPercent|overheadPercent)$/.test(path)
+      || /^review\.(measurementsVerified|wasteConfirmed|materialTakeoffReviewed|laborConfirmed|pricingCurrent)$/.test(path)
+      || /^jobCosts\.(dumpster|delivery|permit|plywood|solar|flashing|other)$/.test(path)
+      || /^materials\.(shingles|deckProtection|starter|ridgeCap|dripEdge|leakBarrier|lowSlopeBase|lowSlopeCap|coilNails|capNails|stepFlashing)\.(product|unitPrice|quantity|supplier|pricedAt)$/.test(path);
+    if (!valid) return;
+    let obj = w;
+    keys.slice(0,-1).forEach(k => { obj[k] = obj[k] || {}; obj = obj[k]; });
+    obj[keys[keys.length - 1]] = path.startsWith('review.') ? value === true : String(value ?? '');
+    if (!path.startsWith('review.')) {
+      if (path.startsWith('materials.')) { w.review.materialTakeoffReviewed = false; w.review.pricingCurrent = false; }
+      if (path === 'laborRate') w.review.laborConfirmed = false;
+    }
+    this.syncWorkflow(taskId);
+  }
+
+  syncWorkflow(taskId) {
+    const d = this.draft(taskId);
+    if (!d.workflow) return null;
+    try {
+      d.workflow.targetMarginPercent = d.targetMarginPercent;
+      const result = App.UnderwritingCalc.calculateWorkflow(d.workflow, d.wastePercent);
+      d.materialCost = result.materialCost; d.laborCost = result.laborCost; d.otherCost = result.otherCost;
+      return result;
+    } catch (e) { return null; }
   }
 
   discardDraft(taskId) { this._entry(taskId).draft = null; }
@@ -163,7 +218,8 @@ App.UnderwritingModel = class UnderwritingModel {
     if (!e.draft) return false;
     const base = App.UnderwritingModel.draftFromRecord(e.record);
     return ['roofAreaSqft', 'wastePercent', 'materialCost', 'laborCost', 'otherCost', 'targetMarginPercent']
-      .some(k => String(e.draft[k]).trim() !== String(base[k]).trim());
+      .some(k => String(e.draft[k]).trim() !== String(base[k]).trim())
+      || JSON.stringify(e.draft.workflow || null) !== JSON.stringify(base.workflow || null);
   }
 
   /* Validate + compute the current draft. Returns
@@ -176,6 +232,20 @@ App.UnderwritingModel = class UnderwritingModel {
     const calc = App.UnderwritingCalc;
     const d = this.draft(taskId);
     const errors = {};
+    let workflowResult = null;
+    if (d.workflow) {
+      try { workflowResult = App.UnderwritingCalc.calculateWorkflow(d.workflow, d.wastePercent); }
+      catch (e) { return { ok: false, errors: { form: e.message } }; }
+      if (workflowResult.lines.some(l => l.quantity == null || (l.quantity !== '0' && l.quantity !== '0.00' && l.unitPrice == null))) {
+        return { ok: false, errors: { form: 'Complete quantities and unit prices for every required material.' } };
+      }
+      if (!d.workflow.laborRate || !d.workflow.clientPrice) return { ok: false, errors: { form: 'Enter the labor rate and client price.' } };
+      const baseWorkflow = this.record(taskId)?.workflow;
+      const changedOverride = (d.workflow.measurementOverrides && JSON.stringify(d.workflow.measurementOverrides) !== JSON.stringify(baseWorkflow?.measurementOverrides))
+        || Object.entries(d.workflow.materials).some(([key,line]) => line.quantity != null && line.quantity !== '' && line.quantity !== baseWorkflow?.materials?.[key]?.quantity);
+      if (changedOverride && !String(d.reason).trim()) return { ok: false, errors: { form: 'Record a reason for the measurement override.' } };
+      d.materialCost = workflowResult.materialCost; d.laborCost = workflowResult.laborCost; d.otherCost = workflowResult.otherCost;
+    }
     const L = App.UnderwritingModel.LIMITS;
     const field = (key, label, { required, min, maxExclusive, minExclusive, maxInclusive, maxLabel }) => {
       const raw = String(d[key] == null ? '' : d[key]).trim();
@@ -213,7 +283,7 @@ App.UnderwritingModel = class UnderwritingModel {
     if (over(dv.totalEstimatedCost, L.money) || over(dv.recommendedSalePrice, L.money)) {
       return { ok: false, errors: { form: 'The total cost or recommended sale price is too large to store (maximum $9,999,999,999.99). Reduce a cost or the target margin.' } };
     }
-    return { ok: true, input, data: dv };
+    return { ok: true, input, data: dv, ...(d.workflow ? { workflow: { ...JSON.parse(JSON.stringify(d.workflow)), snapshot: workflowResult } } : {}) };
   }
 
   /* ---------- writes ---------- */
@@ -257,7 +327,7 @@ App.UnderwritingModel = class UnderwritingModel {
     if (!ev.ok) return ev;
     if (!this._saveEstimate) throw new Error('Underwriting is unavailable.');
     const reason = String(this.draft(taskId).reason || '').trim() || null;
-    await this._saveEstimate(e.record.id, { input: ev.input, data: ev.data }, reason);
+    await this._saveEstimate(e.record.id, { input: ev.input, data: ev.data, ...(ev.workflow ? { workflow: ev.workflow } : {}) }, reason);
     e.draft = null;
     await this._reloadAll(taskId);
     return { ok: true };
@@ -270,6 +340,11 @@ App.UnderwritingModel = class UnderwritingModel {
     if (!e.record) return { ok: false, error: 'No underwriting.' };
     if (!App.UnderwritingCalc.allowedNextStatuses(e.record.status).includes(next)) {
       return { ok: false, error: 'Cannot move from ' + e.record.status + ' to ' + next + '.' };
+    }
+    if (e.record.workflow && ['ready_for_review', 'approved'].includes(next)) {
+      try {
+        if (!App.UnderwritingCalc.calculateWorkflow(e.record.workflow, e.record.wastePercent).ready) return { ok: false, error: 'Complete the PROVE checks before review or approval.' };
+      } catch (err) { return { ok: false, error: err.message }; }
     }
     if (next === 'approved' && !App.UnderwritingCalc.canApprove(e.record.recommendedSalePrice)) {
       return { ok: false, error: 'Approval requires a calculated, positive recommended sale price.' };

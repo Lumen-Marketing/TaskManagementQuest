@@ -9,10 +9,10 @@ window.App = window.App || {};
    the step-by-step lines around those results — it never recomputes a figure with
    different math than the one real formula.
 
-   Sources are NEVER invented. Only three exist today: 'manual' (a person typed
+   Sources are NEVER invented. Legacy records use: 'manual' (a person typed
    it), 'calculated' (derived by the formula), 'not_entered'. This app has no
    import pipeline, measurement-report ingestion or override path, so those
-   sources are deliberately absent rather than fabricated.
+   sources come from the normalized V1 report only when present.
 
    "Has this record ever been through a real calculation save" is read off
    `recommendedSalePrice` being non-null (the row is written whole, by one RPC).
@@ -23,7 +23,7 @@ App.UnderwritingTrace = (function () {
   const C = () => App.UnderwritingCalc;
 
   const SOURCE_LABELS = {
-    manual: 'Manual entry',
+    manual: 'Manual entry', gaf_report: 'GAF QuickMeasure report', underwriter_override: 'Underwriter override',
     calculated: 'Calculated',
     not_entered: 'Not entered',
   };
@@ -55,7 +55,7 @@ App.UnderwritingTrace = (function () {
       key: 'base_roof_area', label: 'Base roof area', inputs: [], formula: null,
       calculationLines: [],
       result: u.roofAreaSqft ? u.roofAreaSqft + ' sqft' : 'Not entered',
-      source: u.roofAreaSqft ? manualOrNone : 'not_entered', roundingNote: null,
+      source: u.workflow ? (u.workflow.measurementOverrides ? 'underwriter_override' : 'gaf_report') : (u.roofAreaSqft ? manualOrNone : 'not_entered'), roundingNote: null,
     });
 
     steps.push({
@@ -222,6 +222,17 @@ App.UnderwritingTrace = (function () {
       steps.push(notEntered('achieved_margin_verification', 'Achieved margin verification', amFormula));
     }
 
+    if (u.workflow?.snapshot) {
+      const s = u.workflow.snapshot, src = u.workflow.measurement.source;
+      steps.push({ key:'order_quantity', label:'Order quantity (whole squares)',
+        inputs:[{label:'Report',value:src.reportName+' · page '+src.page},{label:'Selected waste',value:u.wastePercent+'%'}],
+        formula:'Use the printed report waste row when available; otherwise round area to whole SF and ceil exact area / 100.',
+        calculationLines:[], result:s.order.adjustedAreaSqft+' SF · '+s.order.orderSquares+' SQ',
+        source:'calculated', roundingNote:'Separate from migration 073 decimal squares; preserves provider rounding.' });
+      steps.push({ key:'net_profit', label:'Net profit at client price', inputs:[], formula:'Client price − hard cost − commission − overhead',
+        calculationLines:[s.clientPrice+' − '+s.hardCost+' − '+s.commission+' − '+s.overhead],
+        result:'$'+s.netProfit+' · '+s.netMarginPercent+'% net margin', source:'calculated',roundingNote:'Quest supplier and labor rates; material tax only. Saved V1 snapshot.' });
+    }
     return steps;
   }
 
