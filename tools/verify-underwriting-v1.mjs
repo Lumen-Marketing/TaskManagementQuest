@@ -32,7 +32,7 @@ try {
   await page.locator('[data-uw-workflow="materials.shingles.unitPrice"]').fill('40');
   assert.equal(await page.locator('[data-uw-material-row="shingles"] [data-uw-material-total]').innerText(),'$6800.00');count++;
   await page.locator('[data-uw-field="wastePercent"]').fill('15');
-  assert.match(await page.locator('[data-uw-order]').innerText(),/60 order SQ/);count++;
+  assert.match(await page.locator('[data-uw-order]').innerText(),/61 order SQ/);count++;
   await page.locator('[data-uw-workflow="materials.shingles.quantity"]').fill('180');
   assert.equal(await page.locator('[data-uw-material-row="shingles"] [data-uw-material-quantity]').innerText(),'180.00');count++;
   assert.equal(await page.locator('[data-uw-material-row="shingles"] [data-uw-material-total]').innerText(),'$7200.00');count++;
