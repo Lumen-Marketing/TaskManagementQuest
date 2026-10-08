@@ -367,9 +367,10 @@
       // recategorise. ('manual' is a plain table sort — unlike the old 'focus'
       // key it carries no execution-mode reset baggage.)
       const reorder = sortBy === 'manual' && App.can('tasks.write');
-      // In manual-order mode, completed tasks aren't part of the execution order —
-      // hide them so the drag list is just live work, unless "Show done" is on.
-      const hideDone = reorder && !view.controller.uiState.showCompleted;
+      // In manual and Focus order, completed tasks can be hidden so the working
+      // list stays limited to live work. "Show done" reveals them in either mode.
+      const hideDone = (sortBy === 'manual' || sortBy === 'focus')
+        && !view.controller.uiState.showCompleted;
       const shown = hideDone ? tasks.filter(t => !App.taxonomy.isDone(t)) : tasks;
 
       view.wrap.classList.add('qt-skin');
