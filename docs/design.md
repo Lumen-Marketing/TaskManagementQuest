@@ -3,7 +3,7 @@
 A locked design system for this app, produced by `hallmark redesign` across both
 surfaces (the auth page and the task manager). Every page reads this file before
 emitting code. Do not regenerate per page — extend or amend this file when the
-system needs to grow. All tokens live in [`tokens.css`](tokens.css); pages must
+system needs to grow. All tokens live in [`tokens.css`](../tokens.css); pages must
 reference tokens by name, never inline raw values.
 
 ## Genre
@@ -76,7 +76,7 @@ named tokens, never raw px.
 - The work-surface layout (table/timeline/kanban) on the app.
 
 ## Exports
-See [`tokens.css`](tokens.css) for the full, live token set. Quick drop-ins:
+See [`tokens.css`](../tokens.css) for the full, live token set. Quick drop-ins:
 
 ### Tailwind v4 `@theme`
 ```css

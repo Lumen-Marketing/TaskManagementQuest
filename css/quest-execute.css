@@ -1,0 +1,1103 @@
+/**
+ * QUEST OS — FILE STATUS
+ * File: css/quest-execute.css
+ * Role: Execute phase presentation layer
+ * Status: ACTIVE — REBUILDING
+ *
+ * Current:
+ * - Owns Execute-specific presentation only.
+ * - Reuses the existing qt-* task renderer and task controls.
+ * - Does not own routing, mutations, drag/drop, Supabase, or New Task behavior.
+ *
+ * Next:
+ * - Validate desktop Execute composition.
+ * - Add intentional compact-card breakpoint after desktop is stable.
+ *
+ * Last reviewed: 2026-10-02
+ */
+
+/* ==========================================================
+   QUEST OS — EXECUTE
+   Canonical operational surface
+   ========================================================== */
+
+body[data-quest-domain="tasks"] {
+  --execute-line: rgba(31, 29, 26, 0.11);
+  --execute-line-strong: rgba(31, 29, 26, 0.18);
+  --execute-muted: #777571;
+  --execute-orange: #ed4e0d;
+}
+
+
+/* ==========================================================
+   1. CENTER CANVAS — REMOVE LEGACY PAGE-IN-A-PAGE FEEL
+   ========================================================== */
+
+body[data-quest-domain="tasks"] #questCoreZone {
+  padding:
+    42px
+    42px
+    150px
+    42px !important;
+
+  background: #fff !important;
+}
+
+body[data-quest-domain="tasks"] #listPane {
+  width: 100% !important;
+  max-width: none !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+
+/* ==========================================================
+   2. EXECUTE HEADER
+   ========================================================== */
+
+body[data-quest-domain="tasks"] .page-head {
+  position: relative;
+
+  display: grid !important;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto !important;
+
+  align-items: end !important;
+  gap: 30px !important;
+
+  width: 100% !important;
+
+  margin: 0 0 30px !important;
+  padding: 0 0 22px !important;
+
+  border-bottom:
+    1px solid
+    var(--execute-line) !important;
+
+  background: transparent !important;
+}
+
+
+/* Header card becomes pure typography, not a card */
+body[data-quest-domain="tasks"] .head-card {
+  display: block !important;
+
+  min-width: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+
+/* canonical phase eyebrow */
+body[data-quest-domain="tasks"] .head-card::before {
+  content: "03 / EXECUTE";
+
+  display: block;
+
+  margin-bottom: 10px;
+
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace;
+
+  font-size: 10px;
+  line-height: 1;
+
+  font-weight: 600;
+
+  letter-spacing: .12em;
+  text-transform: uppercase;
+
+  color: var(--execute-orange);
+}
+
+
+/* hide old scope toggle from the visual header */
+body[data-quest-domain="tasks"] #scopeSeg {
+  position: absolute !important;
+
+  width: 1px !important;
+  height: 1px !important;
+
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+
+  white-space: nowrap !important;
+}
+
+
+/* existing page title becomes canonical Execute heading */
+body[data-quest-domain="tasks"] #pageTitle {
+  margin: 0 !important;
+
+  font-family:
+    "Hanken Grotesk",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif !important;
+
+  font-size:
+    clamp(34px, 4vw, 52px) !important;
+
+  line-height: .98 !important;
+
+  font-weight: 700 !important;
+
+  letter-spacing: -.045em !important;
+
+  color: #1f1d1a !important;
+}
+
+
+/* subtitle without extra markup */
+body[data-quest-domain="tasks"] .head-card::after {
+  content: "Move the work.";
+
+  display: block;
+
+  margin-top: 10px;
+
+  font-size: 12px;
+  line-height: 1.5;
+
+  font-weight: 500;
+
+  color: var(--execute-muted);
+}
+
+
+/* secondary header actions stay functional but disappear from primary composition */
+body[data-quest-domain="tasks"] .head-card-actions {
+  display: none !important;
+}
+
+
+/* ==========================================================
+   3. CONTROLS — ONE QUIET UPPER-RIGHT INSTRUMENT
+   ========================================================== */
+
+body[data-quest-domain="tasks"] .page-head-widgets {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+
+  gap: 0 !important;
+
+  min-width: 0 !important;
+  width: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+/* Up-next and progress no longer belong in the Execute header */
+body[data-quest-domain="tasks"] #upNextWidget,
+body[data-quest-domain="tasks"] #progressWidget,
+body[data-quest-domain="tasks"] .focus-widget-mount {
+  display: none !important;
+}
+
+
+/* control mount becomes structural only */
+body[data-quest-domain="tasks"] #controlsWidget {
+  width: auto !important;
+  min-width: 0 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+}
+
+
+/* kill legacy floating controls card */
+body[data-quest-domain="tasks"] .controls-card {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 0 !important;
+
+  width: auto !important;
+  height: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+
+/* Filter | Sort | Group | Show done */
+body[data-quest-domain="tasks"] .controls-card .btn {
+  position: relative;
+
+  height: 32px !important;
+
+  margin: 0 !important;
+  padding:
+    0
+    12px !important;
+
+  border: 0 !important;
+  border-right:
+    1px solid
+    var(--execute-line) !important;
+
+  border-radius: 0 !important;
+
+  background: transparent !important;
+  box-shadow: none !important;
+
+  font-size: 11px !important;
+  line-height: 32px !important;
+
+  font-weight: 600 !important;
+
+  color: #514e49 !important;
+
+  transform: none !important;
+}
+
+body[data-quest-domain="tasks"] .controls-card .btn:first-child {
+  border-left:
+    1px solid
+    var(--execute-line) !important;
+}
+
+body[data-quest-domain="tasks"] .controls-card .btn:hover {
+  background:
+    rgba(31, 29, 26, .035) !important;
+
+  color: #1f1d1a !important;
+}
+
+body[data-quest-domain="tasks"] .controls-card .btn i {
+  display: none !important;
+}
+
+
+/* ==========================================================
+   4. TASK SURFACE
+   ========================================================== */
+
+body[data-quest-domain="tasks"] #taskViewWrap {
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+
+/* static legacy list header is not the renderer actually in use */
+body[data-quest-domain="tasks"] #taskViewWrap > .list-header {
+  display: none !important;
+}
+
+
+body[data-quest-domain="tasks"] #listBody {
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-wrap {
+  width: 100% !important;
+  max-width: none !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+
+/* ==========================================================
+   5. COMPANY / SCOPE STRIP
+   ========================================================== */
+
+body[data-quest-domain="tasks"] .qt-chiprow {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+
+  min-height: 36px !important;
+
+  margin: 0 0 18px !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-chip {
+  height: 28px !important;
+
+  padding:
+    0
+    10px !important;
+
+  border:
+    1px solid
+    var(--execute-line) !important;
+
+  border-radius: 999px !important;
+
+  background: transparent !important;
+
+  box-shadow: none !important;
+
+  font-size: 10px !important;
+  font-weight: 650 !important;
+
+  color: #625f5a !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-chip.on {
+  background: #1f1d1a !important;
+  border-color: #1f1d1a !important;
+
+  color: #fff !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-chip .sq {
+  background: var(--execute-orange) !important;
+}
+
+
+/* ==========================================================
+   6. COLUMN HEADER
+   ========================================================== */
+
+body[data-quest-domain="tasks"] .qt-cols {
+  display: grid !important;
+
+  grid-template-columns:
+    28px
+    18px
+    minmax(250px, 2.5fr)
+    minmax(112px, .95fr)
+    minmax(115px, 1fr)
+    minmax(135px, 1.15fr)
+    minmax(100px, .85fr)
+    minmax(80px, .7fr)
+    74px !important;
+
+  align-items: center !important;
+
+  min-height: 40px !important;
+
+  margin: 0 !important;
+  padding:
+    0
+    14px !important;
+
+  border-top:
+    1px solid
+    var(--execute-line) !important;
+
+  border-bottom:
+    1px solid
+    var(--execute-line) !important;
+
+  background: transparent !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-cols-reorder {
+  grid-template-columns:
+    22px
+    28px
+    28px
+    18px
+    minmax(250px, 2.5fr)
+    minmax(112px, .95fr)
+    minmax(115px, 1fr)
+    minmax(135px, 1.15fr)
+    minmax(100px, .85fr)
+    minmax(80px, .7fr)
+    74px !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-colcell,
+body[data-quest-domain="tasks"] .qt-colbtn {
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace !important;
+
+  font-size: 9px !important;
+  line-height: 1 !important;
+
+  font-weight: 600 !important;
+
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+
+  color: #66625d !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-colbtn {
+  justify-self: start !important;
+
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+
+/* ==========================================================
+   7. GROUPS — REMOVE CARD STACKING
+   ========================================================== */
+
+body[data-quest-domain="tasks"] .qt-group {
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-ghead {
+  display: grid !important;
+
+  grid-template-columns:
+    18px
+    20px
+    minmax(0, 1fr)
+    auto !important;
+
+  align-items: center !important;
+
+  min-height: 48px !important;
+
+  margin: 0 !important;
+
+  padding:
+    0
+    14px !important;
+
+  border-bottom:
+    1px solid
+    var(--execute-line) !important;
+
+  background: rgba(246,244,241,.55) !important;
+
+  border-radius: 0 !important;
+  box-shadow: none !important;
+
+  color: #1f1d1a !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-gname {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+
+  letter-spacing: -.01em !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-gcount {
+  min-width: 24px !important;
+  height: 20px !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  padding: 0 6px !important;
+
+  border-radius: 999px !important;
+
+  background: #5d5954 !important;
+  color: #fff !important;
+
+  font-size: 9px !important;
+  font-weight: 700 !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-gicon {
+  color: #77736e !important;
+}
+
+
+/* ==========================================================
+   8. TASK ROWS
+   ========================================================== */
+
+body[data-quest-domain="tasks"] .qt-gbody {
+  width: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-row {
+  display: grid !important;
+
+  grid-template-columns:
+    28px
+    18px
+    minmax(250px, 2.5fr)
+    minmax(112px, .95fr)
+    minmax(115px, 1fr)
+    minmax(135px, 1.15fr)
+    minmax(100px, .85fr)
+    minmax(80px, .7fr)
+    74px !important;
+
+  align-items: center !important;
+
+  min-height: 50px !important;
+
+  margin: 0 !important;
+
+  padding:
+    0
+    14px !important;
+
+  border: 0 !important;
+  border-bottom:
+    1px solid
+    var(--execute-line) !important;
+
+  border-radius: 0 !important;
+
+  background: transparent !important;
+
+  box-shadow: none !important;
+
+  transform: none !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-row.qt-reorderable {
+  grid-template-columns:
+    22px
+    28px
+    28px
+    18px
+    minmax(250px, 2.5fr)
+    minmax(112px, .95fr)
+    minmax(115px, 1fr)
+    minmax(135px, 1.15fr)
+    minmax(100px, .85fr)
+    minmax(80px, .7fr)
+    74px !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-row:hover {
+  background:
+    rgba(31,29,26,.022) !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-tcell {
+  min-width: 0 !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-ttitle {
+  display: block !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+
+  font-size: 12px !important;
+  font-weight: 650 !important;
+
+  letter-spacing: -.005em !important;
+
+  color: #24211e !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-cell-type,
+body[data-quest-domain="tasks"] .qt-cell-assignee,
+body[data-quest-domain="tasks"] .qt-cell-status,
+body[data-quest-domain="tasks"] .qt-cell-priority,
+body[data-quest-domain="tasks"] .qt-due {
+  min-width: 0 !important;
+
+  overflow: hidden !important;
+
+  font-size: 10px !important;
+
+  color: #4f4b47 !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-cellbtn {
+  max-width: 100% !important;
+
+  overflow: hidden !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-cellbtn .nm {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+
+/* status stays semantic but visually quieter */
+body[data-quest-domain="tasks"] .qt-cell-status .qt-cellbtn {
+  display: inline-flex !important;
+  align-items: center !important;
+
+  gap: 6px !important;
+
+  padding: 0 !important;
+
+  font-size: 10px !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-cell-status .dot {
+  width: 6px !important;
+  height: 6px !important;
+
+  flex: 0 0 6px !important;
+}
+
+
+/* priority chip remains useful but restrained */
+body[data-quest-domain="tasks"] .qt-pbadge {
+  min-height: 22px !important;
+
+  padding:
+    0
+    10px !important;
+
+  border-radius: 999px !important;
+
+  font-size: 8px !important;
+  font-weight: 700 !important;
+
+  box-shadow: none !important;
+}
+
+
+body[data-quest-domain="tasks"] .qt-due {
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace !important;
+
+  font-size: 9px !important;
+
+  font-variant-numeric: tabular-nums !important;
+}
+
+
+/* row actions should not dominate normal scanning */
+body[data-quest-domain="tasks"] .qt-actions {
+  justify-self: end !important;
+
+  opacity: .25;
+
+  transition: opacity .15s ease;
+}
+
+body[data-quest-domain="tasks"] .qt-row:hover .qt-actions,
+body[data-quest-domain="tasks"] .qt-row:focus-within .qt-actions {
+  opacity: 1;
+}
+
+
+/* ==========================================================
+   9. MANUAL ORDER CONTROLS
+   ========================================================== */
+
+body[data-quest-domain="tasks"] .qt-grip {
+  color: #8a8580 !important;
+
+  opacity: .65;
+}
+
+
+body[data-quest-domain="tasks"] .qt-seqbadge {
+  width: 24px !important;
+  height: 24px !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  border:
+    1px solid
+    var(--execute-line-strong) !important;
+
+  border-radius: 6px !important;
+
+  background: transparent !important;
+
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace !important;
+
+  font-size: 9px !important;
+
+  font-weight: 600 !important;
+}
+
+
+/* ==========================================================
+   10. EXECUTION SIGNAL — DEMOTE OLD RUN SHELF
+   ========================================================== */
+
+body[data-quest-domain="tasks"] #questSignalZone {
+  position: fixed !important;
+
+  left:
+    calc(var(--quest-engine-w) + 28px) !important;
+
+  right:
+    calc(var(--quest-sidecar-w) + 28px) !important;
+
+  bottom: 70px !important;
+
+  width: auto !important;
+  height: 34px !important;
+
+  min-height: 34px !important;
+
+  margin: 0 !important;
+  padding:
+    0
+    12px !important;
+
+  overflow: hidden !important;
+
+  border:
+    1px solid
+    var(--execute-line) !important;
+
+  border-radius: 0 !important;
+
+  background:
+    rgba(251,250,248,.96) !important;
+
+  box-shadow: none !important;
+
+  z-index: 70 !important;
+}
+
+
+body[data-quest-domain="tasks"] #questSignalZone > * {
+  min-height: 32px !important;
+  height: 32px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+
+/* ==========================================================
+   11. DESKTOP SAFETY
+   Do NOT force the six data columns to collapse.
+   Horizontal compression belongs to the later card breakpoint.
+   ========================================================== */
+
+@media (max-width: 1180px) {
+  body[data-quest-domain="tasks"] #questCoreZone {
+    padding-left: 28px !important;
+    padding-right: 28px !important;
+  }
+
+  body[data-quest-domain="tasks"] .qt-wrap {
+    overflow-x: auto !important;
+  }
+
+  body[data-quest-domain="tasks"] .qt-cols,
+  body[data-quest-domain="tasks"] .qt-row {
+    min-width: 920px !important;
+  }
+}
+
+
+/* ==========================================================
+   12. EXECUTE FINISHING PASS
+   ========================================================== */
+
+/* real Execute title stays in the canvas */
+body[data-quest-domain="tasks"] #pageTitle {
+  display: block !important;
+}
+
+body[data-quest-domain="tasks"] #pageTitle::before {
+  content: "Active Operations";
+}
+
+body[data-quest-domain="tasks"] #pageTitle {
+  font-size: 0 !important;
+}
+
+body[data-quest-domain="tasks"] #pageTitle::before {
+  font-size: clamp(34px, 4vw, 52px) !important;
+  line-height: .98 !important;
+  font-weight: 700 !important;
+  letter-spacing: -.045em !important;
+  color: #1f1d1a !important;
+}
+
+
+/* ----------------------------------------------------------
+   RUN = one restrained execution signal
+   ---------------------------------------------------------- */
+
+body[data-quest-domain="tasks"] #questSignalZone {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 14px !important;
+
+  height: 38px !important;
+  min-height: 38px !important;
+
+  padding: 0 14px !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .qf-task-signal-head {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 8px !important;
+
+  height: auto !important;
+  min-height: 0 !important;
+
+  white-space: nowrap !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .qf-task-signal-head .qf-kicker {
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace !important;
+
+  font-size: 9px !important;
+  letter-spacing: .10em !important;
+
+  color: #ed4e0d !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .qf-zone-title {
+  font-size: 10px !important;
+  font-weight: 650 !important;
+
+  color: #514e49 !important;
+}
+
+
+/* obsolete quest-path strip stays gone */
+body[data-quest-domain="tasks"]
+#questSignalZone .qf-task-path {
+  display: none !important;
+}
+
+
+/* show only Up Next inside RUN */
+body[data-quest-domain="tasks"]
+#questSignalZone #qfUpNextSlot {
+  display: block !important;
+
+  flex: 1 1 auto !important;
+
+  min-width: 0 !important;
+  height: 30px !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone #qfProgressSlot {
+  display: none !important;
+}
+
+
+/* override the header-level hide now that Up Next is inside RUN */
+body[data-quest-domain="tasks"]
+#questSignalZone #upNextWidget {
+  display: block !important;
+
+  width: 100% !important;
+  height: 30px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+/* flatten old Up Next card into one line */
+body[data-quest-domain="tasks"]
+#questSignalZone .up-next-card {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 8px !important;
+
+  width: 100% !important;
+  height: 30px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  box-shadow: none !important;
+
+  color: #1f1d1a !important;
+
+  transform: none !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .up-next-icon {
+  display: none !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .up-next-text {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 8px !important;
+
+  min-width: 0 !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .up-next-eyebrow {
+  font-family:
+    "IBM Plex Mono",
+    ui-monospace,
+    monospace !important;
+
+  font-size: 8px !important;
+  font-weight: 600 !important;
+
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+
+  color: #777571 !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .up-next-title {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+
+  font-size: 10px !important;
+  font-weight: 650 !important;
+
+  color: #1f1d1a !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .up-next-meta {
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 6px !important;
+
+  white-space: nowrap !important;
+
+  font-size: 9px !important;
+}
+
+body[data-quest-domain="tasks"]
+#questSignalZone .up-next-start {
+  flex: 0 0 24px !important;
+
+  width: 24px !important;
+  height: 24px !important;
+
+  border-radius: 50% !important;
+
+  box-shadow: none !important;
+}
+
+
+/* ----------------------------------------------------------
+   RELAY = compact persistent instrument
+   ---------------------------------------------------------- */
+
+#relayDock .relay-v2-operator-copy {
+  max-width: 145px !important;
+}
+
+#relayDock .relay-v2-operator-copy strong {
+  display: block !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+
+  font-size: 10px !important;
+  font-weight: 650 !important;
+}
+
+#relayDock .relay-v2-operator {
+  padding-right: 12px !important;
+}
