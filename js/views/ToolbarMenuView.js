@@ -24,6 +24,16 @@ App.ToolbarMenuView = class ToolbarMenuView {
     // "Show done" is a plain toggle, not a menu — flip uiState and restyle.
     const showDoneBtn = document.getElementById('showDoneBtn');
     if (showDoneBtn) showDoneBtn.addEventListener('click', (e) => { e.stopPropagation(); this.controller.toggleShowCompleted(); });
+    const focusViewBtn = document.getElementById('focusViewBtn');
+    if (focusViewBtn) focusViewBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.controller.uiState.sortBy === 'focus') {
+        this.controller.setSortBy('priority');
+        return;
+      }
+      this.controller.setLayout('table');
+      this.controller.setSortBy('focus');
+    });
     App.EventBus.on('controls:changed', () => this.syncButtonLabels());
     [sortBtn, groupBtn, viewBtn, viewsBtn, exportBtn, moreBtn].forEach(btn => {
       if (btn) { btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false'); }
@@ -272,6 +282,13 @@ App.ToolbarMenuView = class ToolbarMenuView {
     if (groupBtn) {
       const lbl = (App.GROUP_OPTIONS[ui.groupBy] || App.GROUP_OPTIONS.due).label;
       groupBtn.innerHTML = `<i class="ti ti-layout-rows"></i>Group: ${lbl}`;
+    }
+    const focusViewBtn = document.getElementById('focusViewBtn');
+    if (focusViewBtn) {
+      const on = ui.sortBy === 'focus';
+      focusViewBtn.classList.toggle('active', on);
+      focusViewBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      focusViewBtn.innerHTML = `<i class="ti ${on ? 'ti-list-check' : 'ti-list-numbers'}"></i>${on ? 'Exit Focus' : 'Focus'}`;
     }
     if (viewBtn) {
       const layoutIcons = { table: 'ti-table', cards: 'ti-layout-grid', calendar: 'ti-calendar', kanban: 'ti-layout-kanban' };
