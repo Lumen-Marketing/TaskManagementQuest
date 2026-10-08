@@ -64,6 +64,7 @@ App.SORT_OPTIONS = {
   status:   { label: 'Status' },
   created:  { label: 'Created' },
   manual:   { label: 'Manual order' },
+  focus:    { label: 'Focus' },
 };
 
 App.GROUP_OPTIONS = {
